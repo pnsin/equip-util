@@ -232,8 +232,7 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
 
 def render() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
-    page_header("달력 입력", "실적",
-                desc="칸 안의 실적을 누르면 복사, 다른 날짜를 누르면 붙여넣기. 날짜 숫자를 누르면 아래에서 그날 입력을 고칩니다.")
+    page_header("달력 입력", "실적")
     msg = st.session_state.pop("cal_saved", None)
     undo = st.session_state.get("cal_undo")
     if msg or undo:
@@ -310,11 +309,13 @@ def render() -> None:
                 continue
             _day_cell(cols[i], d, by_day.get(d, []), selected=d == day, holiday=d in hol, today=d == today,
                       clip=clip, logs=logs)
-    st.caption("🔴 공휴일 · 📍 오늘 · 실적에 마우스를 올리면 전체 내용이 보입니다.")
+    st.caption("🔴 공휴일 · 📍 오늘")
 
     # ── 선택한 날 입력 ─────────────────────────────────────
     st.divider()
-    st.subheader(f"{day:%Y-%m-%d} ({WEEKDAYS[day.weekday()]}) 입력")
+    st.subheader(f"{day:%Y-%m-%d} ({WEEKDAYS[day.weekday()]}) 입력",
+                 help="맨 아래 빈 행에 입력하면 추가, 행 왼쪽을 선택해 휴지통을 누르면 삭제. 다 고친 뒤 저장을 누르세요. "
+                      "달력에서 실적을 누르면 복사, 다른 날짜를 누르면 붙여넣기입니다.")
 
     ts = pd.Timestamp(day)
     rows = _day_rows(logs, day)
@@ -334,10 +335,9 @@ def render() -> None:
     missing = [name for name, empty in (("장비", eq.empty), ("담당자", not staff_opts)) if empty]
     if missing:
         st.warning(f"등록된 {'·'.join(missing)}이(가) 없어 새로 입력할 수 없습니다. "
-                   f"'정보 입력' 메뉴의 {', '.join(m + ' 관리' for m in missing)}에서 먼저 등록하세요.")
+                   f"{', '.join(m + ' 정보' for m in missing)} 메뉴에서 먼저 등록하세요.")
     if comp.empty:
-        st.caption("등록된 업체가 없습니다. 외부 업체 실적은 '업체 정보 입력'에서 업체를 먼저 등록한 뒤 입력하세요. "
-                   "내부 사용은 업체 없이 입력할 수 있습니다.")
+        st.caption("등록된 업체가 없습니다. 업체 정보 메뉴에서 먼저 등록하세요.")
     last_staff = st.session_state.get("last_staff")
 
     view = pd.DataFrame({
@@ -376,7 +376,6 @@ def render() -> None:
             "지원내용": st.column_config.TextColumn(width="medium"),
         },
     )
-    st.caption("맨 아래 빈 행에 입력하면 추가, 행 왼쪽을 선택해 휴지통을 누르면 삭제됩니다. 다 고친 뒤 저장을 누르세요.")
 
     orig = {int(r["id"]): r for r in rows.to_dict("records")}
     view_by_id = {int(r["id"]): r for r in view.to_dict("records")}
