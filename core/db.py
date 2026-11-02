@@ -649,7 +649,8 @@ def _equip_names() -> dict[int, str]:
     return dict(zip(eq["id"].astype(int), eq["label"]))
 
 
-def insert_logs(records: list[dict], user: str = "") -> int:
+def insert_logs(records: list[dict], user: str = "", ids_out: list | None = None) -> int:
+    """실적을 추가하고 추가한 건수를 돌려줍니다. ids_out 을 주면 새 id 를 담아 줍니다 (되돌리기용)."""
     if not records:
         return 0
     now = dt.datetime.now().replace(microsecond=0)
@@ -660,6 +661,8 @@ def insert_logs(records: list[dict], user: str = "") -> int:
         row.setdefault("created_by", user)
         row.update(id=rid, equip_ref=names.get(row.get("equip_id"), ""), created_at=now, updated_at=now)
         rows.append(row)
+        if ids_out is not None:
+            ids_out.append(rid)
     get_store().append("usage", _rows("usage", rows))
     load_logs.clear()
     return len(rows)
