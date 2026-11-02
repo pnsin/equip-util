@@ -4,7 +4,18 @@ import streamlit as st
 
 st.set_page_config(page_title="장비 가동률 관리", page_icon="📊", layout="wide")
 
-from core import db  # noqa: E402
+import importlib  # noqa: E402
+import os  # noqa: E402
+
+from core import calc, db, rules, seed  # noqa: E402
+
+# 새 코드가 배포된 직후 Streamlit Cloud가 화면 파일만 새로 읽고 core 모듈은 옛 버전을 쓰는 일이 있어
+# (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀌었으면 core 모듈을 다시 읽어 옴
+for _m in (seed, db, calc, rules):
+    _mt = os.path.getmtime(_m.__file__)
+    if getattr(_m, "_src_mtime", None) != _mt:
+        importlib.reload(_m)
+        _m._src_mtime = _mt
 from views import calendar_entry, companies, dashboard, entry, equipment, export, records, settings  # noqa: E402
 
 
