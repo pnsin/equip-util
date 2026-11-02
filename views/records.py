@@ -28,7 +28,7 @@ FIELDS = {
     "사용료": "fee",
     "사용목적(상세)": "purpose_detail",
     "기타": "etc",
-    "작성자": "created_by",
+    "담당자": "created_by",
 }
 
 
@@ -51,7 +51,7 @@ def render() -> None:
     sel_eq = c2.multiselect("장비", list(eq["label"]), placeholder="전체")
     comp_q = c3.text_input("기관명 검색", placeholder="일부만 입력해도 됩니다")
     writers = sorted(w for w in logs["created_by"].unique() if w)
-    writer = c4.selectbox("작성자", ["전체"] + writers)
+    writer = c4.selectbox("담당자", ["전체"] + writers)
 
     df = logs.copy()
     if isinstance(rng, (tuple, list)) and len(rng) == 2:
@@ -82,8 +82,9 @@ def render() -> None:
     st.caption("셀을 직접 고친 뒤 아래 '변경 내용 저장'을 누르세요. 지울 행은 '삭제'에 체크합니다.")
     edited = st.data_editor(
         view, key="records_editor", hide_index=True, width="stretch", height=520,
-        disabled=["작성자", "사업자번호"],
+        disabled=["사업자번호"],
         column_config={
+            "담당자": st.column_config.SelectboxColumn(options=db.staff_names(list(df["created_by"])), required=True),
             "삭제": st.column_config.CheckboxColumn(width="small"),
             "장비": st.column_config.SelectboxColumn(options=list(eq["label"]), width="large", required=True),
             "사용목적": st.column_config.SelectboxColumn(options=seed.PURPOSES, required=True),
@@ -124,7 +125,7 @@ def render() -> None:
         errors, updates = [], {}
         for i in changed:
             row = edited.loc[i]
-            rec = {FIELDS[col]: row[col] for col in FIELDS if col not in ("장비", "작성자")}
+            rec = {FIELDS[col]: row[col] for col in FIELDS if col != "장비"}
             rec["equip_id"] = id_of.get(row["장비"])
             rec["company"] = db.to_str(rec.get("company"))
             m = master.get(rec["company"])
