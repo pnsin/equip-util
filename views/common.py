@@ -100,7 +100,8 @@ POS = "_pos"
 
 
 def search_box(key: str, placeholder: str) -> str:
-    return st.text_input("검색", placeholder=placeholder, key=key, label_visibility="collapsed")
+    return st.text_input("검색", placeholder=placeholder, key=key, label_visibility="collapsed",
+                         icon=":material/search:")
 
 
 def filtered_editor(view, mask, **kwargs):

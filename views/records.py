@@ -12,7 +12,7 @@ FIELDS = {
     "장비": "equip_label",
     "사용목적": "purpose",
     "활용유형": "usage_type",
-    "기업명": "company",
+    "업체": "company",
     "사업자번호": "brn",
     "내부부서명": "dept",
     "업종": "industry",
@@ -34,11 +34,11 @@ FIELDS = {
 
 
 def render() -> None:
-    page_header("실적 조회·수정", "실적")
+    page_header("실적 목록", "실적")
     saved = st.session_state.pop("records_saved", None)
     if saved:
         st.success(saved, icon=":material/check_circle:")
-        st.toast(saved, icon="✅")
+        st.toast(saved, icon=":material/check_circle:")
 
     logs = db.load_logs()
     eq = db.load_equipment()
@@ -51,7 +51,7 @@ def render() -> None:
     c1, c2, c3, c4 = st.container(border=True).columns([1.4, 2, 1.2, 1])
     rng = c1.date_input("사용시작일 범위", value=(q_s, q_e), format="YYYY-MM-DD", help="기본값은 이번 분기입니다.")
     sel_eq = c2.multiselect("장비", list(eq["label"]), placeholder="전체")
-    comp_q = c3.text_input("기관명", placeholder="검색")
+    comp_q = c3.text_input("업체", placeholder="검색")
     writers = sorted(w for w in logs["created_by"].unique() if w)
     writer = c4.selectbox("담당자", ["전체"] + writers)
 
@@ -90,10 +90,10 @@ def render() -> None:
             "장비": st.column_config.SelectboxColumn(options=list(eq["label"]), width="large", required=True),
             "사용목적": st.column_config.SelectboxColumn(options=seed.PURPOSES, required=True),
             "활용유형": st.column_config.SelectboxColumn(options=seed.USAGE_TYPES, required=True),
-            "기업명": st.column_config.SelectboxColumn(
-                options=list(master) + sorted({c for c in view["기업명"] if c and c not in master}),
-                help="'업체 정보 입력'에 등록된 업체만 고를 수 있습니다. 사업자번호는 업체 목록에서 자동으로 채워집니다."),
-            "사업자번호": st.column_config.TextColumn(help="'업체 정보 입력'에서 고칩니다."),
+            "업체": st.column_config.SelectboxColumn(
+                options=list(master) + sorted({c for c in view["업체"] if c and c not in master}),
+                help="'기준 정보 › 업체'에 등록된 업체만 고를 수 있습니다. 사업자번호는 업체 목록에서 자동으로 채워집니다."),
+            "사업자번호": st.column_config.TextColumn(help="'기준 정보 › 업체'에서 고칩니다."),
             "업종": st.column_config.SelectboxColumn(options=seed.INDUSTRIES),
             "품목": st.column_config.SelectboxColumn(options=seed.ALL_ITEMS),
             "세부품목": st.column_config.SelectboxColumn(options=seed.ALL_SUBITEMS),

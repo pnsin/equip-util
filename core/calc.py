@@ -121,6 +121,16 @@ def effective_end(s: dt.date, e: dt.date, cutoff: dt.date | None) -> dt.date:
     return e
 
 
+def same_progress_end(s: dt.date, e_eff: dt.date, e: dt.date, ps: dt.date, pe: dt.date) -> dt.date:
+    """진행 중인 기간(s~e 중 e_eff까지)과 같은 만큼 진행된 직전 기간의 끝날.
+
+    예: 4분기를 11/02까지 봤다면 3분기는 08/02까지 (기간 시작부터 같은 날수, 직전 기간 길이를 넘지 않음).
+    """
+    if e_eff >= e:
+        return pe
+    return min(pe, ps + (e_eff - s))
+
+
 def available_hours(eq_row, s: dt.date, e: dt.date, default_annual: float) -> float:
     a, r = to_date(eq_row.acquired_on), to_date(eq_row.retired_on)
     s2 = max(s, a) if a else s
