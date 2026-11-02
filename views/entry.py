@@ -20,10 +20,6 @@ def render() -> None:
         st.success(saved)
         st.toast(saved, icon="✅")
 
-    user = st.session_state.get("user", "")
-    if not user:
-        st.info("왼쪽 사이드바에서 작성자를 먼저 선택하세요.")
-
     cfg = db.get_settings()
     eq = db.load_equipment()
     logs = db.load_logs()
@@ -32,6 +28,12 @@ def render() -> None:
                    "장비 목록(Sheet4)과 실적이 함께 등록됩니다. '장비 관리'에서 직접 추가해도 됩니다.")
         return
     ver = st.session_state.setdefault("entry_ver", 0)
+    staff_opts = db.staff_names()
+    last = st.session_state.get("last_staff")
+    user = st.selectbox("담당자", staff_opts, index=staff_opts.index(last) if last in staff_opts else None,
+                        placeholder="담당자를 고르세요", key=f"entry_{ver}_staff") or ""
+    if not staff_opts:
+        st.warning("등록된 담당자가 없습니다. '담당자 관리'에서 먼저 담당자를 등록하세요.")
 
     def k(name: str) -> str:
         return f"entry_{ver}_{name}"
@@ -139,7 +141,7 @@ def render() -> None:
             "start_date": start, "end_date": end, "include_holidays": hol,
             "purpose_detail": purpose_detail or overview, "etc": etc,
         }
-        errors = [] if user else ["작성자를 선택하세요 (왼쪽 사이드바)."]
+        errors = [] if user else ["담당자를 선택하세요."]
         common_errs = rules.validate(dict(common, hours=1, fee=0))
         errors += common_errs
         label_to_id = dict(zip(eq["label"], eq["id"]))
@@ -160,13 +162,14 @@ def render() -> None:
                 st.error(e)
         else:
             n = db.insert_logs(recs, user)
+            st.session_state.last_staff = user
             st.session_state.entry_ver = ver + 1
             st.session_state.entry_saved = f"{n}건 저장했습니다 · 총 {sum(r['hours'] for r in recs):,.0f} h"
             st.rerun()
 
     st.divider()
-    st.subheader("내가 최근 입력한 실적")
-    mine = logs[logs["created_by"] == user].sort_values("id", ascending=False).head(10) if user else logs.head(0)
+    st.subheader(f"{user} 님의 최근 실적" if user else "최근 실적")
+    mine = (logs[logs["created_by"] == user] if user else logs).sort_values("id", ascending=False).head(10)
     if mine.empty:
         st.caption("아직 입력한 실적이 없습니다.")
     else:

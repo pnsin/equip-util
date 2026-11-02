@@ -3,7 +3,7 @@
 secrets 에 [gsheets] spreadsheet_id 와 [gcp_service_account] 가 있으면 구글 시트에 저장하고,
 없으면 data/ 폴더의 CSV 파일에 저장합니다 (내 PC에서 시험할 때).
 
-구글 시트 구조: 탭 4개 (장비 / 업체 / 사용실적 / 설정). 없는 탭은 처음 연결할 때 자동으로 만듭니다. 1행 열 제목은 바꾸거나 옮기면 안 됩니다.
+구글 시트 구조: 탭 5개 (장비 / 업체 / 담당자 / 사용실적 / 설정). 없는 탭은 처음 연결할 때 자동으로 만듭니다. 1행 열 제목은 바꾸거나 옮기면 안 됩니다.
 사용실적 탭의 '장비명(참고)' 열은 사람이 보기 위한 사본이며 프로그램은 읽지 않습니다.
 """
 from __future__ import annotations
@@ -29,6 +29,10 @@ TABLES = {
     "companies": ("업체", [
         ("id", "ID"), ("name", "기업명"), ("brn", "사업자등록번호"), ("contact", "담당자"),
         ("phone", "연락처"), ("industry", "업종"), ("item", "품목"), ("sub_item", "세부품목"), ("note", "비고"),
+    ]),
+    "staff": ("담당자", [
+        ("id", "ID"), ("name", "이름"), ("phone", "연락처"), ("email", "이메일"), ("role", "담당업무"),
+        ("active", "재직"), ("note", "비고"),
     ]),
     "usage": ("사용실적", [
         ("id", "ID"), ("equip_id", "장비ID"), ("equip_ref", "장비명(참고)"),
@@ -345,6 +349,7 @@ def storage_label() -> str:
 def clear_caches() -> None:
     load_equipment.clear()
     load_companies.clear()
+    load_staff.clear()
     load_logs.clear()
     get_settings.clear()
 
@@ -532,6 +537,69 @@ def save_companies(edited: pd.DataFrame) -> None:
     load_companies.clear()
 
 
+# ── 담당자 ──────────────────────────────────────────────────────
+
+STAFF_TEXT = ("name", "phone", "email", "role", "note")
+
+
+@st.cache_data(ttl=30)
+def load_staff() -> pd.DataFrame:
+    df = get_store().read("staff").copy()
+    df["id"] = pd.to_numeric(df["id"], errors="coerce")
+    df = df.dropna(subset=["id"])
+    df["id"] = df["id"].astype("int64")
+    for c in STAFF_TEXT:
+        df[c] = df[c].map(to_str)
+    df["active"] = df["active"].map(lambda v: to_str(v).upper() not in ("N", "FALSE", "0", "퇴직"))
+    df = df[df["name"] != ""]
+    if df.empty:  # 예전 '설정 → 팀원 명단'에 적어 둔 이름이 있으면 그대로 보여 줌 (저장하면 담당자 탭으로 옮겨짐)
+        members = [to_str(m) for m in (get_settings().get("members") or []) if to_str(m)]
+        df = pd.DataFrame({"id": range(1, len(members) + 1), "name": members, "phone": "", "email": "",
+                           "role": "", "active": True, "note": ""})
+    return df.sort_values("name").reset_index(drop=True)
+
+
+def staff_names(include: list[str] | None = None) -> list[str]:
+    """입력 화면에서 고를 담당자 이름 (재직 중인 사람 + include 로 넘긴 기존 값)."""
+    df = load_staff()
+    names = list(df.loc[df["active"], "name"])
+    return names + sorted({n for n in (include or []) if n and n not in names})
+
+
+def check_staff(edited: pd.DataFrame) -> list[str]:
+    errors, seen = [], set()
+    for r in edited.to_dict("records"):
+        name = to_str(r.get("name"))
+        if not name:
+            continue
+        if name in seen:
+            errors.append(f"'{name}'이(가) 두 번 등록되어 있습니다. 동명이인이면 '홍길동(시험)'처럼 구분해 주세요.")
+        seen.add(name)
+    return errors
+
+
+def save_staff(edited: pd.DataFrame) -> None:
+    store = get_store()
+    old_ids = set(pd.to_numeric(store.read("staff")["id"], errors="coerce").dropna().astype(int))
+    next_id = (max(old_ids) if old_ids else 0) + 1
+    out = []
+    for r in edited.to_dict("records"):
+        rec = {c: to_str(r.get(c)) for c in STAFF_TEXT}
+        if not rec["name"]:
+            continue
+        a = r.get("active")
+        rec["active"] = "N" if a is False or to_str(a).upper() in ("N", "FALSE", "0") else "Y"
+        rid = to_num(r.get("id"))
+        if rid is not None and int(rid) in old_ids:
+            rec["id"] = int(rid)
+        else:
+            rec["id"] = next_id
+            next_id += 1
+        out.append(rec)
+    store.rewrite("staff", _rows("staff", out))
+    load_staff.clear()
+
+
 # ── 사용실적 ────────────────────────────────────────────────────
 
 def _usage_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -708,6 +776,7 @@ def backup_bytes() -> bytes:
     with pd.ExcelWriter(bio, engine="openpyxl") as xw:
         store.read("equipment").to_excel(xw, sheet_name="equipment", index=False)
         store.read("companies").to_excel(xw, sheet_name="companies", index=False)
+        store.read("staff").to_excel(xw, sheet_name="staff", index=False)
         store.read("usage").to_excel(xw, sheet_name="usage_log", index=False)
         st_df.to_excel(xw, sheet_name="settings", index=False)
     return bio.getvalue()
@@ -720,6 +789,8 @@ def restore_bytes(data: bytes) -> dict:
     store = get_store()
     store.rewrite("equipment", eq.values.tolist())
     store.rewrite("usage", lg.values.tolist())
+    if "staff" in sheets:
+        store.rewrite("staff", sheets["staff"].reindex(columns=cols("staff")).fillna("").values.tolist())
     if "companies" in sheets:  # 업체 탭이 생기기 전 백업에는 없음
         store.rewrite("companies", sheets["companies"].reindex(columns=cols("companies")).fillna("").values.tolist())
     if "settings" in sheets:

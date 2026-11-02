@@ -6,17 +6,20 @@ st.set_page_config(page_title="장비 가동률 관리", page_icon="📊", layou
 
 import importlib  # noqa: E402
 import os  # noqa: E402
+import sys  # noqa: E402
 
-from core import calc, db, rules, seed  # noqa: E402
+from core import calc, db, itube, rules, seed  # noqa: E402
+from views import calendar_entry, companies, common, dashboard, entry, equipment, export, records, settings, staff  # noqa: E402,E501
 
-# 새 코드가 배포된 직후 Streamlit Cloud가 화면 파일만 새로 읽고 core 모듈은 옛 버전을 쓰는 일이 있어
-# (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀌었으면 core 모듈을 다시 읽어 옴
-for _m in (seed, db, calc, rules):
+# 새 코드가 배포된 직후 Streamlit Cloud가 일부 파일만 새로 읽고 나머지는 옛 버전을 쓰는 일이 있어
+# (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
+# core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
+for _m in (seed, db, calc, rules, itube, common, calendar_entry, companies, dashboard, entry, equipment, export,
+           records, settings, staff):
     _mt = os.path.getmtime(_m.__file__)
     if getattr(_m, "_src_mtime", None) != _mt:
-        importlib.reload(_m)
+        _m = importlib.reload(sys.modules[_m.__name__])
         _m._src_mtime = _mt
-from views import calendar_entry, companies, dashboard, entry, equipment, export, records, settings  # noqa: E402
 
 
 def check_password() -> bool:
@@ -34,20 +37,6 @@ def check_password() -> bool:
             st.rerun()
         st.error("비밀번호가 맞지 않습니다.")
     return False
-
-
-def sidebar_user() -> None:
-    members = db.get_settings().get("members") or []
-    with st.sidebar:
-        if members:
-            cur = st.session_state.get("user")
-            st.selectbox("👤 작성자", members, index=members.index(cur) if cur in members else None,
-                         placeholder="이름을 선택하세요", key="_user_pick")
-            st.session_state.user = st.session_state.get("_user_pick") or ""
-        else:
-            st.text_input("👤 작성자", value=st.session_state.get("user", ""), key="_user_text",
-                          help="설정 메뉴에서 팀원 명단을 등록하면 목록에서 고를 수 있습니다.")
-            st.session_state.user = st.session_state.get("_user_text", "")
 
 
 if check_password():
@@ -71,8 +60,8 @@ if check_password():
         "관리": [
             st.Page(equipment.render, title="장비 관리", icon="🔧", url_path="equipment"),
             st.Page(companies.render, title="업체 관리", icon="🏢", url_path="companies"),
+            st.Page(staff.render, title="담당자 관리", icon="👤", url_path="staff"),
             st.Page(settings.render, title="설정", icon="⚙️", url_path="settings"),
         ],
     })
-    sidebar_user()
     pg.run()

@@ -15,7 +15,7 @@ DEFAULT_INDUSTRY = ("전기전자", "이차전지_에너지", "이차전지")
 
 # 표 열 이름 → 내부 키
 FIELDS = {
-    "장비": "equip_label", "업체": "company", "활용유형": "usage_type", "사용목적": "purpose",
+    "장비": "equip_label", "업체": "company", "담당자": "created_by", "활용유형": "usage_type", "사용목적": "purpose",
     "사용시간": "hours", "시료수": "samples", "사용료": "fee",
     "지원개요": "overview", "지원내용": "content", "기타": "etc",
 }
@@ -60,6 +60,7 @@ def _record(row: dict, base: dict, comp_by_name: dict, eq_id: dict, cfg: dict) -
         samples=db.to_num(row.get("시료수"), 0),
         fee=db.to_num(row.get("사용료"), 0),
         etc=db.to_str(row.get("기타")),
+        created_by=db.to_str(row.get("담당자")),
     )
     if master is not None:  # 사업자번호·업종은 항상 업체 목록 기준
         rec["brn"] = master["brn"]
@@ -92,19 +93,10 @@ def render() -> None:
         st.success(msg)
         st.toast(msg, icon="✅")
 
-    user = st.session_state.get("user", "")
-    if not user:
-        st.info("왼쪽 사이드바에서 작성자를 먼저 선택하세요.")
     cfg = db.get_settings()
     eq = db.load_equipment()
     comp = db.load_companies()
     logs = db.load_logs()
-    if eq.empty:
-        st.warning("등록된 장비가 없습니다. '장비 관리'에서 먼저 장비를 등록하세요.")
-        return
-    if comp.empty:
-        st.info("등록된 업체가 없습니다. 외부 업체 실적을 입력하려면 '업체 관리'에서 업체를 먼저 등록하세요. "
-                "내부 사용은 업체 없이 입력할 수 있습니다.")
 
     today = dt.date.today()
     day: dt.date = st.session_state.setdefault("cal_day", today)
@@ -168,10 +160,21 @@ def render() -> None:
     comp_by_name = {r["name"]: r for r in comp.to_dict("records")}
     comp_opts = list(comp_by_name) + sorted({c for c in rows["company"] if c and c not in comp_by_name})
 
+    staff_opts = db.staff_names(list(rows["created_by"]))
+    missing = [name for name, empty in (("장비", eq.empty), ("담당자", not staff_opts)) if empty]
+    if missing:
+        st.warning(f"등록된 {'·'.join(missing)}이(가) 없어 새로 입력할 수 없습니다. "
+                   f"'관리' 메뉴의 {', '.join(m + ' 관리' for m in missing)}에서 먼저 등록하세요.")
+    if comp.empty:
+        st.caption("등록된 업체가 없습니다. 외부 업체 실적은 '업체 관리'에서 업체를 먼저 등록한 뒤 입력하세요. "
+                   "내부 사용은 업체 없이 입력할 수 있습니다.")
+    last_staff = st.session_state.get("last_staff")
+
     view = pd.DataFrame({
         "id": rows["id"].astype("Int64"),
         "장비": rows["equip_id"].map(label_of),
         "업체": rows["company"].replace("", None),
+        "담당자": rows["created_by"].replace("", None),
         "활용유형": rows["usage_type"], "사용목적": rows["purpose"],
         "사용시간": rows["hours"].astype(int), "시료수": rows["samples"].astype(int), "사용료": rows["fee"].astype(int),
         "지원개요": [seed.parse_detail(t)[0] for t in rows["detail"]],
@@ -179,7 +182,7 @@ def render() -> None:
         "기타": rows["etc"],
     }).reset_index(drop=True)
     # 빈 날은 열 형식을 알 수 없어 편집기가 오류를 내므로 형식을 고정
-    view = view.astype({c: "string" for c in ("장비", "업체", "활용유형", "사용목적", "지원개요", "지원내용", "기타")}
+    view = view.astype({c: "string" for c in ("장비", "업체", "담당자", "활용유형", "사용목적", "지원개요", "지원내용", "기타")}
                        | {c: "Int64" for c in ("id", "사용시간", "시료수", "사용료")})
 
     ver = st.session_state.setdefault("cal_ver", 0)
@@ -190,6 +193,9 @@ def render() -> None:
             "장비": st.column_config.SelectboxColumn(options=eq_opts, required=True, width="large"),
             "업체": st.column_config.SelectboxColumn(options=comp_opts, width="medium",
                                                    help="내부 사용이면 비워 두세요. 목록에 없으면 '업체 관리'에서 추가합니다."),
+            "담당자": st.column_config.SelectboxColumn(options=staff_opts, required=True,
+                                                    default=last_staff if last_staff in staff_opts else None,
+                                                    help="목록에 없으면 '담당자 관리'에서 추가합니다."),
             "활용유형": st.column_config.SelectboxColumn(options=seed.USAGE_TYPES, required=True, default="외부"),
             "사용목적": st.column_config.SelectboxColumn(options=seed.PURPOSES, required=True, default="생산"),
             "사용시간": st.column_config.NumberColumn("사용시간(h)", min_value=0, max_value=24, step=1, format="%d",
@@ -224,19 +230,22 @@ def render() -> None:
     if removed:
         confirm = st.checkbox(f"{len(removed)}건을 삭제합니다. 되돌릴 수 없습니다.", value=False, key=f"cal_del_{day}_{ver}")
     c1, c2 = st.columns([1, 3])
-    if c1.button("💾 저장", type="primary", disabled=not dirty or not confirm or not user, width="stretch"):
+    if c1.button("💾 저장", type="primary", disabled=not dirty or not confirm, width="stretch"):
         errors, inserts, updates = [], [], {}
         base_new = {"start_date": day, "end_date": day}
         for r in new_rows:
             rec = _record(r, base_new, comp_by_name, eq_id, cfg)
             errors += [f"[새 행 · {r.get('장비')}] {e}" for e in rules.validate(rec)]
+            if not rec["created_by"]:
+                errors.append(f"[새 행 · {r.get('장비')}] 담당자를 선택하세요.")
             inserts.append(rec)
         for rid, r in changed.items():
             base = {k: orig[rid].get(k) for k in db.LOG_FIELDS if k in orig[rid]}
             base.update(start_date=day, end_date=day)
             rec = _record(r, base, comp_by_name, eq_id, cfg)
-            rec.pop("created_by", None)
             errors += [f"[{r.get('장비')}] {e}" for e in rules.validate(rec)]
+            if not rec["created_by"]:
+                errors.append(f"[{r.get('장비')}] 담당자를 선택하세요.")
             updates[rid] = rec
         # 같은 장비를 하루 24시간 넘게 쓸 수는 없음 (저장된 행 + 새 행 기준)
         per_equip: dict[int, float] = {}
@@ -252,7 +261,9 @@ def render() -> None:
             for e in errors:
                 st.error(e)
         else:
-            n_in = db.insert_logs(inserts, user)
+            n_in = db.insert_logs(inserts)
+            if inserts:
+                st.session_state.last_staff = inserts[-1]["created_by"]
             n_up = db.update_logs(updates) if updates else 0
             n_del = db.delete_logs(removed)
             st.session_state.cal_ver = ver + 1
@@ -315,15 +326,15 @@ def render() -> None:
             if (int(r["equip_id"]), r["company"]) in have:
                 skipped += 1
                 continue
-            rec = {k: r.get(k) for k in db.LOG_FIELDS if k != "created_by"}
+            rec = {k: r.get(k) for k in db.LOG_FIELDS}
             rec.update(start_date=d, end_date=d)
             plan.append(rec)
     if targets:
         shown = ", ".join(f"{d:%m/%d}({WEEKDAYS[d.weekday()]})" for d in targets[:8]) + (" …" if len(targets) > 8 else "")
         st.caption(f"{shown} · {len(targets)}일 × {len(src)}건 → {len(plan)}건 추가"
                    + (f" (같은 장비·업체가 이미 있는 {skipped}건은 건너뜀)" if skipped else ""))
-    if st.button("📋 복사", type="primary", disabled=not plan or dirty or not user):
-        n = db.insert_logs(plan, user)
+    if st.button("📋 복사", type="primary", disabled=not plan or dirty):
+        n = db.insert_logs(plan)
         if len(targets) == 1:
             _pick_day(targets[0])
         st.session_state.cal_ver = ver + 1

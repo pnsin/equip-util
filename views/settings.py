@@ -30,11 +30,10 @@ def render() -> None:
         mode = c3.selectbox("기간별 집계 방식", list(modes), format_func=modes.get,
                             index=list(modes).index(cfg.get("alloc_mode", "spread")),
                             help="예: 7/25~8/10 실적 20시간을 7월·8월에 일수만큼 나눌지, 7월에 모두 넣을지")
-        members = st.text_area("팀원 명단 (한 줄에 한 명)", value="\n".join(cfg.get("members") or []), height=120)
+        st.caption("팀원 명단은 '관리 → 담당자 관리'로 옮겼습니다.")
         if st.form_submit_button("저장", type="primary"):
             db.save_settings(org_name=org.strip(), org_suffix=suffix.strip(), dept_default=dept.strip(),
-                             annual_hours=annual, target_util=target, alloc_mode=mode,
-                             members=[m.strip() for m in members.splitlines() if m.strip()])
+                             annual_hours=annual, target_util=target, alloc_mode=mode)
             st.session_state.settings_saved = "설정을 저장했습니다."
             st.rerun()
 
@@ -52,7 +51,7 @@ def render() -> None:
             hours = sum(r["hours"] for r in rows)
             st.info(f"실적 {len(rows)}건 (총 {hours:,} h)을 찾았습니다.")
             if st.button(f"{len(rows)}건 가져오기", type="primary"):
-                res = db.import_parsed(rows, master, st.session_state.get("user", "") or "가져오기")
+                res = db.import_parsed(rows, master, "가져오기")
                 st.session_state.settings_saved = (
                     f"{res['inserted']}건 등록 · 중복 {res['skipped']}건 건너뜀 · 새 장비 {res['created_equipment']}대 추가")
                 st.rerun()

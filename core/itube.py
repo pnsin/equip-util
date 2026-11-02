@@ -230,7 +230,7 @@ def make_report(period_label: str, summary: pd.DataFrame, tot: dict, monthly: pd
 
     log_cols = {"start_date": "사용시작일", "end_date": "사용종료일", "equip_name": "장비명", "equip_code": "장비번호",
                 "purpose": "사용목적", "usage_type": "활용유형", "company": "기업명", "hours": "사용시간",
-                "fee": "사용료", "product": "제품명", "created_by": "작성자"}
+                "fee": "사용료", "product": "제품명", "created_by": "담당자"}
     lg = logs[list(log_cols)].rename(columns=log_cols).copy()
     for c in ("사용시작일", "사용종료일"):
         lg[c] = pd.to_datetime(lg[c]).dt.date
