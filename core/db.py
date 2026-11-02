@@ -267,11 +267,17 @@ def _sheet_secrets() -> tuple[dict | None, str]:
     return (dict(info) if info else None), str(sid or "")
 
 
-@st.cache_resource
 def get_store():
     info, sid = _sheet_secrets()
-    if info and sid:
-        return SheetStore(info, sid)
+    # Secrets가 바뀌면(시트 ID·서비스 계정) 캐시 키가 달라져 새로 연결됨
+    return _open_store(sid if info else "", (info or {}).get("client_email", ""))
+
+
+@st.cache_resource
+def _open_store(spreadsheet_id: str, client_email: str):
+    info, _ = _sheet_secrets()
+    if info and spreadsheet_id:
+        return SheetStore(info, spreadsheet_id)
     return CsvStore(DATA_DIR)
 
 
