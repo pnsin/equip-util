@@ -29,7 +29,7 @@ def render(header: bool = True) -> None:
         return
     ver = st.session_state.setdefault("entry_ver", 0)
     staff_opts = db.staff_names()
-    last = st.session_state.get("last_staff")
+    last = st.session_state.get("last_staff") or st.session_state.get("me")
     user = st.selectbox("담당자", staff_opts, index=staff_opts.index(last) if last in staff_opts else None,
                         placeholder="담당자를 고르세요", key=f"entry_{ver}_staff") or ""
     if not staff_opts:

@@ -119,8 +119,6 @@ def render() -> None:
             changed.append(i)
 
     confirm = True
-    if to_delete:
-        confirm = st.checkbox(f"{len(to_delete)}건을 삭제합니다. 되돌릴 수 없습니다.", value=False)
     c1, c2 = st.columns([1, 3])
     if c1.button("변경 내용 저장", type="primary", disabled=not (changed or to_delete) or not confirm,
                  icon=":material/save:", width="stretch"):
@@ -146,8 +144,9 @@ def render() -> None:
             for e in errors:
                 st.error(e)
         else:
-            n_up = db.update_logs(updates) if updates else 0
-            n_del = db.delete_logs(to_delete)
+            with db.undo_group(f"실적 목록 저장 (수정 {len(updates)} · 삭제 {len(to_delete)})"):
+                n_up = db.update_logs(updates) if updates else 0
+                n_del = db.delete_logs(to_delete)
             st.session_state.records_saved = f"수정 {n_up}건 · 삭제 {n_del}건 반영했습니다."
             st.session_state.pop("records_editor", None)
             st.rerun()

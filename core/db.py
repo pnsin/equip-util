@@ -45,6 +45,17 @@ TABLES = {
         ("include_holidays", "휴무일자포함"), ("hours", "사용시간"), ("fee", "사용료"),
         ("purpose_detail", "사용목적(상세)"), ("etc", "기타"), ("created_by", "작성자"),
         ("created_at", "작성일시"), ("updated_at", "수정일시"),
+        # 2026-11 추가. 새 열은 항상 맨 뒤에만 덧붙임
+        ("updated_by", "수정자"),
+    ]),
+    # 지운 행을 보관했다가 '관리 › 휴지통 · 기록'에서 되살림 (data = 원래 행, JSON)
+    "trash": ("휴지통", [
+        ("id", "ID"), ("deleted_at", "지운 시각"), ("deleted_by", "지운 사람"), ("table", "종류"),
+        ("summary", "내용"), ("data", "원본"),
+    ]),
+    # 누가 언제 무엇을 바꿨는지
+    "history": ("수정기록", [
+        ("at", "시각"), ("who", "누가"), ("action", "작업"), ("target", "대상"), ("summary", "내용"),
     ]),
     "settings": ("설정", [("key", "항목"), ("value", "값")]),
 }
@@ -61,7 +72,7 @@ DEFAULT_SETTINGS = {
 }
 
 CHUNK = 40000  # 구글 시트 셀 한도(50,000자)보다 작게 나눠 저장
-LOG_FIELDS = [k for k, _ in TABLES["usage"][1] if k not in ("id", "equip_ref", "created_at", "updated_at")]
+LOG_FIELDS = [k for k, _ in TABLES["usage"][1] if k not in ("id", "equip_ref", "created_at", "updated_at", "updated_by")]
 
 
 class StorageError(Exception):
@@ -354,6 +365,8 @@ def storage_label() -> str:
 
 
 def clear_caches() -> None:
+    load_trash.clear()
+    load_history.clear()
     load_equipment.clear()
     load_companies.clear()
     load_staff.clear()
@@ -365,6 +378,236 @@ def _new_ids(n: int) -> list[str]:
     """동시에 저장해도 겹치지 않도록 시각 기반 ID (글자로 저장)."""
     base = int(time.time() * 1000) * 1000
     return [str(base + i) for i in range(n)]
+
+
+# ── 누가 · 되돌리기 · 휴지통 · 수정 기록 ─────────────────────────
+# 모든 저장 함수는 바꾸기 전 모습을 '되돌리기 단계'로 남깁니다. 화면에서 db.undo_last()를 부르면
+# 마지막 작업을 거꾸로 적용합니다. 지운 행은 '휴지통' 탭에 원본째 보관해 나중에도 되살릴 수 있습니다.
+
+TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정"}
+UNDO_KEEP = 20
+
+
+def who() -> str:
+    """지금 앱을 쓰는 사람 (접속할 때 고른 이름)."""
+    try:
+        return to_str(st.session_state.get("me", ""))
+    except Exception:  # noqa: BLE001 - 화면 밖(테스트)
+        return ""
+
+
+def _now() -> dt.datetime:
+    return dt.datetime.now().replace(microsecond=0)
+
+
+def _state() -> dict:
+    try:
+        return st.session_state
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def undo_stack() -> list[dict]:
+    return _state().setdefault("_undo_stack", [])
+
+
+class undo_group:
+    """with db.undo_group("10/28 저장"): ... 안의 여러 저장을 되돌리기 한 번으로 묶습니다."""
+
+    def __init__(self, label: str):
+        self.label = label
+        self.outer = False
+
+    def __enter__(self):
+        ss = _state()
+        if ss.get("_undo_open") is not None:
+            self.outer = True
+        else:
+            ss["_undo_open"] = {"label": self.label, "steps": [], "at": _now()}
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if self.outer:
+            return False
+        ss = _state()
+        group = ss.pop("_undo_open", None)
+        if group and group["steps"]:
+            _push(group)
+        return False
+
+
+def _push(entry: dict) -> None:
+    stack = undo_stack()
+    stack.append(entry)
+    del stack[:-UNDO_KEEP]
+
+
+def _step(step: tuple, label: str) -> None:
+    group = _state().get("_undo_open")
+    if group is not None:
+        group["steps"].append(step)
+    else:
+        _push({"label": label, "steps": [step], "at": _now()})
+
+
+def last_undo() -> dict | None:
+    stack = undo_stack()
+    return stack[-1] if stack else None
+
+
+def log(action: str, target: str, summary: str) -> None:
+    """수정 기록 한 줄. 기록이 실패해도 저장은 그대로 둡니다."""
+    try:
+        get_store().append("history", _rows("history", [{"at": _now(), "who": who() or "(이름 없음)",
+                                                          "action": action, "target": target,
+                                                          "summary": summary[:500]}]))
+        load_history.clear()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _usage_summary(r: dict) -> str:
+    h = to_num(r.get("hours"), 0) or 0
+    return (f"{to_str(r.get('start_date'))[:10]} {to_str(r.get('equip_ref'))} · "
+            f"{to_str(r.get('company')) or '내부'} · {h:g}h")
+
+
+def _master_summary(t: str, r: dict) -> str:
+    return to_str(r.get("name")) or f"ID {to_str(r.get('id'))}"
+
+
+def _to_trash(t: str, rows: list[dict]) -> list[str]:
+    """지운 행(원래 시트 글자 그대로)을 휴지통에 넣고 휴지통 ID를 돌려줍니다."""
+    if not rows:
+        return []
+    ids = _new_ids(len(rows))
+    now = _now()
+    recs = [{"id": i, "deleted_at": now, "deleted_by": who(), "table": t,
+             "summary": _usage_summary(r) if t == "usage" else _master_summary(t, r),
+             "data": json.dumps({k: str(v) for k, v in r.items()}, ensure_ascii=False)} for i, r in zip(ids, rows)]
+    get_store().append("trash", _rows("trash", recs))
+    load_trash.clear()
+    return ids
+
+
+def _raw(t: str) -> pd.DataFrame:
+    return get_store().read(t).astype(str)
+
+
+def _apply(step: tuple) -> None:
+    store = get_store()
+    kind, t = step[0], step[1]
+    if kind == "delete":  # 추가한 것 지우기
+        store.delete_ids(t, step[2])
+    elif kind == "put":  # 고치기 전 값으로
+        rows: dict[str, list] = step[2]
+        have = set(store.read(t)["id"].astype(str).str.strip())
+        store.update_rows(t, {k: v for k, v in rows.items() if k in have})
+        store.append(t, [v for k, v in rows.items() if k not in have])
+    elif kind == "readd":  # 지운 것 되살리기
+        have = set(store.read(t)["id"].astype(str).str.strip())
+        store.append(t, [r for r in step[2] if str(r[0]).strip() not in have])
+        if step[3]:
+            store.delete_ids("trash", step[3])
+    elif kind == "rewrite":  # 표 전체를 예전 모습으로
+        store.rewrite(t, step[2])
+        if len(step) > 3 and step[3]:
+            store.delete_ids("trash", step[3])
+
+
+def undo_last() -> str | None:
+    """마지막 작업을 되돌리고 그 작업 이름을 돌려줍니다."""
+    stack = undo_stack()
+    if not stack:
+        return None
+    entry = stack.pop()
+    for step in reversed(entry["steps"]):
+        _apply(step)
+    clear_caches()
+    log("되돌리기", "", entry["label"])
+    return entry["label"]
+
+
+@st.cache_data(ttl=30)
+def load_trash() -> pd.DataFrame:
+    df = get_store().read("trash")
+    df["deleted_at"] = pd.to_datetime(df["deleted_at"], errors="coerce")
+    return df.sort_values("deleted_at", ascending=False).reset_index(drop=True)
+
+
+@st.cache_data(ttl=30)
+def load_history() -> pd.DataFrame:
+    df = get_store().read("history")
+    df["at"] = pd.to_datetime(df["at"], errors="coerce")
+    return df.sort_values("at", ascending=False).reset_index(drop=True)
+
+
+def restore_trash(trash_ids: list[str]) -> dict:
+    """휴지통에서 골라 되살립니다. 이미 있는 실적은 건너뛰고, 장비·업체·담당자는 ID가 겹치면 새 ID를 붙입니다."""
+    store = get_store()
+    tr = store.read("trash")
+    tr = tr[tr["id"].astype(str).isin([str(i) for i in trash_ids])]
+    done, skipped, used = [], 0, {}
+    added_steps: list[tuple] = []
+    for r in tr.to_dict("records"):
+        t = r["table"]
+        if t not in TABLES or t in ("trash", "history", "settings"):
+            continue
+        try:
+            data = json.loads(r["data"])
+        except (TypeError, ValueError):
+            continue
+        if t not in used:
+            used[t] = set(store.read(t)["id"].astype(str).str.strip())
+        rid = str(data.get("id", "")).strip()
+        if rid in used[t]:
+            if t == "usage":
+                skipped += 1
+                done.append(r["id"])
+                continue
+            nums = [int(x) for x in used[t] if x.isdigit()]
+            rid = str((max(nums) if nums else 0) + 1)
+        data["id"] = rid
+        used[t].add(rid)
+        store.append(t, [[data.get(c, "") for c in cols(t)]])
+        added_steps.append(("delete", t, [rid]))
+        done.append(r["id"])
+    if done:
+        store.delete_ids("trash", done)
+    if added_steps:
+        _push({"label": f"휴지통에서 {len(added_steps)}건 되살리기", "steps": added_steps, "at": _now()})
+        log("되살리기", "휴지통", f"{len(added_steps)}건")
+    clear_caches()
+    return {"restored": len(added_steps), "skipped": skipped}
+
+
+def purge_trash(trash_ids: list[str]) -> int:
+    n = get_store().delete_ids("trash", [str(i) for i in trash_ids])
+    load_trash.clear()
+    if n:
+        log("영구 삭제", "휴지통", f"{n}건")
+    return n
+
+
+def _save_master(t: str, out: list[dict]) -> None:
+    """장비·업체·담당자 표 전체를 다시 쓰고, 예전 모습은 되돌리기로, 빠진 행은 휴지통으로."""
+    store = get_store()
+    cur = _raw(t)
+    old_rows = cur.values.tolist()
+    old_map = {str(r[0]).strip(): [str(x) for x in r] for r in old_rows}
+    new_rows = _rows(t, out)
+    new_ids = {str(r[0]).strip() for r in new_rows}
+    gone = [r for r in cur.to_dict("records") if str(r["id"]).strip() and str(r["id"]).strip() not in new_ids]
+    added = sum(1 for i in new_ids if i not in old_map)
+    changed = sum(1 for r in new_rows if str(r[0]).strip() in old_map
+                  and [str(x) for x in r] != old_map[str(r[0]).strip()][:len(r)])
+    if not (added or gone or changed):
+        return
+    trash_ids = _to_trash(t, gone)
+    store.rewrite(t, new_rows)
+    _step(("rewrite", t, old_rows, trash_ids), f"{TABLE_NAMES[t]} 저장")
+    log("저장", TABLE_NAMES[t], f"추가 {added} · 수정 {changed} · 삭제 {len(gone)}"
+        + (" (" + ", ".join(_master_summary(t, g) for g in gone[:5]) + ")" if gone else ""))
 
 
 # ── 설정 ────────────────────────────────────────────────────────
@@ -404,7 +647,10 @@ def save_settings(**kv) -> None:
                 raw[f"{k}#{i // CHUNK}"] = s[i:i + CHUNK]
         else:
             raw[k] = s
+    old = _raw("settings").values.tolist()
     get_store().rewrite("settings", [[k, v] for k, v in raw.items()])
+    _step(("rewrite", "settings", old), "설정 저장")
+    log("저장", "설정", ", ".join(k for k in kv if k != "template_b64") or "i-Tube 양식")
     get_settings.clear()
 
 
@@ -480,7 +726,7 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
         if gone in used_ids:
             errors.append(f"'{orig[gone]['name']}'은(는) 사용실적이 있어 삭제하지 않았습니다. 불용일을 입력해 주세요.")
             out.append(_equip_record(orig[gone]) | {"id": gone})
-    store.rewrite("equipment", _rows("equipment", out))
+    _save_master("equipment", out)
     clear_caches()
     return errors
 
@@ -544,7 +790,7 @@ def save_companies(edited: pd.DataFrame) -> None:
             rec["id"] = next_id
             next_id += 1
         out.append(rec)
-    store.rewrite("companies", _rows("companies", out))
+    _save_master("companies", out)
     load_companies.clear()
 
 
@@ -607,7 +853,7 @@ def save_staff(edited: pd.DataFrame) -> None:
             rec["id"] = next_id
             next_id += 1
         out.append(rec)
-    store.rewrite("staff", _rows("staff", out))
+    _save_master("staff", out)
     load_staff.clear()
 
 
@@ -669,12 +915,17 @@ def insert_logs(records: list[dict], user: str = "", ids_out: list | None = None
     rows = []
     for rid, r in zip(_new_ids(len(records)), records):
         row = _clean_log(r)
-        row.setdefault("created_by", user)
-        row.update(id=rid, equip_ref=names.get(row.get("equip_id"), ""), created_at=now, updated_at=now)
+        if not row.get("created_by"):
+            row["created_by"] = user or who()
+        row.update(id=rid, equip_ref=names.get(row.get("equip_id"), ""), created_at=now, updated_at=now,
+                   updated_by=who())
         rows.append(row)
         if ids_out is not None:
             ids_out.append(rid)
     get_store().append("usage", _rows("usage", rows))
+    _step(("delete", "usage", [str(r["id"]) for r in rows]), f"실적 {len(rows)}건 추가")
+    log("추가", "실적", f"{len(rows)}건: " + " / ".join(_usage_summary(r) for r in rows[:3])
+        + (" …" if len(rows) > 3 else ""))
     load_logs.clear()
     return len(rows)
 
@@ -689,19 +940,26 @@ def update_logs(changes: dict[int, dict]) -> int:
     now = dt.datetime.now().replace(microsecond=0)
     ids = df["id"].astype(str).str.strip()
     out: dict[str, list] = {}
+    before: dict[str, list] = {}
     for log_id, vals in changes.items():
         key = str(int(log_id))
         hit = df[ids == key]
         if hit.empty:
             continue  # 그 사이 다른 사람이 지운 실적
         cur = hit.iloc[0].to_dict()
+        before[key] = [str(cur.get(c, "")) for c in cols("usage")]
         row = _clean_log(vals)
         row["updated_at"] = now
+        row["updated_by"] = who()
         if "equip_id" in row:
             row["equip_ref"] = names.get(row["equip_id"], "")
         cur.update(row)
         out[key] = _rows("usage", [cur])[0]
     n = store.update_rows("usage", out)
+    if n:
+        _step(("put", "usage", before), f"실적 {n}건 수정")
+        log("수정", "실적", f"{n}건: " + " / ".join(
+            _usage_summary(dict(zip(cols("usage"), out[k]))) for k in list(out)[:3]) + (" …" if n > 3 else ""))
     load_logs.clear()
     return n
 
@@ -709,7 +967,15 @@ def update_logs(changes: dict[int, dict]) -> int:
 def delete_logs(ids: list[int]) -> int:
     if not ids:
         return 0
-    n = get_store().delete_ids("usage", [str(int(i)) for i in ids])
+    keys = {str(int(i)) for i in ids}
+    cur = _raw("usage")
+    gone = cur[cur["id"].str.strip().isin(keys)]
+    trash_ids = _to_trash("usage", gone.to_dict("records"))
+    n = get_store().delete_ids("usage", list(keys))
+    if n:
+        _step(("readd", "usage", gone.values.tolist(), trash_ids), f"실적 {n}건 삭제")
+        log("삭제", "실적", f"{n}건: " + " / ".join(_usage_summary(r) for r in gone.to_dict("records")[:3])
+            + (" …" if n > 3 else ""))
     load_logs.clear()
     return n
 
@@ -759,7 +1025,7 @@ def import_parsed(rows: list[dict], equip_master: list[tuple[str, str]], user: s
         if eid is not None:
             prepared.append(dict(r, equip_id=eid))
     if changed:
-        store.rewrite("equipment", _rows("equipment", eq))
+        _save_master("equipment", eq)
     clear_caches()
 
     logs = load_logs()
@@ -797,6 +1063,15 @@ def backup_bytes() -> bytes:
 
 
 def restore_bytes(data: bytes) -> dict:
+    with undo_group("백업 복원"):
+        for t in ("equipment", "usage", "staff", "companies", "settings"):
+            _step(("rewrite", t, _raw(t).values.tolist()), "백업 복원")
+        res = _restore_bytes(data)
+    log("복원", "전체", f"장비 {res['equipment']}대, 실적 {res['usage_log']}건")
+    return res
+
+
+def _restore_bytes(data: bytes) -> dict:
     sheets = pd.read_excel(io.BytesIO(data), sheet_name=None, dtype=str)
     eq = sheets["equipment"].reindex(columns=cols("equipment")).fillna("")
     lg = sheets["usage_log"].reindex(columns=cols("usage")).fillna("")

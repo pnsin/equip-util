@@ -86,12 +86,11 @@ def split_deleted(edited, name_col: str):
 
 
 def confirm_delete(names: list[str], key: str, unit: str = "개") -> bool:
-    """지울 행이 있으면 목록을 보여 주고 확인 체크를 받습니다."""
-    if not names:
-        return True
-    shown = ", ".join(names[:5]) + (f" 외 {len(names) - 5}{unit}" if len(names) > 5 else "")
-    josa = "를" if unit == "대" else "을"
-    return st.checkbox(f"{len(names)}{unit}{josa} 삭제합니다 ({shown}). 되돌릴 수 없습니다.", key=key)
+    """지울 행이 있으면 무엇이 지워지는지 한 줄로 알려 줍니다 (지운 것은 되돌리기·휴지통으로 살릴 수 있음)."""
+    if names:
+        shown = ", ".join(names[:5]) + (f" 외 {len(names) - 5}{unit}" if len(names) > 5 else "")
+        st.caption(f"저장하면 {len(names)}{unit} 삭제: {shown} · 실수해도 '되돌리기'나 휴지통에서 살릴 수 있습니다.")
+    return True
 
 
 # ── 검색해도 바로 고칠 수 있는 목록 표 ───────────────────────────
