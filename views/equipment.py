@@ -1,6 +1,6 @@
 import streamlit as st
 
-from core import db, equip_import, seed
+from core import db, seed
 
 COLS = {
     "id": "id", "name": "장비명", "code": "장비번호", "kind": "장비구분", "annual_hours": "연간기준시간",
@@ -18,9 +18,6 @@ def render() -> None:
         f"연간기준시간을 비워 두면 기본값 {cfg.get('annual_hours', 2000):,.0f}시간(설정 메뉴)을 씁니다. "
         "도입일 이전·불용일 이후는 가용시간에서 빠집니다. 부대시설처럼 가동률에 넣지 않을 장비는 '가동률 산정'을 끄세요."
     )
-    with st.expander("📥 장비 목록 엑셀로 한꺼번에 추가", expanded=db.load_equipment().empty):
-        _import_box()
-
     eq = db.load_equipment()
     view = eq[list(COLS)].rename(columns=COLS)
     view["도입일"] = view["도입일"].dt.date
@@ -54,25 +51,3 @@ def render() -> None:
             st.session_state.equip_saved = "장비 목록을 저장했습니다."
             st.session_state.pop("equip_editor", None)
             st.rerun()
-
-
-def _import_box() -> None:
-    st.caption("장비 현황 엑셀(예: '장비 종 대수 분류정리' 파일)을 올리면 '전수조사' 탭의 장비를 추가합니다. "
-               "비고에 '불용'이라고 적힌 장비와 이미 등록된 장비번호는 건너뜁니다.")
-    up = st.file_uploader("장비 현황 엑셀", type=["xlsx"], key="equip_import_file")
-    if up is None:
-        return
-    try:
-        items, retired, sheet = equip_import.read_equipment_file(up.getvalue())
-    except Exception as e:  # 양식이 다른 파일
-        st.error(f"파일을 읽지 못했습니다: {e}")
-        return
-    st.write(f"'{sheet}' 탭에서 장비 **{len(items)}대**를 찾았습니다 (불용 {len(retired)}대 제외).")
-    st.dataframe([{"장비명": i["name"], "장비번호": i["code"], "장비구분": i["kind"], "비고": i["note"]} for i in items],
-                 hide_index=True, width="stretch", height=260)
-    if st.button(f"{len(items)}대 추가", type="primary", disabled=not items):
-        n, skipped = db.add_equipment(items)
-        st.session_state.equip_saved = f"장비 {n}대를 추가했습니다." + (
-            f" 이미 있는 {len(skipped)}대는 건너뛰었습니다." if skipped else "")
-        st.session_state.pop("equip_import_file", None)
-        st.rerun()
