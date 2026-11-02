@@ -224,29 +224,6 @@ def _paste(d: dt.date, clip: dict, logs: pd.DataFrame) -> None:
                                   f"{d:%m/%d}에는 같은 장비·업체가 이미 있어 붙여 넣지 않았습니다")
 
 
-def _paste_many_form(clip: dict, logs: pd.DataFrame) -> None:
-    src = clip["from"]
-    week_end = src + dt.timedelta(days=6 - src.weekday())
-    rng = st.date_input("붙여 넣을 기간", value=(src + dt.timedelta(days=1), max(week_end, src + dt.timedelta(days=1))),
-                        format="YYYY-MM-DD", key="cal_many_rng")
-    weekdays = st.toggle("평일만 (주말·공휴일 빼기)", value=True, key="cal_many_wd")
-    if not (isinstance(rng, (tuple, list)) and len(rng) == 2):
-        st.caption("끝 날짜도 고르세요.")
-        return
-    s, e = rng
-    hol = kr_holidays({s.year, e.year})
-    days = [s + dt.timedelta(days=i) for i in range((e - s).days + 1)]
-    days = [d for d in days if d != src and (not weekdays or (d.weekday() < 5 and d not in hol))]
-    if st.button(f"{len(days)}일에 붙여넣기", type="primary", disabled=not days, width="stretch", key="cal_many_go"):
-        plan, skipped = _paste_plan(clip["rows"], days, logs)
-        with db.undo_group(f"{len(days)}일에 붙여넣기"):
-            added = db.insert_logs(plan) if plan else 0
-        st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
-        st.session_state.cal_saved = (f"{s:%m/%d}~{e:%m/%d} 중 {added}일에 붙여 넣었습니다"
-                                      + (f" · 같은 장비·업체가 이미 있는 {skipped}일은 건너뜀" if skipped else ""))
-        st.rerun()
-
-
 def _reset_period_pick() -> None:
     st.session_state.cal_pnonce = st.session_state.get("cal_pnonce", 0) + 1  # 표 선택을 풀어 창이 다시 뜨지 않게
 
@@ -367,12 +344,9 @@ def render(header: bool = True) -> None:
         st.session_state.pop("cal_clip", None)
         clip = None
     if clip:
-        c1, c2, c3 = st.columns([5, 1.4, 1], vertical_alignment="center")
+        c1, c3 = st.columns([6, 1], vertical_alignment="center")
         c1.info(f"**{_md(_cut(clip['label'], 28))}** 복사됨 · 붙여 넣을 날짜를 누르세요",
                 icon=":material/content_copy:")
-        with c2.popover("여러 날에", icon=":material/date_range:", width="stretch",
-                        help="기간을 골라 한 번에 붙여 넣습니다."):
-            _paste_many_form(clip, logs)
         if c3.button("끝", icon=":material/close:", width="stretch", help="붙여넣기를 끝냅니다."):
             st.session_state.pop("cal_clip", None)
             st.rerun()
