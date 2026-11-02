@@ -203,6 +203,16 @@ _CSS = """
   [data-testid="stSidebar"] hr { border-color: var(--side-line); }
   [data-testid="stSidebar"] .stButton button:hover, [data-testid="stSidebar"] .stButton button:hover p { color: var(--side-ink); border-color: var(--side-dim); }
 
+  /* ---------- 되돌리기 띠 ---------- */
+  .st-key-undo_bar { background: var(--accent-bg); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+        border-radius: 6px; padding: .35rem .5rem .35rem .9rem; margin: 0 0 .8rem 0; }
+  .st-key-undo_bar .undo-txt { font-size: .9rem; color: var(--ink); }
+  .st-key-undo_bar [data-testid="stElementContainer"]:has(.undo-txt) { flex: 1; }
+  [data-testid="stSidebar"] .me-line { font-size: .85rem; color: var(--side-muted); }
+  [data-testid="stSidebar"] .me-line b { color: var(--side-ink); font-weight: 600; }
+  [data-testid="stSidebar"] .stButton button[kind="tertiary"] { border: none; min-height: 0; padding: 0; margin-left: auto; display: block; }
+  [data-testid="stSidebar"] .stButton button[kind="tertiary"] p { font-size: .8rem; text-decoration: underline; }
+
   /* ---------- 도움말 팝업 ---------- */
   [data-testid="stTooltipContent"] { font-size: .9rem; line-height: 1.55; max-width: 520px; }
 

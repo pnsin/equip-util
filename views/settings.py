@@ -71,7 +71,8 @@ def render_data() -> None:
             hours = sum(r["hours"] for r in rows)
             st.info(f"실적 {len(rows)}건 (총 {hours:,} h)을 찾았습니다.")
             if st.button(f"{len(rows)}건 가져오기", type="primary"):
-                res = db.import_parsed(rows, master, "가져오기")
+                with db.undo_group(f"엑셀 가져오기 {len(rows)}건"):
+                    res = db.import_parsed(rows, master, "가져오기")
                 st.session_state.settings_saved = (
                     f"{res['inserted']}건 등록 · 중복 {res['skipped']}건 건너뜀 · 새 장비 {res['created_equipment']}대 추가")
                 st.rerun()

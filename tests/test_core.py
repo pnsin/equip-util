@@ -142,3 +142,54 @@ def test_same_progress_end_clips_previous_period():
     # 3/31까지 본 1분기 → 직전 4분기(92일)를 넘지 않음
     assert same_progress_end(dt.date(2027, 1, 1), dt.date(2027, 1, 31), dt.date(2027, 3, 31),
                              dt.date(2026, 10, 1), dt.date(2026, 12, 31)) == dt.date(2026, 10, 31)
+
+
+def _clear_undo():
+    import streamlit as st
+    for k in ("_undo_stack", "_undo_open"):
+        st.session_state.pop(k, None)
+
+
+def test_undo_insert_update_delete(store):
+    _clear_undo()
+    rec = dict(equip_id=1, start_date=D(2026, 7, 1), end_date=D(2026, 7, 1), hours=3, purpose="시험",
+               usage_type="내부", company="")
+    db.insert_logs([rec, dict(rec, hours=4)], "tester")
+    ids = list(store.read("usage")["id"])
+    db.update_logs({int(ids[0]): {"hours": 9}})
+    db.delete_logs([int(ids[1])])
+    assert len(store.read("usage")) == 1 and len(store.read("trash")) == 1
+    assert db.undo_last() == "실적 1건 삭제"
+    assert len(store.read("usage")) == 2 and len(store.read("trash")) == 0
+    assert db.undo_last() == "실적 1건 수정"
+    assert store.read("usage").set_index("id").loc[ids[0], "hours"] == "3"
+    assert db.undo_last() == "실적 2건 추가"
+    assert store.read("usage").empty
+    assert db.undo_last() is None
+    assert len(store.read("history")) >= 6
+
+
+def test_undo_group_and_trash_restore(store):
+    _clear_undo()
+    rec = dict(equip_id=1, start_date=D(2026, 7, 1), end_date=D(2026, 7, 1), hours=3, purpose="시험",
+               usage_type="내부", company="")
+    with db.undo_group("묶음"):
+        db.insert_logs([rec])
+        db.insert_logs([rec])
+    assert len(db.undo_stack()) == 1
+    ids = list(store.read("usage")["id"])
+    db.delete_logs([int(ids[0])])
+    tid = list(store.read("trash")["id"])
+    res = db.restore_trash(tid)
+    assert res["restored"] == 1 and len(store.read("usage")) == 2 and store.read("trash").empty
+
+
+def test_master_save_undo_and_trash(store):
+    _clear_undo()
+    import pandas as pd
+    db.save_companies(pd.DataFrame([{"name": "가"}, {"name": "나"}]))
+    db.save_companies(pd.DataFrame([{"id": 1, "name": "가"}]))  # '나' 삭제
+    assert list(store.read("companies")["name"]) == ["가"]
+    assert list(store.read("trash")["summary"]) == ["나"]
+    assert db.undo_last() == "업체 저장"
+    assert sorted(store.read("companies")["name"]) == ["가", "나"] and store.read("trash").empty

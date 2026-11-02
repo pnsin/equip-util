@@ -200,17 +200,8 @@ def _entry_text(e: dict) -> str:
 
 def _paste(d: dt.date, clip: dict, logs: pd.DataFrame) -> None:
     plan, skipped = _paste_plan(clip["rows"], [d], logs)
-    new_ids: list = []
-    added = db.insert_logs(plan, ids_out=new_ids) if plan else 0
-    if added:  # 같은 복사로 여러 날에 붙여 넣었으면 한꺼번에 되돌릴 수 있게 모음
-        prev = st.session_state.get("cal_undo")
-        if prev and prev.get("label") == clip["label"]:
-            days = prev["days"] + [d]
-            new_ids = prev["ids"] + new_ids
-        else:
-            days = [d]
-        st.session_state.cal_undo = {"ids": new_ids, "days": days, "label": clip["label"],
-                                     "text": f"붙여넣기({', '.join(f'{x:%m/%d}' for x in days)})"}
+    with db.undo_group(f"{d:%m/%d}에 붙여넣기"):
+        added = db.insert_logs(plan) if plan else 0
     st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
     st.session_state.cal_saved = (f"{d:%m/%d}에 {_cut(clip['label'], 30)} 붙여 넣었습니다" if added else
                                   f"{d:%m/%d}에는 같은 장비·업체가 이미 있어 붙여 넣지 않았습니다")
@@ -248,18 +239,8 @@ def render(header: bool = True) -> None:
     if header:
         page_header("달력 입력", "실적")
     msg = st.session_state.pop("cal_saved", None)
-    undo = st.session_state.get("cal_undo")
-    if msg or undo:
-        c1, c2 = st.columns([6, 1], vertical_alignment="center")
-        if msg:
-            c1.success(msg)
-        if undo and c2.button("되돌리기", icon=":material/undo:", width="stretch",
-                              help=f"방금 한 {undo['text']}를 취소합니다."):
-            n = db.delete_logs(undo["ids"])
-            st.session_state.pop("cal_undo", None)
-            st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
-            st.session_state.cal_saved = f"{undo['text']}를 취소했습니다 ({n}건 삭제)."
-            st.rerun()
+    if msg:
+        st.success(msg, icon=":material/check_circle:")
 
     cfg = db.get_settings()
     eq = db.load_equipment()
@@ -327,7 +308,7 @@ def render(header: bool = True) -> None:
     # ── 선택한 날 입력 ─────────────────────────────────────
     st.divider()
     st.subheader(f"{day:%Y-%m-%d} ({WEEKDAYS[day.weekday()]}) 입력",
-                 help="맨 아래 빈 행에 입력하면 추가, 행 왼쪽을 선택해 휴지통을 누르면 삭제. 다 고친 뒤 저장을 누르세요. "
+                 help="맨 아래 빈 행에 입력하면 추가, '삭제' 칸에 체크하면 삭제. 다 고친 뒤 저장을 누르세요. "
                       "달력에서 실적을 누르면 복사, 다른 날짜를 누르면 붙여넣기입니다.")
 
     ts = pd.Timestamp(day)
@@ -351,7 +332,7 @@ def render(header: bool = True) -> None:
                    f"{', '.join(m + ' 정보' for m in missing)} 메뉴에서 먼저 등록하세요.")
     if comp.empty:
         st.caption("등록된 업체가 없습니다. 업체 정보 메뉴에서 먼저 등록하세요.")
-    last_staff = st.session_state.get("last_staff")
+    last_staff = st.session_state.get("last_staff") or st.session_state.get("me")
 
     view = pd.DataFrame({
         "id": rows["id"].astype("Int64"),
@@ -367,12 +348,15 @@ def render(header: bool = True) -> None:
     # 빈 날은 열 형식을 알 수 없어 편집기가 오류를 내므로 형식을 고정
     view = view.astype({c: "string" for c in ("장비", "업체", "담당자", "활용유형", "사용목적", "지원개요", "지원내용", "기타")}
                        | {c: "Int64" for c in ("id", "사용시간", "시료수", "사용료")})
+    view.insert(0, "삭제", False)
 
     ver = st.session_state.setdefault("cal_ver", 0)
     edited = st.data_editor(
         view, key=f"cal_ed_{day}_{ver}", num_rows="dynamic", hide_index=True, width="stretch",
         column_order=[c for c in view.columns if c != "id"],
         column_config={
+            "삭제": st.column_config.CheckboxColumn(width="small", default=False,
+                                                  help="지울 행에 체크하고 저장하세요. 실수하면 '되돌리기'로 살릴 수 있습니다."),
             "장비": st.column_config.SelectboxColumn(options=eq_opts, required=True, width="large"),
             "업체": st.column_config.SelectboxColumn(options=comp_opts, width="medium",
                                                    help="내부 사용이면 비워 두세요. 목록에 없으면 '기준 정보 › 업체'에서 추가합니다."),
@@ -395,11 +379,14 @@ def render(header: bool = True) -> None:
     new_rows, changed, kept = [], {}, set()
     for r in edited.to_dict("records"):
         rid = r.get("id")
+        gone = bool(r.get("삭제")) and not pd.isna(r.get("삭제"))
         if rid is None or pd.isna(rid):
-            if db.to_str(r.get("장비")):
+            if db.to_str(r.get("장비")) and not gone:
                 new_rows.append(r)
             continue
         rid = int(rid)
+        if gone:
+            continue
         kept.add(rid)
         a = {k: db.to_str(r.get(k)) for k in FIELDS}
         b = {k: db.to_str(view_by_id[rid].get(k)) for k in FIELDS}
@@ -409,8 +396,6 @@ def render(header: bool = True) -> None:
 
     dirty = bool(new_rows or changed or removed)
     confirm = True
-    if removed:
-        confirm = st.checkbox(f"{len(removed)}건을 삭제합니다. 되돌릴 수 없습니다.", value=False, key=f"cal_del_{day}_{ver}")
     c1, c2 = st.columns([1, 3])
     if c1.button("저장", icon=":material/save:", type="primary", disabled=not dirty or not confirm, width="stretch"):
         errors, inserts, updates = [], [], {}
@@ -443,13 +428,13 @@ def render(header: bool = True) -> None:
             for e in errors:
                 st.error(e)
         else:
-            n_in = db.insert_logs(inserts)
+            with db.undo_group(f"{day:%m/%d} 저장"):
+                n_in = db.insert_logs(inserts)
+                n_up = db.update_logs(updates) if updates else 0
+                n_del = db.delete_logs(removed)
             if inserts:
                 st.session_state.last_staff = inserts[-1]["created_by"]
-            n_up = db.update_logs(updates) if updates else 0
-            n_del = db.delete_logs(removed)
             st.session_state.cal_ver = ver + 1
-            st.session_state.pop("cal_undo", None)
             st.session_state.cal_saved = f"{day:%m/%d} 저장 · 추가 {n_in}건 · 수정 {n_up}건 · 삭제 {n_del}건"
             st.rerun()
     if dirty:
