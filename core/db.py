@@ -25,6 +25,8 @@ TABLES = {
         ("id", "ID"), ("name", "장비명"), ("code", "장비번호"), ("kind", "장비구분"),
         ("annual_hours", "연간기준시간"), ("acquired_on", "도입일"), ("retired_on", "불용일"),
         ("in_kpi", "가동률산정"), ("manager", "담당자"), ("note", "비고"),
+        # 아래는 2026-11 추가 (장비 현황 엑셀 항목). 새 열은 항상 맨 뒤에만 덧붙임
+        ("nfec", "국가연구시설장비번호"), ("model", "모델명"), ("location", "장비위치"), ("use", "장비용도"),
     ]),
     "companies": ("업체", [
         ("id", "ID"), ("name", "기업명"), ("brn", "사업자등록번호"), ("contact", "담당자"),
@@ -214,6 +216,11 @@ class SheetStore:
             else:
                 first = [str(c).strip() for c in _call(ws.row_values, 1)]
                 if not first:
+                    _call(ws.update, values=[head], range_name="A1", value_input_option="RAW")
+                elif len(first) < len(head) and head[:len(first)] == first:
+                    # 예전 열 제목 뒤에 새 열이 생긴 경우: 열 제목만 뒤에 덧붙임 (기존 데이터는 그대로)
+                    if ws.col_count < len(head):
+                        _call(ws.add_cols, len(head) - ws.col_count)
                     _call(ws.update, values=[head], range_name="A1", value_input_option="RAW")
                 elif first[:len(head)] != head:
                     raise StorageError(f"구글 시트 '{title}' 탭의 1행 열 제목이 프로그램 기준과 다릅니다. "
@@ -412,7 +419,7 @@ def _equipment_frame(df: pd.DataFrame) -> pd.DataFrame:
     for c in ("acquired_on", "retired_on"):
         df[c] = pd.to_datetime(df[c], errors="coerce")
     df["in_kpi"] = df["in_kpi"].map(lambda v: str(v).strip().upper() not in ("N", "FALSE", "0", "아니오"))
-    for c in ("name", "code", "kind", "manager", "note"):
+    for c in ("name", "code", "kind", "manager", "note", "nfec", "model", "location", "use"):
         df[c] = df[c].fillna("").astype(str).str.strip()
     df["kind"] = df["kind"].replace("", "주장비")
     return df.sort_values(["name", "code"]).reset_index(drop=True)
@@ -441,6 +448,10 @@ def _equip_record(r: dict) -> dict:
         "in_kpi": True if in_kpi is None or (isinstance(in_kpi, float) and pd.isna(in_kpi)) else bool(in_kpi),
         "manager": to_str(r.get("manager")),
         "note": to_str(r.get("note")),
+        "nfec": to_str(r.get("nfec")),
+        "model": to_str(r.get("model")),
+        "location": to_str(r.get("location")),
+        "use": to_str(r.get("use")),
     }
 
 
