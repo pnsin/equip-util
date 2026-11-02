@@ -112,14 +112,14 @@ def render() -> None:
 
     # ── 달력 ──────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns([1, 3, 1, 1])
-    if c1.button("◀ 이전 달", use_container_width=True):
+    if c1.button("◀ 이전 달", width="stretch"):
         st.session_state.cal_month = _shift_month(month, -1)
         st.rerun()
     c2.markdown(f"<h3 style='text-align:center;margin:0'>{month.year}년 {month.month}월</h3>", unsafe_allow_html=True)
-    if c3.button("다음 달 ▶", use_container_width=True):
+    if c3.button("다음 달 ▶", width="stretch"):
         st.session_state.cal_month = _shift_month(month, 1)
         st.rerun()
-    if c4.button("오늘", use_container_width=True):
+    if c4.button("오늘", width="stretch"):
         _pick_day(today)
         st.rerun()
 
@@ -144,7 +144,7 @@ def render() -> None:
             n, h = count_by_day.get(d, 0), hours_by_day.get(d, 0)
             mark = "🔴 " if d in hol else ("📍 " if d == today else "")
             label = f"{mark}{d.day}" + (f"  \n{n}건 · {h:,.0f}h" if n else "  \n·")
-            if cols[i].button(label, key=f"cal_{d}", use_container_width=True,
+            if cols[i].button(label, key=f"cal_{d}", width="stretch",
                               type="primary" if d == day else "secondary"):
                 _pick_day(d)
                 st.rerun()
@@ -182,9 +182,9 @@ def render() -> None:
     view = view.astype({c: "string" for c in ("장비", "업체", "활용유형", "사용목적", "지원개요", "지원내용", "기타")}
                        | {c: "Int64" for c in ("id", "사용시간", "시료수", "사용료")})
 
-    ver =st.session_state.setdefault("cal_ver", 0)
+    ver = st.session_state.setdefault("cal_ver", 0)
     edited = st.data_editor(
-        view, key=f"cal_ed_{day}_{ver}", num_rows="dynamic", hide_index=True, use_container_width=True,
+        view, key=f"cal_ed_{day}_{ver}", num_rows="dynamic", hide_index=True, width="stretch",
         column_order=[c for c in view.columns if c != "id"],
         column_config={
             "장비": st.column_config.SelectboxColumn(options=eq_opts, required=True, width="large"),
@@ -224,7 +224,7 @@ def render() -> None:
     if removed:
         confirm = st.checkbox(f"{len(removed)}건을 삭제합니다. 되돌릴 수 없습니다.", value=False, key=f"cal_del_{day}_{ver}")
     c1, c2 = st.columns([1, 3])
-    if c1.button("💾 저장", type="primary", disabled=not dirty or not confirm or not user, use_container_width=True):
+    if c1.button("💾 저장", type="primary", disabled=not dirty or not confirm or not user, width="stretch"):
         errors, inserts, updates = [], [], {}
         base_new = {"start_date": day, "end_date": day}
         for r in new_rows:
@@ -238,6 +238,16 @@ def render() -> None:
             rec.pop("created_by", None)
             errors += [f"[{r.get('장비')}] {e}" for e in rules.validate(rec)]
             updates[rid] = rec
+        # 같은 장비를 하루 24시간 넘게 쓸 수는 없음 (저장된 행 + 새 행 기준)
+        per_equip: dict[int, float] = {}
+        for rec in list(inserts) + list(updates.values()):
+            per_equip[rec["equip_id"]] = per_equip.get(rec["equip_id"], 0) + db.to_num(rec["hours"], 0)
+        for rid, r in orig.items():
+            if rid not in updates and rid not in removed:
+                per_equip[int(r["equip_id"])] = per_equip.get(int(r["equip_id"]), 0) + db.to_num(r["hours"], 0)
+        for eid, h in per_equip.items():
+            if h > 24:
+                errors.append(f"[{label_of.get(eid, eid)}] 하루 사용시간 합계가 {h:,.0f}h로 24h를 넘습니다.")
         if errors:
             for e in errors:
                 st.error(e)
@@ -257,7 +267,7 @@ def render() -> None:
                 "장비": period["equip_id"].map(label_of), "업체": period["company"],
                 "시작일": period["start_date"].dt.date, "종료일": period["end_date"].dt.date,
                 "사용시간(전체)": period["hours"].astype(int),
-            }), hide_index=True, use_container_width=True)
+            }), hide_index=True, width="stretch")
 
     # ── 다른 날로 복사 ─────────────────────────────────────
     st.divider()

@@ -26,12 +26,12 @@ def render() -> None:
     q = st.text_input("검색", placeholder="장비명 또는 장비번호")
     if q:
         mask = view["장비명"].str.contains(q, case=False, regex=False) | view["장비번호"].str.contains(q, case=False, regex=False)
-        st.dataframe(view[mask].drop(columns=["id"]), hide_index=True, use_container_width=True)
+        st.dataframe(view[mask].drop(columns=["id"]), hide_index=True, width="stretch")
         st.caption("검색 중에는 보기만 됩니다. 수정하려면 검색어를 지우세요.")
         return
 
     edited = st.data_editor(
-        view, key="equip_editor", num_rows="dynamic", hide_index=True, use_container_width=True, height=560,
+        view, key="equip_editor", num_rows="dynamic", hide_index=True, width="stretch", height=560,
         column_order=[c for c in COLS.values() if c != "id"],
         column_config={
             "장비명": st.column_config.TextColumn(required=True, width="large"),

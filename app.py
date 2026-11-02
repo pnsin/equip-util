@@ -1,3 +1,5 @@
+import hmac
+
 import streamlit as st
 
 st.set_page_config(page_title="장비 가동률 관리", page_icon="📊", layout="wide")
@@ -16,7 +18,7 @@ def check_password() -> bool:
     st.title("📊 장비 가동률 관리")
     value = st.text_input("접속 비밀번호", type="password")
     if value:
-        if value == pw:
+        if hmac.compare_digest(value.encode(), pw.encode()):
             st.session_state.authed = True
             st.rerun()
         st.error("비밀번호가 맞지 않습니다.")

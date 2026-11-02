@@ -25,12 +25,12 @@ def render() -> None:
     if q:
         mask = view["기업명"].str.contains(q, case=False, regex=False) | \
             view["사업자등록번호"].str.contains(db.digits(q) or q, regex=False)
-        st.dataframe(view[mask].drop(columns=["id"]), hide_index=True, use_container_width=True)
+        st.dataframe(view[mask].drop(columns=["id"]), hide_index=True, width="stretch")
         st.caption("검색 중에는 보기만 됩니다. 수정하려면 검색어를 지우세요.")
         return
 
     edited = st.data_editor(
-        view, key="company_editor", num_rows="dynamic", hide_index=True, use_container_width=True, height=520,
+        view, key="company_editor", num_rows="dynamic", hide_index=True, width="stretch", height=520,
         column_order=[c for c in COLS.values() if c != "id"],
         column_config={
             "기업명": st.column_config.TextColumn(required=True, width="medium"),

@@ -63,3 +63,14 @@ Streamlit Cloud는 앱이 재시작·재배포될 때 서버의 파일이 초기
 pip install -r requirements.txt
 streamlit run app.py
 ```
+
+## 테스트
+
+계산·i-Tube 규칙·저장 로직은 `tests/`의 자동 테스트로 확인합니다 (구글 시트 없이 실행).
+
+```bash
+pip install -r requirements.txt pytest
+pytest -q tests
+```
+
+GitHub에 올리면 Actions가 같은 테스트를 자동으로 돌립니다.

@@ -57,7 +57,7 @@ def render() -> None:
             st.warning("i-Tube는 한 번에 1000건까지만 올릴 수 있습니다. 기간을 나눠서 내려받으세요.")
         if issues:
             st.warning(f"i-Tube 규칙에 맞지 않는 항목이 {len(issues)}개 있습니다. '실적 조회·수정'에서 고친 뒤 내려받는 것을 권장합니다.")
-            st.dataframe(pd.DataFrame(issues), hide_index=True, use_container_width=True)
+            st.dataframe(pd.DataFrame(issues), hide_index=True, width="stretch")
         elif records:
             st.success("모든 실적이 i-Tube 업로드 규칙을 통과했습니다.")
 
@@ -66,7 +66,7 @@ def render() -> None:
         if records:
             data = itube.make_itube_file(records, list(zip(eq["name"], eq["code"])), template)
             st.download_button("⬇️ i-Tube 장비일지 내려받기", data=data, file_name=fname, mime=XLSX,
-                               type="primary", use_container_width=True)
+                               type="primary", width="stretch")
             st.caption("공식 양식 파일에 채워 넣습니다." if template else
                        "양식 구조(헤더·드롭다운·업종 연동)를 그대로 재현한 파일입니다. 설정에서 공식 빈 양식을 올리면 그 파일에 채웁니다.")
             with st.expander("미리보기"):
@@ -74,7 +74,7 @@ def render() -> None:
                                   "end_date", "hours", "fee"]].rename(columns={
                     "purpose": "사용목적", "usage_type": "활용유형", "company": "기업명", "equip_name": "장비명",
                     "equip_code": "장비번호", "start_date": "시작일", "end_date": "종료일", "hours": "사용시간",
-                    "fee": "사용료"}), hide_index=True, use_container_width=True,
+                    "fee": "사용료"}), hide_index=True, width="stretch",
                     column_config={"시작일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                    "종료일": st.column_config.DateColumn(format="YYYY-MM-DD")})
         else:
@@ -109,12 +109,12 @@ def render() -> None:
         m4.metric("사용료", f"{tot['fee']:,.0f} 원")
         if e_eff < e:
             st.caption(f"진행 중인 기간이라 오늘({cutoff:%m/%d})까지의 가용시간으로 계산했습니다.")
-        st.dataframe(monthly, hide_index=True, use_container_width=True,
+        st.dataframe(monthly, hide_index=True, width="stretch",
                      column_config={"가동률(%)": st.column_config.NumberColumn(format="%.1f"),
                                     "사용시간": st.column_config.NumberColumn(format="%.1f"),
                                     "가용시간": st.column_config.NumberColumn(format="%.1f"),
                                     "사용료": st.column_config.NumberColumn(format="%d")})
         data = itube.make_report(label, summary, tot, monthly, by_purpose, by_type, in_period, target, annual)
         st.download_button("⬇️ 가동률 분석 보고서 내려받기", data=data, mime=XLSX, type="primary",
-                           file_name=f"장비가동률_분석_{label.replace(' ', '')}.xlsx", use_container_width=True)
+                           file_name=f"장비가동률_분석_{label.replace(' ', '')}.xlsx", width="stretch")
         st.caption("요약 · 장비별 가동률 · 월별 추이 · 사용목적별 · 활용유형별 · 실적목록 시트로 구성됩니다.")
