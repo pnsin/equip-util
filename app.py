@@ -5,7 +5,7 @@ import streamlit as st
 import ui_style  # noqa: E402
 
 st.set_page_config(page_title=ui_style.SYSTEM_TITLE, page_icon=ui_style.favicon(), layout="wide",
-                   initial_sidebar_state="expanded")
+                   initial_sidebar_state="auto")
 
 import importlib  # noqa: E402
 import os  # noqa: E402

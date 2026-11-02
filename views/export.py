@@ -6,6 +6,7 @@ import streamlit as st
 
 from core import calc, db, itube, rules
 from views.common import period_picker
+from ui_style import empty_state, page_header, section_bar
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -19,7 +20,7 @@ def _itube_filename(cfg: dict, s: dt.date, e: dt.date) -> str:
 
 
 def render() -> None:
-    st.title("📥 엑셀 내려받기")
+    page_header("엑셀 내려받기", "실적", desc="i-Tube 제출용 장비일지와 가동률 분석 보고서를 엑셀로 내려받습니다.")
     cfg = db.get_settings()
     logs = db.load_logs()
     eq = db.load_equipment()
@@ -27,9 +28,9 @@ def render() -> None:
 
     s, e, label, _ = period_picker("export", ["월", "분기", "반기", "연", "직접 지정"], "분기",
                                    completed=True, years=years)
-    st.markdown(f"**선택 기간: {label}** ({s:%Y-%m-%d} ~ {e:%Y-%m-%d})")
+    section_bar(label, sub=f"{s:%Y-%m-%d} ~ {e:%Y-%m-%d}", first=True)
 
-    tab1, tab2 = st.tabs(["📄 i-Tube 제출용 장비일지", "📊 가동률 분석 보고서"])
+    tab1, tab2 = st.tabs(["i-Tube 제출용 장비일지", "가동률 분석 보고서"])
 
     with tab1:
         c1, c2 = st.columns(2)
@@ -56,17 +57,18 @@ def render() -> None:
         if len(records) > 1000:
             st.warning("i-Tube는 한 번에 1000건까지만 올릴 수 있습니다. 기간을 나눠서 내려받으세요.")
         if issues:
-            st.warning(f"i-Tube 규칙에 맞지 않는 항목이 {len(issues)}개 있습니다. '실적 조회·수정'에서 고친 뒤 내려받는 것을 권장합니다.")
+            st.warning(f"i-Tube 규칙에 맞지 않는 항목이 {len(issues)}개 있습니다. '실적 조회·수정'에서 고친 뒤 내려받는 것을 권장합니다.",
+                       icon=":material/warning:")
             st.dataframe(pd.DataFrame(issues), hide_index=True, width="stretch")
         elif records:
-            st.success("모든 실적이 i-Tube 업로드 규칙을 통과했습니다.")
+            st.success("모든 실적이 i-Tube 업로드 규칙을 통과했습니다.", icon=":material/verified:")
 
         fname = st.text_input("파일 이름", value=_itube_filename(cfg, s, e))
         template = base64.b64decode(cfg["template_b64"]) if cfg.get("template_b64") else None
         if records:
             data = itube.make_itube_file(records, list(zip(eq["name"], eq["code"])), template)
-            st.download_button("⬇️ i-Tube 장비일지 내려받기", data=data, file_name=fname, mime=XLSX,
-                               type="primary", width="stretch")
+            st.download_button("i-Tube 장비일지 내려받기", data=data, file_name=fname, mime=XLSX,
+                               type="primary", width="stretch", icon=":material/download:")
             st.caption("공식 양식 파일에 채워 넣습니다." if template else
                        "양식 구조(헤더·드롭다운·업종 연동)를 그대로 재현한 파일입니다. 설정에서 공식 빈 양식을 올리면 그 파일에 채웁니다.")
             with st.expander("미리보기"):
@@ -78,7 +80,7 @@ def render() -> None:
                     column_config={"시작일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                    "종료일": st.column_config.DateColumn(format="YYYY-MM-DD")})
         else:
-            st.info("이 기간에 실적이 없습니다.")
+            empty_state("이 기간에 실적이 없습니다", "위에서 다른 기간을 고르거나 '직접 지정'으로 기간을 정해 보세요.")
 
     with tab2:
         annual = float(cfg.get("annual_hours") or 2000)
@@ -115,6 +117,6 @@ def render() -> None:
                                     "가용시간": st.column_config.NumberColumn(format="%.1f"),
                                     "사용료": st.column_config.NumberColumn(format="%d")})
         data = itube.make_report(label, summary, tot, monthly, by_purpose, by_type, in_period, target, annual)
-        st.download_button("⬇️ 가동률 분석 보고서 내려받기", data=data, mime=XLSX, type="primary",
+        st.download_button("가동률 분석 보고서 내려받기", data=data, mime=XLSX, type="primary", icon=":material/download:",
                            file_name=f"장비가동률_분석_{label.replace(' ', '')}.xlsx", width="stretch")
         st.caption("요약 · 장비별 가동률 · 월별 추이 · 사용목적별 · 활용유형별 · 실적목록 시트로 구성됩니다.")

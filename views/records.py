@@ -5,6 +5,7 @@ import streamlit as st
 
 from core import db, rules, seed
 from core.calc import period_bounds
+from ui_style import empty_state, page_header
 
 # 표 열 이름 → DB 필드
 FIELDS = {
@@ -33,10 +34,11 @@ FIELDS = {
 
 
 def render() -> None:
-    st.title("📋 실적 조회·수정")
+    page_header("실적 조회·수정", "실적", desc="조건으로 찾은 실적을 표에서 바로 고치거나 지웁니다. 셀을 고친 뒤 '변경 내용 저장'을 누르세요.")
     saved = st.session_state.pop("records_saved", None)
     if saved:
-        st.success(saved)
+        st.success(saved, icon=":material/check_circle:")
+        st.toast(saved, icon="✅")
 
     logs = db.load_logs()
     eq = db.load_equipment()
@@ -46,8 +48,8 @@ def render() -> None:
     id_of = dict(zip(eq["label"], eq["id"]))
 
     q_s, q_e, _ = period_bounds("분기", dt.date.today())
-    c1, c2, c3, c4 = st.columns([1.4, 2, 1.2, 1])
-    rng = c1.date_input("사용시작일 범위", value=(q_s, q_e), format="YYYY-MM-DD")
+    c1, c2, c3, c4 = st.container(border=True).columns([1.4, 2, 1.2, 1])
+    rng = c1.date_input("사용시작일 범위", value=(q_s, q_e), format="YYYY-MM-DD", help="기본값은 이번 분기입니다.")
     sel_eq = c2.multiselect("장비", list(eq["label"]), placeholder="전체")
     comp_q = c3.text_input("기관명 검색", placeholder="일부만 입력해도 됩니다")
     writers = sorted(w for w in logs["created_by"].unique() if w)
@@ -69,7 +71,7 @@ def render() -> None:
     m3.metric("사용료 합계", f"{df['fee'].sum():,.0f} 원")
 
     if df.empty:
-        st.info("조건에 맞는 실적이 없습니다.")
+        empty_state("조건에 맞는 실적이 없습니다", "기간을 넓히거나 장비·기관·담당자 조건을 지워 보세요.", "⌕")
         return
 
     view = df.copy()
@@ -79,7 +81,6 @@ def render() -> None:
     view = view.set_index("id")[list(FIELDS.values())].rename(columns={v: k for k, v in FIELDS.items()})
     view.insert(0, "삭제", False)
 
-    st.caption("셀을 직접 고친 뒤 아래 '변경 내용 저장'을 누르세요. 지울 행은 '삭제'에 체크합니다.")
     edited = st.data_editor(
         view, key="records_editor", hide_index=True, width="stretch", height=520,
         disabled=["사업자번호"],
@@ -121,7 +122,8 @@ def render() -> None:
     if to_delete:
         confirm = st.checkbox(f"{len(to_delete)}건을 삭제합니다. 되돌릴 수 없습니다.", value=False)
     c1, c2 = st.columns([1, 3])
-    if c1.button("변경 내용 저장", type="primary", disabled=not (changed or to_delete) or not confirm):
+    if c1.button("변경 내용 저장", type="primary", disabled=not (changed or to_delete) or not confirm,
+                 icon=":material/save:", width="stretch"):
         errors, updates = [], {}
         for i in changed:
             row = edited.loc[i]
@@ -149,4 +151,5 @@ def render() -> None:
             st.session_state.records_saved = f"수정 {n_up}건 · 삭제 {n_del}건 반영했습니다."
             st.session_state.pop("records_editor", None)
             st.rerun()
-    c2.caption(f"수정 {len(changed)}건 · 삭제 {len(to_delete)}건 대기 중" if (changed or to_delete) else "")
+    c2.caption(f"수정 {len(changed)}건 · 삭제 {len(to_delete)}건이 저장을 기다리고 있습니다." if (changed or to_delete)
+               else "셀을 눌러 바로 고칠 수 있습니다. 지울 행은 '삭제'에 체크하세요.")

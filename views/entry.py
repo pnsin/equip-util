@@ -6,26 +6,27 @@ import streamlit as st
 
 from core import db, rules, seed
 from core.calc import period_bounds
+from ui_style import empty_state, page_header, section_bar
 
 def _idx(options: list, value, default: int = 0) -> int:
     return options.index(value) if value in options else default
 
 
 def render() -> None:
-    st.title("✍️ 사용실적 입력")
-    st.caption("같은 기관·같은 기간에 여러 장비를 썼다면 장비를 여러 개 고르고 장비별 시간만 적으세요. 장비마다 한 건씩 저장됩니다.")
+    page_header("기간 실적 입력", "실적",
+                desc="여러 날에 걸친 사용을 한 번에 입력합니다. 같은 기관·기간에 여러 장비를 썼다면 장비를 여러 개 고르고 장비별 시간만 적으세요.")
 
     saved = st.session_state.pop("entry_saved", None)
     if saved:
-        st.success(saved)
+        st.success(saved, icon=":material/check_circle:")
         st.toast(saved, icon="✅")
 
     cfg = db.get_settings()
     eq = db.load_equipment()
     logs = db.load_logs()
     if eq.empty:
-        st.warning("등록된 장비가 없습니다. '설정 → 기존 엑셀 실적 가져오기'로 i-Tube 장비일지 파일을 올리면 "
-                   "장비 목록(Sheet4)과 실적이 함께 등록됩니다. '장비 정보 입력'에서 직접 추가해도 됩니다.")
+        empty_state("등록된 장비가 없습니다", "'장비 정보'에서 장비를 추가하거나, '설정 · 백업 → 기존 엑셀 실적 가져오기'로 "
+                    "i-Tube 장비일지 파일을 올리면 장비 목록과 실적이 함께 등록됩니다.")
         return
     ver = st.session_state.setdefault("entry_ver", 0)
     staff_opts = db.staff_names()
@@ -33,13 +34,13 @@ def render() -> None:
     user = st.selectbox("담당자", staff_opts, index=staff_opts.index(last) if last in staff_opts else None,
                         placeholder="담당자를 고르세요", key=f"entry_{ver}_staff") or ""
     if not staff_opts:
-        st.warning("등록된 담당자가 없습니다. '담당자 정보 입력'에서 먼저 담당자를 등록하세요.")
+        st.warning("등록된 담당자가 없습니다. '담당자 정보'에서 먼저 담당자를 등록하세요.")
 
     def k(name: str) -> str:
         return f"entry_{ver}_{name}"
 
     # 1. 사용기관 ─ 업체 정보 입력에 등록된 업체 중에서 고름. 사업자번호·업종은 업체 목록, 나머지는 지난 실적에서 채움
-    st.subheader("1. 사용기관")
+    section_bar("사용기관", 1)
     comp = db.load_companies()
     master = {r["name"]: r for r in comp.to_dict("records")}
     recent = logs.sort_values("id", ascending=False) if not logs.empty else logs
@@ -48,7 +49,7 @@ def render() -> None:
     company = c1.selectbox("사용기관 기업명", list(master), index=None, key=k("comp"),
                            placeholder="업체명을 입력해 검색 (내부 사용이면 비워 두세요)")
     if not master:
-        c1.caption("등록된 업체가 없습니다. '업체 정보 입력'에서 먼저 업체를 등록하세요.")
+        c1.caption("등록된 업체가 없습니다. '업체 정보'에서 먼저 업체를 등록하세요.")
     company = company or ""
     prev: dict = {}
     if company and not recent.empty and (recent["company"] == company).any():
@@ -80,7 +81,7 @@ def render() -> None:
     sub = c3.selectbox("세부품목", subs, index=_idx(subs, prev.get("sub_item")), key=k(f"sub_{pk}_{item}"))
 
     # 2. 사용 기간
-    st.subheader("2. 사용 기간")
+    section_bar("사용 기간", 2)
     today = dt.date.today()
     m_start, m_end, _ = period_bounds("월", today)
     c1, c2, c3, c4 = st.columns(4)
@@ -93,7 +94,7 @@ def render() -> None:
         st.caption(f"사용기간 {(end - start).days + 1}일 · i-Tube 규칙: 같은 해, 2개월 이내")
 
     # 3. 장비와 시간
-    st.subheader("3. 사용 장비와 시간")
+    section_bar("사용 장비와 시간", 3)
     active = eq[eq["retired_on"].isna() | (eq["retired_on"] >= pd.Timestamp(start or today))]
     picked = st.multiselect("장비 선택 (여러 개 가능)", list(active["label"]), key=k("equip"),
                             placeholder="장비명이나 장비번호로 검색")
@@ -122,7 +123,7 @@ def render() -> None:
                    f"{db.to_num(table['사용료(원)'].sum(), 0):,.0f} 원")
 
     # 4. 세부지원내용
-    st.subheader("4. 세부지원내용")
+    section_bar("세부지원내용", 4)
     ov, me, co = seed.parse_detail(prev.get("detail", ""))
     c1, c2, c3 = st.columns(3)
     overview = c1.text_input("지원개요", value=ov, key=k(f"ov_{pk}"))
@@ -133,7 +134,8 @@ def render() -> None:
                                    placeholder="비워 두면 지원개요가 들어갑니다", key=k(f"pd_{pk}"))
     etc = c2.text_input("기타", key=k("etc"))
 
-    if st.button("💾 저장", type="primary", width="stretch", disabled=not picked):
+    if st.button(f"{len(picked)}건 저장" if picked else "장비를 고르면 저장할 수 있습니다", type="primary",
+                 width="stretch", disabled=not picked, icon=":material/save:"):
         common = {
             "purpose": purpose, "usage_type": usage_type, "company": company, "brn": brn, "dept": dept,
             "industry": ind, "item": item, "sub_item": sub, "product": product, "disclose": disclose,
@@ -167,11 +169,10 @@ def render() -> None:
             st.session_state.entry_saved = f"{n}건 저장했습니다 · 총 {sum(r['hours'] for r in recs):,.0f} h"
             st.rerun()
 
-    st.divider()
-    st.subheader(f"{user} 님의 최근 실적" if user else "최근 실적")
+    st.subheader(f"{user} 님이 최근 입력한 실적" if user else "최근 입력한 실적")
     mine = (logs[logs["created_by"] == user] if user else logs).sort_values("id", ascending=False).head(10)
     if mine.empty:
-        st.caption("아직 입력한 실적이 없습니다.")
+        st.caption("아직 입력한 실적이 없습니다. 위에서 저장하면 여기에 바로 보입니다.")
     else:
         st.dataframe(
             mine[["start_date", "end_date", "equip_name", "company", "purpose", "hours", "fee"]].rename(columns={
