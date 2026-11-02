@@ -21,6 +21,36 @@ FIELDS = {
 }
 
 
+CELL_LINES = 4  # 달력 칸에 바로 보여 줄 실적 수 (나머지는 "+N건")
+CSS = """<style>
+.block-container {padding-top: 2.5rem;}
+.st-key-calgrid button {min-height: 118px; align-items: flex-start; justify-content: flex-start; padding: 6px 8px;}
+.st-key-calgrid button > div, .st-key-calgrid button div[data-testid="stMarkdownContainer"] {
+  width: 100%; justify-content: flex-start; text-align: left;}
+.st-key-calgrid button div[data-testid="stMarkdownContainer"] p {
+  text-align: left; font-size: 0.74rem; line-height: 1.4; margin: 0; white-space: normal; word-break: keep-all;}
+.st-key-calgrid button div[data-testid="stMarkdownContainer"] strong {font-size: 0.9rem;}
+.st-key-calgrid [data-testid="stHorizontalBlock"] {gap: 0.4rem;}
+</style>"""
+
+
+def _cut(text: str, n: int) -> str:
+    """n글자보다 길면 잘라서 … 를 붙임."""
+    text = str(text).strip()
+    return text if len(text) <= n else text[:n].rstrip() + "…"
+
+
+def _md(text: str) -> str:
+    """버튼 글자·툴팁이 마크다운으로 해석되지 않게."""
+    for ch in "\\*_[]()#`~<>|":
+        text = text.replace(ch, "\\" + ch)
+    return text
+
+
+def _hours(h: float) -> str:
+    return f"{h:,.1f}".rstrip("0").rstrip(".") + "h"
+
+
 def _shift_month(d: dt.date, n: int) -> dt.date:
     y, m = divmod(d.month - 1 + n, 12)
     return dt.date(d.year + y, m + 1, 1)
@@ -37,13 +67,6 @@ def _day_rows(logs: pd.DataFrame, day: dt.date) -> pd.DataFrame:
         return logs
     ts = pd.Timestamp(day)
     return logs[(logs["start_date"] == ts) & (logs["end_date"] == ts)]
-
-
-def _next_workday(d: dt.date, hol: set[dt.date]) -> dt.date:
-    d += dt.timedelta(days=1)
-    while d.weekday() >= 5 or d in hol:
-        d += dt.timedelta(days=1)
-    return d
 
 
 def _paste_plan(src: list[dict], targets: list[dt.date], logs: pd.DataFrame) -> tuple[list[dict], int]:
@@ -100,10 +123,55 @@ def _record(row: dict, base: dict, comp_by_name: dict, eq_id: dict, cfg: dict) -
     return rec
 
 
+def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) -> dict[dt.date, list[dict]]:
+    """날짜별로 달력 칸에 보여 줄 실적 (장비, 업체, 그날 몫의 시간, 담당자, 기간 여부)."""
+    if in_month.empty:
+        return {}
+    name_of = dict(zip(eq["id"].astype(int), eq["name"]))
+    info = logs.set_index("id")
+    out: dict[dt.date, list[dict]] = {}
+    for r in in_month.itertuples(index=False):
+        if r.log_id not in info.index:
+            continue
+        lg = info.loc[r.log_id]
+        multi = lg["start_date"] != lg["end_date"]
+        out.setdefault(r.day.date(), []).append({
+            "equip": name_of.get(int(r.equip_id), "?"), "company": db.to_str(lg["company"]) or "내부",
+            "hours": float(r.hours), "staff": db.to_str(lg["created_by"]),
+            "period": f"{lg['start_date']:%m/%d}~{lg['end_date']:%m/%d}" if multi else "",
+        })
+    for v in out.values():
+        v.sort(key=lambda e: (e["period"] != "", -e["hours"]))
+    return out
+
+
+def _cell_label(d: dt.date, entries: list[dict], holiday: bool, today: bool) -> tuple[str, str | None]:
+    """달력 칸 글자(짧게 줄임)와 마우스를 올렸을 때 보일 전체 내용."""
+    mark = " 🔴" if holiday else (" 📍" if today else "")
+    total = sum(e["hours"] for e in entries)
+    head = f"**{d.day}**{mark}" + (f" · {len(entries)}건 {_hours(total)}" if entries else "")
+    if not entries:
+        return head + "  \n\u2800", None
+    lines = []
+    for e in entries[:CELL_LINES]:
+        lines.append(f"▪ {_md(_cut(e['equip'], 9))}")
+        lines.append(f"\u2002 {_md(_cut(e['company'], 6))} · {_hours(e['hours'])}")
+    if len(entries) > CELL_LINES:
+        lines.append(f"+{len(entries) - CELL_LINES}건 더")
+    tip = [f"**{d:%m/%d} ({WEEKDAYS[d.weekday()]}) · {len(entries)}건 · {_hours(total)}**", ""]
+    for e in entries:
+        extra = " · ".join(x for x in (e["staff"], f"기간 {e['period']}" if e["period"] else "") if x)
+        tip.append(f"- {_md(e['equip'])} · {_md(e['company'])} · {_hours(e['hours'])}"
+                   + (f" ({_md(extra)})" if extra else ""))
+    return "  \n".join([head] + lines), "\n".join(tip)
+
+
 def render() -> None:
-    st.title("🗓️ 달력 입력")
-    st.caption("날짜를 눌러 그날 사용한 장비를 입력하세요. 장비·업체·담당자는 목록에서 고릅니다. "
-               "같은 작업이 이어지면 날짜를 고르고 '복사'를 누른 뒤, 붙여 넣을 날짜를 차례로 누르세요.")
+    st.markdown(CSS, unsafe_allow_html=True)
+    st.markdown("#### 🗓️ 달력 입력",
+                help="날짜를 눌러 그날 사용한 장비를 입력하세요. 장비·업체·담당자는 목록에서 고릅니다. "
+                     "같은 작업이 이어지면 날짜를 고르고 '복사'를 누른 뒤, 붙여 넣을 날짜를 차례로 누르세요. "
+                     "달력 칸에 마우스를 올리면 그날 실적 전체가 보입니다.")
     msg = st.session_state.pop("cal_saved", None)
     if msg:
         st.success(msg)
@@ -123,7 +191,8 @@ def render() -> None:
     if c1.button("◀ 이전 달", width="stretch"):
         st.session_state.cal_month = _shift_month(month, -1)
         st.rerun()
-    c2.markdown(f"<h3 style='text-align:center;margin:0'>{month.year}년 {month.month}월</h3>", unsafe_allow_html=True)
+    c2.markdown(f"<h4 style='text-align:center;margin:0;padding:0.3rem 0'>{month.year}년 {month.month}월</h4>",
+                unsafe_allow_html=True)
     if c3.button("다음 달 ▶", width="stretch"):
         st.session_state.cal_month = _shift_month(month, 1)
         st.rerun()
@@ -135,8 +204,7 @@ def render() -> None:
     hol = kr_holidays({weeks[0][0].year, weeks[-1][-1].year, today.year, today.year + 1})
     daily = expand_daily(logs, cfg.get("alloc_mode", "spread"))
     in_month = daily[(daily["day"] >= pd.Timestamp(weeks[0][0])) & (daily["day"] <= pd.Timestamp(weeks[-1][-1]))]
-    hours_by_day = in_month.groupby(in_month["day"].dt.date)["hours"].sum().to_dict()
-    count_by_day = in_month.groupby(in_month["day"].dt.date)["log_id"].nunique().to_dict()
+    by_day = _cell_entries(in_month, logs, eq)
 
     # ── 복사 / 붙여넣기 ─────────────────────────────────────
     clip = st.session_state.get("cal_clip")
@@ -157,21 +225,20 @@ def render() -> None:
         c2.caption("날짜를 고르고 📋 복사 → 붙여 넣을 날짜를 누르면 끝입니다." if not day_saved.empty
                    else "이 날은 저장된 입력이 없어 복사할 수 없습니다.")
 
-    head = st.columns(7)
+    grid = st.container(key="calgrid")
+    head = grid.columns(7)
     for i, w in enumerate(WEEKDAYS):
         color = "#d33" if i == 6 else ("#36c" if i == 5 else "inherit")
         head[i].markdown(f"<div style='text-align:center;font-weight:600;color:{color}'>{w}</div>",
                          unsafe_allow_html=True)
     for week in weeks:
-        cols = st.columns(7)
+        cols = grid.columns(7)
         for i, d in enumerate(week):
             if d.month != month.month:
                 cols[i].write("")
                 continue
-            n, h = count_by_day.get(d, 0), hours_by_day.get(d, 0)
-            mark = "🔴 " if d in hol else ("📍 " if d == today else "")
-            label = f"{mark}{d.day}" + (f"  \n{n}건 · {h:,.0f}h" if n else "  \n\u2800")
-            if cols[i].button(label, key=f"cal_{d}", width="stretch",
+            label, tip = _cell_label(d, by_day.get(d, []), d in hol, d == today)
+            if cols[i].button(label, key=f"cal_{d}", width="stretch", help=tip,
                               type="primary" if d == day else "secondary"):
                 if clip and d != clip["from"]:
                     plan, skipped = _paste_plan(clip["rows"], [d], logs)
@@ -320,58 +387,3 @@ def render() -> None:
                 "시작일": period["start_date"].dt.date, "종료일": period["end_date"].dt.date,
                 "사용시간(전체)": period["hours"].astype(int),
             }), hide_index=True, width="stretch")
-
-    # ── 다른 날로 복사 ─────────────────────────────────────
-    if rows.empty:
-        return
-    st.divider()
-    box = st.expander("📋 여러 날에 한 번에 붙여넣기 (기간 지정, 일부 항목만)")
-    with box:
-        _bulk_copy(day, rows, orig, logs, label_of, hol, dirty, ver)
-
-
-def _bulk_copy(day, rows, orig, logs, label_of, hol, dirty, ver) -> None:
-    if dirty:
-        st.warning("저장하지 않은 변경이 있습니다. 복사는 저장된 내용 기준이니 먼저 저장하세요.")
-
-    names = {int(r["id"]): f"{label_of.get(r['equip_id'], '?')} · {r['company'] or '내부'} · {int(r['hours'])}h"
-             for r in rows.to_dict("records")}
-    pick = st.multiselect("복사할 항목", list(names), default=list(names), format_func=names.get,
-                          key=f"cal_copy_pick_{day}_{ver}")
-    mode = st.radio("붙여 넣을 날짜", ["다음 날", "다음 평일", "기간 지정"], horizontal=True, key="cal_copy_mode")
-    if mode == "다음 날":
-        targets = [day + dt.timedelta(days=1)]
-    elif mode == "다음 평일":
-        targets = [_next_workday(day, hol)]
-    else:
-        c1, c2 = st.columns([2, 1])
-        nd = day + dt.timedelta(days=1)
-        rng = c1.date_input("기간", value=(nd, nd + dt.timedelta(days=4)), format="YYYY-MM-DD",
-                            key=f"cal_copy_rng_{day}")
-        skip = c2.checkbox("주말·공휴일 빼기", value=True, key="cal_copy_skip")
-        if isinstance(rng, (tuple, list)) and len(rng) == 2:
-            s, e = rng
-            targets = [s + dt.timedelta(days=i) for i in range((e - s).days + 1)]
-            if skip:
-                hol_t = kr_holidays({s.year, e.year})
-                targets = [d for d in targets if d.weekday() < 5 and d not in hol_t]
-        else:
-            targets = []
-        targets = [d for d in targets if d != day]
-        if len(targets) > 62:
-            st.error("한 번에 62일까지 복사할 수 있습니다.")
-            targets = []
-
-    src = [orig[i] for i in pick]
-    plan, skipped = _paste_plan(src, targets, logs)
-    if targets:
-        shown = ", ".join(f"{d:%m/%d}({WEEKDAYS[d.weekday()]})" for d in targets[:8]) + (" …" if len(targets) > 8 else "")
-        st.caption(f"{shown} · {len(targets)}일 × {len(src)}건 → {len(plan)}건 추가"
-                   + (f" (같은 장비·업체가 이미 있는 {skipped}건은 건너뜀)" if skipped else ""))
-    if st.button("📋 복사", type="primary", disabled=not plan or dirty):
-        n = db.insert_logs(plan)
-        if len(targets) == 1:
-            _pick_day(targets[0])
-        st.session_state.cal_ver = ver + 1
-        st.session_state.cal_saved = f"{n}건을 {len(targets)}일에 복사했습니다."
-        st.rerun()
