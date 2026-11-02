@@ -25,7 +25,7 @@ def render() -> None:
     logs = db.load_logs()
     if eq.empty:
         st.warning("등록된 장비가 없습니다. '설정 → 기존 엑셀 실적 가져오기'로 i-Tube 장비일지 파일을 올리면 "
-                   "장비 목록(Sheet4)과 실적이 함께 등록됩니다. '장비 관리'에서 직접 추가해도 됩니다.")
+                   "장비 목록(Sheet4)과 실적이 함께 등록됩니다. '장비 정보 입력'에서 직접 추가해도 됩니다.")
         return
     ver = st.session_state.setdefault("entry_ver", 0)
     staff_opts = db.staff_names()
@@ -33,12 +33,12 @@ def render() -> None:
     user = st.selectbox("담당자", staff_opts, index=staff_opts.index(last) if last in staff_opts else None,
                         placeholder="담당자를 고르세요", key=f"entry_{ver}_staff") or ""
     if not staff_opts:
-        st.warning("등록된 담당자가 없습니다. '담당자 관리'에서 먼저 담당자를 등록하세요.")
+        st.warning("등록된 담당자가 없습니다. '담당자 정보 입력'에서 먼저 담당자를 등록하세요.")
 
     def k(name: str) -> str:
         return f"entry_{ver}_{name}"
 
-    # 1. 사용기관 ─ 업체 관리에 등록된 업체 중에서 고름. 사업자번호·업종은 업체 목록, 나머지는 지난 실적에서 채움
+    # 1. 사용기관 ─ 업체 정보 입력에 등록된 업체 중에서 고름. 사업자번호·업종은 업체 목록, 나머지는 지난 실적에서 채움
     st.subheader("1. 사용기관")
     comp = db.load_companies()
     master = {r["name"]: r for r in comp.to_dict("records")}
@@ -48,7 +48,7 @@ def render() -> None:
     company = c1.selectbox("사용기관 기업명", list(master), index=None, key=k("comp"),
                            placeholder="업체명을 입력해 검색 (내부 사용이면 비워 두세요)")
     if not master:
-        c1.caption("등록된 업체가 없습니다. '업체 관리'에서 먼저 업체를 등록하세요.")
+        c1.caption("등록된 업체가 없습니다. '업체 정보 입력'에서 먼저 업체를 등록하세요.")
     company = company or ""
     prev: dict = {}
     if company and not recent.empty and (recent["company"] == company).any():
@@ -64,8 +64,8 @@ def render() -> None:
                            key=k(f"purpose_{pk}"))
 
     c1, c2, c3 = st.columns(3)
-    brn = c1.text_input("사업자등록번호 (업체 관리 기준)", value=prev.get("brn", ""), key=k(f"brn_{pk}"),
-                        disabled=True, help="사업자등록번호는 '업체 관리'에서 고칩니다.")
+    brn = c1.text_input("사업자등록번호 (업체 정보 입력 기준)", value=prev.get("brn", ""), key=k(f"brn_{pk}"),
+                        disabled=True, help="사업자등록번호는 '업체 정보 입력'에서 고칩니다.")
     dept = c2.text_input("내부부서명", value=prev.get("dept") or cfg.get("dept_default", ""), key=k(f"dept_{pk}"))
     product = c3.text_input("제품명", value=prev.get("product", ""), key=k(f"product_{pk}"))
 

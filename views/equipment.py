@@ -10,7 +10,7 @@ COLS = {
 
 
 def render() -> None:
-    st.title("🔧 장비 관리")
+    st.title("🔧 장비 정보 입력")
     msg = st.session_state.pop("equip_saved", None)
     if msg:
         st.success(msg)
