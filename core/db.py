@@ -474,6 +474,30 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
     return errors
 
 
+def add_equipment(items: list[dict]) -> tuple[int, list[str]]:
+    """장비를 목록 끝에 추가합니다. 같은 장비번호(없으면 같은 이름)가 이미 있으면 건너뜁니다."""
+    store = get_store()
+    current = _equipment_frame(store.read("equipment"))
+    codes = set(current["code"]) - {""}
+    names_wo_code = set(current.loc[current["code"] == "", "name"])
+    next_id = (int(current["id"].max()) if not current.empty else 0) + 1
+    out, skipped = [], []
+    for it in items:
+        rec = _equip_record(it)
+        if not rec["name"]:
+            continue
+        if (rec["code"] and rec["code"] in codes) or (not rec["code"] and rec["name"] in names_wo_code):
+            skipped.append(rec["name"])
+            continue
+        rec["id"] = next_id
+        next_id += 1
+        codes.add(rec["code"]) if rec["code"] else names_wo_code.add(rec["name"])
+        out.append(rec)
+    store.append("equipment", _rows("equipment", out))
+    clear_caches()
+    return len(out), skipped
+
+
 # ── 업체 ────────────────────────────────────────────────────────
 
 COMPANY_TEXT = ("name", "brn", "contact", "phone", "industry", "item", "sub_item", "note")
