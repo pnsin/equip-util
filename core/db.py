@@ -343,9 +343,12 @@ def _sheet_secrets() -> tuple[dict | None, str]:
 def get_store():
     info, sid = _sheet_secrets()
     # Secrets가 바뀌면(시트 ID·서비스 계정) 캐시 키가 달라져 새로 연결됨
-    key = (sid if info else "", (info or {}).get("client_email", ""))
+    # 표 구성(열 제목)도 키에 넣어, 새 열·새 탭이 생긴 코드가 배포되면 예전 연결을 버리고 새로 연결함
+    schema = "|".join(f"{t}:{','.join(heads(t))}" for t in TABLES)
+    key = (sid if info else "", (info or {}).get("client_email", ""), schema)
     store = _open_store(*key)
-    if hasattr(store, "ws") and not all(t in getattr(store, "ws", {}) for t in TABLES):
+    if not isinstance(store, (SheetStore, CsvStore)) or (
+            hasattr(store, "ws") and not all(t in getattr(store, "ws", {}) for t in TABLES)):
         # 새 탭(예: 업체)이 생기기 전에 연결된 저장소가 남아 있으면 다시 연결해 탭을 만듦
         _open_store.clear()
         store = _open_store(*key)
@@ -353,7 +356,7 @@ def get_store():
 
 
 @st.cache_resource
-def _open_store(spreadsheet_id: str, client_email: str):
+def _open_store(spreadsheet_id: str, client_email: str, schema: str = ""):
     info, _ = _sheet_secrets()
     if info and spreadsheet_id:
         return SheetStore(info, spreadsheet_id)
@@ -661,7 +664,7 @@ def save_settings(**kv) -> None:
 # ── 장비 ────────────────────────────────────────────────────────
 
 def _equipment_frame(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
+    df = df.reindex(columns=cols("equipment"))  # 빠진 열이 있어도 멈추지 않게
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
     df = df.dropna(subset=["id"])
     df["id"] = df["id"].astype("int64")
