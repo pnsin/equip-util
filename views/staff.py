@@ -11,7 +11,7 @@ COLS = {
 
 
 def render() -> None:
-    st.title("👤 담당자 관리")
+    st.title("👤 담당자 정보 입력")
     msg = st.session_state.pop("staff_saved", None)
     if msg:
         st.success(msg)

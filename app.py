@@ -57,10 +57,12 @@ if check_password():
             st.Page(records.render, title="실적 조회·수정", icon="📋", url_path="records"),
             st.Page(export.render, title="엑셀 내려받기", icon="📥", url_path="export"),
         ],
-        "관리": [
-            st.Page(equipment.render, title="장비 관리", icon="🔧", url_path="equipment"),
-            st.Page(companies.render, title="업체 관리", icon="🏢", url_path="companies"),
-            st.Page(staff.render, title="담당자 관리", icon="👤", url_path="staff"),
+        "정보 입력": [
+            st.Page(equipment.render, title="장비 정보 입력", icon="🔧", url_path="equipment"),
+            st.Page(companies.render, title="업체 정보 입력", icon="🏢", url_path="companies"),
+            st.Page(staff.render, title="담당자 정보 입력", icon="👤", url_path="staff"),
+        ],
+        "설정": [
             st.Page(settings.render, title="설정", icon="⚙️", url_path="settings"),
         ],
     })

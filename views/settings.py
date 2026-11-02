@@ -23,14 +23,14 @@ def render() -> None:
         dept = c3.text_input("내부부서명 기본값", value=cfg.get("dept_default", ""))
         c1, c2, c3 = st.columns(3)
         annual = c1.number_input("연간 기준 가용시간 (h)", min_value=1, step=100, value=int(cfg.get("annual_hours") or 2000),
-                                 help="장비별로 다르면 '장비 관리'에서 장비마다 따로 지정할 수 있습니다.")
+                                 help="장비별로 다르면 '장비 정보 입력'에서 장비마다 따로 지정할 수 있습니다.")
         target = c2.number_input("목표 가동률 (%)", min_value=0.0, max_value=100.0, step=5.0,
                                  value=float(cfg.get("target_util") or 0))
         modes = {"spread": "사용기간에 고르게 나눔 (권장)", "start": "사용시작일에 전부 반영"}
         mode = c3.selectbox("기간별 집계 방식", list(modes), format_func=modes.get,
                             index=list(modes).index(cfg.get("alloc_mode", "spread")),
                             help="예: 7/25~8/10 실적 20시간을 7월·8월에 일수만큼 나눌지, 7월에 모두 넣을지")
-        st.caption("팀원 명단은 '관리 → 담당자 관리'로 옮겼습니다.")
+        st.caption("팀원 명단은 '정보 입력 → 담당자 정보 입력'로 옮겼습니다.")
         if st.form_submit_button("저장", type="primary"):
             db.save_settings(org_name=org.strip(), org_suffix=suffix.strip(), dept_default=dept.strip(),
                              annual_hours=annual, target_util=target, alloc_mode=mode)

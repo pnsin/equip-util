@@ -91,7 +91,7 @@ def render() -> None:
     sm = summary[summary["KPI"]] if only_kpi else summary
     sm = sm.sort_values("가동률", ascending=True, na_position="first")
     shown = sm.tail(25) if len(sm) > 25 else sm
-    # 마지막 사용일 (공동장비 관리 시스템의 '저활용·유휴 장비' 관리 참고)
+    # 마지막 사용일 (공동장비 정보 입력 시스템의 '저활용·유휴 장비' 관리 참고)
     past = logs[logs["start_date"] <= pd.Timestamp(dt.date.today())] if not logs.empty else logs
     last_used = past.groupby("equip_id")["end_date"].max() if not past.empty else pd.Series(dtype="datetime64[ns]")
     sm = sm.assign(최근사용일=sm["equip_id"].map(last_used).dt.date if not last_used.empty else None)
@@ -101,7 +101,7 @@ def render() -> None:
     if not idle.empty:
         with st.expander(f"⚠️ {idle_days}일 넘게 사용 기록이 없는 장비 {len(idle)}대 (저활용·유휴 후보)"):
             st.caption("국가연구시설장비 표준지침은 장비를 활용·저활용·유휴·불용으로 나눠 관리합니다. "
-                       "실제로 쓰지 않는 장비라면 '장비 관리'에서 불용일을 넣거나 가동률 산정에서 빼는 것을 검토하세요.")
+                       "실제로 쓰지 않는 장비라면 '장비 정보 입력'에서 불용일을 넣거나 가동률 산정에서 빼는 것을 검토하세요.")
             st.dataframe(idle[["장비명", "장비번호", "담당자", "최근사용일"]].sort_values("최근사용일", na_position="first"),
                          hide_index=True, width="stretch",
                          column_config={"최근사용일": st.column_config.DateColumn(format="YYYY-MM-DD")})

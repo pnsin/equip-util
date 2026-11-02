@@ -91,8 +91,8 @@ def render() -> None:
             "활용유형": st.column_config.SelectboxColumn(options=seed.USAGE_TYPES, required=True),
             "기업명": st.column_config.SelectboxColumn(
                 options=list(master) + sorted({c for c in view["기업명"] if c and c not in master}),
-                help="'업체 관리'에 등록된 업체만 고를 수 있습니다. 사업자번호는 업체 목록에서 자동으로 채워집니다."),
-            "사업자번호": st.column_config.TextColumn(help="'업체 관리'에서 고칩니다."),
+                help="'업체 정보 입력'에 등록된 업체만 고를 수 있습니다. 사업자번호는 업체 목록에서 자동으로 채워집니다."),
+            "사업자번호": st.column_config.TextColumn(help="'업체 정보 입력'에서 고칩니다."),
             "업종": st.column_config.SelectboxColumn(options=seed.INDUSTRIES),
             "품목": st.column_config.SelectboxColumn(options=seed.ALL_ITEMS),
             "세부품목": st.column_config.SelectboxColumn(options=seed.ALL_SUBITEMS),

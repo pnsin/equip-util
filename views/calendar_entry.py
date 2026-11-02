@@ -205,9 +205,9 @@ def render() -> None:
     missing = [name for name, empty in (("장비", eq.empty), ("담당자", not staff_opts)) if empty]
     if missing:
         st.warning(f"등록된 {'·'.join(missing)}이(가) 없어 새로 입력할 수 없습니다. "
-                   f"'관리' 메뉴의 {', '.join(m + ' 관리' for m in missing)}에서 먼저 등록하세요.")
+                   f"'정보 입력' 메뉴의 {', '.join(m + ' 관리' for m in missing)}에서 먼저 등록하세요.")
     if comp.empty:
-        st.caption("등록된 업체가 없습니다. 외부 업체 실적은 '업체 관리'에서 업체를 먼저 등록한 뒤 입력하세요. "
+        st.caption("등록된 업체가 없습니다. 외부 업체 실적은 '업체 정보 입력'에서 업체를 먼저 등록한 뒤 입력하세요. "
                    "내부 사용은 업체 없이 입력할 수 있습니다.")
     last_staff = st.session_state.get("last_staff")
 
@@ -233,10 +233,10 @@ def render() -> None:
         column_config={
             "장비": st.column_config.SelectboxColumn(options=eq_opts, required=True, width="large"),
             "업체": st.column_config.SelectboxColumn(options=comp_opts, width="medium",
-                                                   help="내부 사용이면 비워 두세요. 목록에 없으면 '업체 관리'에서 추가합니다."),
+                                                   help="내부 사용이면 비워 두세요. 목록에 없으면 '업체 정보 입력'에서 추가합니다."),
             "담당자": st.column_config.SelectboxColumn(options=staff_opts, required=True,
                                                     default=last_staff if last_staff in staff_opts else None,
-                                                    help="목록에 없으면 '담당자 관리'에서 추가합니다."),
+                                                    help="목록에 없으면 '담당자 정보 입력'에서 추가합니다."),
             "활용유형": st.column_config.SelectboxColumn(options=seed.USAGE_TYPES, required=True, default="외부"),
             "사용목적": st.column_config.SelectboxColumn(options=seed.PURPOSES, required=True, default="생산"),
             "사용시간": st.column_config.NumberColumn("사용시간(h)", min_value=0, max_value=24, step=1, format="%d",
