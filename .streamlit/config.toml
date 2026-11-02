@@ -1,5 +1,36 @@
+# 디자인: 전극 제조 공정 관리 시스템(battery-app)과 같은 C "다크 관제실형".
+# 색 값은 ui_style.py 맨 위 규칙표(토큰)와 같게 유지한다.
 [theme]
-primaryColor = "#2F6DB5"
+base = "dark"
+primaryColor = "#2D8FD5"
+backgroundColor = "#0F141A"
+secondaryBackgroundColor = "#1A222C"
+textColor = "#E3E9EF"
+linkColor = "#4FB3F0"
+font = "IBM Plex Sans KR:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap, Noto Sans KR, Malgun Gothic, sans-serif"
+codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap, monospace"
+baseRadius = "small"
+borderColor = "#2E3A49"
+showWidgetBorder = true
+dataframeBorderColor = "#263140"
+dataframeHeaderBackgroundColor = "#111820"
+dataframeHeaderTextColor = "#8B97A5"
+greenColor = "#5CCB93"
+redColor = "#FF8A7A"
+orangeColor = "#F0B35C"
+blueColor = "#4FB3F0"
+
+[theme.sidebar]
+backgroundColor = "#0A0E13"
+secondaryBackgroundColor = "#151C24"
+textColor = "#B7C2CF"
+primaryColor = "#4FB3F0"
+borderColor = "#263140"
+
+[client]
+toolbarMode = "minimal"
 
 [server]
 maxUploadSize = 20
+# 화면보호기·절전으로 연결이 끊겨도 12시간 동안은 같은 세션(입력 중인 값 포함)으로 다시 이어짐
+disconnectedSessionTTL = 43200
