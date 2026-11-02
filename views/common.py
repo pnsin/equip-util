@@ -117,3 +117,29 @@ def filtered_editor(view, mask, **kwargs):
     full = edited if mask is None else pd.concat([view[~mask], edited])
     full = full.sort_values(POS, na_position="last", kind="stable").drop(columns=[POS])
     return full.reset_index(drop=True), len(edited)
+
+
+# ── 다른 화면으로 바로 가기 (대시보드에서 누르면 장비 상세·실적 목록) ─────────
+
+PAGES: dict = {}  # app.py 가 채움: {"equip": st.Page, "records": st.Page, ...}
+_CLICK_KEYS = ("dash_equip_chart", "dash_heat", "dash_equip_tbl", "dash_comp_chart")
+
+
+def _leave() -> None:
+    # 눌러 둔 그래프 선택이 남아 있으면 대시보드로 돌아왔을 때 또 넘어가므로 지움
+    for k in _CLICK_KEYS:
+        st.session_state.pop(k, None)
+
+
+def go_equipment(equip_id: int) -> None:
+    st.session_state.detail_equip = int(equip_id)
+    _leave()
+    if "equip" in PAGES:
+        st.switch_page(PAGES["equip"])
+
+
+def go_records(company: str | None = None, equip_label: str | None = None, start=None, end=None) -> None:
+    st.session_state.records_prefilter = {"company": company, "equip": equip_label, "start": start, "end": end}
+    _leave()
+    if "records" in PAGES:
+        st.switch_page(PAGES["records"])

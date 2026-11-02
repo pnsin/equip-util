@@ -193,3 +193,16 @@ def test_master_save_undo_and_trash(store):
     assert list(store.read("trash")["summary"]) == ["나"]
     assert db.undo_last() == "업체 저장"
     assert sorted(store.read("companies")["name"]) == ["가", "나"] and store.read("trash").empty
+
+
+def test_compare_period_modes():
+    import datetime as dt
+    from core.calc import compare_period
+    s, e, e_eff = dt.date(2026, 10, 1), dt.date(2026, 12, 31), dt.date(2026, 11, 2)
+    ps, pe, label = compare_period("분기", s, e, e_eff, "직전")
+    assert (ps, pe) == (dt.date(2026, 7, 1), dt.date(2026, 8, 2)) and "같은 기간" in label
+    ps, pe, label = compare_period("분기", s, e, e_eff, "전년")
+    assert (ps, pe) == (dt.date(2025, 10, 1), dt.date(2025, 11, 2)) and label.startswith("전년")
+    # 직접 지정: 같은 길이만큼 바로 앞
+    ps, pe, _ = compare_period("직접 지정", dt.date(2026, 3, 11), dt.date(2026, 3, 20), dt.date(2026, 3, 20))
+    assert (ps, pe) == (dt.date(2026, 3, 1), dt.date(2026, 3, 10))
