@@ -9,6 +9,7 @@ import streamlit as st
 
 from core import db, rules, seed
 from core.calc import expand_daily, kr_holidays
+from ui_style import T, page_header
 
 WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
 DEFAULT_INDUSTRY = ("전기전자", "이차전지_에너지", "이차전지")
@@ -27,7 +28,7 @@ CSS = """<style>
 .st-key-calgrid [data-testid="stHorizontalBlock"] {gap: 0.4rem;}
 /* 날짜 칸 */
 .st-key-calgrid div[class*="st-key-cell_"] {min-height: 128px; padding: 6px 6px 8px; gap: 3px; border-radius: 10px;}
-.st-key-calgrid div[class*="st-key-cell_"]:hover {border-color: #3168b8;}
+.st-key-calgrid div[class*="st-key-cell_"]:hover {border-color: var(--accent);}
 .st-key-calgrid div[class*="st-key-cell_"] [data-testid="stVerticalBlock"] {gap: 3px;}
 .st-key-calgrid button div[data-testid="stMarkdownContainer"] {width: 100%; min-width: 0; text-align: left;}
 .st-key-calgrid button div[data-testid="stMarkdownContainer"] p {
@@ -43,8 +44,8 @@ CSS = """<style>
 /* 실적 한 줄 (누르면 이 실적만 복사) */
 .st-key-calgrid div[class*="st-key-ent_"] button {
   justify-content: flex-start; min-height: 0; padding: 3px 7px; border: none; border-radius: 6px;
-  background: rgba(49, 104, 184, 0.08); border-left: 3px solid #3168b8;}
-.st-key-calgrid div[class*="st-key-ent_"] button:hover {background: rgba(49, 104, 184, 0.18);}
+  background: rgba(45, 143, 213, 0.10); border-left: 3px solid var(--accent);}
+.st-key-calgrid div[class*="st-key-ent_"] button:hover {background: rgba(45, 143, 213, 0.22);}
 .st-key-calgrid div[class*="st-key-ent_"] button p {font-size: 0.72rem; line-height: 1.35;}
 .st-key-calgrid div[class*="st-key-more_"] p {font-size: 0.7rem; color: #777; margin: 0 0 0 4px;}
 </style>"""
@@ -231,10 +232,8 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
 
 def render() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
-    st.markdown("#### 🗓️ 달력 입력",
-                help="날짜를 눌러 그날 사용한 장비를 입력하세요. 장비·업체·담당자는 목록에서 고릅니다. "
-                     "칸 안의 실적을 누르면 복사되고, 붙여 넣을 날짜를 차례로 누르면 들어갑니다. "
-                     "날짜에 마우스를 올리면 그날 실적 전체가 보입니다.")
+    page_header("달력 입력", "실적",
+                desc="칸 안의 실적을 누르면 복사, 다른 날짜를 누르면 붙여넣기. 날짜 숫자를 누르면 아래에서 그날 입력을 고칩니다.")
     msg = st.session_state.pop("cal_saved", None)
     undo = st.session_state.get("cal_undo")
     if msg or undo:
@@ -292,15 +291,15 @@ def render() -> None:
             st.rerun()
 
     grid = st.container(key="calgrid")
-    sel = (f".st-key-cell_{day} {{border-color: #3168b8 !important; box-shadow: 0 0 0 1px #3168b8;}}")
+    sel = (f".st-key-cell_{day} {{border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent);}}")
     if clip:  # 복사한 실적은 진하게 표시
         sel += (f" .st-key-ent_{clip['from']}_{clip['rows'][0]['id']} button "
-                "{background: #3168b8 !important;} "
+                "{background: var(--accent) !important;} "
                 f".st-key-ent_{clip['from']}_{clip['rows'][0]['id']} button p {{color: #fff;}}")
     grid.markdown(f"<style>{sel}</style>", unsafe_allow_html=True)
     head = grid.columns(7)
     for i, w in enumerate(WEEKDAYS):
-        color = "#d33" if i == 6 else ("#36c" if i == 5 else "inherit")
+        color = T["ng"] if i == 6 else (T["accent-hi"] if i == 5 else "inherit")
         head[i].markdown(f"<div style='text-align:center;font-weight:600;color:{color}'>{w}</div>",
                          unsafe_allow_html=True)
     for week in weeks:
@@ -311,8 +310,7 @@ def render() -> None:
                 continue
             _day_cell(cols[i], d, by_day.get(d, []), selected=d == day, holiday=d in hol, today=d == today,
                       clip=clip, logs=logs)
-    st.caption("칸 안의 실적을 누르면 그 실적이 복사되고, 다른 날짜를 누르면 붙여 넣어집니다. "
-               "날짜 숫자를 누르면 아래에서 그날 입력을 고칠 수 있습니다. · 🔴 공휴일 · 📍 오늘")
+    st.caption("🔴 공휴일 · 📍 오늘 · 실적에 마우스를 올리면 전체 내용이 보입니다.")
 
     # ── 선택한 날 입력 ─────────────────────────────────────
     st.divider()
