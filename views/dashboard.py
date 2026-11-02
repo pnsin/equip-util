@@ -76,7 +76,8 @@ def render() -> None:
         if target:
             fig.add_scatter(x=tr["기간"], y=[target] * len(tr), name=f"목표 {target:.0f}%", yaxis="y2",
                             mode="lines", line=dict(color=ORANGE, width=1, dash="dot"), hoverinfo="skip")
-        fig.update_layout(yaxis=dict(title="사용시간(h)", gridcolor="rgba(128,128,128,0.15)"),
+        fig.update_layout(xaxis=dict(type="category"),
+                          yaxis=dict(title="사용시간(h)", gridcolor="rgba(128,128,128,0.15)"),
                           yaxis2=dict(title="가동률(%)", overlaying="y", side="right", rangemode="tozero",
                                       showgrid=False))
         st.plotly_chart(_layout(fig, 340), use_container_width=True)
