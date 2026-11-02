@@ -236,6 +236,32 @@ class SheetStore:
             _call(ws.add_rows, len(values) - ws.row_count)
         _call(ws.update, values=values, range_name="A1", value_input_option="RAW")
 
+    def _row_numbers(self, t: str) -> dict[str, int]:
+        """지금 시트에 있는 ID → 행 번호 (저장 직전에 다시 읽어 다른 사람이 추가한 행도 반영)."""
+        ids = _call(self.ws[t].col_values, 1)
+        return {str(v).strip(): i for i, v in enumerate(ids, start=1) if i > 1 and str(v).strip()}
+
+    def update_rows(self, t: str, rows: dict[str, list]) -> int:
+        """ID가 같은 행만 고칩니다. 전체를 다시 쓰지 않으므로 동시에 입력한 다른 사람의 행이 지워지지 않습니다."""
+        from gspread.utils import rowcol_to_a1
+        where = self._row_numbers(t)
+        n = len(cols(t))
+        data = [{"range": f"A{where[rid]}:{rowcol_to_a1(where[rid], n)}", "values": [row]}
+                for rid, row in rows.items() if rid in where]
+        if data:
+            _call(self.ws[t].batch_update, data, value_input_option="RAW")
+        return len(data)
+
+    def delete_ids(self, t: str, ids: list[str]) -> int:
+        where = self._row_numbers(t)
+        nums = sorted({where[i] for i in ids if i in where}, reverse=True)  # 아래 행부터 지워야 번호가 안 밀림
+        if nums:
+            sid = self.ws[t].id
+            reqs = [{"deleteDimension": {"range": {"sheetId": sid, "dimension": "ROWS",
+                                                   "startIndex": r - 1, "endIndex": r}}} for r in nums]
+            _call(self.ss.batch_update, {"requests": reqs})
+        return len(nums)
+
 
 class CsvStore:
     label = "로컬 파일 (시험용)"
@@ -260,6 +286,23 @@ class CsvStore:
 
     def rewrite(self, t: str, rows: list[list]) -> None:
         pd.DataFrame(rows, columns=cols(t)).to_csv(self._path(t), index=False)
+
+    def update_rows(self, t: str, rows: dict[str, list]) -> int:
+        df = self.read(t)
+        n = 0
+        for rid, row in rows.items():
+            mask = df["id"].astype(str).str.strip() == rid
+            if mask.any():
+                df.loc[mask, cols(t)] = [str(v) for v in row]
+                n += 1
+        self.rewrite(t, df.values.tolist())
+        return n
+
+    def delete_ids(self, t: str, ids: list[str]) -> int:
+        df = self.read(t)
+        mask = df["id"].astype(str).str.strip().isin(set(ids))
+        self.rewrite(t, df[~mask].values.tolist())
+        return int(mask.sum())
 
 
 def _sheet_secrets() -> tuple[dict | None, str]:
@@ -554,36 +597,39 @@ def insert_logs(records: list[dict], user: str = "") -> int:
     return len(rows)
 
 
-def _rewrite_usage(df: pd.DataFrame) -> None:
-    get_store().rewrite("usage", _rows("usage", df.to_dict("records")))
-    load_logs.clear()
-
-
 def update_logs(changes: dict[int, dict]) -> int:
+    """고친 실적만 그 행에 다시 씁니다 (다른 사람이 동시에 추가·수정한 행은 건드리지 않음)."""
+    if not changes:
+        return 0
     store = get_store()
     df = store.read("usage")
     names = _equip_names()
     now = dt.datetime.now().replace(microsecond=0)
-    ids = pd.to_numeric(df["id"], errors="coerce")
+    ids = df["id"].astype(str).str.strip()
+    out: dict[str, list] = {}
     for log_id, vals in changes.items():
-        mask = ids == int(log_id)
+        key = str(int(log_id))
+        hit = df[ids == key]
+        if hit.empty:
+            continue  # 그 사이 다른 사람이 지운 실적
+        cur = hit.iloc[0].to_dict()
         row = _clean_log(vals)
         row["updated_at"] = now
         if "equip_id" in row:
             row["equip_ref"] = names.get(row["equip_id"], "")
-        for k, v in row.items():
-            df.loc[mask, k] = _cell(v)
-    _rewrite_usage(df)
-    return len(changes)
+        cur.update(row)
+        out[key] = _rows("usage", [cur])[0]
+    n = store.update_rows("usage", out)
+    load_logs.clear()
+    return n
 
 
 def delete_logs(ids: list[int]) -> int:
     if not ids:
         return 0
-    df = get_store().read("usage")
-    keep = ~pd.to_numeric(df["id"], errors="coerce").isin([int(i) for i in ids])
-    _rewrite_usage(df[keep])
-    return len(ids)
+    n = get_store().delete_ids("usage", [str(int(i)) for i in ids])
+    load_logs.clear()
+    return n
 
 
 def import_parsed(rows: list[dict], equip_master: list[tuple[str, str]], user: str) -> dict:
