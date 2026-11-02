@@ -128,3 +128,17 @@ def test_sheet_store_row_level_ops():
     assert s.delete_ids("usage", ["100", "300"]) == 2
     starts = [r["deleteDimension"]["range"]["startIndex"] for r in s.ss.body["requests"]]
     assert starts == [3, 1]  # 아래 행부터
+
+
+def test_same_progress_end_clips_previous_period():
+    import datetime as dt
+    from core.calc import same_progress_end
+    # 4분기를 11/02까지 보면 3분기는 08/02까지
+    assert same_progress_end(dt.date(2026, 10, 1), dt.date(2026, 11, 2), dt.date(2026, 12, 31),
+                             dt.date(2026, 7, 1), dt.date(2026, 9, 30)) == dt.date(2026, 8, 2)
+    # 끝난 기간은 그대로
+    assert same_progress_end(dt.date(2026, 7, 1), dt.date(2026, 9, 30), dt.date(2026, 9, 30),
+                             dt.date(2026, 4, 1), dt.date(2026, 6, 30)) == dt.date(2026, 6, 30)
+    # 3/31까지 본 1분기 → 직전 4분기(92일)를 넘지 않음
+    assert same_progress_end(dt.date(2027, 1, 1), dt.date(2027, 1, 31), dt.date(2027, 3, 31),
+                             dt.date(2026, 10, 1), dt.date(2026, 12, 31)) == dt.date(2026, 10, 31)

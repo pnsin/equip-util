@@ -12,11 +12,11 @@ COLS = {
 
 
 def render() -> None:
-    page_header("담당자 정보", "정보 입력")
+    page_header("담당자", "기준 정보")
     msg = st.session_state.pop("staff_saved", None)
     if msg:
         st.success(msg, icon=":material/check_circle:")
-        st.toast(msg, icon="✅")
+        st.toast(msg, icon=":material/check_circle:")
     view = db.load_staff()[list(COLS)].rename(columns=COLS)
     # 빈 목록이면 열 형식을 알 수 없어 편집기가 오류를 내므로 형식을 고정
     view = view.astype({c: "string" for c in ("이름", "연락처", "이메일", "담당업무", "비고")} | {"재직": "bool", "id": "Int64"})

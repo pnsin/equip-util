@@ -12,19 +12,20 @@ def _idx(options: list, value, default: int = 0) -> int:
     return options.index(value) if value in options else default
 
 
-def render() -> None:
-    page_header("기간 실적 입력", "실적")
+def render(header: bool = True) -> None:
+    if header:
+        page_header("기간 실적 입력", "실적")
 
     saved = st.session_state.pop("entry_saved", None)
     if saved:
         st.success(saved, icon=":material/check_circle:")
-        st.toast(saved, icon="✅")
+        st.toast(saved, icon=":material/check_circle:")
 
     cfg = db.get_settings()
     eq = db.load_equipment()
     logs = db.load_logs()
     if eq.empty:
-        empty_state("등록된 장비가 없습니다", "'장비 정보'에서 먼저 장비를 추가하세요.")
+        empty_state("등록된 장비가 없습니다", "'기준 정보 › 장비'에서 먼저 장비를 추가하세요.")
         return
     ver = st.session_state.setdefault("entry_ver", 0)
     staff_opts = db.staff_names()
@@ -32,22 +33,22 @@ def render() -> None:
     user = st.selectbox("담당자", staff_opts, index=staff_opts.index(last) if last in staff_opts else None,
                         placeholder="담당자를 고르세요", key=f"entry_{ver}_staff") or ""
     if not staff_opts:
-        st.warning("등록된 담당자가 없습니다. '담당자 정보'에서 먼저 담당자를 등록하세요.")
+        st.warning("등록된 담당자가 없습니다. '기준 정보 › 담당자'에서 먼저 담당자를 등록하세요.")
 
     def k(name: str) -> str:
         return f"entry_{ver}_{name}"
 
     # 1. 사용기관 ─ 업체 정보 입력에 등록된 업체 중에서 고름. 사업자번호·업종은 업체 목록, 나머지는 지난 실적에서 채움
-    section_bar("사용기관", 1)
+    section_bar("업체", 1)
     comp = db.load_companies()
     master = {r["name"]: r for r in comp.to_dict("records")}
     recent = logs.sort_values("id", ascending=False) if not logs.empty else logs
     recent = recent[recent["company"] != ""].drop_duplicates("company") if not recent.empty else recent
     c1, c2, c3 = st.columns([2, 1, 1])
-    company = c1.selectbox("사용기관 기업명", list(master), index=None, key=k("comp"),
+    company = c1.selectbox("업체", list(master), index=None, key=k("comp"),
                            placeholder="업체 검색 (내부 사용은 비움)")
     if not master:
-        c1.caption("등록된 업체가 없습니다. '업체 정보'에서 먼저 업체를 등록하세요.")
+        c1.caption("등록된 업체가 없습니다. '기준 정보 › 업체'에서 먼저 업체를 등록하세요.")
     company = company or ""
     prev: dict = {}
     if company and not recent.empty and (recent["company"] == company).any():
@@ -62,21 +63,23 @@ def render() -> None:
     purpose = c3.selectbox("사용목적", seed.PURPOSES, index=_idx(seed.PURPOSES, prev.get("purpose"), 3),
                            key=k(f"purpose_{pk}"))
 
-    c1, c2, c3 = st.columns(3)
-    brn = c1.text_input("사업자등록번호", value=prev.get("brn", ""), key=k(f"brn_{pk}"),
-                        disabled=True, help="'업체 정보'에서 고칩니다.")
-    dept = c2.text_input("내부부서명", value=prev.get("dept") or cfg.get("dept_default", ""), key=k(f"dept_{pk}"))
-    product = c3.text_input("제품명", value=prev.get("product", ""), key=k(f"product_{pk}"))
+    detail_label = "업체 세부 정보 · 사업자번호·업종·품목은 업체를 고르면 자동으로 채워집니다"
+    with st.expander(detail_label, expanded=False):
+        c1, c2, c3 = st.columns(3)
+        brn = c1.text_input("사업자등록번호", value=prev.get("brn", ""), key=k(f"brn_{pk}"),
+                            disabled=True, help="'기준 정보 › 업체'에서 고칩니다.")
+        dept = c2.text_input("내부부서명", value=prev.get("dept") or cfg.get("dept_default", ""), key=k(f"dept_{pk}"))
+        product = c3.text_input("제품명", value=prev.get("product", ""), key=k(f"product_{pk}"))
 
-    c1, c2, c3 = st.columns(3)
-    ind = c1.selectbox("업종", seed.INDUSTRIES,
-                       index=_idx(seed.INDUSTRIES, prev.get("industry"), _idx(seed.INDUSTRIES, "전기전자")),
-                       key=k(f"ind_{pk}"))
-    items = seed.ITEMS[ind]
-    item = c2.selectbox("품목", items, index=_idx(items, prev.get("item"), _idx(items, "이차전지_에너지")),
-                        key=k(f"item_{pk}_{ind}"))
-    subs = seed.SUBITEMS.get(item, [])
-    sub = c3.selectbox("세부품목", subs, index=_idx(subs, prev.get("sub_item")), key=k(f"sub_{pk}_{item}"))
+        c1, c2, c3 = st.columns(3)
+        ind = c1.selectbox("업종", seed.INDUSTRIES,
+                           index=_idx(seed.INDUSTRIES, prev.get("industry"), _idx(seed.INDUSTRIES, "전기전자")),
+                           key=k(f"ind_{pk}"))
+        items = seed.ITEMS[ind]
+        item = c2.selectbox("품목", items, index=_idx(items, prev.get("item"), _idx(items, "이차전지_에너지")),
+                            key=k(f"item_{pk}_{ind}"))
+        subs = seed.SUBITEMS.get(item, [])
+        sub = c3.selectbox("세부품목", subs, index=_idx(subs, prev.get("sub_item")), key=k(f"sub_{pk}_{item}"))
 
     # 2. 사용 기간
     section_bar("사용 기간", 2)
@@ -155,7 +158,7 @@ def render() -> None:
                        fee=db.to_num(r["사용료(원)"], 0), samples=db.to_num(r["시료수"], 0))
             errors += [f"[{r['장비']}] {e}" for e in rules.validate(rec) if e not in common_errs]
             if (rec["equip_id"], start, end, company) in existing:
-                errors.append(f"[{r['장비']}] 같은 기관·기간의 실적이 이미 있습니다. '실적 조회·수정'에서 확인하세요.")
+                errors.append(f"[{r['장비']}] 같은 업체·기간의 실적이 이미 있습니다. '실적 목록'에서 확인하세요.")
             recs.append(rec)
         if errors:
             for e in errors:
@@ -174,7 +177,7 @@ def render() -> None:
     else:
         st.dataframe(
             mine[["start_date", "end_date", "equip_name", "company", "purpose", "hours", "fee"]].rename(columns={
-                "start_date": "시작일", "end_date": "종료일", "equip_name": "장비", "company": "기관",
+                "start_date": "시작일", "end_date": "종료일", "equip_name": "장비", "company": "업체",
                 "purpose": "목적", "hours": "시간(h)", "fee": "사용료"}),
             hide_index=True, width="stretch",
             column_config={"시작일": st.column_config.DateColumn(format="YYYY-MM-DD"),

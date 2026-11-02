@@ -7,33 +7,33 @@ from views.common import (confirm_delete, delete_config, filtered_editor, search
                           with_delete_column)
 
 COLS = {
-    "id": "id", "name": "기업명", "brn": "사업자등록번호", "contact": "담당자", "phone": "연락처",
+    "id": "id", "name": "업체명", "brn": "사업자등록번호", "contact": "업체 담당자", "phone": "연락처",
     "industry": "업종", "item": "품목", "sub_item": "세부품목", "note": "비고",
 }
 
 
 def render() -> None:
-    page_header("업체 정보", "정보 입력")
+    page_header("업체", "기준 정보")
     msg = st.session_state.pop("company_saved", None)
     if msg:
         st.success(msg, icon=":material/check_circle:")
-        st.toast(msg, icon="✅")
+        st.toast(msg, icon=":material/check_circle:")
     comp = db.load_companies()
     view = comp[list(COLS)].rename(columns=COLS)
 
-    q = search_box("company_q", "🔍  기업명·사업자등록번호·담당자로 찾기")
+    q = search_box("company_q", "업체명·사업자등록번호·업체 담당자로 찾기")
     mask = None
     if q:
-        mask = (view["기업명"].str.contains(q, case=False, regex=False)
+        mask = (view["업체명"].str.contains(q, case=False, regex=False)
                 | view["사업자등록번호"].str.contains(db.digits(q) or q, regex=False)
-                | view["담당자"].astype(str).str.contains(q, case=False, regex=False))
+                | view["업체 담당자"].astype(str).str.contains(q, case=False, regex=False))
 
     edited, shown = filtered_editor(
         with_delete_column(view), mask, key=f"company_editor_{q}", num_rows="dynamic", hide_index=True,
         width="stretch", height=min(620, 38 + 35 * (len(view) + 2)),
         column_order=["삭제"] + [c for c in COLS.values() if c != "id"],
         column_config=delete_config() | {
-            "기업명": st.column_config.TextColumn(required=True, width="medium"),
+            "업체명": st.column_config.TextColumn(required=True, width="medium"),
             "사업자등록번호": st.column_config.TextColumn(help="숫자 10자리 (- 는 넣어도 되고 빼도 됩니다)"),
             "업종": st.column_config.SelectboxColumn(options=seed.INDUSTRIES),
             "품목": st.column_config.SelectboxColumn(options=seed.ALL_ITEMS),
@@ -42,7 +42,7 @@ def render() -> None:
         },
     )
     st.caption(f"{shown}곳 / 전체 {len(view)}곳" if q else f"전체 {len(view)}곳")
-    edited, deleted = split_deleted(edited, "기업명")
+    edited, deleted = split_deleted(edited, "업체명")
     ok = confirm_delete(deleted, "company_editor_del", "곳")
     if st.button("변경 내용 저장", type="primary", disabled=not ok, icon=":material/save:"):
         raw = edited.rename(columns={v: k for k, v in COLS.items()})

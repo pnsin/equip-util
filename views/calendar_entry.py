@@ -26,6 +26,15 @@ CELL_LINES = 4  # 달력 칸에 바로 보여 줄 실적 수 (나머지는 "+N�
 CSS = """<style>
 .block-container {padding-top: 2.5rem;}
 .st-key-calgrid [data-testid="stHorizontalBlock"] {gap: 0.4rem;}
+/* 달 이동 줄 */
+.st-key-calnav {margin-bottom: .8rem; align-items: center;}
+.st-key-calnav .cal-title {font-size: 1.25rem; font-weight: 700; color: var(--ink); min-width: 8.5rem; text-align: center;
+  line-height: 2.25rem;}
+.st-key-calnav [data-testid="stElementContainer"]:has(.cal-title) {width: auto !important; flex: none;}
+.st-key-calnav [data-testid="stMarkdownContainer"] {margin: 0;}
+.st-key-calnav div[class*="st-key-cal_prev"] button, .st-key-calnav div[class*="st-key-cal_next"] button {
+  width: 2.25rem; height: 2.25rem; min-height: 0; padding: 0; border-radius: 6px;}
+.st-key-calnav div[class*="st-key-cal_today"] {margin-left: auto;}
 /* 날짜 칸 */
 .st-key-calgrid div[class*="st-key-cell_"] {min-height: 128px; padding: 6px 6px 8px; gap: 3px; border-radius: 10px;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {border-color: var(--accent);}
@@ -168,9 +177,13 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
 
 def _day_head(d: dt.date, entries: list[dict], holiday: bool, today: bool) -> tuple[str, str | None]:
     """날짜 머리 글자와, 마우스를 올렸을 때 보일 그날 실적 전체."""
-    mark = " 🔴" if holiday else (" 📍" if today else "")
+    num = f"**{d.day}**"
+    if today:
+        num = f":blue-background[:blue[**{d.day}**]]"
+    elif holiday or d.weekday() == 6:
+        num = f":red[**{d.day}**]"
     total = sum(e["hours"] for e in entries)
-    head = f"**{d.day}**{mark}" + (f"\u2002{len(entries)}건 · {_hours(total)}" if entries else "")
+    head = num + (f"\u2002{len(entries)}건 · {_hours(total)}" if entries else "")
     if not entries:
         return head, None
     tip = [f"**{d:%m/%d} ({WEEKDAYS[d.weekday()]}) · {len(entries)}건 · {_hours(total)}**", ""]
@@ -230,9 +243,10 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
         cell.container(key=f"more_{d}").markdown(f"+{len(entries) - CELL_LINES}건 더 · 날짜에 마우스를 올려 보기")
 
 
-def render() -> None:
+def render(header: bool = True) -> None:
     st.markdown(CSS, unsafe_allow_html=True)
-    page_header("달력 입력", "실적")
+    if header:
+        page_header("달력 입력", "실적")
     msg = st.session_state.pop("cal_saved", None)
     undo = st.session_state.get("cal_undo")
     if msg or undo:
@@ -257,18 +271,17 @@ def render() -> None:
     month: dt.date = st.session_state.setdefault("cal_month", day.replace(day=1))
 
     # ── 달력 ──────────────────────────────────────────────
-    c1, c2, c3, c4 = st.columns([1, 3, 1, 1])
-    if c1.button("◀ 이전 달", width="stretch"):
-        st.session_state.cal_month = _shift_month(month, -1)
-        st.rerun()
-    c2.markdown(f"<h4 style='text-align:center;margin:0;padding:0.3rem 0'>{month.year}년 {month.month}월</h4>",
-                unsafe_allow_html=True)
-    if c3.button("다음 달 ▶", width="stretch"):
-        st.session_state.cal_month = _shift_month(month, 1)
-        st.rerun()
-    if c4.button("오늘", width="stretch"):
-        _pick_day(today)
-        st.rerun()
+    with st.container(key="calnav", horizontal=True, vertical_alignment="center", gap="small"):
+        if st.button("", icon=":material/chevron_left:", key="cal_prev", help="이전 달"):
+            st.session_state.cal_month = _shift_month(month, -1)
+            st.rerun()
+        st.markdown(f"<div class='cal-title'>{month.year}년 {month.month}월</div>", unsafe_allow_html=True)
+        if st.button("", icon=":material/chevron_right:", key="cal_next", help="다음 달"):
+            st.session_state.cal_month = _shift_month(month, 1)
+            st.rerun()
+        if st.button("오늘", key="cal_today", icon=":material/today:"):
+            _pick_day(today)
+            st.rerun()
 
     weeks = calendar.Calendar(firstweekday=0).monthdatescalendar(month.year, month.month)
     hol = kr_holidays({weeks[0][0].year, weeks[-1][-1].year, today.year, today.year + 1})
@@ -309,7 +322,7 @@ def render() -> None:
                 continue
             _day_cell(cols[i], d, by_day.get(d, []), selected=d == day, holiday=d in hol, today=d == today,
                       clip=clip, logs=logs)
-    st.caption("🔴 공휴일 · 📍 오늘")
+    st.caption("빨간 날짜는 일요일·공휴일, 파란 날짜는 오늘입니다.")
 
     # ── 선택한 날 입력 ─────────────────────────────────────
     st.divider()
@@ -362,10 +375,10 @@ def render() -> None:
         column_config={
             "장비": st.column_config.SelectboxColumn(options=eq_opts, required=True, width="large"),
             "업체": st.column_config.SelectboxColumn(options=comp_opts, width="medium",
-                                                   help="내부 사용이면 비워 두세요. 목록에 없으면 '업체 정보 입력'에서 추가합니다."),
+                                                   help="내부 사용이면 비워 두세요. 목록에 없으면 '기준 정보 › 업체'에서 추가합니다."),
             "담당자": st.column_config.SelectboxColumn(options=staff_opts, required=True,
                                                     default=last_staff if last_staff in staff_opts else None,
-                                                    help="목록에 없으면 '담당자 정보 입력'에서 추가합니다."),
+                                                    help="목록에 없으면 '기준 정보 › 담당자'에서 추가합니다."),
             "활용유형": st.column_config.SelectboxColumn(options=seed.USAGE_TYPES, required=True, default="외부"),
             "사용목적": st.column_config.SelectboxColumn(options=seed.PURPOSES, required=True, default="생산"),
             "사용시간": st.column_config.NumberColumn("사용시간(h)", min_value=0, max_value=24, step=1, format="%d",
@@ -399,7 +412,7 @@ def render() -> None:
     if removed:
         confirm = st.checkbox(f"{len(removed)}건을 삭제합니다. 되돌릴 수 없습니다.", value=False, key=f"cal_del_{day}_{ver}")
     c1, c2 = st.columns([1, 3])
-    if c1.button("💾 저장", type="primary", disabled=not dirty or not confirm, width="stretch"):
+    if c1.button("저장", icon=":material/save:", type="primary", disabled=not dirty or not confirm, width="stretch"):
         errors, inserts, updates = [], [], {}
         base_new = {"start_date": day, "end_date": day}
         for r in new_rows:
@@ -443,7 +456,7 @@ def render() -> None:
         c2.caption(f"저장 안 된 변경: 추가 {len(new_rows)} · 수정 {len(changed)} · 삭제 {len(removed)}")
 
     if not period.empty:
-        with st.expander(f"이 날이 포함된 기간 실적 {len(period)}건 (여기서는 보기만, 수정은 '실적 조회·수정')"):
+        with st.expander(f"이 날이 포함된 기간 실적 {len(period)}건 (여기서는 보기만, 수정은 '실적 목록')"):
             st.dataframe(pd.DataFrame({
                 "장비": period["equip_id"].map(label_of), "업체": period["company"],
                 "시작일": period["start_date"].dt.date, "종료일": period["end_date"].dt.date,

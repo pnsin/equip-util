@@ -11,11 +11,11 @@ XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def render() -> None:
-    page_header("설정 · 백업", "설정")
+    page_header("설정", "관리")
     msg = st.session_state.pop("settings_saved", None)
     if msg:
         st.success(msg, icon=":material/check_circle:")
-        st.toast(msg, icon="✅")
+        st.toast(msg, icon=":material/check_circle:")
     cfg = db.get_settings()
 
     st.subheader("기본 정보")
@@ -26,7 +26,7 @@ def render() -> None:
         dept = c3.text_input("내부부서명 기본값", value=cfg.get("dept_default", ""))
         c1, c2, c3 = st.columns(3)
         annual = c1.number_input("연간 기준 가용시간 (h)", min_value=1, step=100, value=int(cfg.get("annual_hours") or 2000),
-                                 help="장비별로 다르면 '장비 정보 입력'에서 장비마다 따로 지정할 수 있습니다.")
+                                 help="장비별로 다르면 '기준 정보 › 장비'에서 장비마다 따로 지정할 수 있습니다.")
         target = c2.number_input(w("목표 가동률 (%)"), min_value=0.0, max_value=100.0, step=5.0,
                                  value=float(cfg.get("target_util") or 0))
         modes = {"spread": "사용기간에 고르게 나눔 (권장)", "start": "사용시작일에 전부 반영"}
@@ -39,6 +39,25 @@ def render() -> None:
             st.session_state.settings_saved = "설정을 저장했습니다."
             st.rerun()
 
+    st.subheader("i-Tube 공식 빈 양식")
+    if cfg.get("template_b64"):
+        st.success("공식 양식 등록됨", icon=":material/check_circle:")
+        if st.button("등록된 양식 지우기"):
+            db.save_settings(template_b64="")
+            st.rerun()
+    tpl = st.file_uploader("i-Tube에서 받은 빈 양식 (.xlsx)", type=["xlsx"], key="tpl_file")
+    if tpl is not None and st.button("이 파일을 양식으로 등록"):
+        db.save_settings(template_b64=base64.b64encode(tpl.getvalue()).decode())
+        st.session_state.settings_saved = "공식 양식을 등록했습니다."
+        st.rerun()
+
+
+def render_data() -> None:
+    page_header("가져오기 · 백업", "관리")
+    msg = st.session_state.pop("settings_saved", None)
+    if msg:
+        st.success(msg, icon=":material/check_circle:")
+        st.toast(msg, icon=":material/check_circle:")
     st.subheader("기존 엑셀 실적 가져오기")
     up = st.file_uploader("i-Tube 장비일지 파일", type=["xlsx"], key="import_file",
                           help="이미 등록된 실적(같은 장비·기간·기관·시간)은 건너뜁니다.")
@@ -58,18 +77,6 @@ def render() -> None:
                 st.rerun()
         elif up is not None:
             st.warning("실적 행을 찾지 못했습니다. 3행에 헤더, 4행부터 데이터가 있는 i-Tube 양식인지 확인하세요.")
-
-    st.subheader("i-Tube 공식 빈 양식")
-    if cfg.get("template_b64"):
-        st.success("공식 양식 등록됨", icon=":material/check_circle:")
-        if st.button("등록된 양식 지우기"):
-            db.save_settings(template_b64="")
-            st.rerun()
-    tpl = st.file_uploader("i-Tube에서 받은 빈 양식 (.xlsx)", type=["xlsx"], key="tpl_file")
-    if tpl is not None and st.button("이 파일을 양식으로 등록"):
-        db.save_settings(template_b64=base64.b64encode(tpl.getvalue()).decode())
-        st.session_state.settings_saved = "공식 양식을 등록했습니다."
-        st.rerun()
 
     st.subheader("백업 · 복원")
     if db.is_local():

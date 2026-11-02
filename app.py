@@ -12,13 +12,15 @@ import os  # noqa: E402
 import sys  # noqa: E402
 
 from core import calc, db, itube, rules, seed  # noqa: E402
-from views import calendar_entry, companies, common, dashboard, entry, equipment, export, records, settings, staff  # noqa: E402,E501
+from views import (calendar_entry, companies, common, dashboard, entry, equipment, export, input_page,  # noqa: E402
+                   records, settings, staff)
+from core.terms import w  # noqa: E402
 
 # 새 코드가 배포된 직후 Streamlit Cloud가 일부 파일만 새로 읽고 나머지는 옛 버전을 쓰는 일이 있어
 # (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
-for _m in (ui_style, seed, db, calc, rules, itube, common, calendar_entry, companies, dashboard, entry, equipment,
-           export, records, settings, staff):
+for _m in (ui_style, seed, db, calc, rules, itube, common, calendar_entry, entry, input_page, companies, dashboard,
+           equipment, export, records, settings, staff):
     _mt = os.path.getmtime(_m.__file__)
     if getattr(_m, "_src_mtime", None) != _mt:
         _m = importlib.reload(sys.modules[_m.__name__])
@@ -58,23 +60,33 @@ def check_password() -> bool:
 
 PAGES = {
     "현황": [
-        st.Page(dashboard.render, title="대시보드", url_path="dashboard", default=True),
+        st.Page(dashboard.render, title="대시보드", url_path="home", default=True),
     ],
     "실적": [
-        st.Page(calendar_entry.render, title="달력 입력", url_path="calendar"),
-        st.Page(entry.render, title="기간 실적 입력", url_path="entry"),
-        st.Page(records.render, title="실적 조회·수정", url_path="records"),
-        st.Page(export.render, title="엑셀 내려받기", url_path="export"),
+        st.Page(input_page.render, title="실적 입력", url_path="input"),
+        st.Page(records.render, title="실적 목록", url_path="records"),
     ],
-    "정보 입력": [
-        st.Page(equipment.render, title="장비 정보", url_path="equipment"),
-        st.Page(companies.render, title="업체 정보", url_path="companies"),
-        st.Page(staff.render, title="담당자 정보", url_path="staff"),
+    "보고": [
+        st.Page(export.render_itube, title="i-Tube 장비일지", url_path="itube"),
+        st.Page(export.render_report, title=w("가동률 분석 보고서"), url_path="report"),
     ],
-    "설정": [
-        st.Page(settings.render, title="설정 · 백업", url_path="settings"),
+    "기준 정보": [
+        st.Page(equipment.render, title="장비", url_path="equipment"),
+        st.Page(companies.render, title="업체", url_path="companies"),
+        st.Page(staff.render, title="담당자", url_path="staff"),
+    ],
+    "관리": [
+        st.Page(settings.render, title="설정", url_path="settings"),
+        st.Page(settings.render_data, title="가져오기 · 백업", url_path="data"),
     ],
 }
+# 예전 주소(/dashboard, /calendar …)로 들어와도 "Page not found" 없이 해당 화면이 열리게 하는 숨은 주소
+ALIASES = [
+    st.Page(dashboard.render, title="대시보드", url_path="dashboard"),
+    st.Page(input_page.render, title="실적 입력", url_path="calendar"),
+    st.Page(input_page.render, title="실적 입력", url_path="entry"),
+    st.Page(export.render_itube, title="i-Tube 장비일지", url_path="export"),
+]
 
 
 def sidebar(local: bool) -> None:
@@ -86,7 +98,7 @@ def sidebar(local: bool) -> None:
                 st.page_link(p, label=p.title)
         st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
         st.divider()
-        if st.button("↻ 데이터 새로고침", width="stretch",
+        if st.button("데이터 새로고침", icon=":material/refresh:", width="stretch",
                      help="다른 팀원이 방금 저장한 내용이나 구글 시트에서 직접 고친 내용을 다시 불러옵니다."):
             db.clear_caches()
             st.rerun()
@@ -102,7 +114,7 @@ if check_password():
         st.error(f"데이터 저장소(구글 시트)에 연결하지 못했습니다. 잠시 뒤 새로고침해 보세요.\n\n자세한 내용: {e}")
         st.stop()
     local = db.is_local()
-    pg = st.navigation(PAGES, position="hidden")
+    pg = st.navigation({**PAGES, "": ALIASES}, position="hidden")
     sidebar(local)
     if local:
         st.warning("구글 시트가 연결되지 않아 임시 저장 중입니다. 앱이 재시작되면 데이터가 지워질 수 있습니다.")

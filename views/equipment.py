@@ -18,17 +18,17 @@ COLS = {
 
 def render() -> None:
     cfg = db.get_settings()
-    page_header("장비 정보", "정보 입력")
+    page_header("장비", "기준 정보")
     msg = st.session_state.pop("equip_saved", None)
     if msg:
         st.success(msg, icon=":material/check_circle:")
-        st.toast(msg, icon="✅")
+        st.toast(msg, icon=":material/check_circle:")
     eq = db.load_equipment()
     view = eq[list(COLS)].rename(columns=COLS)
     view["도입일"] = view["도입일"].dt.date
     view["불용일"] = view["불용일"].dt.date
 
-    q = search_box("equip_q", "🔍  장비명·ITUBE번호·관리자로 찾기")
+    q = search_box("equip_q", "장비명·ITUBE번호·관리자로 찾기")
     kpi_n = int(view[KPI_COL].fillna(False).astype(bool).sum()) if not view.empty else 0
     mask = None
     if q:
