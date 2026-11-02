@@ -13,8 +13,7 @@ def _idx(options: list, value, default: int = 0) -> int:
 
 
 def render() -> None:
-    page_header("기간 실적 입력", "실적",
-                desc="여러 날에 걸친 사용을 한 번에 입력합니다. 같은 기관·기간에 여러 장비를 썼다면 장비를 여러 개 고르고 장비별 시간만 적으세요.")
+    page_header("기간 실적 입력", "실적")
 
     saved = st.session_state.pop("entry_saved", None)
     if saved:
@@ -25,8 +24,7 @@ def render() -> None:
     eq = db.load_equipment()
     logs = db.load_logs()
     if eq.empty:
-        empty_state("등록된 장비가 없습니다", "'장비 정보'에서 장비를 추가하거나, '설정 · 백업 → 기존 엑셀 실적 가져오기'로 "
-                    "i-Tube 장비일지 파일을 올리면 장비 목록과 실적이 함께 등록됩니다.")
+        empty_state("등록된 장비가 없습니다", "'장비 정보'에서 먼저 장비를 추가하세요.")
         return
     ver = st.session_state.setdefault("entry_ver", 0)
     staff_opts = db.staff_names()
@@ -47,7 +45,7 @@ def render() -> None:
     recent = recent[recent["company"] != ""].drop_duplicates("company") if not recent.empty else recent
     c1, c2, c3 = st.columns([2, 1, 1])
     company = c1.selectbox("사용기관 기업명", list(master), index=None, key=k("comp"),
-                           placeholder="업체명을 입력해 검색 (내부 사용이면 비워 두세요)")
+                           placeholder="업체 검색 (내부 사용은 비움)")
     if not master:
         c1.caption("등록된 업체가 없습니다. '업체 정보'에서 먼저 업체를 등록하세요.")
     company = company or ""
@@ -65,8 +63,8 @@ def render() -> None:
                            key=k(f"purpose_{pk}"))
 
     c1, c2, c3 = st.columns(3)
-    brn = c1.text_input("사업자등록번호 (업체 정보 입력 기준)", value=prev.get("brn", ""), key=k(f"brn_{pk}"),
-                        disabled=True, help="사업자등록번호는 '업체 정보 입력'에서 고칩니다.")
+    brn = c1.text_input("사업자등록번호", value=prev.get("brn", ""), key=k(f"brn_{pk}"),
+                        disabled=True, help="'업체 정보'에서 고칩니다.")
     dept = c2.text_input("내부부서명", value=prev.get("dept") or cfg.get("dept_default", ""), key=k(f"dept_{pk}"))
     product = c3.text_input("제품명", value=prev.get("product", ""), key=k(f"product_{pk}"))
 
@@ -91,7 +89,7 @@ def render() -> None:
                    help="N이면 대시보드에서 주·월별로 나눌 때 주말·공휴일을 빼고 나눕니다.")
     disclose = c4.radio("세부지원공개여부", ["N", "Y"], horizontal=True, key=k("disc"))
     if start and end and end >= start:
-        st.caption(f"사용기간 {(end - start).days + 1}일 · i-Tube 규칙: 같은 해, 2개월 이내")
+        st.caption(f"{(end - start).days + 1}일간")
 
     # 3. 장비와 시간
     section_bar("사용 장비와 시간", 3)
@@ -130,7 +128,7 @@ def render() -> None:
     method = c2.text_input("인증/인정/시험법", value=me or "-", key=k(f"me_{pk}"))
     content = c3.text_input("지원내용", value=co, key=k(f"co_{pk}"))
     c1, c2 = st.columns(2)
-    purpose_detail = c1.text_input("사용목적 (상세, 양식 U열)", value=prev.get("purpose_detail", ""),
+    purpose_detail = c1.text_input("사용목적 (상세)", value=prev.get("purpose_detail", ""),
                                    placeholder="비워 두면 지원개요가 들어갑니다", key=k(f"pd_{pk}"))
     etc = c2.text_input("기타", key=k("etc"))
 
@@ -172,7 +170,7 @@ def render() -> None:
     st.subheader(f"{user} 님이 최근 입력한 실적" if user else "최근 입력한 실적")
     mine = (logs[logs["created_by"] == user] if user else logs).sort_values("id", ascending=False).head(10)
     if mine.empty:
-        st.caption("아직 입력한 실적이 없습니다. 위에서 저장하면 여기에 바로 보입니다.")
+        st.caption("아직 입력한 실적이 없습니다.")
     else:
         st.dataframe(
             mine[["start_date", "end_date", "equip_name", "company", "purpose", "hours", "fee"]].rename(columns={
