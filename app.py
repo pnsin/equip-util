@@ -186,6 +186,9 @@ def sidebar(local: bool) -> None:
                     unsafe_allow_html=True)
 
 
+# 주소(예: /input)로 바로 들어와도 접속·이름 고르기 뒤에 그 화면이 열리도록 먼저 등록
+pg = st.navigation({**PAGES, "": ALIASES}, position="hidden")
+
 if check_password():
     try:
         db.get_store()
@@ -195,7 +198,6 @@ if check_password():
     if not pick_name():
         st.stop()
     local = db.is_local()
-    pg = st.navigation({**PAGES, "": ALIASES}, position="hidden")
     sidebar(local)
     if local:
         st.warning("구글 시트가 연결되지 않아 임시 저장 중입니다. 앱이 재시작되면 데이터가 지워질 수 있습니다.")

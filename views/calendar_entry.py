@@ -58,6 +58,22 @@ CSS = """<style>
 .st-key-calgrid div[class*="st-key-ent_"] button:hover {background: rgba(45, 143, 213, 0.22);}
 .st-key-calgrid div[class*="st-key-ent_"] button p {font-size: 0.72rem; line-height: 1.35;}
 .st-key-calgrid div[class*="st-key-more_"] p {font-size: 0.7rem; color: #777; margin: 0 0 0 4px;}
+/* 휴대폰: 7칸을 한 줄에 유지한 작은 달력 (날짜·건수만, 누르면 아래에 그날 실적) */
+.cal-mobile-hint {display: none;}
+@media (max-width: 640px) {
+  .st-key-calgrid [data-testid="stHorizontalBlock"] {flex-wrap: nowrap !important; gap: 3px !important;}
+  .st-key-calgrid [data-testid="stColumn"] {min-width: 0 !important; width: auto !important; flex: 1 1 0 !important;}
+  .st-key-calgrid div[class*="st-key-cell_"] {min-height: 54px; padding: 3px 2px; border-radius: 8px;}
+  .st-key-calgrid div[class*="st-key-ent_"], .st-key-calgrid div[class*="st-key-more_"] {display: none;}
+  .st-key-calgrid div[class*="st-key-day_"] button {padding: 0;}
+  .st-key-calgrid div[class*="st-key-day_"] button p {white-space: normal !important; font-size: .62rem; line-height: 1.25;
+    text-align: center !important; overflow: visible;}
+  .st-key-calgrid div[class*="st-key-day_"] button strong {display: block; font-size: .9rem;}
+  .st-key-calgrid div[class*="st-key-day_"] button span {background: none !important; padding: 0 !important;}
+  .st-key-calgrid div[class*="st-key-day_"] button div[data-testid="stMarkdownContainer"] {text-align: center;}
+  .st-key-calnav .cal-title {min-width: 0; font-size: 1.05rem;}
+  .cal-mobile-hint {display: block; font-size: .8rem; color: var(--muted); margin: .2rem 0 .4rem;}
+}
 </style>"""
 
 
@@ -382,6 +398,8 @@ def render(header: bool = True) -> None:
             _day_cell(cols[i], d, by_day.get(d, []), selected=d == day, holiday=d in hol, today=d == today,
                       clip=clip, logs=logs)
     st.caption("빨간 날짜는 일요일·공휴일, 파란 날짜는 오늘입니다.")
+    st.markdown("<div class='cal-mobile-hint'>날짜를 누르면 아래에 그날 실적이 나옵니다. "
+                "다른 날로 복사는 '실적 목록'의 복제를 쓰세요.</div>", unsafe_allow_html=True)
 
     # ── 선택한 날 입력 ─────────────────────────────────────
     st.divider()
