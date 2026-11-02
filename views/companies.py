@@ -2,7 +2,7 @@
 import streamlit as st
 
 from core import db, seed
-from ui_style import note, page_header
+from ui_style import page_header
 from views.common import (confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
                           with_delete_column)
 
@@ -13,8 +13,7 @@ COLS = {
 
 
 def render() -> None:
-    page_header("업체 정보", "정보 입력",
-                desc="실적을 입력할 때는 여기 등록된 업체만 고를 수 있습니다. 같은 회사가 다른 이름으로 집계되지 않게 한 곳에서 관리합니다.")
+    page_header("업체 정보", "정보 입력")
     msg = st.session_state.pop("company_saved", None)
     if msg:
         st.success(msg, icon=":material/check_circle:")
@@ -23,8 +22,6 @@ def render() -> None:
     view = comp[list(COLS)].rename(columns=COLS)
 
     q = search_box("company_q", "🔍  기업명·사업자등록번호·담당자로 찾기")
-    note(f"등록 업체 <b>{len(view)}곳</b> · 업종·품목·세부품목을 적어 두면 실적 입력 때 자동으로 채워집니다. "
-         "사업자등록번호는 숫자 10자리로, '-'는 넣어도 되고 빼도 됩니다.")
     mask = None
     if q:
         mask = (view["기업명"].str.contains(q, case=False, regex=False)
@@ -44,8 +41,7 @@ def render() -> None:
             "비고": st.column_config.TextColumn(width="medium"),
         },
     )
-    st.caption((f"검색 결과 {shown}곳 (검색 중에도 바로 고칠 수 있습니다) · " if q else "")
-               + "지울 행은 '삭제'에 체크하고, 맨 아래 빈 행에 입력하면 업체가 추가됩니다.")
+    st.caption(f"{shown}곳 / 전체 {len(view)}곳" if q else f"전체 {len(view)}곳")
     edited, deleted = split_deleted(edited, "기업명")
     ok = confirm_delete(deleted, "company_editor_del", "곳")
     if st.button("변경 내용 저장", type="primary", disabled=not ok, icon=":material/save:"):

@@ -10,7 +10,7 @@ XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def render() -> None:
-    page_header("설정 · 백업", "설정", desc="가동률 기준, 기존 엑셀 가져오기, i-Tube 양식, 데이터 백업을 관리합니다.")
+    page_header("설정 · 백업", "설정")
     msg = st.session_state.pop("settings_saved", None)
     if msg:
         st.success(msg, icon=":material/check_circle:")
@@ -39,9 +39,8 @@ def render() -> None:
             st.rerun()
 
     st.subheader("기존 엑셀 실적 가져오기")
-    st.caption("지금까지 작성한 i-Tube 장비일지 파일(예: '26.07~09월 장비실적)을 올리면 실적을 한 번에 등록합니다. "
-               "이미 등록된 실적(같은 장비·기간·기관·시간)은 건너뜁니다.")
-    up = st.file_uploader("i-Tube 장비일지 파일", type=["xlsx"], key="import_file")
+    up = st.file_uploader("i-Tube 장비일지 파일", type=["xlsx"], key="import_file",
+                          help="이미 등록된 실적(같은 장비·기간·기관·시간)은 건너뜁니다.")
     if up is not None:
         try:
             rows, master = itube.read_itube_file(up.getvalue())
@@ -61,12 +60,10 @@ def render() -> None:
 
     st.subheader("i-Tube 공식 빈 양식")
     if cfg.get("template_b64"):
-        st.success("공식 양식이 등록되어 있습니다. 내려받는 장비일지는 이 파일에 채워집니다.")
-        if st.button("등록된 양식 지우기 (기본 재현 양식 사용)"):
+        st.success("공식 양식 등록됨", icon=":material/check_circle:")
+        if st.button("등록된 양식 지우기"):
             db.save_settings(template_b64="")
             st.rerun()
-    else:
-        st.caption("등록하지 않아도 같은 구조의 양식으로 내려받을 수 있습니다. i-Tube에서 받은 빈 양식을 올리면 그 파일에 그대로 채웁니다.")
     tpl = st.file_uploader("i-Tube에서 받은 빈 양식 (.xlsx)", type=["xlsx"], key="tpl_file")
     if tpl is not None and st.button("이 파일을 양식으로 등록"):
         db.save_settings(template_b64=base64.b64encode(tpl.getvalue()).decode())
@@ -78,14 +75,13 @@ def render() -> None:
         st.warning("구글 시트가 연결되지 않아 앱 서버의 임시 파일에 저장 중입니다. 앱이 재시작되면 지워질 수 있으니 "
                    "README의 안내대로 Secrets에 구글 시트를 연결하세요.")
     else:
-        st.caption("구글 시트에 저장 중입니다 (탭: 장비 / 업체 / 사용실적 / 설정). 시트의 1행 열 제목은 바꾸지 마세요.")
+        st.caption("구글 시트에 저장 중 · 시트의 1행 열 제목은 바꾸지 마세요.")
     # 백업 파일은 누를 때만 만듭니다 (화면을 고칠 때마다 시트 4개를 다시 읽지 않도록)
-    if st.button("백업 파일 만들기", icon=":material/inventory_2:"):
+    if st.button("백업 파일 만들기", icon=":material/inventory_2:", help="한 달에 한 번쯤 내려받아 팀 드라이브에 보관하세요."):
         st.session_state.backup_file = db.backup_bytes()
     if st.session_state.get("backup_file"):
         st.download_button("전체 데이터 백업 내려받기", data=st.session_state.backup_file, mime=XLSX, icon=":material/download:",
                            file_name=f"가동률관리_백업_{dt.date.today():%Y%m%d}.xlsx", type="primary")
-    st.caption("한 달에 한 번쯤 백업 파일을 내려받아 팀 드라이브에 보관하세요. 실수로 지운 실적은 백업으로만 되살릴 수 있습니다.")
     with st.expander("백업 파일로 복원 (현재 데이터를 모두 덮어씀)"):
         bk = st.file_uploader("백업 파일", type=["xlsx"], key="restore_file")
         ok = st.checkbox("현재 데이터가 모두 지워지고 백업 내용으로 바뀌는 것을 확인했습니다.")

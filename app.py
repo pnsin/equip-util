@@ -40,14 +40,12 @@ def check_password() -> bool:
         with st.container(key="login_card"):
             ui_style.login_head()
             with st.form("login", border=False, enter_to_submit=True):
-                value = st.text_input("비밀번호", type="password", placeholder="팀 공용 비밀번호",
+                value = st.text_input("비밀번호", type="password", placeholder="비밀번호",
                                       label_visibility="collapsed")
                 if st.session_state.get("login_failed"):
                     st.markdown('<div class="login-err">비밀번호가 맞지 않습니다. 다시 입력해 주세요.</div>',
                                 unsafe_allow_html=True)
                 sent = st.form_submit_button("접속하기", type="primary", width="stretch")
-            st.markdown('<div class="login-foot">비밀번호를 모르면 팀 장비 담당자에게 문의하세요.</div>',
-                        unsafe_allow_html=True)
     if sent:
         if value and hmac.compare_digest(value.encode(), pw.encode()):
             st.session_state.authed = True

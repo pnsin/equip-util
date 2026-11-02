@@ -19,34 +19,66 @@ import streamlit as st
 SYSTEM_TITLE = "장비 가동률 관리 시스템"
 TEAM_NAME = "배터리산업팀"
 
-# ------------------------------------------------------------------ 규칙표 (색 토큰) — battery-app과 같은 값
-TOKENS = {
-    "bg": "#0F141A",        # 화면 바탕
-    "side": "#0A0E13",      # 왼쪽 메뉴
-    "panel": "#151C24",     # 상자·카드
-    "panel2": "#1A222C",    # 상자 머리·표 머리·입력칸
-    "deep": "#111820",      # 한 단계 어두운 면
-    "line": "#263140",      # 얇은 선
-    "line2": "#2E3A49",     # 입력칸·표 테두리
-    "ink": "#E3E9EF",       # 본문 글자
-    "muted": "#8B97A5",     # 보조 글자
-    "dim": "#5F6B7A",       # 흐린 글자
-    "accent": "#2D8FD5",    # 강조(버튼)
-    "accent-hi": "#4FB3F0", # 밝은 강조(선택된 메뉴·번호)
-    "accent-bg": "#12263A",
-    "ok": "#5CCB93", "ok-bg": "#12301F",
-    "ng": "#FF8A7A", "ng-bg": "#3A1714",
-    "warn": "#F0B35C", "warn-bg": "#33260F",
+# ------------------------------------------------------------------ 테마 (색 토큰)
+# 화면 코드에는 색 값을 직접 쓰지 말고 var(--이름) 이나 T["이름"] 을 쓴다.
+# 'st' 는 .streamlit/config.toml [theme] 에 넣는 값 (Streamlit 기본 위젯 색).
+THEMES = {
+    # battery-app과 같은 다크 관제실형
+    "dark": {
+        "bg": "#0F141A", "panel": "#151C24", "panel2": "#1A222C", "deep": "#111820",
+        "line": "#263140", "line2": "#2E3A49", "ink": "#E3E9EF", "muted": "#8B97A5", "dim": "#5F6B7A",
+        "accent": "#2D8FD5", "accent-hi": "#4FB3F0", "accent-bg": "#12263A",
+        "ok": "#5CCB93", "ok-bg": "#12301F", "ng": "#FF8A7A", "ng-bg": "#3A1714", "warn": "#F0B35C", "warn-bg": "#33260F",
+        "bar-off": "#3A4656", "shadow": "0 24px 60px rgba(0,0,0,.45)", "card-shadow": "none",
+        "side": "#0A0E13", "side-line": "#263140", "side-ink": "#E3E9EF", "side-muted": "#8B97A5", "side-dim": "#5F6B7A",
+        "side-hover": "#151C24", "side-active": "#1B2633", "side-active-ink": "#4FB3F0",
+        "logo": "logo_dark.png", "base": "dark",
+    },
+    # A. 흰 바탕 카드형 (Looker Studio · Metabase)
+    "light": {
+        "bg": "#F5F7FA", "panel": "#FFFFFF", "panel2": "#F1F4F8", "deep": "#F8FAFC",
+        "line": "#E3E8EF", "line2": "#CBD3DD", "ink": "#1F2937", "muted": "#5B6675", "dim": "#98A2B0",
+        "accent": "#1A73E8", "accent-hi": "#1A73E8", "accent-bg": "#E8F0FE",
+        "ok": "#188038", "ok-bg": "#E6F4EA", "ng": "#D93025", "ng-bg": "#FCE8E6", "warn": "#B06000", "warn-bg": "#FEF3E0",
+        "bar-off": "#C9D1DC", "shadow": "0 12px 40px rgba(31,41,55,.10)", "card-shadow": "0 1px 2px rgba(31,41,55,.06)",
+        "side": "#FFFFFF", "side-line": "#E3E8EF", "side-ink": "#1F2937", "side-muted": "#5B6675", "side-dim": "#98A2B0",
+        "side-hover": "#F1F4F8", "side-active": "#E8F0FE", "side-active-ink": "#1A73E8",
+        "logo": "logo_light.png", "base": "light",
+    },
+    # B. 남색 메뉴 + 밝은 본문 (Power BI)
+    "navy": {
+        "bg": "#F2F4F7", "panel": "#FFFFFF", "panel2": "#F3F5F8", "deep": "#F7F8FA",
+        "line": "#E1E5EB", "line2": "#C8D0DA", "ink": "#1B2430", "muted": "#5A6474", "dim": "#97A1AE",
+        "accent": "#2563C9", "accent-hi": "#2563C9", "accent-bg": "#E7EEFA",
+        "ok": "#1E8E5A", "ok-bg": "#E5F4EC", "ng": "#C9372C", "ng-bg": "#FBE9E7", "warn": "#B5650B", "warn-bg": "#FDF1E2",
+        "bar-off": "#C5CDD8", "shadow": "0 12px 40px rgba(17,28,46,.14)", "card-shadow": "0 1px 3px rgba(17,28,46,.08)",
+        "side": "#132036", "side-line": "#22324D", "side-ink": "#E4EAF2", "side-muted": "#9DAABD", "side-dim": "#6F7F96",
+        "side-hover": "#1B2B45", "side-active": "#25395A", "side-active-ink": "#FFFFFF",
+        "logo": "logo_dark.png", "base": "light",
+    },
+    # C. 따뜻한 회색 리포트형 (Tableau)
+    "warm": {
+        "bg": "#FAF9F7", "panel": "#FFFFFF", "panel2": "#F4F3F0", "deep": "#F8F7F4",
+        "line": "#E7E4DE", "line2": "#D3CFC7", "ink": "#2A2A2A", "muted": "#66625B", "dim": "#A39E95",
+        "accent": "#4E79A7", "accent-hi": "#3F6A99", "accent-bg": "#EAF0F6",
+        "ok": "#3E8E41", "ok-bg": "#EAF4EA", "ng": "#C8454A", "ng-bg": "#FBEAEA", "warn": "#D87A16", "warn-bg": "#FDF0E1",
+        "bar-off": "#D6D1C8", "shadow": "0 12px 40px rgba(42,42,42,.10)", "card-shadow": "none",
+        "side": "#F1EFEB", "side-line": "#E2DED6", "side-ink": "#2A2A2A", "side-muted": "#66625B", "side-dim": "#A39E95",
+        "side-hover": "#E8E5DF", "side-active": "#E1E8F0", "side-active-ink": "#3F6A99",
+        "logo": "logo_light.png", "base": "light",
+    },
 }
+THEME_NAME = os.environ.get("EQUIP_THEME", "dark")
+TOKENS = {k: v for k, v in THEMES.get(THEME_NAME, THEMES["dark"]).items() if k not in ("logo", "base")}
 T = TOKENS
 
 # 그래프 색 (plotly)
 CHART_FONT = dict(family="IBM Plex Sans KR, Noto Sans KR, Malgun Gothic, sans-serif", color=T["ink"], size=12)
-CHART_GRID = "rgba(139,151,165,0.16)"
-SERIES = [T["accent-hi"], T["ok"], T["warn"], "#B39DDB", "#F48FB1", "#80CBC4", T["muted"]]
+CHART_GRID = T["line"]
+SERIES = [T["accent"], T["ok"], T["warn"], "#8E6CC0", "#D45087", "#2A9D8F", T["muted"]]
 
 _DIR = os.path.dirname(__file__)
-LOGO_PATH = os.path.join(_DIR, "assets", "logo_dark.png")
+LOGO_PATH = os.path.join(_DIR, "assets", THEMES.get(THEME_NAME, THEMES["dark"])["logo"])
 FAVICON_PATH = os.path.join(_DIR, "assets", "favicon.png")
 
 
@@ -110,7 +142,7 @@ _CSS = """
   [data-testid="stMetricValue"], [data-testid="stNumberInputContainer"] input, .kpi b { font-variant-numeric: tabular-nums; }
 
   /* ---------- 지표 카드 ---------- */
-  [data-testid="stMetric"] { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px; padding: .6rem .85rem; }
+  [data-testid="stMetric"] { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px; padding: .6rem .85rem; box-shadow: var(--card-shadow); }
   [data-testid="stMetricLabel"] { color: var(--muted); font-size: .85rem; }
   [data-testid="stMetricValue"] { font-size: 1.45rem; font-weight: 600; color: var(--ink); }
   [data-testid="stMetricDelta"] { font-size: .85rem; }
@@ -142,41 +174,43 @@ _CSS = """
   .goal .bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--c); }
 
   /* ---------- 왼쪽 메뉴 ---------- */
-  [data-testid="stSidebar"] { background: var(--side); border-right: 1px solid var(--line); }
+  [data-testid="stSidebar"] { background: var(--side); border-right: 1px solid var(--side-line); }
   section[data-testid="stSidebar"] { width: 260px !important; min-width: 260px !important; max-width: 260px !important; }
   [data-testid="stSidebarHeader"] { height: 2.2rem; min-height: 0; padding-bottom: 0; }
   [data-testid="stSidebarUserContent"] { padding-top: 0; }
-  [data-testid="stSidebar"] .brand { padding: 0 0 .9rem 0; margin: 0 0 .2rem 0; border-bottom: 1px solid var(--line); }
+  [data-testid="stSidebar"] .brand { padding: 0 0 .9rem 0; margin: 0 0 .2rem 0; border-bottom: 1px solid var(--side-line); }
   [data-testid="stSidebar"] .brand img { width: 140px; display: block; margin: 0 0 .7rem 0; }
-  [data-testid="stSidebar"] .brand-title { font-size: 1.05rem; font-weight: 700; color: var(--ink); line-height: 1.3; margin: 0; white-space: nowrap; letter-spacing: -.01em; }
-  [data-testid="stSidebar"] .brand-sub { font-size: .75rem; color: var(--muted); margin: .2rem 0 0 0; }
-  [data-testid="stSidebar"] .nav-group { font-size: .75rem; font-weight: 600; letter-spacing: .12em; color: var(--dim); margin: 1rem 0 .2rem 0; padding: 0 .6rem; }
+  [data-testid="stSidebar"] .brand-title { font-size: 1.05rem; font-weight: 700; color: var(--side-ink); line-height: 1.3; margin: 0; white-space: nowrap; letter-spacing: -.01em; }
+  [data-testid="stSidebar"] .brand-sub { font-size: .75rem; color: var(--side-muted); margin: .2rem 0 0 0; }
+  [data-testid="stSidebar"] .nav-group { font-size: .75rem; font-weight: 600; letter-spacing: .12em; color: var(--side-dim); margin: 1rem 0 .2rem 0; padding: 0 .6rem; }
   [data-testid="stSidebar"] [data-testid="stElementContainer"]:has([data-testid="stPageLink"]) { margin-bottom: -0.85rem; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a { padding: .38rem .6rem; border-radius: 4px; margin: 0; }
-  [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover { background: var(--panel); }
-  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { font-size: .95rem; color: var(--ink); display: flex; align-items: center; gap: .6rem; }
-  [data-testid="stSidebar"] [data-testid="stPageLink"] a span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--line2); flex: none; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover { background: var(--side-hover); }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { font-size: .95rem; color: var(--side-ink); display: flex; align-items: center; gap: .6rem; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--side-dim); flex: none; opacity: .6; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"],
-  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] { background: #1B2633; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] { background: var(--side-active); }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] span,
-  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span { color: var(--accent-hi); font-weight: 600; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span { color: var(--side-active-ink); font-weight: 600; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] span::before,
-  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span::before { background: var(--accent-hi); }
-  [data-testid="stSidebar"] .side-foot { font-size: .75rem; color: var(--dim); line-height: 1.6; margin-top: .2rem; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span::before { background: var(--side-active-ink); opacity: 1; }
+  [data-testid="stSidebar"] .side-foot { font-size: .75rem; color: var(--side-dim); line-height: 1.6; margin-top: .2rem; }
   [data-testid="stSidebar"] .side-foot .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: .4rem; }
   [data-testid="stSidebar"] .side-foot .dot.off { background: var(--warn); }
-  [data-testid="stSidebar"] .stButton button { color: var(--muted); border-color: var(--line); background: transparent; }
-  [data-testid="stSidebar"] .stButton button:hover { color: var(--ink); border-color: var(--line2); }
+  [data-testid="stSidebar"] .stButton button { color: var(--side-muted); border-color: var(--side-line); background: transparent; }
+  [data-testid="stSidebar"] .stButton button p { color: var(--side-muted); }
+  [data-testid="stSidebar"] hr { border-color: var(--side-line); }
+  [data-testid="stSidebar"] .stButton button:hover, [data-testid="stSidebar"] .stButton button:hover p { color: var(--side-ink); border-color: var(--side-dim); }
 
   /* ---------- 도움말 팝업 ---------- */
   [data-testid="stTooltipContent"] { font-size: .9rem; line-height: 1.55; max-width: 520px; }
 
   /* ---------- 접속 화면 ---------- */
-  .st-key-login_card { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent);
-        border-radius: 8px; padding: 2rem 2rem 1.4rem 2rem; box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+  .st-key-login_card { position: relative; z-index: 1; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent);
+        border-radius: 8px; padding: 2rem 2rem 1.4rem 2rem; box-shadow: var(--shadow); }
   .login-head img { width: 150px; display: block; margin: 0 0 1.4rem 0; }
   .login-head .eb { font-size: .75rem; font-weight: 600; letter-spacing: .16em; color: var(--muted); }
-  .login-head .t { font-size: 1.6rem; font-weight: 700; color: var(--ink); letter-spacing: -.02em; margin: .25rem 0 .35rem 0; line-height: 1.25; }
+  .login-head .t { font-size: 1.6rem; font-weight: 700; color: var(--ink); letter-spacing: -.02em; margin: .25rem 0 1.4rem 0; line-height: 1.25; }
   .login-head .d { font-size: .85rem; color: var(--muted); margin: 0 0 1.2rem 0; line-height: 1.6; word-break: keep-all; }
   .st-key-login_card [data-testid="stForm"] { border: none; padding: 0; }
   .st-key-login_card [data-testid="stFormSubmitButton"], .st-key-login_card [data-testid="stFormSubmitButton"] button { width: 100%; }
@@ -184,9 +218,9 @@ _CSS = """
   .st-key-login_card [data-testid="InputInstructions"] { display: none; }
   .login-foot { font-size: .75rem; color: var(--dim); text-align: center; margin-top: 1rem; border-top: 1px solid var(--line); padding-top: .9rem; }
   .login-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none;
-        background: radial-gradient(900px 480px at 50% -10%, rgba(45,143,213,.18), transparent 70%),
-                    linear-gradient(rgba(139,151,165,.05) 1px, transparent 1px) 0 0 / 44px 44px,
-                    linear-gradient(90deg, rgba(139,151,165,.05) 1px, transparent 1px) 0 0 / 44px 44px; }
+        background: radial-gradient(900px 480px at 50% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+                    linear-gradient(color-mix(in srgb, var(--muted) 5%, transparent) 1px, transparent 1px) 0 0 / 44px 44px,
+                    linear-gradient(90deg, color-mix(in srgb, var(--muted) 5%, transparent) 1px, transparent 1px) 0 0 / 44px 44px; }
   .login-err { font-size: .85rem; color: var(--ng); background: var(--ng-bg); border: 1px solid color-mix(in srgb, var(--ng) 35%, transparent);
         border-radius: 4px; padding: .45rem .7rem; margin: .2rem 0 .4rem 0; }
 </style>
@@ -239,7 +273,7 @@ def sidebar_brand():
     uri = _data_uri(LOGO_PATH)
     logo = f'<img src="{uri}" alt="로고">' if uri else ""
     st.markdown(f'<div class="brand">{logo}<p class="brand-title">{html.escape(SYSTEM_TITLE)}</p>'
-                f'<p class="brand-sub">장비 사용실적 · 가동률 · i-Tube 보고</p></div>', unsafe_allow_html=True)
+                '</div>', unsafe_allow_html=True)
 
 
 def nav_group(name: str):
@@ -247,13 +281,12 @@ def nav_group(name: str):
 
 
 def login_head():
-    uri = _data_uri(LOGO_PATH)
+    base = THEMES.get(THEME_NAME, THEMES["dark"])["base"]
+    uri = _data_uri(os.path.join(_DIR, "assets", "logo_dark.png" if base == "dark" else "logo_light.png"))
     logo = f'<img src="{uri}" alt="로고">' if uri else ""
     st.markdown('<div class="login-bg"></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="login-head">{logo}<div class="eb">{html.escape(TEAM_NAME)} · 공동장비</div>'
-                f'<div class="t">{html.escape(SYSTEM_TITLE)}</div>'
-                '<div class="d">장비 사용실적을 기록하고, 가동률을 확인하고, i-Tube 장비일지를 내려받습니다.<br>'
-                '팀 공용 비밀번호로 접속하세요.</div></div>', unsafe_allow_html=True)
+                f'<div class="t">{html.escape(SYSTEM_TITLE)}</div></div>', unsafe_allow_html=True)
 
 
 def chart_layout(fig, height: int, legend: bool = True):

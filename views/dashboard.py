@@ -11,12 +11,12 @@ from views.common import period_picker
 BLUE = T["accent-hi"]
 BAR = T["accent"]
 ORANGE = T["warn"]
-GRAY = "#3A4656"
+GRAY = T["bar-off"]
 CFG = {"displayModeBar": False}
 
 
 def render() -> None:
-    page_header("대시보드", "현황", desc="기간을 고르면 가동률·사용시간·사용료와 장비별 현황을 한눈에 봅니다.")
+    page_header("대시보드", "현황")
     cfg = db.get_settings()
     logs = db.load_logs()
     eq = db.load_equipment()
@@ -33,8 +33,7 @@ def render() -> None:
     cutoff = dt.date.today() if to_today else None
 
     if logs.empty:
-        empty_state("아직 사용실적이 없습니다", "왼쪽 메뉴의 '달력 입력'이나 '기간 실적 입력'에서 실적을 넣거나, "
-                    "'설정 · 백업 → 기존 엑셀 실적 가져오기'로 지금까지 쓰던 i-Tube 장비일지를 올리면 여기에 바로 나타납니다.", "◷")
+        empty_state("아직 사용실적이 없습니다", "'달력 입력'에서 입력하거나 '설정 · 백업'에서 기존 엑셀을 가져오세요.", "◷")
 
     daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"))
     e_eff = calc.effective_end(s, e, cutoff)
@@ -85,7 +84,7 @@ def render() -> None:
     with hc1:
         section_bar("장비별 가동률", sub=f"파란 막대 = 목표 {target:.0f}% 이상" if target else "")
     if summary.empty:
-        empty_state("이 기간에 보유한 장비가 없습니다", "'장비 정보'에서 장비를 등록하거나 도입일·불용일을 확인하세요.")
+        empty_state("이 기간에 보유한 장비가 없습니다")
         return
     only_kpi = hc2.toggle("가동률 산정 대상만", value=True)
     sm = summary[summary["KPI"]] if only_kpi else summary
@@ -123,7 +122,7 @@ def render() -> None:
         chart_layout(fig, max(320, 26 * len(shown) + 80), legend=False).update_layout(margin_t=34, bargap=0.35)
         st.plotly_chart(fig, width="stretch", config=CFG)
         if len(sm) > 25:
-            st.caption(f"가동률 상위 25대만 표시했습니다. 전체 {len(sm)}대는 '표' 탭에서 보세요.")
+            st.caption(f"상위 25대 · 전체 {len(sm)}대는 '표' 탭")
     with tab_table:
         st.dataframe(
             sm.sort_values("가동률", ascending=False).drop(columns=["equip_id"]),
@@ -146,7 +145,7 @@ def render() -> None:
         with col:
             st.markdown(f"**{title}**")
             if b.empty:
-                st.caption("이 기간에 데이터가 없습니다.")
+                st.caption("데이터 없음")
                 continue
             b = b.iloc[::-1]
             fig = go.Figure(go.Bar(x=b["사용시간"], y=b[by], orientation="h", marker_color=BAR,

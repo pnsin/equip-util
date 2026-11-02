@@ -34,7 +34,7 @@ FIELDS = {
 
 
 def render() -> None:
-    page_header("실적 조회·수정", "실적", desc="조건으로 찾은 실적을 표에서 바로 고치거나 지웁니다. 셀을 고친 뒤 '변경 내용 저장'을 누르세요.")
+    page_header("실적 조회·수정", "실적")
     saved = st.session_state.pop("records_saved", None)
     if saved:
         st.success(saved, icon=":material/check_circle:")
@@ -51,7 +51,7 @@ def render() -> None:
     c1, c2, c3, c4 = st.container(border=True).columns([1.4, 2, 1.2, 1])
     rng = c1.date_input("사용시작일 범위", value=(q_s, q_e), format="YYYY-MM-DD", help="기본값은 이번 분기입니다.")
     sel_eq = c2.multiselect("장비", list(eq["label"]), placeholder="전체")
-    comp_q = c3.text_input("기관명 검색", placeholder="일부만 입력해도 됩니다")
+    comp_q = c3.text_input("기관명", placeholder="검색")
     writers = sorted(w for w in logs["created_by"].unique() if w)
     writer = c4.selectbox("담당자", ["전체"] + writers)
 
@@ -71,7 +71,7 @@ def render() -> None:
     m3.metric("사용료 합계", f"{df['fee'].sum():,.0f} 원")
 
     if df.empty:
-        empty_state("조건에 맞는 실적이 없습니다", "기간을 넓히거나 장비·기관·담당자 조건을 지워 보세요.", "⌕")
+        empty_state("조건에 맞는 실적이 없습니다", icon="⌕")
         return
 
     view = df.copy()
@@ -151,5 +151,4 @@ def render() -> None:
             st.session_state.records_saved = f"수정 {n_up}건 · 삭제 {n_del}건 반영했습니다."
             st.session_state.pop("records_editor", None)
             st.rerun()
-    c2.caption(f"수정 {len(changed)}건 · 삭제 {len(to_delete)}건이 저장을 기다리고 있습니다." if (changed or to_delete)
-               else "셀을 눌러 바로 고칠 수 있습니다. 지울 행은 '삭제'에 체크하세요.")
+    c2.caption(f"수정 {len(changed)}건 · 삭제 {len(to_delete)}건 저장 대기" if (changed or to_delete) else "")

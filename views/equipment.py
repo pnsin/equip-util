@@ -1,7 +1,7 @@
 import streamlit as st
 
 from core import db, seed
-from ui_style import note, page_header
+from ui_style import page_header
 from views.common import (confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
                           with_delete_column)
 
@@ -13,7 +13,7 @@ COLS = {
 
 def render() -> None:
     cfg = db.get_settings()
-    page_header("장비 정보", "정보 입력", desc="장비를 추가·수정·삭제합니다. 표의 칸을 눌러 바로 고친 뒤 저장하세요.")
+    page_header("장비 정보", "정보 입력")
     msg = st.session_state.pop("equip_saved", None)
     if msg:
         st.success(msg, icon=":material/check_circle:")
@@ -25,9 +25,6 @@ def render() -> None:
 
     q = search_box("equip_q", "🔍  장비명·장비번호·담당자로 찾기")
     kpi_n = int(view["가동률 산정"].fillna(False).astype(bool).sum()) if not view.empty else 0
-    note(f"전체 <b>{len(view)}대</b> · 가동률 산정 대상 <b>{kpi_n}대</b> · "
-         f"연간기준시간을 비워 두면 기본값 <b>{float(cfg.get('annual_hours') or 2000):,.0f}시간</b>(설정)을 씁니다. "
-         "도입일 이전·불용일 이후는 가용시간에서 빠지고, 부대시설처럼 가동률에 넣지 않을 장비는 '가동률 산정'을 끄세요.")
     mask = None
     if q:
         mask = (view["장비명"].str.contains(q, case=False, regex=False)
@@ -43,15 +40,14 @@ def render() -> None:
             "장비번호": st.column_config.TextColumn(help="예: 2312-C-0436 (NTIS 장비번호)"),
             "장비구분": st.column_config.SelectboxColumn(options=seed.EQUIP_KINDS),
             "연간기준시간": st.column_config.NumberColumn(min_value=0, step=100, format="%d",
-                                                     help="비워 두면 설정의 기본값을 씁니다."),
-            "도입일": st.column_config.DateColumn(format="YYYY-MM-DD"),
-            "불용일": st.column_config.DateColumn(format="YYYY-MM-DD"),
-            "가동률 산정": st.column_config.CheckboxColumn(default=True),
+                                                     help=f"비워 두면 기본값 {float(cfg.get('annual_hours') or 2000):,.0f}시간(설정)을 씁니다."),
+            "도입일": st.column_config.DateColumn(format="YYYY-MM-DD", help="이 날 이전은 가용시간에서 빠집니다."),
+            "불용일": st.column_config.DateColumn(format="YYYY-MM-DD", help="이 날 이후는 가용시간에서 빠집니다."),
+            "가동률 산정": st.column_config.CheckboxColumn(default=True, help="부대시설처럼 가동률에 넣지 않을 장비는 끄세요."),
             "비고": st.column_config.TextColumn(width="large"),
         },
     )
-    st.caption((f"검색 결과 {shown}대 (검색 중에도 바로 고칠 수 있습니다) · " if q else "")
-               + "지울 행은 '삭제'에 체크하고, 맨 아래 빈 행에 입력하면 장비가 추가됩니다.")
+    st.caption((f"{shown}대 / " if q else "") + f"전체 {len(view)}대 · 가동률 산정 {kpi_n}대")
     edited, deleted = split_deleted(edited, "장비명")
     ok = confirm_delete(deleted, "equip_editor_del", "대")
     if st.button("변경 내용 저장", type="primary", disabled=not ok, icon=":material/save:"):
