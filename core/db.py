@@ -3,7 +3,7 @@
 secrets 에 [gsheets] spreadsheet_id 와 [gcp_service_account] 가 있으면 구글 시트에 저장하고,
 없으면 data/ 폴더의 CSV 파일에 저장합니다 (내 PC에서 시험할 때).
 
-구글 시트 구조: 탭 3개 (장비 / 사용실적 / 설정). 1행 열 제목은 바꾸거나 옮기면 안 됩니다.
+구글 시트 구조: 탭 4개 (장비 / 업체 / 사용실적 / 설정). 없는 탭은 처음 연결할 때 자동으로 만듭니다. 1행 열 제목은 바꾸거나 옮기면 안 됩니다.
 사용실적 탭의 '장비명(참고)' 열은 사람이 보기 위한 사본이며 프로그램은 읽지 않습니다.
 """
 from __future__ import annotations
@@ -25,6 +25,10 @@ TABLES = {
         ("id", "ID"), ("name", "장비명"), ("code", "장비번호"), ("kind", "장비구분"),
         ("annual_hours", "연간기준시간"), ("acquired_on", "도입일"), ("retired_on", "불용일"),
         ("in_kpi", "가동률산정"), ("manager", "담당자"), ("note", "비고"),
+    ]),
+    "companies": ("업체", [
+        ("id", "ID"), ("name", "기업명"), ("brn", "사업자등록번호"), ("contact", "담당자"),
+        ("phone", "연락처"), ("industry", "업종"), ("item", "품목"), ("sub_item", "세부품목"), ("note", "비고"),
     ]),
     "usage": ("사용실적", [
         ("id", "ID"), ("equip_id", "장비ID"), ("equip_ref", "장비명(참고)"),
@@ -291,6 +295,7 @@ def storage_label() -> str:
 
 def clear_caches() -> None:
     load_equipment.clear()
+    load_companies.clear()
     load_logs.clear()
     get_settings.clear()
 
@@ -413,6 +418,69 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
     store.rewrite("equipment", _rows("equipment", out))
     clear_caches()
     return errors
+
+
+# ── 업체 ────────────────────────────────────────────────────────
+
+COMPANY_TEXT = ("name", "brn", "contact", "phone", "industry", "item", "sub_item", "note")
+
+
+@st.cache_data(ttl=30)
+def load_companies() -> pd.DataFrame:
+    df = get_store().read("companies").copy()
+    df["id"] = pd.to_numeric(df["id"], errors="coerce")
+    df = df.dropna(subset=["id"])
+    df["id"] = df["id"].astype("int64")
+    for c in COMPANY_TEXT:
+        df[c] = df[c].map(to_str)
+    return df.sort_values("name").reset_index(drop=True)
+
+
+def check_companies(edited: pd.DataFrame) -> list[str]:
+    """업체 표를 저장하기 전에 검사합니다. 문제가 없으면 빈 목록."""
+    from core import seed  # 순환 import 방지
+    errors, seen = [], {}
+    for r in edited.to_dict("records"):
+        name = to_str(r.get("name"))
+        if not name:
+            continue
+        key = name.replace(" ", "")
+        if key in seen:
+            errors.append(f"'{name}'이(가) 두 번 등록되어 있습니다 ('{seen[key]}'). 하나로 합쳐 주세요.")
+        seen[key] = name
+        brn_raw = to_str(r.get("brn"))
+        if brn_raw and digits(brn_raw) != brn_raw.replace("-", ""):
+            errors.append(f"[{name}] 사업자등록번호는 숫자와 '-'만 입력하세요.")
+        elif brn_raw and len(digits(brn_raw)) != 10:
+            errors.append(f"[{name}] 사업자등록번호는 10자리 숫자입니다.")
+        ind, item, sub = (to_str(r.get(k)) for k in ("industry", "item", "sub_item"))
+        if item and item not in seed.ITEMS.get(ind, []):
+            errors.append(f"[{name}] 품목 '{item}'은(는) 업종 '{ind or '(비어 있음)'}'에 없습니다.")
+        elif sub and sub not in seed.SUBITEMS.get(item, []):
+            errors.append(f"[{name}] 세부품목 '{sub}'은(는) 품목 '{item or '(비어 있음)'}'에 없습니다.")
+    return errors
+
+
+def save_companies(edited: pd.DataFrame) -> None:
+    store = get_store()
+    current = store.read("companies")
+    old_ids = set(pd.to_numeric(current["id"], errors="coerce").dropna().astype(int))
+    next_id = (max(old_ids) if old_ids else 0) + 1
+    out = []
+    for r in edited.to_dict("records"):
+        rec = {c: to_str(r.get(c)) for c in COMPANY_TEXT}
+        if not rec["name"]:
+            continue
+        rec["brn"] = digits(rec["brn"])
+        rid = to_num(r.get("id"))
+        if rid is not None and int(rid) in old_ids:
+            rec["id"] = int(rid)
+        else:
+            rec["id"] = next_id
+            next_id += 1
+        out.append(rec)
+    store.rewrite("companies", _rows("companies", out))
+    load_companies.clear()
 
 
 # ── 사용실적 ────────────────────────────────────────────────────
@@ -587,6 +655,7 @@ def backup_bytes() -> bytes:
     bio = io.BytesIO()
     with pd.ExcelWriter(bio, engine="openpyxl") as xw:
         store.read("equipment").to_excel(xw, sheet_name="equipment", index=False)
+        store.read("companies").to_excel(xw, sheet_name="companies", index=False)
         store.read("usage").to_excel(xw, sheet_name="usage_log", index=False)
         st_df.to_excel(xw, sheet_name="settings", index=False)
     return bio.getvalue()
@@ -599,6 +668,8 @@ def restore_bytes(data: bytes) -> dict:
     store = get_store()
     store.rewrite("equipment", eq.values.tolist())
     store.rewrite("usage", lg.values.tolist())
+    if "companies" in sheets:  # 업체 탭이 생기기 전 백업에는 없음
+        store.rewrite("companies", sheets["companies"].reindex(columns=cols("companies")).fillna("").values.tolist())
     if "settings" in sheets:
         keep = {k: v for k, v in _settings_raw().items() if k.startswith("template_b64")}
         st_df = sheets["settings"].reindex(columns=["key", "value"]).fillna("")

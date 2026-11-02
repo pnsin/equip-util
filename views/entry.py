@@ -7,9 +7,6 @@ import streamlit as st
 from core import db, rules, seed
 from core.calc import period_bounds
 
-NEW = "＋ 새 기관 직접 입력"
-
-
 def _idx(options: list, value, default: int = 0) -> int:
     return options.index(value) if value in options else default
 
@@ -39,22 +36,25 @@ def render() -> None:
     def k(name: str) -> str:
         return f"entry_{ver}_{name}"
 
-    # 1. 사용기관 ─ 이전에 입력한 기관을 고르면 사업자번호·업종 등을 마지막 실적에서 채워 줌
+    # 1. 사용기관 ─ 업체 관리에 등록된 업체 중에서 고름. 사업자번호·업종은 업체 목록, 나머지는 지난 실적에서 채움
     st.subheader("1. 사용기관")
+    comp = db.load_companies()
+    master = {r["name"]: r for r in comp.to_dict("records")}
     recent = logs.sort_values("id", ascending=False) if not logs.empty else logs
     recent = recent[recent["company"] != ""].drop_duplicates("company") if not recent.empty else recent
-    comp_opts = [NEW] + (list(recent["company"]) if not recent.empty else [])
     c1, c2, c3 = st.columns([2, 1, 1])
-    comp_pick = c1.selectbox("사용기관 기업명", comp_opts, index=None, key=k("comp"),
-                             placeholder="기관명을 입력해 검색 (처음이면 '새 기관 직접 입력')")
-    if comp_pick in (None, NEW):
-        prev: dict = {}
-        company = c1.text_input("새 기관명", key=k("comp_new"),
-                                placeholder="활용유형이 '내부'면 비워 둬도 됩니다") if comp_pick == NEW else ""
-    else:
-        prev = recent[recent["company"] == comp_pick].iloc[0].to_dict()
-        company = comp_pick
-    pk = hashlib.md5(str(comp_pick).encode()).hexdigest()[:8]  # 기관을 바꾸면 아래 기본값이 새로 채워지도록
+    company = c1.selectbox("사용기관 기업명", list(master), index=None, key=k("comp"),
+                           placeholder="업체명을 입력해 검색 (내부 사용이면 비워 두세요)")
+    if not master:
+        c1.caption("등록된 업체가 없습니다. '업체 관리'에서 먼저 업체를 등록하세요.")
+    company = company or ""
+    prev: dict = {}
+    if company and not recent.empty and (recent["company"] == company).any():
+        prev = recent[recent["company"] == company].iloc[0].to_dict()
+    m = master.get(company)
+    if m is not None:
+        prev.update({k: m[k] for k in ("brn", "industry", "item", "sub_item") if m[k]})
+    pk = hashlib.md5(company.encode()).hexdigest()[:8]  # 기관을 바꾸면 아래 기본값이 새로 채워지도록
 
     usage_type = c2.selectbox("활용유형", seed.USAGE_TYPES, index=_idx(seed.USAGE_TYPES, prev.get("usage_type")),
                               key=k(f"utype_{pk}"))
@@ -62,7 +62,8 @@ def render() -> None:
                            key=k(f"purpose_{pk}"))
 
     c1, c2, c3 = st.columns(3)
-    brn = c1.text_input("사업자등록번호 (숫자 10자리)", value=prev.get("brn", ""), key=k(f"brn_{pk}"))
+    brn = c1.text_input("사업자등록번호 (업체 관리 기준)", value=prev.get("brn", ""), key=k(f"brn_{pk}"),
+                        disabled=True, help="사업자등록번호는 '업체 관리'에서 고칩니다.")
     dept = c2.text_input("내부부서명", value=prev.get("dept") or cfg.get("dept_default", ""), key=k(f"dept_{pk}"))
     product = c3.text_input("제품명", value=prev.get("product", ""), key=k(f"product_{pk}"))
 
