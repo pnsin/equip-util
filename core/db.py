@@ -69,6 +69,10 @@ DEFAULT_SETTINGS = {
     "alloc_mode": "spread",  # spread: 기간에 고르게 배분 / start: 시작일에 전부 반영
     "members": [],
     "template_b64": "",
+    # 대시보드 보기 설정 (설정 화면에서 바꿈)
+    "idle_days": 90,          # 이 날수 넘게 안 쓴 장비를 저활용·유휴 후보로
+    "chart_top": 25,          # 장비별 그래프에 보여 줄 최대 대수
+    "default_period": "월",   # 대시보드를 열 때 기간 단위
 }
 
 CHUNK = 40000  # 구글 시트 셀 한도(50,000자)보다 작게 나눠 저장

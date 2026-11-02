@@ -143,3 +143,41 @@ def go_records(company: str | None = None, equip_label: str | None = None, start
     _leave()
     if "records" in PAGES:
         st.switch_page(PAGES["records"])
+
+
+# ── 입력 화면에서 바로 새 업체 등록 ─────────────────────────────
+
+def _idx(options: list, value, default: int = 0) -> int:
+    return options.index(value) if value in options else default
+
+
+@st.dialog("새 업체 등록")
+def new_company_dialog() -> None:
+    """입력하던 화면을 떠나지 않고 업체를 추가합니다. 등록하면 바로 목록에서 고를 수 있습니다."""
+    from core import db, seed
+    name = st.text_input("업체명", placeholder="예: ○○배터리", key="nc_name")
+    brn = st.text_input("사업자등록번호", placeholder="숫자 10자리 (- 는 넣어도 됨)", key="nc_brn")
+    c1, c2, c3 = st.columns(3)
+    ind = c1.selectbox("업종", seed.INDUSTRIES, index=_idx(seed.INDUSTRIES, "전기전자"), key="nc_ind")
+    items = seed.ITEMS[ind]
+    item = c2.selectbox("품목", items, index=_idx(items, "이차전지_에너지"), key=f"nc_item_{ind}")
+    subs = seed.SUBITEMS.get(item, [])
+    sub = c3.selectbox("세부품목", subs, key=f"nc_sub_{item}") if subs else ""
+    c1, c2 = st.columns(2)
+    contact = c1.text_input("업체 담당자", key="nc_contact")
+    phone = c2.text_input("연락처", key="nc_phone")
+    if st.button("등록", type="primary", icon=":material/add_business:", width="stretch", disabled=not name.strip()):
+        comp = db.load_companies()
+        rows = comp.to_dict("records") + [{"name": name.strip(), "brn": brn, "industry": ind, "item": item,
+                                           "sub_item": sub or "", "contact": contact, "phone": phone, "note": ""}]
+        df = pd.DataFrame(rows)
+        errors = db.check_companies(df)
+        if errors:
+            for e in errors:
+                st.error(e)
+            return
+        db.save_companies(df)
+        st.session_state.company_added = name.strip()
+        for k in [k for k in st.session_state if str(k).startswith("nc_")]:
+            st.session_state.pop(k, None)
+        st.rerun()

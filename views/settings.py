@@ -33,9 +33,20 @@ def render() -> None:
         mode = c3.selectbox("기간별 집계 방식", list(modes), format_func=modes.get,
                             index=list(modes).index(cfg.get("alloc_mode", "spread")),
                             help="예: 7/25~8/10 실적 20시간을 7월·8월에 일수만큼 나눌지, 7월에 모두 넣을지")
+        st.markdown("**대시보드 보기**")
+        c1, c2, c3 = st.columns(3)
+        kinds = ["주", "월", "분기", "반기", "연"]
+        dkind = c1.selectbox("처음 열 때 기간 단위", kinds, index=kinds.index(cfg.get("default_period", "월"))
+                             if cfg.get("default_period") in kinds else 1)
+        idle = c2.number_input("저활용·유휴 후보 기준 (일)", min_value=7, max_value=730, step=10,
+                               value=int(cfg.get("idle_days") or 90),
+                               help="이 날수 넘게 사용 기록이 없는 장비를 대시보드에서 따로 보여 줍니다.")
+        top_n = c3.number_input("장비별 그래프 최대 대수", min_value=5, max_value=100, step=5,
+                                value=int(cfg.get("chart_top") or 25))
         if st.form_submit_button("설정 저장", type="primary", icon=":material/save:"):
             db.save_settings(org_name=org.strip(), org_suffix=suffix.strip(), dept_default=dept.strip(),
-                             annual_hours=annual, target_util=target, alloc_mode=mode)
+                             annual_hours=annual, target_util=target, alloc_mode=mode,
+                             default_period=dkind, idle_days=int(idle), chart_top=int(top_n))
             st.session_state.settings_saved = "설정을 저장했습니다."
             st.rerun()
 
