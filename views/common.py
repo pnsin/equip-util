@@ -51,3 +51,36 @@ def period_picker(key: str, kinds: list[str], default_kind: str, completed: bool
         d = dt.date(year, 1, 1)
     s, e, label = period_bounds(kind, d)
     return s, e, label, kind
+
+
+# ── 목록 표의 '삭제' 칸 ─────────────────────────────────────────
+
+DEL = "삭제"
+
+
+def with_delete_column(view):
+    """표 맨 앞에 '삭제' 체크 칸을 붙입니다."""
+    view = view.copy()
+    view.insert(0, DEL, False)
+    return view
+
+
+def delete_config() -> dict:
+    return {DEL: st.column_config.CheckboxColumn(DEL, width="small", default=False,
+                                                 help="지울 행에 체크한 뒤 저장을 누르세요.")}
+
+
+def split_deleted(edited, name_col: str):
+    """(남길 행, 지울 행 이름 목록)."""
+    mask = edited[DEL].fillna(False).astype(bool)
+    names = [str(n) for n in edited.loc[mask, name_col] if str(n) not in ("", "None", "<NA>", "nan")]
+    return edited[~mask].drop(columns=[DEL]), names
+
+
+def confirm_delete(names: list[str], key: str, unit: str = "개") -> bool:
+    """지울 행이 있으면 목록을 보여 주고 확인 체크를 받습니다."""
+    if not names:
+        return True
+    shown = ", ".join(names[:5]) + (f" 외 {len(names) - 5}{unit}" if len(names) > 5 else "")
+    josa = "를" if unit == "대" else "을"
+    return st.checkbox(f"{len(names)}{unit}{josa} 삭제합니다 ({shown}). 되돌릴 수 없습니다.", key=key)

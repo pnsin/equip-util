@@ -2,6 +2,7 @@
 import streamlit as st
 
 from core import db, seed
+from views.common import confirm_delete, delete_config, split_deleted, with_delete_column
 
 COLS = {
     "id": "id", "name": "기업명", "brn": "사업자등록번호", "contact": "담당자", "phone": "연락처",
@@ -30,9 +31,9 @@ def render() -> None:
         return
 
     edited = st.data_editor(
-        view, key="company_editor", num_rows="dynamic", hide_index=True, width="stretch", height=520,
-        column_order=[c for c in COLS.values() if c != "id"],
-        column_config={
+        with_delete_column(view), key="company_editor", num_rows="dynamic", hide_index=True, width="stretch", height=520,
+        column_order=["삭제"] + [c for c in COLS.values() if c != "id"],
+        column_config=delete_config() | {
             "기업명": st.column_config.TextColumn(required=True, width="medium"),
             "사업자등록번호": st.column_config.TextColumn(help="숫자 10자리 (- 는 넣어도 되고 빼도 됩니다)"),
             "업종": st.column_config.SelectboxColumn(options=seed.INDUSTRIES),
@@ -41,14 +42,17 @@ def render() -> None:
             "비고": st.column_config.TextColumn(width="medium"),
         },
     )
-    st.caption(f"총 {len(edited.dropna(subset=['기업명']))}곳 · 맨 아래 빈 행에 입력하면 업체가 추가됩니다.")
-    if st.button("변경 내용 저장", type="primary"):
+    st.caption(f"총 {len(edited.dropna(subset=['기업명']))}곳 · 지울 행은 '삭제'에 체크하고, 맨 아래 빈 행에 입력하면 업체가 추가됩니다.")
+    edited, deleted = split_deleted(edited, "기업명")
+    ok = confirm_delete(deleted, "company_editor_del", "곳")
+    if st.button("변경 내용 저장", type="primary", disabled=not ok):
         raw = edited.rename(columns={v: k for k, v in COLS.items()})
         errors = db.check_companies(raw)
         for e in errors:
             st.error(e)
         if not errors:
             db.save_companies(raw)
-            st.session_state.company_saved = "업체 목록을 저장했습니다."
+            st.session_state.company_saved = "업체 목록을 저장했습니다." + (f" ({len(deleted)}곳 삭제)" if deleted else "")
             st.session_state.pop("company_editor", None)
+            st.session_state.pop("company_editor_del", None)
             st.rerun()
