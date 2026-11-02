@@ -14,6 +14,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 from core import seed
 from core.db import digits, to_date, to_num, to_str
+from core.terms import w
 
 FIRST_ROW = 4
 KEYS = [k for _, k in seed.COLUMNS]
@@ -217,8 +218,8 @@ def make_report(period_label: str, summary: pd.DataFrame, tot: dict, monthly: pd
         ("미사용 장비 수", tot["idle_count"]),
         ("총 사용시간(h)", round(tot["used"], 1)),
         ("총 가용시간(h)", round(tot["avail"], 1)),
-        ("평균 가동률(%)", round(tot["util"], 1)),
-        ("목표 가동률(%)", target),
+        (w("평균 가동률(%)"), round(tot["util"], 1)),
+        (w("목표 가동률(%)"), target),
         ("사용료 합계(원)", round(tot["fee"])),
         ("연간 기준시간(h)", annual),
         ("작성일", dt.date.today().isoformat()),
@@ -237,8 +238,8 @@ def make_report(period_label: str, summary: pd.DataFrame, tot: dict, monthly: pd
 
     with pd.ExcelWriter(bio, engine="openpyxl") as xw:
         pd.DataFrame(summary_rows, columns=["항목", "값"]).to_excel(xw, sheet_name="요약", index=False)
-        eq.to_excel(xw, sheet_name="장비별 가동률", index=False)
-        monthly.round(1).to_excel(xw, sheet_name="월별 추이", index=False)
+        eq.rename(columns=w).to_excel(xw, sheet_name=w("장비별 가동률"), index=False)
+        monthly.round(1).rename(columns=w).to_excel(xw, sheet_name="월별 추이", index=False)
         by_purpose.round(1).to_excel(xw, sheet_name="사용목적별", index=False)
         by_type.round(1).to_excel(xw, sheet_name="활용유형별", index=False)
         lg.to_excel(xw, sheet_name="실적목록", index=False)

@@ -2,14 +2,16 @@ import streamlit as st
 
 from core import db, seed
 from ui_style import page_header
+from core.terms import w
 from views.common import (confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
                           with_delete_column)
 
 # 화면 열 이름은 장비 현황 엑셀(260310 전수조사·내부기준 탭)의 항목 이름을 따름. 순서도 엑셀 순서.
+KPI_COL = w("가동률 산정")
 COLS = {
     "id": "id", "code": "ITUBE번호", "nfec": "국가연구시설장비번호", "name": "장비명(한글)", "model": "모델명",
     "kind": "장비구분", "location": "장비위치", "use": "장비용도", "manager": "관리자",
-    "annual_hours": "연간기준시간", "acquired_on": "도입일", "retired_on": "불용일", "in_kpi": "가동률 산정",
+    "annual_hours": "연간기준시간", "acquired_on": "도입일", "retired_on": "불용일", "in_kpi": KPI_COL,
     "note": "비고",
 }
 
@@ -27,7 +29,7 @@ def render() -> None:
     view["불용일"] = view["불용일"].dt.date
 
     q = search_box("equip_q", "🔍  장비명·ITUBE번호·관리자로 찾기")
-    kpi_n = int(view["가동률 산정"].fillna(False).astype(bool).sum()) if not view.empty else 0
+    kpi_n = int(view[KPI_COL].fillna(False).astype(bool).sum()) if not view.empty else 0
     mask = None
     if q:
         mask = (view["장비명(한글)"].str.contains(q, case=False, regex=False)
@@ -46,11 +48,11 @@ def render() -> None:
                                                      help=f"비워 두면 기본값 {float(cfg.get('annual_hours') or 2000):,.0f}시간(설정)을 씁니다."),
             "도입일": st.column_config.DateColumn(format="YYYY-MM-DD", help="이 날 이전은 가용시간에서 빠집니다."),
             "불용일": st.column_config.DateColumn(format="YYYY-MM-DD", help="이 날 이후는 가용시간에서 빠집니다."),
-            "가동률 산정": st.column_config.CheckboxColumn(default=True, help="부대시설처럼 가동률에 넣지 않을 장비는 끄세요."),
+            KPI_COL: st.column_config.CheckboxColumn(default=True, help=w("부대시설처럼 가동률에 넣지 않을 장비는 끄세요.")),
             "비고": st.column_config.TextColumn(width="large"),
         },
     )
-    st.caption((f"{shown}대 / " if q else "") + f"전체 {len(view)}대 · 가동률 산정 {kpi_n}대")
+    st.caption((f"{shown}대 / " if q else "") + f"전체 {len(view)}대 · {KPI_COL} {kpi_n}대")
     edited, deleted = split_deleted(edited, "장비명(한글)")
     ok = confirm_delete(deleted, "equip_editor_del", "대")
     if st.button("변경 내용 저장", type="primary", disabled=not ok, icon=":material/save:"):
