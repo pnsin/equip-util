@@ -8,13 +8,13 @@ import importlib  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
 
-from core import calc, db, itube, rules, seed  # noqa: E402
+from core import calc, db, equip_import, itube, rules, seed  # noqa: E402
 from views import calendar_entry, companies, common, dashboard, entry, equipment, export, records, settings, staff  # noqa: E402,E501
 
 # 새 코드가 배포된 직후 Streamlit Cloud가 일부 파일만 새로 읽고 나머지는 옛 버전을 쓰는 일이 있어
 # (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
-for _m in (seed, db, calc, rules, itube, common, calendar_entry, companies, dashboard, entry, equipment, export,
+for _m in (seed, db, calc, rules, itube, equip_import, common, calendar_entry, companies, dashboard, entry, equipment, export,
            records, settings, staff):
     _mt = os.path.getmtime(_m.__file__)
     if getattr(_m, "_src_mtime", None) != _mt:
