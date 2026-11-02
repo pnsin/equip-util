@@ -1,31 +1,30 @@
-# 디자인: 전극 제조 공정 관리 시스템(battery-app)과 같은 C "다크 관제실형".
-# 색 값은 ui_style.py 맨 위 규칙표(토큰)와 같게 유지한다.
+# 디자인: "navy" 남색 메뉴 + 밝은 본문 (2026-11-02 사용자 선택). 색 값은 ui_style.py THEMES["navy"]와 같게 유지한다.
 [theme]
-base = "dark"
-primaryColor = "#2D8FD5"
-backgroundColor = "#0F141A"
-secondaryBackgroundColor = "#1A222C"
-textColor = "#E3E9EF"
-linkColor = "#4FB3F0"
+base = "light"
+primaryColor = "#2563C9"
+backgroundColor = "#F2F4F7"
+secondaryBackgroundColor = "#F3F5F8"
+textColor = "#1B2430"
+linkColor = "#2563C9"
 font = "IBM Plex Sans KR:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap, Noto Sans KR, Malgun Gothic, sans-serif"
 codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap, monospace"
 baseRadius = "small"
-borderColor = "#2E3A49"
+borderColor = "#C8D0DA"
 showWidgetBorder = true
-dataframeBorderColor = "#263140"
-dataframeHeaderBackgroundColor = "#111820"
-dataframeHeaderTextColor = "#8B97A5"
-greenColor = "#5CCB93"
-redColor = "#FF8A7A"
-orangeColor = "#F0B35C"
-blueColor = "#4FB3F0"
+dataframeBorderColor = "#E1E5EB"
+dataframeHeaderBackgroundColor = "#F7F8FA"
+dataframeHeaderTextColor = "#5A6474"
+greenColor = "#1E8E5A"
+redColor = "#C9372C"
+orangeColor = "#B5650B"
+blueColor = "#2563C9"
 
 [theme.sidebar]
-backgroundColor = "#0A0E13"
-secondaryBackgroundColor = "#151C24"
-textColor = "#B7C2CF"
-primaryColor = "#4FB3F0"
-borderColor = "#263140"
+backgroundColor = "#132036"
+secondaryBackgroundColor = "#1B2B45"
+textColor = "#E4EAF2"
+primaryColor = "#7FB0FF"
+borderColor = "#22324D"
 
 [client]
 toolbarMode = "minimal"
