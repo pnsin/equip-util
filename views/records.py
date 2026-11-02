@@ -40,6 +40,8 @@ def render() -> None:
 
     logs = db.load_logs()
     eq = db.load_equipment()
+    comp = db.load_companies()
+    master = {r["name"]: r for r in comp.to_dict("records")}
     label_of = dict(zip(eq["id"], eq["label"]))
     id_of = dict(zip(eq["label"], eq["id"]))
 
@@ -79,13 +81,17 @@ def render() -> None:
 
     st.caption("셀을 직접 고친 뒤 아래 '변경 내용 저장'을 누르세요. 지울 행은 '삭제'에 체크합니다.")
     edited = st.data_editor(
-        view, key="records_editor", hide_index=True, use_container_width=True, height=520,
-        disabled=["작성자"],
+        view, key="records_editor", hide_index=True, width="stretch", height=520,
+        disabled=["작성자", "사업자번호"],
         column_config={
             "삭제": st.column_config.CheckboxColumn(width="small"),
             "장비": st.column_config.SelectboxColumn(options=list(eq["label"]), width="large", required=True),
             "사용목적": st.column_config.SelectboxColumn(options=seed.PURPOSES, required=True),
             "활용유형": st.column_config.SelectboxColumn(options=seed.USAGE_TYPES, required=True),
+            "기업명": st.column_config.SelectboxColumn(
+                options=list(master) + sorted({c for c in view["기업명"] if c and c not in master}),
+                help="'업체 관리'에 등록된 업체만 고를 수 있습니다. 사업자번호는 업체 목록에서 자동으로 채워집니다."),
+            "사업자번호": st.column_config.TextColumn(help="'업체 관리'에서 고칩니다."),
             "업종": st.column_config.SelectboxColumn(options=seed.INDUSTRIES),
             "품목": st.column_config.SelectboxColumn(options=seed.ALL_ITEMS),
             "세부품목": st.column_config.SelectboxColumn(options=seed.ALL_SUBITEMS),
@@ -120,6 +126,12 @@ def render() -> None:
             row = edited.loc[i]
             rec = {FIELDS[col]: row[col] for col in FIELDS if col not in ("장비", "작성자")}
             rec["equip_id"] = id_of.get(row["장비"])
+            rec["company"] = db.to_str(rec.get("company"))
+            m = master.get(rec["company"])
+            if m is not None:  # 사업자번호는 항상 업체 목록 기준
+                rec["brn"] = m["brn"]
+            elif not rec["company"]:
+                rec["brn"] = ""
             errs = rules.validate(rec)
             if rec["equip_id"] is None:
                 errs.append("장비를 선택하세요.")

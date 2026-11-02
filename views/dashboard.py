@@ -80,7 +80,7 @@ def render() -> None:
                           yaxis=dict(title="사용시간(h)", gridcolor="rgba(128,128,128,0.15)"),
                           yaxis2=dict(title="가동률(%)", overlaying="y", side="right", rangemode="tozero",
                                       showgrid=False))
-        st.plotly_chart(_layout(fig, 340), use_container_width=True)
+        st.plotly_chart(_layout(fig, 340), width="stretch")
 
     # 장비별
     st.markdown("##### 장비별 가동률")
@@ -91,6 +91,20 @@ def render() -> None:
     sm = summary[summary["KPI"]] if only_kpi else summary
     sm = sm.sort_values("가동률", ascending=True, na_position="first")
     shown = sm.tail(25) if len(sm) > 25 else sm
+    # 마지막 사용일 (공동장비 관리 시스템의 '저활용·유휴 장비' 관리 참고)
+    past = logs[logs["start_date"] <= pd.Timestamp(dt.date.today())] if not logs.empty else logs
+    last_used = past.groupby("equip_id")["end_date"].max() if not past.empty else pd.Series(dtype="datetime64[ns]")
+    sm = sm.assign(최근사용일=sm["equip_id"].map(last_used).dt.date if not last_used.empty else None)
+    idle_days = 90
+    cut = dt.date.today() - dt.timedelta(days=idle_days)
+    idle = sm[[(d is None or pd.isna(d) or d < cut) for d in sm["최근사용일"]]]
+    if not idle.empty:
+        with st.expander(f"⚠️ {idle_days}일 넘게 사용 기록이 없는 장비 {len(idle)}대 (저활용·유휴 후보)"):
+            st.caption("국가연구시설장비 표준지침은 장비를 활용·저활용·유휴·불용으로 나눠 관리합니다. "
+                       "실제로 쓰지 않는 장비라면 '장비 관리'에서 불용일을 넣거나 가동률 산정에서 빼는 것을 검토하세요.")
+            st.dataframe(idle[["장비명", "장비번호", "담당자", "최근사용일"]].sort_values("최근사용일", na_position="first"),
+                         hide_index=True, width="stretch",
+                         column_config={"최근사용일": st.column_config.DateColumn(format="YYYY-MM-DD")})
     tab_chart, tab_table = st.tabs(["그래프", "표"])
     with tab_chart:
         colors = [BLUE if (v or 0) >= target else GRAY for v in shown["가동률"]]
@@ -104,19 +118,20 @@ def render() -> None:
             fig.add_vline(x=target, line_dash="dot", line_color=ORANGE,
                           annotation_text=f"목표 {target:.0f}%", annotation_position="top")
         fig.update_layout(xaxis=dict(title="가동률(%)", gridcolor="rgba(128,128,128,0.15)"), showlegend=False)
-        st.plotly_chart(_layout(fig, max(320, 26 * len(shown) + 80)), use_container_width=True)
+        st.plotly_chart(_layout(fig, max(320, 26 * len(shown) + 80)), width="stretch")
         if len(sm) > 25:
             st.caption(f"가동률 상위 25대만 표시했습니다. 전체 {len(sm)}대는 '표' 탭에서 보세요.")
     with tab_table:
         st.dataframe(
             sm.sort_values("가동률", ascending=False).drop(columns=["equip_id"]),
-            hide_index=True, use_container_width=True,
+            hide_index=True, width="stretch",
             column_config={
                 "가동률": st.column_config.ProgressColumn("가동률(%)", min_value=0, max_value=100, format="%.1f%%"),
                 "사용시간": st.column_config.NumberColumn("사용시간(h)", format="%.1f"),
                 "가용시간": st.column_config.NumberColumn("가용시간(h)", format="%.1f"),
                 "사용료": st.column_config.NumberColumn("사용료(원)", format="%d"),
                 "KPI": st.column_config.CheckboxColumn("산정대상"),
+                "최근사용일": st.column_config.DateColumn(format="YYYY-MM-DD"),
             },
         )
 
@@ -134,4 +149,4 @@ def render() -> None:
             fig = go.Figure(go.Bar(x=b["사용시간"], y=b[by], orientation="h", marker_color=BLUE,
                                    hovertemplate="%{y}<br>%{x:,.0f} h<extra></extra>"))
             fig.update_layout(xaxis=dict(title="사용시간(h)", gridcolor="rgba(128,128,128,0.15)"))
-            st.plotly_chart(_layout(fig, max(200, 30 * len(b) + 60)), use_container_width=True)
+            st.plotly_chart(_layout(fig, max(200, 30 * len(b) + 60)), width="stretch")

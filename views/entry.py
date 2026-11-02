@@ -106,7 +106,7 @@ def render() -> None:
         })
         sig = hashlib.md5("|".join(picked).encode()).hexdigest()[:8]
         table = st.data_editor(
-            base, key=k(f"tbl_{sig}"), hide_index=True, use_container_width=True, disabled=["장비"],
+            base, key=k(f"tbl_{sig}"), hide_index=True, width="stretch", disabled=["장비"],
             column_config={
                 "장비": st.column_config.TextColumn(width="large"),
                 "사용시간(h)": st.column_config.NumberColumn(min_value=0, step=1, format="%d"),
@@ -131,7 +131,7 @@ def render() -> None:
                                    placeholder="비워 두면 지원개요가 들어갑니다", key=k(f"pd_{pk}"))
     etc = c2.text_input("기타", key=k("etc"))
 
-    if st.button("💾 저장", type="primary", use_container_width=True, disabled=not picked):
+    if st.button("💾 저장", type="primary", width="stretch", disabled=not picked):
         common = {
             "purpose": purpose, "usage_type": usage_type, "company": company, "brn": brn, "dept": dept,
             "industry": ind, "item": item, "sub_item": sub, "product": product, "disclose": disclose,
@@ -174,7 +174,7 @@ def render() -> None:
             mine[["start_date", "end_date", "equip_name", "company", "purpose", "hours", "fee"]].rename(columns={
                 "start_date": "시작일", "end_date": "종료일", "equip_name": "장비", "company": "기관",
                 "purpose": "목적", "hours": "시간(h)", "fee": "사용료"}),
-            hide_index=True, use_container_width=True,
+            hide_index=True, width="stretch",
             column_config={"시작일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                            "종료일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                            "사용료": st.column_config.NumberColumn(format="%d")},
