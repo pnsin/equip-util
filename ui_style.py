@@ -300,6 +300,21 @@ def login_head():
                 f'<div class="t">{html.escape(SYSTEM_TITLE)}</div></div>', unsafe_allow_html=True)
 
 
+# 그래프 오른쪽 위 버튼: 그림으로 저장(보고서 붙여넣기용)만 남김
+CHART_CONFIG = {"displaylogo": False, "toImageButtonOptions": {"format": "png", "scale": 2},
+                "modeBarButtonsToRemove": ["zoom2d", "pan2d", "select2d", "lasso2d", "zoomIn2d", "zoomOut2d",
+                                           "autoScale2d", "resetScale2d", "toggleSpikelines",
+                                           "hoverClosestCartesian", "hoverCompareCartesian"]}
+
+
+def nice_step(top: float) -> float:
+    """보조축 눈금 간격: 4~6칸이 되도록 2·5·10·20·25·50 중에서."""
+    for step in (2, 5, 10, 20, 25, 50):
+        if top / step <= 6:
+            return step
+    return 100
+
+
 def chart_layout(fig, height: int, legend: bool = True):
     """plotly 그래프를 어두운 화면에 맞게."""
     fig.update_layout(

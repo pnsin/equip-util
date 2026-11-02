@@ -13,7 +13,8 @@ import os  # noqa: E402
 import sys  # noqa: E402
 
 from core import calc, db, itube, rules, seed  # noqa: E402
-from views import (calendar_entry, companies, common, dashboard, entry, equipment, export, input_page,  # noqa: E402
+from views import (calendar_entry, companies, common, dashboard, entry, equip_detail, equipment, export,  # noqa: E402
+                   input_page,
                    records, settings, staff, trash)
 from core.terms import w  # noqa: E402
 
@@ -21,6 +22,7 @@ from core.terms import w  # noqa: E402
 # (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
 for _m in (ui_style, seed, db, calc, rules, itube, common, calendar_entry, entry, input_page, companies, dashboard,
+           equip_detail,
            equipment, export, records, settings, staff, trash):
     _mt = os.path.getmtime(_m.__file__)
     if getattr(_m, "_src_mtime", None) != _mt:
@@ -103,9 +105,26 @@ def _undo() -> None:
     st.rerun()
 
 
+# 다른 메뉴에 다녀와도 기간·필터 선택이 그대로 남도록 (Streamlit은 안 보이는 화면의 선택값을 지움)
+KEEP_SUFFIX = ("_kind", "_year", "_month", "_q", "_h", "_week", "_range")
+KEEP_KEYS = {"dash_to_today", "dash_loc", "dash_use", "dash_kind_eq", "dash_cmp", "dash_only_kpi", "dash_base",
+             "rec_eq", "rec_comp", "rec_writer", "detail_sel", "input_mode"}
+
+
+def keep_choices() -> None:
+    for k in list(st.session_state):
+        k = str(k)
+        if k in KEEP_KEYS or (k.split("_")[0] in ("dash", "rec", "detail", "itube", "report") and k.endswith(KEEP_SUFFIX)):
+            try:
+                st.session_state[k] = st.session_state[k]
+            except Exception:  # noqa: BLE001 - 값을 다시 넣을 수 없는 위젯은 건너뜀
+                pass
+
+
 PAGES = {
     "현황": [
         st.Page(dashboard.render, title="대시보드", url_path="home", default=True),
+        st.Page(equip_detail.render, title="장비 상세", url_path="equip"),
     ],
     "실적": [
         st.Page(input_page.render, title="실적 입력", url_path="input"),
@@ -126,6 +145,8 @@ PAGES = {
         st.Page(trash.render, title="휴지통 · 기록", url_path="trash"),
     ],
 }
+common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1], "input": PAGES["실적"][0]})
+
 # 예전 주소(/dashboard, /calendar …)로 들어와도 "Page not found" 없이 해당 화면이 열리게 하는 숨은 주소
 ALIASES = [
     st.Page(dashboard.render, title="대시보드", url_path="dashboard"),
@@ -179,4 +200,5 @@ if check_password():
     if local:
         st.warning("구글 시트가 연결되지 않아 임시 저장 중입니다. 앱이 재시작되면 데이터가 지워질 수 있습니다.")
     undo_bar()
+    keep_choices()
     pg.run()

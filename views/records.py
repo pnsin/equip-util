@@ -48,12 +48,20 @@ def render() -> None:
     id_of = dict(zip(eq["label"], eq["id"]))
 
     q_s, q_e, _ = period_bounds("분기", dt.date.today())
+    pre = st.session_state.pop("records_prefilter", None)
+    if pre:  # 대시보드·장비 상세에서 눌러 들어온 경우 그 조건으로 채움
+        if pre.get("start") and pre.get("end"):
+            st.session_state.rec_range = (pre["start"], pre["end"])
+        st.session_state.rec_eq = [pre["equip"]] if pre.get("equip") in set(eq["label"]) else []
+        st.session_state.rec_comp = pre.get("company") or ""
+        st.session_state.rec_writer = "전체"
+    st.session_state.setdefault("rec_range", (q_s, q_e))
     c1, c2, c3, c4 = st.container(border=True).columns([1.4, 2, 1.2, 1])
-    rng = c1.date_input("사용시작일 범위", value=(q_s, q_e), format="YYYY-MM-DD", help="기본값은 이번 분기입니다.")
-    sel_eq = c2.multiselect("장비", list(eq["label"]), placeholder="전체")
-    comp_q = c3.text_input("업체", placeholder="검색")
+    rng = c1.date_input("사용시작일 범위", format="YYYY-MM-DD", help="기본값은 이번 분기입니다.", key="rec_range")
+    sel_eq = c2.multiselect("장비", list(eq["label"]), placeholder="전체", key="rec_eq")
+    comp_q = c3.text_input("업체", placeholder="검색", key="rec_comp")
     writers = sorted(w for w in logs["created_by"].unique() if w)
-    writer = c4.selectbox("담당자", ["전체"] + writers)
+    writer = c4.selectbox("담당자", ["전체"] + writers, key="rec_writer")
 
     df = logs.copy()
     if isinstance(rng, (tuple, list)) and len(rng) == 2:

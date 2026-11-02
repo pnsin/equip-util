@@ -131,6 +131,63 @@ def same_progress_end(s: dt.date, e_eff: dt.date, e: dt.date, ps: dt.date, pe: d
     return min(pe, ps + (e_eff - s))
 
 
+def shift_year(d: dt.date, n: int) -> dt.date:
+    """n년 앞/뒤 같은 날 (2/29는 2/28로)."""
+    try:
+        return d.replace(year=d.year + n)
+    except ValueError:
+        return d.replace(year=d.year + n, day=28)
+
+
+def compare_period(kind: str, s: dt.date, e: dt.date, e_eff: dt.date, mode: str = "직전") -> tuple[dt.date, dt.date, str]:
+    """비교할 기간 (시작, 끝, 이름). mode: '직전' = 바로 앞 기간, '전년' = 1년 전 같은 기간.
+
+    진행 중인 기간이면 비교 기간도 같은 만큼만 자릅니다 (4분기 11/02까지 ↔ 3분기 08/02까지).
+    """
+    if mode == "전년":
+        ps, pe = shift_year(s, -1), shift_year(e_eff, -1)
+        return ps, pe, f"전년 같은 기간({ps:%y.%m.%d}~{pe:%m/%d})"
+    ps, pe, label = period_bounds(kind if kind in PERIOD_KINDS else "월", s - dt.timedelta(days=1))
+    if kind not in PERIOD_KINDS:  # 직접 지정: 같은 길이만큼 바로 앞
+        length = e - s
+        ps, pe = s - length - dt.timedelta(days=1), s - dt.timedelta(days=1)
+        label = f"{ps:%m/%d}~{pe:%m/%d}"
+    pe_eff = same_progress_end(s, e_eff, e, ps, pe)
+    if pe_eff < pe:
+        label = f"{label} 같은 기간({ps:%m/%d}~{pe_eff:%m/%d})"
+    return ps, pe_eff, label
+
+
+def group_util(summary: pd.DataFrame, by: str) -> pd.DataFrame:
+    """센터·용도 같은 묶음별 사용시간·가용시간·가동률 (산정 대상 장비만)."""
+    k = summary[summary["KPI"]] if not summary.empty else summary
+    if k.empty:
+        return pd.DataFrame(columns=[by, "사용시간", "가용시간", "가동률", "사용료", "대수"])
+    g = k.groupby(by).agg(사용시간=("사용시간", "sum"), 가용시간=("가용시간", "sum"), 사용료=("사용료", "sum"),
+                          대수=("equip_id", "count")).reset_index()
+    g["가동률"] = g["사용시간"] / g["가용시간"].where(g["가용시간"] > 0) * 100
+    return g.sort_values("가동률", ascending=False)
+
+
+def monthly_matrix(daily: pd.DataFrame, equip: pd.DataFrame, end: dt.date, n: int, default_annual: float,
+                   cutoff: dt.date | None) -> pd.DataFrame:
+    """장비 × 최근 n개월 가동률 표 (행: equip_id, 열: 'yy.mm')."""
+    months = []
+    cur = dt.date(end.year, end.month, 1)
+    for _ in range(n):
+        months.append(cur)
+        cur = (cur - dt.timedelta(days=1)).replace(day=1)
+    out = {}
+    for m in reversed(months):
+        ms, me, _ = period_bounds("월", m)
+        if cutoff and ms > cutoff:
+            continue
+        me = effective_end(ms, me, cutoff)
+        sm = equipment_summary(daily, equip, ms, me, default_annual)
+        out[short_label("월", ms)] = sm.set_index("equip_id")["가동률"]
+    return pd.DataFrame(out)
+
+
 def available_hours(eq_row, s: dt.date, e: dt.date, default_annual: float) -> float:
     a, r = to_date(eq_row.acquired_on), to_date(eq_row.retired_on)
     s2 = max(s, a) if a else s
@@ -157,6 +214,8 @@ def equipment_summary(daily: pd.DataFrame, equip: pd.DataFrame, s: dt.date, e: d
             "equip_id": r.id,
             "장비명": r.name,
             "장비번호": r.code,
+            "센터": getattr(r, "location", "") or "(미입력)",
+            "용도": getattr(r, "use", "") or "(미입력)",
             "구분": r.kind,
             "담당자": r.manager,
             "사용시간": used,
@@ -166,7 +225,7 @@ def equipment_summary(daily: pd.DataFrame, equip: pd.DataFrame, s: dt.date, e: d
             "건수": int(g["cnt"].get(r.id, 0)),
             "KPI": bool(r.in_kpi),
         })
-    cols = ["equip_id", "장비명", "장비번호", "구분", "담당자", "사용시간", "가용시간", "가동률", "사용료", "건수", "KPI"]
+    cols = ["equip_id", "장비명", "장비번호", "센터", "용도", "구분", "담당자", "사용시간", "가용시간", "가동률", "사용료", "건수", "KPI"]
     return pd.DataFrame(rows, columns=cols)
 
 
