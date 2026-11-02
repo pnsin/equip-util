@@ -7,7 +7,8 @@ from views.common import (confirm_delete, delete_config, filtered_editor, search
 
 # 화면 열 이름은 장비 현황 엑셀(260310 전수조사·내부기준 탭)의 항목 이름을 따름. 순서도 엑셀 순서.
 COLS = {
-    "id": "id", "code": "ITUBE번호", "name": "장비명(한글)", "kind": "장비구분", "manager": "관리자",
+    "id": "id", "code": "ITUBE번호", "nfec": "국가연구시설장비번호", "name": "장비명(한글)", "model": "모델명",
+    "kind": "장비구분", "location": "장비위치", "use": "장비용도", "manager": "관리자",
     "annual_hours": "연간기준시간", "acquired_on": "도입일", "retired_on": "불용일", "in_kpi": "가동률 산정",
     "note": "비고",
 }
