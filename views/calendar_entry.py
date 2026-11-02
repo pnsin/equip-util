@@ -21,7 +21,7 @@ FIELDS = {
 }
 
 
-CELL_LINES = 2  # 달력 칸에 바로 보여 줄 실적 수 (나머지는 "+N건")
+CELL_LINES = 4  # 달력 칸에 바로 보여 줄 실적 수 (나머지는 "+N건")
 CSS = """<style>
 .block-container {padding-top: 2.5rem;}
 .st-key-calgrid button {min-height: 118px; align-items: flex-start; justify-content: flex-start; padding: 6px 8px;}
