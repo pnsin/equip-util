@@ -46,6 +46,22 @@ def _next_workday(d: dt.date, hol: set[dt.date]) -> dt.date:
     return d
 
 
+def _paste_plan(src: list[dict], targets: list[dt.date], logs: pd.DataFrame) -> tuple[list[dict], int]:
+    """src 실적을 targets 날짜에 붙여 넣을 목록. 그날 같은 장비·업체가 이미 있으면 건너뜀."""
+    plan, skipped = [], 0
+    for d in targets:
+        there = _day_rows(logs, d)
+        have = set(zip(there["equip_id"].astype(int), there["company"]))
+        for r in src:
+            if (int(r["equip_id"]), r["company"]) in have:
+                skipped += 1
+                continue
+            rec = {k: r.get(k) for k in db.LOG_FIELDS}
+            rec.update(start_date=d, end_date=d)
+            plan.append(rec)
+    return plan, skipped
+
+
 def _record(row: dict, base: dict, comp_by_name: dict, eq_id: dict, cfg: dict) -> dict:
     """표 한 행 + (수정이면) 원래 실적 → 저장할 실적."""
     company = db.to_str(row.get("업체"))
@@ -86,8 +102,8 @@ def _record(row: dict, base: dict, comp_by_name: dict, eq_id: dict, cfg: dict) -
 
 def render() -> None:
     st.title("🗓️ 달력 입력")
-    st.caption("날짜를 눌러 그날 사용한 장비를 입력하세요. 장비와 업체는 목록에서 고릅니다. "
-               "비슷한 작업이 이어지면 아래 '다른 날로 복사'로 하루치를 그대로 옮길 수 있습니다.")
+    st.caption("날짜를 눌러 그날 사용한 장비를 입력하세요. 장비·업체·담당자는 목록에서 고릅니다. "
+               "같은 작업이 이어지면 날짜를 고르고 '복사'를 누른 뒤, 붙여 넣을 날짜를 차례로 누르세요.")
     msg = st.session_state.pop("cal_saved", None)
     if msg:
         st.success(msg)
@@ -122,6 +138,25 @@ def render() -> None:
     hours_by_day = in_month.groupby(in_month["day"].dt.date)["hours"].sum().to_dict()
     count_by_day = in_month.groupby(in_month["day"].dt.date)["log_id"].nunique().to_dict()
 
+    # ── 복사 / 붙여넣기 ─────────────────────────────────────
+    clip = st.session_state.get("cal_clip")
+    day_saved = _day_rows(logs, day)
+    if clip:
+        c1, c2 = st.columns([5, 1])
+        c1.info(f"📋 **{clip['from']:%m/%d} 입력 {len(clip['rows'])}건 복사됨** · 붙여 넣을 날짜를 누르세요. "
+                "여러 날을 차례로 누르면 계속 붙여 넣습니다.")
+        if c2.button("✖ 붙여넣기 끝", width="stretch"):
+            st.session_state.pop("cal_clip", None)
+            st.rerun()
+    else:
+        c1, c2 = st.columns([1, 5])
+        if c1.button(f"📋 {day:%m/%d} 복사", width="stretch", disabled=day_saved.empty,
+                     help="이 날 저장된 입력을 복사합니다. 그다음 붙여 넣을 날짜를 누르면 바로 들어갑니다."):
+            st.session_state.cal_clip = {"from": day, "rows": day_saved.to_dict("records")}
+            st.rerun()
+        c2.caption("날짜를 고르고 📋 복사 → 붙여 넣을 날짜를 누르면 끝입니다." if not day_saved.empty
+                   else "이 날은 저장된 입력이 없어 복사할 수 없습니다.")
+
     head = st.columns(7)
     for i, w in enumerate(WEEKDAYS):
         color = "#d33" if i == 6 else ("#36c" if i == 5 else "inherit")
@@ -135,9 +170,15 @@ def render() -> None:
                 continue
             n, h = count_by_day.get(d, 0), hours_by_day.get(d, 0)
             mark = "🔴 " if d in hol else ("📍 " if d == today else "")
-            label = f"{mark}{d.day}" + (f"  \n{n}건 · {h:,.0f}h" if n else "  \n·")
+            label = f"{mark}{d.day}" + (f"  \n{n}건 · {h:,.0f}h" if n else "  \n\u2800")
             if cols[i].button(label, key=f"cal_{d}", width="stretch",
                               type="primary" if d == day else "secondary"):
+                if clip and d != clip["from"]:
+                    plan, skipped = _paste_plan(clip["rows"], [d], logs)
+                    added = db.insert_logs(plan) if plan else 0
+                    st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
+                    st.session_state.cal_saved = (f"{d:%m/%d}에 {added}건 붙여 넣었습니다"
+                                                  + (f" (이미 있는 {skipped}건은 건너뜀)" if skipped else ""))
                 _pick_day(d)
                 st.rerun()
     st.caption("🔴 공휴일 · 📍 오늘 · 칸의 시간은 여러 날에 걸친 실적을 나눠 담은 시간까지 포함합니다.")
@@ -281,11 +322,15 @@ def render() -> None:
             }), hide_index=True, width="stretch")
 
     # ── 다른 날로 복사 ─────────────────────────────────────
-    st.divider()
-    st.subheader("📋 다른 날로 복사")
     if rows.empty:
-        st.caption("이 날 저장된 입력이 없어 복사할 것이 없습니다.")
         return
+    st.divider()
+    box = st.expander("📋 여러 날에 한 번에 붙여넣기 (기간 지정, 일부 항목만)")
+    with box:
+        _bulk_copy(day, rows, orig, logs, label_of, hol, dirty, ver)
+
+
+def _bulk_copy(day, rows, orig, logs, label_of, hol, dirty, ver) -> None:
     if dirty:
         st.warning("저장하지 않은 변경이 있습니다. 복사는 저장된 내용 기준이니 먼저 저장하세요.")
 
@@ -318,17 +363,7 @@ def render() -> None:
             targets = []
 
     src = [orig[i] for i in pick]
-    plan, skipped = [], 0
-    for d in targets:
-        there = _day_rows(logs, d)
-        have = set(zip(there["equip_id"].astype(int), there["company"]))
-        for r in src:
-            if (int(r["equip_id"]), r["company"]) in have:
-                skipped += 1
-                continue
-            rec = {k: r.get(k) for k in db.LOG_FIELDS}
-            rec.update(start_date=d, end_date=d)
-            plan.append(rec)
+    plan, skipped = _paste_plan(src, targets, logs)
     if targets:
         shown = ", ".join(f"{d:%m/%d}({WEEKDAYS[d.weekday()]})" for d in targets[:8]) + (" …" if len(targets) > 8 else "")
         st.caption(f"{shown} · {len(targets)}일 × {len(src)}건 → {len(plan)}건 추가"
