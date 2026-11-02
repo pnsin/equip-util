@@ -4,15 +4,17 @@ import datetime as dt
 import streamlit as st
 
 from core import db, itube
+from ui_style import page_header
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def render() -> None:
-    st.title("⚙️ 설정")
+    page_header("설정 · 백업", "설정", desc="가동률 기준, 기존 엑셀 가져오기, i-Tube 양식, 데이터 백업을 관리합니다.")
     msg = st.session_state.pop("settings_saved", None)
     if msg:
-        st.success(msg)
+        st.success(msg, icon=":material/check_circle:")
+        st.toast(msg, icon="✅")
     cfg = db.get_settings()
 
     st.subheader("기본 정보")
@@ -30,8 +32,7 @@ def render() -> None:
         mode = c3.selectbox("기간별 집계 방식", list(modes), format_func=modes.get,
                             index=list(modes).index(cfg.get("alloc_mode", "spread")),
                             help="예: 7/25~8/10 실적 20시간을 7월·8월에 일수만큼 나눌지, 7월에 모두 넣을지")
-        st.caption("팀원 명단은 '정보 입력 → 담당자 정보 입력'로 옮겼습니다.")
-        if st.form_submit_button("저장", type="primary"):
+        if st.form_submit_button("설정 저장", type="primary", icon=":material/save:"):
             db.save_settings(org_name=org.strip(), org_suffix=suffix.strip(), dept_default=dept.strip(),
                              annual_hours=annual, target_util=target, alloc_mode=mode)
             st.session_state.settings_saved = "설정을 저장했습니다."
@@ -79,10 +80,10 @@ def render() -> None:
     else:
         st.caption("구글 시트에 저장 중입니다 (탭: 장비 / 업체 / 사용실적 / 설정). 시트의 1행 열 제목은 바꾸지 마세요.")
     # 백업 파일은 누를 때만 만듭니다 (화면을 고칠 때마다 시트 4개를 다시 읽지 않도록)
-    if st.button("🗂️ 백업 파일 만들기"):
+    if st.button("백업 파일 만들기", icon=":material/inventory_2:"):
         st.session_state.backup_file = db.backup_bytes()
     if st.session_state.get("backup_file"):
-        st.download_button("⬇️ 전체 데이터 백업 내려받기", data=st.session_state.backup_file, mime=XLSX,
+        st.download_button("전체 데이터 백업 내려받기", data=st.session_state.backup_file, mime=XLSX, icon=":material/download:",
                            file_name=f"가동률관리_백업_{dt.date.today():%Y%m%d}.xlsx", type="primary")
     st.caption("한 달에 한 번쯤 백업 파일을 내려받아 팀 드라이브에 보관하세요. 실수로 지운 실적은 백업으로만 되살릴 수 있습니다.")
     with st.expander("백업 파일로 복원 (현재 데이터를 모두 덮어씀)"):

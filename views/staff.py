@@ -2,6 +2,7 @@
 import streamlit as st
 
 from core import db
+from ui_style import note, page_header
 from views.common import confirm_delete, delete_config, split_deleted, with_delete_column
 
 COLS = {
@@ -11,12 +12,12 @@ COLS = {
 
 
 def render() -> None:
-    st.title("👤 담당자 정보 입력")
+    page_header("담당자 정보", "정보 입력", desc="실적을 입력할 때 담당자는 이 목록에서 고릅니다.")
     msg = st.session_state.pop("staff_saved", None)
     if msg:
-        st.success(msg)
-    st.caption("실적을 입력할 때 담당자는 이 목록에서 고릅니다. 그만둔 사람은 지우지 말고 '재직'을 끄세요. "
-               "그러면 새 입력 목록에서는 빠지고 지난 실적의 담당자 이름은 그대로 남습니다.")
+        st.success(msg, icon=":material/check_circle:")
+        st.toast(msg, icon="✅")
+    note("그만둔 사람은 지우지 말고 <b>'재직'을 끄세요</b>. 새 입력 목록에서만 빠지고 지난 실적의 담당자 이름은 그대로 남습니다.")
     view = db.load_staff()[list(COLS)].rename(columns=COLS)
     # 빈 목록이면 열 형식을 알 수 없어 편집기가 오류를 내므로 형식을 고정
     view = view.astype({c: "string" for c in ("이름", "연락처", "이메일", "담당업무", "비고")} | {"재직": "bool", "id": "Int64"})
@@ -33,7 +34,7 @@ def render() -> None:
     st.caption(f"총 {len(edited.dropna(subset=['이름']))}명 · 지울 행은 '삭제'에 체크하고, 맨 아래 빈 행에 입력하면 추가됩니다.")
     edited, deleted = split_deleted(edited, "이름")
     ok = confirm_delete(deleted, "staff_editor_del", "명")
-    if st.button("변경 내용 저장", type="primary", disabled=not ok):
+    if st.button("변경 내용 저장", type="primary", disabled=not ok, icon=":material/save:"):
         raw = edited.rename(columns={v: k for k, v in COLS.items()})
         errors = db.check_staff(raw)
         for e in errors:
