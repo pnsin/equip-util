@@ -1,0 +1,54 @@
+"""업체(사용기관) 목록 관리. 실적을 입력할 때는 여기 등록된 업체 중에서만 고릅니다."""
+import streamlit as st
+
+from core import db, seed
+
+COLS = {
+    "id": "id", "name": "기업명", "brn": "사업자등록번호", "contact": "담당자", "phone": "연락처",
+    "industry": "업종", "item": "품목", "sub_item": "세부품목", "note": "비고",
+}
+
+
+def render() -> None:
+    st.title("🏢 업체 관리")
+    msg = st.session_state.pop("company_saved", None)
+    if msg:
+        st.success(msg)
+    st.caption(
+        "실적을 입력할 때는 여기 등록된 업체만 고를 수 있습니다. 업체명·사업자등록번호를 한 곳에서 관리해 "
+        "같은 회사가 다른 이름으로 집계되지 않게 합니다. 업종·품목·세부품목을 적어 두면 실적 입력 때 자동으로 채워집니다."
+    )
+    comp = db.load_companies()
+    view = comp[list(COLS)].rename(columns=COLS)
+
+    q = st.text_input("검색", placeholder="기업명 또는 사업자등록번호")
+    if q:
+        mask = view["기업명"].str.contains(q, case=False, regex=False) | \
+            view["사업자등록번호"].str.contains(db.digits(q) or q, regex=False)
+        st.dataframe(view[mask].drop(columns=["id"]), hide_index=True, use_container_width=True)
+        st.caption("검색 중에는 보기만 됩니다. 수정하려면 검색어를 지우세요.")
+        return
+
+    edited = st.data_editor(
+        view, key="company_editor", num_rows="dynamic", hide_index=True, use_container_width=True, height=520,
+        column_order=[c for c in COLS.values() if c != "id"],
+        column_config={
+            "기업명": st.column_config.TextColumn(required=True, width="medium"),
+            "사업자등록번호": st.column_config.TextColumn(help="숫자 10자리 (- 는 넣어도 되고 빼도 됩니다)"),
+            "업종": st.column_config.SelectboxColumn(options=seed.INDUSTRIES),
+            "품목": st.column_config.SelectboxColumn(options=seed.ALL_ITEMS),
+            "세부품목": st.column_config.SelectboxColumn(options=seed.ALL_SUBITEMS),
+            "비고": st.column_config.TextColumn(width="medium"),
+        },
+    )
+    st.caption(f"총 {len(edited.dropna(subset=['기업명']))}곳 · 맨 아래 빈 행에 입력하면 업체가 추가됩니다.")
+    if st.button("변경 내용 저장", type="primary"):
+        raw = edited.rename(columns={v: k for k, v in COLS.items()})
+        errors = db.check_companies(raw)
+        for e in errors:
+            st.error(e)
+        if not errors:
+            db.save_companies(raw)
+            st.session_state.company_saved = "업체 목록을 저장했습니다."
+            st.session_state.pop("company_editor", None)
+            st.rerun()

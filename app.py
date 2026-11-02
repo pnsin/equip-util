@@ -3,7 +3,7 @@ import streamlit as st
 st.set_page_config(page_title="장비 가동률 관리", page_icon="📊", layout="wide")
 
 from core import db  # noqa: E402
-from views import dashboard, entry, equipment, export, records, settings  # noqa: E402
+from views import calendar_entry, companies, dashboard, entry, equipment, export, records, settings  # noqa: E402
 
 
 def check_password() -> bool:
@@ -50,12 +50,14 @@ if check_password():
             st.Page(dashboard.render, title="대시보드", icon="📊", url_path="dashboard", default=True),
         ],
         "실적": [
-            st.Page(entry.render, title="실적 입력", icon="✍️", url_path="entry"),
+            st.Page(calendar_entry.render, title="달력 입력", icon="🗓️", url_path="calendar"),
+            st.Page(entry.render, title="기간 실적 입력", icon="✍️", url_path="entry"),
             st.Page(records.render, title="실적 조회·수정", icon="📋", url_path="records"),
             st.Page(export.render, title="엑셀 내려받기", icon="📥", url_path="export"),
         ],
         "관리": [
             st.Page(equipment.render, title="장비 관리", icon="🔧", url_path="equipment"),
+            st.Page(companies.render, title="업체 관리", icon="🏢", url_path="companies"),
             st.Page(settings.render, title="설정", icon="⚙️", url_path="settings"),
         ],
     })
