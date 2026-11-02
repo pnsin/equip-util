@@ -5,6 +5,7 @@ import streamlit as st
 
 from core import db, itube
 from ui_style import page_header
+from core.terms import w
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -26,7 +27,7 @@ def render() -> None:
         c1, c2, c3 = st.columns(3)
         annual = c1.number_input("연간 기준 가용시간 (h)", min_value=1, step=100, value=int(cfg.get("annual_hours") or 2000),
                                  help="장비별로 다르면 '장비 정보 입력'에서 장비마다 따로 지정할 수 있습니다.")
-        target = c2.number_input("목표 가동률 (%)", min_value=0.0, max_value=100.0, step=5.0,
+        target = c2.number_input(w("목표 가동률 (%)"), min_value=0.0, max_value=100.0, step=5.0,
                                  value=float(cfg.get("target_util") or 0))
         modes = {"spread": "사용기간에 고르게 나눔 (권장)", "start": "사용시작일에 전부 반영"}
         mode = c3.selectbox("기간별 집계 방식", list(modes), format_func=modes.get,
@@ -81,7 +82,7 @@ def render() -> None:
         st.session_state.backup_file = db.backup_bytes()
     if st.session_state.get("backup_file"):
         st.download_button("전체 데이터 백업 내려받기", data=st.session_state.backup_file, mime=XLSX, icon=":material/download:",
-                           file_name=f"가동률관리_백업_{dt.date.today():%Y%m%d}.xlsx", type="primary")
+                           file_name=w(f"가동률관리_백업_{dt.date.today():%Y%m%d}.xlsx"), type="primary")
     with st.expander("백업 파일로 복원 (현재 데이터를 모두 덮어씀)"):
         bk = st.file_uploader("백업 파일", type=["xlsx"], key="restore_file")
         ok = st.checkbox("현재 데이터가 모두 지워지고 백업 내용으로 바뀌는 것을 확인했습니다.")
