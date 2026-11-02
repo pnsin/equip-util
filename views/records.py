@@ -33,6 +33,10 @@ FIELDS = {
 }
 
 
+DEFAULT_COLS = ["장비", "시작일", "종료일", "업체", "사용목적", "활용유형", "사용시간", "사용료", "시료수", "담당자",
+                "세부지원내용", "수정자"]
+
+
 def render() -> None:
     page_header("실적 목록", "실적")
     saved = st.session_state.pop("records_saved", None)
@@ -87,12 +91,26 @@ def render() -> None:
     view["start_date"] = view["start_date"].dt.date
     view["end_date"] = view["end_date"].dt.date
     view = view.set_index("id")[list(FIELDS.values())].rename(columns={v: k for k, v in FIELDS.items()})
+    view["수정자"] = df.set_index("id")["updated_by"] if "updated_by" in df else ""
+    view.insert(0, "복제", False)
     view.insert(0, "삭제", False)
+    all_cols = list(FIELDS) + ["수정자"]
+    st.session_state.setdefault("rec_cols", DEFAULT_COLS)
+    t2, t1 = st.columns([1.2, 5], vertical_alignment="center")
+    t1.caption("칸을 눌러 바로 고치고 '변경 내용 저장'. 지울 행은 '삭제', 다른 날로 복사할 행은 '복제'에 체크하세요.")
+    with t2.popover("보이는 열", icon=":material/view_column:", width="stretch"):
+        shown = st.multiselect("보이는 열", all_cols, key="rec_cols", label_visibility="collapsed")
+        st.button("기본값으로", key="rec_cols_reset", type="tertiary",
+                  on_click=lambda: st.session_state.update(rec_cols=DEFAULT_COLS))
+    shown = shown or DEFAULT_COLS
 
     edited = st.data_editor(
         view, key="records_editor", hide_index=True, width="stretch", height=520,
-        disabled=["사업자번호"],
+        disabled=["사업자번호", "수정자"],
+        column_order=["삭제", "복제"] + list(dict.fromkeys(c for c in DEFAULT_COLS + all_cols if c in shown)),
         column_config={
+            "복제": st.column_config.CheckboxColumn(width="small", help="체크한 행을 아래에서 고른 날짜로 복사합니다."),
+            "수정자": st.column_config.TextColumn("마지막 수정", help="이 실적을 마지막으로 고친 사람"),
             "담당자": st.column_config.SelectboxColumn(options=db.staff_names(list(df["created_by"])), required=True),
             "삭제": st.column_config.CheckboxColumn(width="small"),
             "장비": st.column_config.SelectboxColumn(options=list(eq["label"]), width="large", required=True),
@@ -121,8 +139,8 @@ def render() -> None:
     for i in edited.index:
         if i in to_delete:
             continue
-        a = edited.loc[i].drop("삭제").astype(str)
-        b = view.loc[i].drop("삭제").astype(str)
+        a = edited.loc[i].drop(["삭제", "복제"]).astype(str)
+        b = view.loc[i].drop(["삭제", "복제"]).astype(str)
         if not a.equals(b):
             changed.append(i)
 
@@ -159,3 +177,31 @@ def render() -> None:
             st.session_state.pop("records_editor", None)
             st.rerun()
     c2.caption(f"수정 {len(changed)}건 · 삭제 {len(to_delete)}건 저장 대기" if (changed or to_delete) else "")
+
+    to_copy = [int(i) for i in edited.index[edited["복제"].fillna(False).astype(bool)]]
+    if to_copy:
+        with st.container(border=True):
+            c1, c2, c3 = st.columns([1.3, 1.2, 2], vertical_alignment="bottom")
+            new_start = c1.date_input("복제할 시작일", value=dt.date.today(), format="YYYY-MM-DD", key="rec_copy_day",
+                                      help="기간 실적은 같은 길이를 유지해 이 날부터 시작하도록 복사합니다.")
+            if c2.button(f"{len(to_copy)}건 복제", type="primary", icon=":material/content_copy:", width="stretch"):
+                errors, recs = [], []
+                for i in to_copy:
+                    src = df[df["id"] == i].iloc[0].to_dict()
+                    length = (src["end_date"] - src["start_date"]).days
+                    rec = {k: src.get(k) for k in db.LOG_FIELDS}
+                    rec.update(start_date=new_start, end_date=new_start + dt.timedelta(days=length),
+                               created_by=st.session_state.get("me") or src.get("created_by"))
+                    errs = rules.validate(rec)
+                    errors += [f"[{label_of.get(src['equip_id'], '')}] {e}" for e in errs]
+                    recs.append(rec)
+                if errors:
+                    for e in errors:
+                        st.error(e)
+                else:
+                    with db.undo_group(f"실적 {len(recs)}건 복제 ({new_start:%m/%d})"):
+                        n = db.insert_logs(recs)
+                    st.session_state.records_saved = f"{n}건을 {new_start:%m/%d}로 복제했습니다."
+                    st.session_state.pop("records_editor", None)
+                    st.rerun()
+            c3.caption("복제한 실적은 '실적 입력' 달력에서도 바로 보입니다.")

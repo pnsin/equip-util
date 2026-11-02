@@ -84,7 +84,9 @@ def render() -> None:
         st.toggle("진행 중 기간은 오늘까지로 계산", value=True, key="dash_to_today",
                   help="끄면 아직 끝나지 않은 기간도 전체 기간의 가용시간으로 나눕니다.")
 
-    s, e, label, kind = period_picker("dash", calc.PERIOD_KINDS, "월", years=years, extra=_toggle)
+    default_kind = cfg.get("default_period") if cfg.get("default_period") in calc.PERIOD_KINDS else "월"
+    top_n = int(cfg.get("chart_top") or 25)
+    s, e, label, kind = period_picker("dash", calc.PERIOD_KINDS, default_kind, years=years, extra=_toggle)
     to_today = st.session_state.get("dash_to_today", True)
     cutoff = dt.date.today() if to_today else None
     eq = _filters(eq_all)
@@ -180,13 +182,13 @@ def render() -> None:
     sm = summary[summary["KPI"]] if only_kpi else summary
     sm = sm.sort_values("가동률", ascending=True, na_position="first")
     used_sm = sm[sm["사용시간"] > 0]
-    shown = used_sm.tail(25) if len(used_sm) > 25 else used_sm
+    shown = used_sm.tail(top_n) if len(used_sm) > top_n else used_sm
     n_zero = len(sm) - len(used_sm)
     # 마지막 사용일 (공동장비 정보 입력 시스템의 '저활용·유휴 장비' 관리 참고)
     past = logs[logs["start_date"] <= pd.Timestamp(dt.date.today())] if not logs.empty else logs
     last_used = past.groupby("equip_id")["end_date"].max() if not past.empty else pd.Series(dtype="datetime64[ns]")
     sm = sm.assign(최근사용일=sm["equip_id"].map(last_used).dt.date if not last_used.empty else None)
-    idle_days = 90
+    idle_days = int(cfg.get("idle_days") or 90)
     cut = dt.date.today() - dt.timedelta(days=idle_days)
     idle = sm[[(d is None or pd.isna(d) or d < cut) for d in sm["최근사용일"]]]
     tab_chart, tab_heat, tab_table = st.tabs(["그래프", "월별 색칠표", "표"])
@@ -196,8 +198,8 @@ def render() -> None:
         else:
             _equip_chart(shown, target)
         notes = []
-        if len(used_sm) > 25:
-            notes.append(f"사용한 장비 {len(used_sm)}대 중 상위 25대")
+        if len(used_sm) > top_n:
+            notes.append(f"사용한 장비 {len(used_sm)}대 중 상위 {top_n}대 ('설정'에서 바꿀 수 있음)")
         if n_zero:
             notes.append(f"사용 기록이 없는 {n_zero}대는 '표' 탭에서 볼 수 있습니다")
         if notes:

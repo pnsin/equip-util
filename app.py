@@ -108,7 +108,7 @@ def _undo() -> None:
 # 다른 메뉴에 다녀와도 기간·필터 선택이 그대로 남도록 (Streamlit은 안 보이는 화면의 선택값을 지움)
 KEEP_SUFFIX = ("_kind", "_year", "_month", "_q", "_h", "_week", "_range")
 KEEP_KEYS = {"dash_to_today", "dash_loc", "dash_use", "dash_kind_eq", "dash_cmp", "dash_only_kpi", "dash_base",
-             "rec_eq", "rec_comp", "rec_writer", "detail_sel", "input_mode"}
+             "rec_eq", "rec_comp", "rec_writer", "rec_cols", "detail_sel", "input_mode"}
 
 
 def keep_choices() -> None:

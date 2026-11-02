@@ -7,6 +7,7 @@ import streamlit as st
 from core import db, rules, seed
 from core.calc import period_bounds
 from ui_style import empty_state, page_header, section_bar
+from views.common import new_company_dialog
 
 def _idx(options: list, value, default: int = 0) -> int:
     return options.index(value) if value in options else default
@@ -45,8 +46,16 @@ def render(header: bool = True) -> None:
     recent = logs.sort_values("id", ascending=False) if not logs.empty else logs
     recent = recent[recent["company"] != ""].drop_duplicates("company") if not recent.empty else recent
     c1, c2, c3 = st.columns([2, 1, 1])
-    company = c1.selectbox("업체", list(master), index=None, key=k("comp"),
+    added = st.session_state.pop("company_added", None)
+    if added:
+        st.session_state.entry_comp_nonce = st.session_state.get("entry_comp_nonce", 0) + 1
+        st.toast(f"'{added}' 업체를 등록했습니다.", icon=":material/check_circle:")
+    names = list(master)
+    company = c1.selectbox("업체", names, index=names.index(added) if added in names else None,
+                           key=k(f"comp_{st.session_state.get('entry_comp_nonce', 0)}"),
                            placeholder="업체 검색 (내부 사용은 비움)")
+    if c1.button("목록에 없는 업체 등록", icon=":material/add_business:", type="tertiary", key=k("new_comp")):
+        new_company_dialog()
     if not master:
         c1.caption("등록된 업체가 없습니다. '기준 정보 › 업체'에서 먼저 업체를 등록하세요.")
     company = company or ""

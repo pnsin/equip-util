@@ -10,6 +10,7 @@ import streamlit as st
 from core import db, rules, seed
 from core.calc import expand_daily, kr_holidays
 from ui_style import T, page_header
+from views.common import new_company_dialog
 
 WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
 DEFAULT_INDUSTRY = ("전기전자", "이차전지_에너지", "이차전지")
@@ -207,6 +208,80 @@ def _paste(d: dt.date, clip: dict, logs: pd.DataFrame) -> None:
                                   f"{d:%m/%d}에는 같은 장비·업체가 이미 있어 붙여 넣지 않았습니다")
 
 
+def _paste_many_form(clip: dict, logs: pd.DataFrame) -> None:
+    src = clip["from"]
+    week_end = src + dt.timedelta(days=6 - src.weekday())
+    rng = st.date_input("붙여 넣을 기간", value=(src + dt.timedelta(days=1), max(week_end, src + dt.timedelta(days=1))),
+                        format="YYYY-MM-DD", key="cal_many_rng")
+    weekdays = st.toggle("평일만 (주말·공휴일 빼기)", value=True, key="cal_many_wd")
+    if not (isinstance(rng, (tuple, list)) and len(rng) == 2):
+        st.caption("끝 날짜도 고르세요.")
+        return
+    s, e = rng
+    hol = kr_holidays({s.year, e.year})
+    days = [s + dt.timedelta(days=i) for i in range((e - s).days + 1)]
+    days = [d for d in days if d != src and (not weekdays or (d.weekday() < 5 and d not in hol))]
+    if st.button(f"{len(days)}일에 붙여넣기", type="primary", disabled=not days, width="stretch", key="cal_many_go"):
+        plan, skipped = _paste_plan(clip["rows"], days, logs)
+        with db.undo_group(f"{len(days)}일에 붙여넣기"):
+            added = db.insert_logs(plan) if plan else 0
+        st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
+        st.session_state.cal_saved = (f"{s:%m/%d}~{e:%m/%d} 중 {added}일에 붙여 넣었습니다"
+                                      + (f" · 같은 장비·업체가 이미 있는 {skipped}일은 건너뜀" if skipped else ""))
+        st.rerun()
+
+
+def _reset_period_pick() -> None:
+    st.session_state.cal_pnonce = st.session_state.get("cal_pnonce", 0) + 1  # 표 선택을 풀어 창이 다시 뜨지 않게
+
+
+@st.dialog("기간 실적 고치기", width="medium", on_dismiss=_reset_period_pick)
+def _edit_period(rec: dict, label_of: dict, comp_opts: list, staff_opts: list) -> None:
+    eq_ids = list(label_of)
+    eid = st.selectbox("장비", eq_ids, index=eq_ids.index(rec["equip_id"]) if rec["equip_id"] in eq_ids else 0,
+                       format_func=label_of.get, key="pe_eq")
+    c1, c2 = st.columns(2)
+    start = c1.date_input("사용시작일", value=rec["start_date"].date(), format="YYYY-MM-DD", key="pe_s")
+    end = c2.date_input("사용종료일", value=rec["end_date"].date(), format="YYYY-MM-DD", key="pe_e")
+    comp = rec.get("company") or ""
+    opts = [""] + comp_opts + ([comp] if comp and comp not in comp_opts else [])
+    company = st.selectbox("업체", opts, index=opts.index(comp), format_func=lambda v: v or "(내부 사용)", key="pe_c")
+    c1, c2, c3 = st.columns(3)
+    hours = c1.number_input("사용시간(h)", min_value=0, step=1, value=int(rec["hours"]), key="pe_h")
+    fee = c2.number_input("사용료(원)", min_value=0, step=1000, value=int(rec["fee"]), key="pe_f")
+    samples = c3.number_input("시료수", min_value=0, step=1, value=int(rec["samples"]), key="pe_n")
+    c1, c2, c3 = st.columns(3)
+    purpose = c1.selectbox("사용목적", seed.PURPOSES, index=seed.PURPOSES.index(rec["purpose"])
+                           if rec["purpose"] in seed.PURPOSES else 0, key="pe_p")
+    utype = c2.selectbox("활용유형", seed.USAGE_TYPES, index=seed.USAGE_TYPES.index(rec["usage_type"])
+                         if rec["usage_type"] in seed.USAGE_TYPES else 0, key="pe_u")
+    sopts = staff_opts + ([rec["created_by"]] if rec["created_by"] and rec["created_by"] not in staff_opts else [])
+    staff = c3.selectbox("담당자", sopts, index=sopts.index(rec["created_by"]) if rec["created_by"] in sopts else 0,
+                         key="pe_w")
+    new = {"equip_id": eid, "start_date": start, "end_date": end, "company": company, "hours": hours, "fee": fee,
+           "samples": samples, "purpose": purpose, "usage_type": utype, "created_by": staff}
+    b1, b2 = st.columns(2)
+    if b1.button("저장", type="primary", icon=":material/save:", width="stretch", key="pe_save"):
+        full = {k: rec.get(k) for k in db.LOG_FIELDS} | new
+        if company != comp:
+            m = {r["name"]: r for r in db.load_companies().to_dict("records")}.get(company)
+            full["brn"] = m["brn"] if m is not None else ""
+        errs = rules.validate(full)
+        if errs:
+            for e in errs:
+                st.error(e)
+            return
+        db.update_logs({int(rec["id"]): full})
+        st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
+        st.session_state.cal_saved = "기간 실적을 고쳤습니다."
+        st.rerun()
+    if b2.button("이 실적 삭제", icon=":material/delete:", width="stretch", key="pe_del"):
+        db.delete_logs([int(rec["id"])])
+        st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
+        st.session_state.cal_saved = "기간 실적을 지웠습니다. 실수면 '되돌리기'를 누르세요."
+        st.rerun()
+
+
 def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: bool, today: bool,
               clip: dict | None, logs: pd.DataFrame) -> None:
     cell = col.container(border=True, key=f"cell_{d}")
@@ -276,10 +351,13 @@ def render(header: bool = True) -> None:
         st.session_state.pop("cal_clip", None)
         clip = None
     if clip:
-        c1, c2 = st.columns([6, 1], vertical_alignment="center")
+        c1, c2, c3 = st.columns([5, 1.4, 1], vertical_alignment="center")
         c1.info(f"**{_md(_cut(clip['label'], 28))}** 복사됨 · 붙여 넣을 날짜를 누르세요",
                 icon=":material/content_copy:")
-        if c2.button("붙여넣기 끝", icon=":material/close:", width="stretch"):
+        with c2.popover("여러 날에", icon=":material/date_range:", width="stretch",
+                        help="기간을 골라 한 번에 붙여 넣습니다."):
+            _paste_many_form(clip, logs)
+        if c3.button("끝", icon=":material/close:", width="stretch", help="붙여넣기를 끝냅니다."):
             st.session_state.pop("cal_clip", None)
             st.rerun()
 
@@ -330,8 +408,9 @@ def render(header: bool = True) -> None:
     if missing:
         st.warning(f"등록된 {'·'.join(missing)}이(가) 없어 새로 입력할 수 없습니다. "
                    f"{', '.join(m + ' 정보' for m in missing)} 메뉴에서 먼저 등록하세요.")
-    if comp.empty:
-        st.caption("등록된 업체가 없습니다. 업체 정보 메뉴에서 먼저 등록하세요.")
+    added = st.session_state.pop("company_added", None)
+    if added:
+        st.toast(f"'{added}' 업체를 등록했습니다. '업체' 칸에서 고르세요.", icon=":material/check_circle:")
     last_staff = st.session_state.get("last_staff") or st.session_state.get("me")
 
     view = pd.DataFrame({
@@ -396,7 +475,10 @@ def render(header: bool = True) -> None:
 
     dirty = bool(new_rows or changed or removed)
     confirm = True
-    c1, c2 = st.columns([1, 3])
+    c1, c3, c2 = st.columns([1, 1.2, 2.8])
+    if c3.button("새 업체 등록", icon=":material/add_business:", width="stretch", key="cal_new_comp",
+                 help="목록에 없는 업체를 바로 등록합니다. 등록하면 '업체' 칸에서 고를 수 있습니다."):
+        new_company_dialog()
     if c1.button("저장", icon=":material/save:", type="primary", disabled=not dirty or not confirm, width="stretch"):
         errors, inserts, updates = [], [], {}
         base_new = {"start_date": day, "end_date": day}
@@ -441,9 +523,14 @@ def render(header: bool = True) -> None:
         c2.caption(f"저장 안 된 변경: 추가 {len(new_rows)} · 수정 {len(changed)} · 삭제 {len(removed)}")
 
     if not period.empty:
-        with st.expander(f"이 날이 포함된 기간 실적 {len(period)}건 (여기서는 보기만, 수정은 '실적 목록')"):
-            st.dataframe(pd.DataFrame({
-                "장비": period["equip_id"].map(label_of), "업체": period["company"],
-                "시작일": period["start_date"].dt.date, "종료일": period["end_date"].dt.date,
-                "사용시간(전체)": period["hours"].astype(int),
-            }), hide_index=True, width="stretch")
+        with st.expander(f"이 날이 포함된 기간 실적 {len(period)}건 · 행을 누르면 고칠 수 있습니다", expanded=False):
+            pv = period.reset_index(drop=True)
+            ev = st.dataframe(pd.DataFrame({
+                "장비": pv["equip_id"].map(label_of), "업체": pv["company"].replace("", "(내부)"),
+                "시작일": pv["start_date"].dt.date, "종료일": pv["end_date"].dt.date,
+                "사용시간(전체)": pv["hours"].astype(int), "담당자": pv["created_by"],
+            }), hide_index=True, width="stretch", on_select="rerun", selection_mode="single-row",
+                key=f"cal_period_{day}_{ver}_{st.session_state.get('cal_pnonce', 0)}")
+            picked = ev.selection.rows if ev else []
+            if picked:
+                _edit_period(pv.iloc[picked[0]].to_dict(), label_of, list(comp_by_name), staff_opts)
