@@ -274,7 +274,13 @@ def _sheet_secrets() -> tuple[dict | None, str]:
 def get_store():
     info, sid = _sheet_secrets()
     # Secrets가 바뀌면(시트 ID·서비스 계정) 캐시 키가 달라져 새로 연결됨
-    return _open_store(sid if info else "", (info or {}).get("client_email", ""))
+    key = (sid if info else "", (info or {}).get("client_email", ""))
+    store = _open_store(*key)
+    if hasattr(store, "ws") and not all(t in getattr(store, "ws", {}) for t in TABLES):
+        # 새 탭(예: 업체)이 생기기 전에 연결된 저장소가 남아 있으면 다시 연결해 탭을 만듦
+        _open_store.clear()
+        store = _open_store(*key)
+    return store
 
 
 @st.cache_resource

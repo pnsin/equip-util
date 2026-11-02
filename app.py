@@ -2,7 +2,14 @@ import streamlit as st
 
 st.set_page_config(page_title="장비 가동률 관리", page_icon="📊", layout="wide")
 
-from core import db  # noqa: E402
+import importlib  # noqa: E402
+
+from core import calc, db, rules, seed  # noqa: E402
+
+# 앱이 새 코드로 바뀐 직후에는 서버에 옛 모듈이 남아 있을 수 있어 (예: db.load_companies 없음) 다시 읽어 옴
+if not hasattr(db, "load_companies"):
+    for _m in (seed, db, calc, rules):
+        importlib.reload(_m)
 from views import calendar_entry, companies, dashboard, entry, equipment, export, records, settings  # noqa: E402
 
 
