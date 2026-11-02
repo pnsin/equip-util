@@ -31,18 +31,22 @@ i-Tube 장비일지 업로드 양식을 그대로 내려받을 수 있는 Stream
 2. https://share.streamlit.io → **Create app** → 저장소 선택, Main file path: `app.py` → Deploy.
 3. 앱의 **Settings → Secrets**에 `.streamlit/secrets.toml.example`을 참고해 입력합니다.
    - `app_password`: 팀 공용 접속 비밀번호
-   - `db_url`: 데이터를 영구 저장할 DB 주소 (아래 참고)
+   - `[gsheets]`, `[gcp_service_account]`: 데이터를 저장할 구글 시트 (아래 참고)
 
-### 데이터 영구 저장 (중요)
+### 데이터 저장: 구글 시트 (중요)
 
-Streamlit Cloud는 앱이 재시작·재배포될 때 서버의 파일이 초기화됩니다. `db_url`을 넣지 않으면
-데이터가 SQLite 파일에 저장되어 **사라질 수 있습니다.** 팀이 함께 쓰려면 무료 PostgreSQL을 연결하세요.
+Streamlit Cloud는 앱이 재시작·재배포될 때 서버의 파일이 초기화됩니다. 구글 시트를 연결하지 않으면
+데이터가 임시 파일에 저장되어 **사라질 수 있습니다.**
 
-1. https://supabase.com 가입 → New project (Region: Northeast Asia (Seoul))
-2. 프로젝트 화면 상단 **Connect** → **Session pooler**의 URI를 복사
-3. `[YOUR-PASSWORD]` 부분을 프로젝트 비밀번호로 바꿔 Secrets의 `db_url`에 붙여 넣기
+1. 구글 드라이브에서 빈 스프레드시트를 하나 만듭니다 (예: `장비가동률 데이터`).
+2. **공유** → 서비스 계정 이메일(`…@….iam.gserviceaccount.com`)을 **편집자**로 추가합니다.
+   전극 공정 관리 시스템에서 쓰는 서비스 계정을 그대로 써도 됩니다.
+3. 시트 주소의 `/d/`와 `/edit` 사이 문자열을 Secrets의 `[gsheets] spreadsheet_id`에,
+   서비스 계정 키 내용을 `[gcp_service_account]`에 넣습니다.
 
-테이블은 앱이 처음 실행될 때 자동으로 만들어집니다. 장비 목록은 코드에 넣지 않았으니, 처음에 기존 장비일지 파일을 가져오면 Sheet4의 장비 목록이 함께 등록됩니다.
+앱이 처음 연결되면 `장비` / `사용실적` / `설정` 탭과 열 제목을 자동으로 만듭니다.
+시트에서 데이터를 볼 수는 있지만 **1행 열 제목은 바꾸거나 옮기지 마세요.** 수정은 앱에서 하는 것을 권장합니다.
+장비 목록은 코드에 넣지 않았으니, 처음에 기존 장비일지 파일을 가져오면 Sheet4의 장비 목록이 함께 등록됩니다.
 
 ## 처음 쓸 때
 

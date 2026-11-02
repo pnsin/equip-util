@@ -38,7 +38,13 @@ def sidebar_user() -> None:
 
 
 if check_password():
-    db.get_engine()
+    try:
+        db.get_store()
+    except db.StorageError as e:
+        st.error(f"데이터 저장소에 연결하지 못했습니다: {e}")
+        st.stop()
+    if db.is_local():
+        st.sidebar.warning("구글 시트가 연결되지 않아 임시 저장 중입니다. 앱이 재시작되면 데이터가 지워질 수 있습니다.")
     pg = st.navigation({
         "현황": [
             st.Page(dashboard.render, title="대시보드", icon="📊", url_path="dashboard", default=True),

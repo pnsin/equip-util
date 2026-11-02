@@ -1,7 +1,10 @@
 """데이터 저장소.
 
-secrets.toml 에 db_url(PostgreSQL, 예: Supabase)이 있으면 그 DB를 쓰고,
-없으면 data/equip.db (SQLite) 파일을 씁니다.
+secrets 에 [gsheets] spreadsheet_id 와 [gcp_service_account] 가 있으면 구글 시트에 저장하고,
+없으면 data/ 폴더의 CSV 파일에 저장합니다 (내 PC에서 시험할 때).
+
+구글 시트 구조: 탭 3개 (장비 / 사용실적 / 설정). 1행 열 제목은 바꾸거나 옮기면 안 됩니다.
+사용실적 탭의 '장비명(참고)' 열은 사람이 보기 위한 사본이며 프로그램은 읽지 않습니다.
 """
 from __future__ import annotations
 
@@ -9,62 +12,32 @@ import datetime as dt
 import io
 import json
 import os
+import time
 
 import pandas as pd
-import sqlalchemy as sa
 import streamlit as st
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
-metadata = sa.MetaData()
-
-equipment = sa.Table(
-    "equipment", metadata,
-    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
-    sa.Column("name", sa.String(200), nullable=False),
-    sa.Column("code", sa.String(50), default=""),
-    sa.Column("kind", sa.String(20), default="주장비"),
-    sa.Column("annual_hours", sa.Float, nullable=True),  # 비어 있으면 설정의 기본값 사용
-    sa.Column("acquired_on", sa.Date, nullable=True),
-    sa.Column("retired_on", sa.Date, nullable=True),
-    sa.Column("in_kpi", sa.Boolean, default=True),
-    sa.Column("manager", sa.String(50), default=""),
-    sa.Column("note", sa.String(500), default=""),
-)
-
-usage = sa.Table(
-    "usage_log", metadata,
-    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
-    sa.Column("equip_id", sa.Integer, sa.ForeignKey("equipment.id"), nullable=False),
-    sa.Column("purpose", sa.String(20)),
-    sa.Column("usage_type", sa.String(20)),
-    sa.Column("company", sa.String(200), default=""),
-    sa.Column("brn", sa.String(20), default=""),
-    sa.Column("dept", sa.String(100), default=""),
-    sa.Column("industry", sa.String(50), default=""),
-    sa.Column("item", sa.String(50), default=""),
-    sa.Column("sub_item", sa.String(50), default=""),
-    sa.Column("product", sa.String(200), default=""),
-    sa.Column("samples", sa.Integer, default=1),
-    sa.Column("disclose", sa.String(1), default="N"),
-    sa.Column("detail", sa.Text, default=""),
-    sa.Column("start_date", sa.Date, nullable=False),
-    sa.Column("end_date", sa.Date, nullable=False),
-    sa.Column("include_holidays", sa.String(1), default="Y"),
-    sa.Column("hours", sa.Integer, nullable=False),
-    sa.Column("fee", sa.BigInteger, default=0),
-    sa.Column("purpose_detail", sa.String(500), default=""),
-    sa.Column("etc", sa.String(500), default=""),
-    sa.Column("created_by", sa.String(50), default=""),
-    sa.Column("created_at", sa.DateTime),
-    sa.Column("updated_at", sa.DateTime),
-)
-
-settings_t = sa.Table(
-    "settings", metadata,
-    sa.Column("key", sa.String(100), primary_key=True),
-    sa.Column("value", sa.Text),
-)
+# 테이블: (탭 이름, [(내부 키, 시트 열 제목)])
+TABLES = {
+    "equipment": ("장비", [
+        ("id", "ID"), ("name", "장비명"), ("code", "장비번호"), ("kind", "장비구분"),
+        ("annual_hours", "연간기준시간"), ("acquired_on", "도입일"), ("retired_on", "불용일"),
+        ("in_kpi", "가동률산정"), ("manager", "담당자"), ("note", "비고"),
+    ]),
+    "usage": ("사용실적", [
+        ("id", "ID"), ("equip_id", "장비ID"), ("equip_ref", "장비명(참고)"),
+        ("purpose", "사용목적"), ("usage_type", "활용유형"), ("company", "사용기관 기업명"),
+        ("brn", "사업자등록번호"), ("dept", "내부부서명"), ("industry", "업종"), ("item", "품목"),
+        ("sub_item", "세부품목"), ("product", "제품명"), ("samples", "시료수"), ("disclose", "세부지원공개여부"),
+        ("detail", "세부지원내용"), ("start_date", "사용시작일"), ("end_date", "사용종료일"),
+        ("include_holidays", "휴무일자포함"), ("hours", "사용시간"), ("fee", "사용료"),
+        ("purpose_detail", "사용목적(상세)"), ("etc", "기타"), ("created_by", "작성자"),
+        ("created_at", "작성일시"), ("updated_at", "수정일시"),
+    ]),
+    "settings": ("설정", [("key", "항목"), ("value", "값")]),
+}
 
 DEFAULT_SETTINGS = {
     "org_name": "차세대에너지센터 차세대전지팀",
@@ -77,39 +50,20 @@ DEFAULT_SETTINGS = {
     "template_b64": "",
 }
 
-LOG_FIELDS = [c.name for c in usage.columns if c.name not in ("id", "created_at", "updated_at")]
+CHUNK = 40000  # 구글 시트 셀 한도(50,000자)보다 작게 나눠 저장
+LOG_FIELDS = [k for k, _ in TABLES["usage"][1] if k not in ("id", "equip_ref", "created_at", "updated_at")]
 
 
-def _db_url() -> str:
-    try:
-        url = st.secrets.get("db_url", "")
-    except Exception:  # secrets.toml 이 없을 때
-        url = ""
-    url = str(url or "")
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
-    return url
+class StorageError(Exception):
+    pass
 
 
-def is_local() -> bool:
-    return not _db_url()
+def cols(t: str) -> list[str]:
+    return [k for k, _ in TABLES[t][1]]
 
 
-@st.cache_resource
-def get_engine() -> sa.Engine:
-    url = _db_url()
-    if not url:
-        os.makedirs(DATA_DIR, exist_ok=True)
-        url = "sqlite:///" + os.path.join(DATA_DIR, "equip.db")
-    engine = sa.create_engine(url, pool_pre_ping=True)
-    metadata.create_all(engine)
-    return engine
-
-
-def clear_caches() -> None:
-    load_equipment.clear()
-    load_logs.clear()
-    get_settings.clear()
+def heads(t: str) -> list[str]:
+    return [h for _, h in TABLES[t][1]]
 
 
 # ── 값 정리 도우미 ──────────────────────────────────────────────
@@ -141,7 +95,7 @@ def to_num(v, default=None):
     except (TypeError, ValueError):
         pass
     try:
-        return float(v)
+        return float(str(v).replace(",", "")) if isinstance(v, str) else float(v)
     except (TypeError, ValueError):
         return default
 
@@ -163,14 +117,204 @@ def digits(v) -> str:
     return "".join(ch for ch in to_str(v) if ch.isdigit())
 
 
+def _cell(v):
+    """시트에 쓸 값. 날짜는 'YYYY-MM-DD' 글자로, 빈 값은 ''."""
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "Y" if v else "N"
+    if isinstance(v, (dt.datetime, pd.Timestamp)):
+        if pd.isna(v):
+            return ""
+        return v.strftime("%Y-%m-%d %H:%M:%S") if (v.hour or v.minute or v.second) else v.strftime("%Y-%m-%d")
+    if isinstance(v, dt.date):
+        return v.isoformat()
+    try:
+        if pd.isna(v):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    if hasattr(v, "item"):  # numpy 숫자
+        v = v.item()
+    if isinstance(v, float) and v.is_integer():
+        return int(v)
+    return v
+
+
+def _rows(t: str, records: list[dict]) -> list[list]:
+    return [[_cell(r.get(c)) for c in cols(t)] for r in records]
+
+
+# ── 저장소 (구글 시트 / CSV) ─────────────────────────────────────
+
+def explain_error(e: Exception) -> str:
+    code = getattr(getattr(e, "response", None), "status_code", None)
+    text = str(e)
+    if type(e).__name__ == "SpreadsheetNotFound" or code == 404:
+        return ("스프레드시트를 찾을 수 없습니다. secrets의 spreadsheet_id를 확인하고, "
+                "서비스 계정 이메일을 시트에 '편집자'로 공유했는지 확인하세요.")
+    if code == 403 and ("has not been used" in text or "SERVICE_DISABLED" in text):
+        return "Google Sheets API가 사용 설정되지 않았습니다. 구글 클라우드 콘솔에서 Google Sheets API를 사용 설정하세요."
+    if code == 403:
+        return "시트 접근 권한이 없습니다. 서비스 계정 이메일을 시트에 '편집자'로 공유했는지 확인하세요."
+    if code == 429:
+        return "구글 시트 요청 한도를 초과했습니다. 잠시 후 다시 시도하세요."
+    if isinstance(e, (ValueError, KeyError)):
+        return f"서비스 계정 인증 정보 형식이 올바르지 않습니다 ({type(e).__name__}). secrets의 [gcp_service_account]를 확인하세요."
+    return f"구글 시트에 연결하지 못했습니다 ({type(e).__name__}). 네트워크와 인증 설정을 확인하세요."
+
+
+def _call(fn, *args, **kw):
+    """구글 API 호출. 한도·서버 오류는 최대 5회 재시도."""
+    delay = 1.5
+    for attempt in range(5):
+        try:
+            return fn(*args, **kw)
+        except Exception as e:  # noqa: BLE001
+            code = getattr(getattr(e, "response", None), "status_code", None)
+            if code in (429, 500, 502, 503, 504) and attempt < 4:
+                time.sleep(delay)
+                delay *= 2
+                continue
+            raise StorageError(explain_error(e)) from e
+
+
+class SheetStore:
+    label = "구글 시트"
+    persistent = True
+
+    def __init__(self, service_account_info: dict, spreadsheet_id: str):
+        try:
+            import gspread
+            client = gspread.service_account_from_dict(
+                dict(service_account_info), scopes=["https://www.googleapis.com/auth/spreadsheets"])
+            self.ss = client.open_by_key(spreadsheet_id)
+        except Exception as e:  # noqa: BLE001
+            raise StorageError(explain_error(e)) from e
+        existing = {w.title: w for w in _call(self.ss.worksheets)}
+        self.ws = {}
+        for t, (title, _) in TABLES.items():
+            head = heads(t)
+            ws = existing.get(title)
+            if ws is None:
+                ws = _call(self.ss.add_worksheet, title=title, rows=500, cols=len(head))
+                _call(ws.update, values=[head], range_name="A1", value_input_option="RAW")
+                try:
+                    ws.freeze(rows=1)
+                except Exception:  # noqa: BLE001 - 고정은 필수가 아님
+                    pass
+            else:
+                first = [str(c).strip() for c in _call(ws.row_values, 1)]
+                if not first:
+                    _call(ws.update, values=[head], range_name="A1", value_input_option="RAW")
+                elif first[:len(head)] != head:
+                    raise StorageError(f"구글 시트 '{title}' 탭의 1행 열 제목이 프로그램 기준과 다릅니다. "
+                                       f"열 제목을 고치거나 열을 옮기지 마세요. (기대: {', '.join(head[:4])} …)")
+            self.ws[t] = ws
+
+    def read(self, t: str) -> pd.DataFrame:
+        n = len(cols(t))
+        values = _call(self.ws[t].get_all_values)
+        rows = [(list(r) + [""] * n)[:n] for r in values[1:] if any(str(c).strip() for c in r)]
+        return pd.DataFrame(rows, columns=cols(t))
+
+    def append(self, t: str, rows: list[list]) -> None:
+        if rows:
+            _call(self.ws[t].append_rows, rows, value_input_option="RAW", table_range="A1")
+
+    def rewrite(self, t: str, rows: list[list]) -> None:
+        ws = self.ws[t]
+        n = len(cols(t))
+        old = len(_call(ws.col_values, 1))
+        values = [heads(t)] + rows
+        values += [[""] * n for _ in range(max(0, old - len(values)))]  # 줄어든 만큼 아래 행 비우기
+        if ws.row_count < len(values):
+            _call(ws.add_rows, len(values) - ws.row_count)
+        _call(ws.update, values=values, range_name="A1", value_input_option="RAW")
+
+
+class CsvStore:
+    label = "로컬 파일 (시험용)"
+    persistent = False
+
+    def __init__(self, folder: str):
+        self.folder = folder
+        os.makedirs(folder, exist_ok=True)
+
+    def _path(self, t: str) -> str:
+        return os.path.join(self.folder, f"{t}.csv")
+
+    def read(self, t: str) -> pd.DataFrame:
+        if not os.path.exists(self._path(t)):
+            return pd.DataFrame(columns=cols(t))
+        df = pd.read_csv(self._path(t), dtype=str, keep_default_na=False)
+        return df.reindex(columns=cols(t), fill_value="")
+
+    def append(self, t: str, rows: list[list]) -> None:
+        df = pd.concat([self.read(t), pd.DataFrame(rows, columns=cols(t)).astype(str)], ignore_index=True)
+        df.to_csv(self._path(t), index=False)
+
+    def rewrite(self, t: str, rows: list[list]) -> None:
+        pd.DataFrame(rows, columns=cols(t)).to_csv(self._path(t), index=False)
+
+
+def _sheet_secrets() -> tuple[dict | None, str]:
+    try:
+        info = st.secrets.get("gcp_service_account")
+        sid = (st.secrets.get("gsheets") or {}).get("spreadsheet_id", "")
+    except Exception:  # secrets.toml 이 없을 때
+        return None, ""
+    return (dict(info) if info else None), str(sid or "")
+
+
+@st.cache_resource
+def get_store():
+    info, sid = _sheet_secrets()
+    if info and sid:
+        return SheetStore(info, sid)
+    return CsvStore(DATA_DIR)
+
+
+def is_local() -> bool:
+    return not get_store().persistent
+
+
+def storage_label() -> str:
+    return get_store().label
+
+
+def clear_caches() -> None:
+    load_equipment.clear()
+    load_logs.clear()
+    get_settings.clear()
+
+
+def _new_ids(n: int) -> list[str]:
+    """동시에 저장해도 겹치지 않도록 시각 기반 ID (글자로 저장)."""
+    base = int(time.time() * 1000) * 1000
+    return [str(base + i) for i in range(n)]
+
+
 # ── 설정 ────────────────────────────────────────────────────────
+
+def _settings_raw() -> dict[str, str]:
+    df = get_store().read("settings")
+    return {to_str(k): str(v) for k, v in zip(df["key"], df["value"]) if to_str(k)}
+
 
 @st.cache_data(ttl=30)
 def get_settings() -> dict:
-    with get_engine().connect() as conn:
-        rows = conn.execute(sa.select(settings_t.c.key, settings_t.c.value)).all()
+    plain, chunks = {}, {}
+    for k, v in _settings_raw().items():
+        if "#" in k:
+            base, i = k.rsplit("#", 1)
+            chunks.setdefault(base, []).append((int(i) if i.isdigit() else 0, v))
+        else:
+            plain[k] = v
+    for base, parts in chunks.items():
+        plain[base] = "".join(v for _, v in sorted(parts))
     out = dict(DEFAULT_SETTINGS)
-    for k, v in rows:
+    for k, v in plain.items():
         try:
             out[k] = json.loads(v)
         except (TypeError, ValueError):
@@ -179,26 +323,39 @@ def get_settings() -> dict:
 
 
 def save_settings(**kv) -> None:
-    with get_engine().begin() as conn:
-        for k, v in kv.items():
-            conn.execute(settings_t.delete().where(settings_t.c.key == k))
-            conn.execute(settings_t.insert().values(key=k, value=json.dumps(v, ensure_ascii=False)))
+    raw = _settings_raw()
+    for k, v in kv.items():
+        raw = {rk: rv for rk, rv in raw.items() if rk != k and not rk.startswith(k + "#")}
+        s = json.dumps(v, ensure_ascii=False)
+        if len(s) > CHUNK:
+            for i in range(0, len(s), CHUNK):
+                raw[f"{k}#{i // CHUNK}"] = s[i:i + CHUNK]
+        else:
+            raw[k] = s
+    get_store().rewrite("settings", [[k, v] for k, v in raw.items()])
     get_settings.clear()
 
 
 # ── 장비 ────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=30)
-def load_equipment() -> pd.DataFrame:
-    with get_engine().connect() as conn:
-        df = pd.read_sql(sa.select(equipment).order_by(equipment.c.name, equipment.c.code), conn)
+def _equipment_frame(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["id"] = pd.to_numeric(df["id"], errors="coerce")
+    df = df.dropna(subset=["id"])
+    df["id"] = df["id"].astype("int64")
+    df["annual_hours"] = pd.to_numeric(df["annual_hours"].astype(str).str.replace(",", ""), errors="coerce")
     for c in ("acquired_on", "retired_on"):
         df[c] = pd.to_datetime(df[c], errors="coerce")
-    df["code"] = df["code"].fillna("")
-    df["kind"] = df["kind"].fillna("주장비")
-    df["manager"] = df["manager"].fillna("")
-    df["note"] = df["note"].fillna("")
-    df["in_kpi"] = df["in_kpi"].map(lambda v: True if v is None or pd.isna(v) else bool(v))
+    df["in_kpi"] = df["in_kpi"].map(lambda v: str(v).strip().upper() not in ("N", "FALSE", "0", "아니오"))
+    for c in ("name", "code", "kind", "manager", "note"):
+        df[c] = df[c].fillna("").astype(str).str.strip()
+    df["kind"] = df["kind"].replace("", "주장비")
+    return df.sort_values(["name", "code"]).reset_index(drop=True)
+
+
+@st.cache_data(ttl=30)
+def load_equipment() -> pd.DataFrame:
+    df = _equipment_frame(get_store().read("equipment"))
     labels = [f"{n} ({c})" if c else n for n, c in zip(df["name"], df["code"])]
     seen: dict[str, int] = {}
     for lb in labels:
@@ -207,70 +364,76 @@ def load_equipment() -> pd.DataFrame:
     return df
 
 
+def _equip_record(r: dict) -> dict:
+    in_kpi = r.get("in_kpi")
+    return {
+        "name": to_str(r.get("name")),
+        "code": to_str(r.get("code")),
+        "kind": to_str(r.get("kind")) or "주장비",
+        "annual_hours": to_num(r.get("annual_hours")),
+        "acquired_on": to_date(r.get("acquired_on")),
+        "retired_on": to_date(r.get("retired_on")),
+        "in_kpi": True if in_kpi is None or (isinstance(in_kpi, float) and pd.isna(in_kpi)) else bool(in_kpi),
+        "manager": to_str(r.get("manager")),
+        "note": to_str(r.get("note")),
+    }
+
+
 def save_equipment(edited: pd.DataFrame) -> list[str]:
     """장비 표 편집 결과를 반영합니다. 실적이 있는 장비는 삭제하지 않고 오류로 돌려줍니다."""
-    current = load_equipment()
-    orig_ids = set(int(i) for i in current["id"])
-    with get_engine().connect() as conn:
-        used_ids = {r[0] for r in conn.execute(sa.select(usage.c.equip_id).distinct())}
+    store = get_store()
+    current = _equipment_frame(store.read("equipment"))
+    orig = {int(r["id"]): r for r in current.to_dict("records")}
+    used_ids = set(pd.to_numeric(store.read("usage")["equip_id"], errors="coerce").dropna().astype(int))
     errors: list[str] = []
-    keep: set[int] = set()
-    with get_engine().begin() as conn:
-        for r in edited.to_dict("records"):
-            name = to_str(r.get("name"))
-            if not name:
-                continue
-            in_kpi = r.get("in_kpi")
-            vals = {
-                "name": name,
-                "code": to_str(r.get("code")),
-                "kind": to_str(r.get("kind")) or "주장비",
-                "annual_hours": to_num(r.get("annual_hours")),
-                "acquired_on": to_date(r.get("acquired_on")),
-                "retired_on": to_date(r.get("retired_on")),
-                "in_kpi": True if in_kpi is None or (isinstance(in_kpi, float) and pd.isna(in_kpi)) else bool(in_kpi),
-                "manager": to_str(r.get("manager")),
-                "note": to_str(r.get("note")),
-            }
-            rid = to_num(r.get("id"))
-            if rid is not None and int(rid) in orig_ids:
-                conn.execute(equipment.update().where(equipment.c.id == int(rid)).values(**vals))
-                keep.add(int(rid))
-            else:
-                conn.execute(equipment.insert().values(**vals))
-        for gone in orig_ids - keep:
-            if gone in used_ids:
-                name = current.loc[current["id"] == gone, "label"].iloc[0]
-                errors.append(f"'{name}'은(는) 사용실적이 있어 삭제하지 않았습니다. 불용일을 입력해 주세요.")
-            else:
-                conn.execute(equipment.delete().where(equipment.c.id == gone))
+    out, keep = [], set()
+    next_id = (max(orig) if orig else 0) + 1
+    for r in edited.to_dict("records"):
+        rec = _equip_record(r)
+        if not rec["name"]:
+            continue
+        rid = to_num(r.get("id"))
+        if rid is not None and int(rid) in orig:
+            rec["id"] = int(rid)
+            keep.add(int(rid))
+        else:
+            rec["id"] = next_id
+            next_id += 1
+        out.append(rec)
+    for gone in set(orig) - keep:
+        if gone in used_ids:
+            errors.append(f"'{orig[gone]['name']}'은(는) 사용실적이 있어 삭제하지 않았습니다. 불용일을 입력해 주세요.")
+            out.append(_equip_record(orig[gone]) | {"id": gone})
+    store.rewrite("equipment", _rows("equipment", out))
     clear_caches()
     return errors
 
 
 # ── 사용실적 ────────────────────────────────────────────────────
 
-@st.cache_data(ttl=30)
-def load_logs() -> pd.DataFrame:
-    q = (
-        sa.select(
-            usage,
-            equipment.c.name.label("equip_name"),
-            equipment.c.code.label("equip_code"),
-            equipment.c.kind.label("equip_kind"),
-        )
-        .select_from(usage.outerjoin(equipment, usage.c.equip_id == equipment.c.id))
-        .order_by(usage.c.start_date.desc(), usage.c.id.desc())
-    )
-    with get_engine().connect() as conn:
-        df = pd.read_sql(q, conn)
+def _usage_frame(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    for c in ("id", "equip_id"):
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    df = df.dropna(subset=["id"])
+    df["id"] = df["id"].astype("int64")
+    df["equip_id"] = df["equip_id"].fillna(0).astype("int64")
+    for c in ("hours", "fee", "samples"):
+        df[c] = pd.to_numeric(df[c].astype(str).str.replace(",", ""), errors="coerce").fillna(0)
     for c in ("start_date", "end_date"):
         df[c] = pd.to_datetime(df[c], errors="coerce")
-    for c in ("hours", "fee", "samples"):
-        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
-    text_cols = [c for c in df.columns if df[c].dtype == object and c not in ("created_at", "updated_at")]
-    df[text_cols] = df[text_cols].fillna("")
     return df
+
+
+@st.cache_data(ttl=30)
+def load_logs() -> pd.DataFrame:
+    df = _usage_frame(get_store().read("usage")).drop(columns=["equip_ref"])
+    eq = load_equipment()[["id", "name", "code", "kind"]].rename(columns={
+        "id": "_eid", "name": "equip_name", "code": "equip_code", "kind": "equip_kind"})
+    df = df.merge(eq, left_on="equip_id", right_on="_eid", how="left").drop(columns=["_eid"])
+    for c in ("equip_name", "equip_code", "equip_kind"):
+        df[c] = df[c].fillna("")
+    return df.sort_values(["start_date", "id"], ascending=False).reset_index(drop=True)
 
 
 def _clean_log(rec: dict) -> dict:
@@ -290,88 +453,105 @@ def _clean_log(rec: dict) -> dict:
     return out
 
 
+def _equip_names() -> dict[int, str]:
+    eq = load_equipment()
+    return dict(zip(eq["id"].astype(int), eq["label"]))
+
+
 def insert_logs(records: list[dict], user: str = "") -> int:
-    now = dt.datetime.now()
+    if not records:
+        return 0
+    now = dt.datetime.now().replace(microsecond=0)
+    names = _equip_names()
     rows = []
-    for r in records:
+    for rid, r in zip(_new_ids(len(records)), records):
         row = _clean_log(r)
         row.setdefault("created_by", user)
-        row["created_at"] = now
-        row["updated_at"] = now
+        row.update(id=rid, equip_ref=names.get(row.get("equip_id"), ""), created_at=now, updated_at=now)
         rows.append(row)
-    if rows:
-        with get_engine().begin() as conn:
-            conn.execute(usage.insert(), rows)
+    get_store().append("usage", _rows("usage", rows))
     load_logs.clear()
     return len(rows)
 
 
-def update_logs(changes: dict[int, dict]) -> int:
-    now = dt.datetime.now()
-    with get_engine().begin() as conn:
-        for log_id, vals in changes.items():
-            row = _clean_log(vals)
-            row["updated_at"] = now
-            conn.execute(usage.update().where(usage.c.id == int(log_id)).values(**row))
+def _rewrite_usage(df: pd.DataFrame) -> None:
+    get_store().rewrite("usage", _rows("usage", df.to_dict("records")))
     load_logs.clear()
+
+
+def update_logs(changes: dict[int, dict]) -> int:
+    store = get_store()
+    df = store.read("usage")
+    names = _equip_names()
+    now = dt.datetime.now().replace(microsecond=0)
+    ids = pd.to_numeric(df["id"], errors="coerce")
+    for log_id, vals in changes.items():
+        mask = ids == int(log_id)
+        row = _clean_log(vals)
+        row["updated_at"] = now
+        if "equip_id" in row:
+            row["equip_ref"] = names.get(row["equip_id"], "")
+        for k, v in row.items():
+            df.loc[mask, k] = _cell(v)
+    _rewrite_usage(df)
     return len(changes)
 
 
 def delete_logs(ids: list[int]) -> int:
     if not ids:
         return 0
-    with get_engine().begin() as conn:
-        conn.execute(usage.delete().where(usage.c.id.in_([int(i) for i in ids])))
-    load_logs.clear()
+    df = get_store().read("usage")
+    keep = ~pd.to_numeric(df["id"], errors="coerce").isin([int(i) for i in ids])
+    _rewrite_usage(df[keep])
     return len(ids)
 
 
 def import_parsed(rows: list[dict], equip_master: list[tuple[str, str]], user: str) -> dict:
     """i-Tube 양식에서 읽은 행을 등록합니다. 없는 장비는 새로 만들고, 이미 있는 실적은 건너뜁니다."""
-    eq = load_equipment()
-    by_code = {c: int(i) for c, i in zip(eq["code"], eq["id"]) if c}
-    by_name = {}
-    for n, i in zip(eq["name"], eq["id"]):
-        by_name.setdefault(n, int(i))
-    code_of = {int(i): c for i, c in zip(eq["id"], eq["code"])}
-    created = 0
-    with get_engine().begin() as conn:
-        def ensure(name: str, code: str, kind: str = "주장비") -> int | None:
-            nonlocal created
-            if code and code in by_code:
-                return by_code[code]
-            if name in by_name:
-                eid = by_name[name]
-                if code and not code_of.get(eid):
-                    # 장비번호가 비어 있던 장비면 양식의 번호를 채워 넣음
-                    conn.execute(equipment.update().where(equipment.c.id == eid).values(code=code))
-                    code_of[eid] = code
-                    by_code[code] = eid
-                    return eid
-                if not code or code_of.get(eid) == code:
-                    return eid
-            if not name:
-                return None
-            res = conn.execute(equipment.insert().values(
-                name=name, code=code, kind=kind or "주장비", in_kpi=True, manager="", note=""))
-            eid = int(res.inserted_primary_key[0])
-            by_name.setdefault(name, eid)
-            code_of[eid] = code
-            if code:
-                by_code[code] = eid
-            created += 1
-            return eid
+    store = get_store()
+    eq = [dict(r) for r in _equipment_frame(store.read("equipment")).to_dict("records")]
+    by_code = {r["code"]: r for r in eq if r["code"]}
+    by_name: dict[str, dict] = {}
+    for r in eq:
+        by_name.setdefault(r["name"], r)
+    next_id = max((int(r["id"]) for r in eq), default=0) + 1
+    created, changed = 0, False
 
-        for name, code in equip_master:
-            ensure(name, code)
-        prepared = []
-        for r in rows:
-            eid = ensure(r.get("equip_name", ""), r.get("equip_code", ""), r.get("equip_kind", ""))
-            if eid is None:
-                continue
-            rr = dict(r)
-            rr["equip_id"] = eid
-            prepared.append(rr)
+    def ensure(name: str, code: str, kind: str = "") -> int | None:
+        nonlocal next_id, created, changed
+        if code and code in by_code:
+            return int(by_code[code]["id"])
+        if name in by_name:
+            r = by_name[name]
+            if code and not r["code"]:  # 장비번호가 비어 있던 장비면 양식의 번호를 채움
+                r["code"] = code
+                by_code[code] = r
+                changed = True
+                return int(r["id"])
+            if not code or r["code"] == code:
+                return int(r["id"])
+        if not name:
+            return None
+        r = {"id": next_id, "name": name, "code": code, "kind": kind or "주장비", "annual_hours": None,
+             "acquired_on": None, "retired_on": None, "in_kpi": True, "manager": "", "note": ""}
+        next_id += 1
+        eq.append(r)
+        by_name.setdefault(name, r)
+        if code:
+            by_code[code] = r
+        created += 1
+        changed = True
+        return int(r["id"])
+
+    for name, code in equip_master:
+        ensure(name, code)
+    prepared = []
+    for r in rows:
+        eid = ensure(r.get("equip_name", ""), r.get("equip_code", ""), r.get("equip_kind", ""))
+        if eid is not None:
+            prepared.append(dict(r, equip_id=eid))
+    if changed:
+        store.rewrite("equipment", _rows("equipment", eq))
     clear_caches()
 
     logs = load_logs()
@@ -395,66 +575,28 @@ def import_parsed(rows: list[dict], equip_master: list[tuple[str, str]], user: s
 # ── 백업 / 복원 ─────────────────────────────────────────────────
 
 def backup_bytes() -> bytes:
-    with get_engine().connect() as conn:
-        eq = pd.read_sql(sa.select(equipment), conn)
-        lg = pd.read_sql(sa.select(usage), conn)
-        st_df = pd.read_sql(sa.select(settings_t).where(settings_t.c.key != "template_b64"), conn)
+    store = get_store()
+    st_df = store.read("settings")
+    st_df = st_df[~st_df["key"].astype(str).str.startswith("template_b64")]
     bio = io.BytesIO()
     with pd.ExcelWriter(bio, engine="openpyxl") as xw:
-        eq.to_excel(xw, sheet_name="equipment", index=False)
-        lg.to_excel(xw, sheet_name="usage_log", index=False)
+        store.read("equipment").to_excel(xw, sheet_name="equipment", index=False)
+        store.read("usage").to_excel(xw, sheet_name="usage_log", index=False)
         st_df.to_excel(xw, sheet_name="settings", index=False)
     return bio.getvalue()
 
 
 def restore_bytes(data: bytes) -> dict:
-    sheets = pd.read_excel(io.BytesIO(data), sheet_name=None)
-    eq = sheets["equipment"]
-    lg = sheets["usage_log"]
-    st_df = sheets.get("settings", pd.DataFrame(columns=["key", "value"]))
-
-    def records(df: pd.DataFrame, table: sa.Table) -> list[dict]:
-        cols = [c.name for c in table.columns if c.name in df.columns]
-        out = []
-        for r in df[cols].to_dict("records"):
-            row = {}
-            for c in cols:
-                v = r[c]
-                col_type = table.c[c].type
-                if isinstance(col_type, sa.Date):
-                    v = to_date(v)
-                elif isinstance(col_type, sa.DateTime):
-                    v = pd.Timestamp(v).to_pydatetime() if to_date(v) else None
-                elif isinstance(col_type, sa.Boolean):
-                    v = True if to_num(v) is None else bool(to_num(v))
-                elif isinstance(col_type, (sa.Integer, sa.BigInteger)):
-                    n = to_num(v)
-                    v = None if n is None else int(n)
-                elif isinstance(col_type, sa.Float):
-                    v = to_num(v)
-                else:
-                    v = to_str(v)
-                row[c] = v
-            out.append(row)
-        return out
-
-    eng = get_engine()
-    with eng.begin() as conn:
-        conn.execute(usage.delete())
-        conn.execute(equipment.delete())
-        conn.execute(settings_t.delete().where(settings_t.c.key != "template_b64"))
-        eq_rows = records(eq, equipment)
-        lg_rows = records(lg, usage)
-        if eq_rows:
-            conn.execute(equipment.insert(), eq_rows)
-        if lg_rows:
-            conn.execute(usage.insert(), lg_rows)
-        st_rows = [{"key": to_str(k), "value": to_str(v)} for k, v in zip(st_df["key"], st_df["value"]) if to_str(k)]
-        if st_rows:
-            conn.execute(settings_t.insert(), st_rows)
-        if eng.dialect.name == "postgresql":
-            for t in ("equipment", "usage_log"):
-                conn.execute(sa.text(
-                    f"SELECT setval(pg_get_serial_sequence('{t}', 'id'), COALESCE((SELECT MAX(id) FROM {t}), 0) + 1, false)"))
+    sheets = pd.read_excel(io.BytesIO(data), sheet_name=None, dtype=str)
+    eq = sheets["equipment"].reindex(columns=cols("equipment")).fillna("")
+    lg = sheets["usage_log"].reindex(columns=cols("usage")).fillna("")
+    store = get_store()
+    store.rewrite("equipment", eq.values.tolist())
+    store.rewrite("usage", lg.values.tolist())
+    if "settings" in sheets:
+        keep = {k: v for k, v in _settings_raw().items() if k.startswith("template_b64")}
+        st_df = sheets["settings"].reindex(columns=["key", "value"]).fillna("")
+        rows = [[k, v] for k, v in st_df.values.tolist() if k and not k.startswith("template_b64")]
+        store.rewrite("settings", rows + [[k, v] for k, v in keep.items()])
     clear_caches()
-    return {"equipment": len(eq_rows), "usage_log": len(lg_rows)}
+    return {"equipment": len(eq), "usage_log": len(lg)}

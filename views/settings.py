@@ -75,10 +75,10 @@ def render() -> None:
 
     st.subheader("백업 · 복원")
     if db.is_local():
-        st.warning("현재 데이터는 앱 서버의 SQLite 파일에 저장됩니다. Streamlit Cloud에서는 앱이 재시작되면 지워질 수 있으니 "
-                   "README의 안내대로 외부 DB(db_url)를 연결하거나, 정기적으로 백업 파일을 내려받으세요.")
+        st.warning("구글 시트가 연결되지 않아 앱 서버의 임시 파일에 저장 중입니다. 앱이 재시작되면 지워질 수 있으니 "
+                   "README의 안내대로 Secrets에 구글 시트를 연결하세요.")
     else:
-        st.caption("외부 데이터베이스에 저장 중입니다.")
+        st.caption("구글 시트에 저장 중입니다 (탭: 장비 / 사용실적 / 설정). 시트의 1행 열 제목은 바꾸지 마세요.")
     st.download_button("⬇️ 전체 데이터 백업 내려받기", data=db.backup_bytes(), mime=XLSX,
                        file_name=f"가동률관리_백업_{dt.date.today():%Y%m%d}.xlsx")
     with st.expander("백업 파일로 복원 (현재 데이터를 모두 덮어씀)"):
