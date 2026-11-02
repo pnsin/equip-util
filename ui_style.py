@@ -1,8 +1,8 @@
-"""공통 화면 스타일 — 전극 제조 공정 관리 시스템(battery-app)과 같은 디자인 C "다크 관제실형".
+"""공통 화면 스타일 — 기본 테마 "navy": 남색 메뉴 + 밝은 본문 (2026-11-02 사용자 선택, Power BI형).
 
 앞으로 추가하는 화면도 이 규칙을 기본으로 한다.
 - 색은 아래 TOKENS만 쓴다. 화면 코드에 색 값을 직접 쓰지 말고 CSS 변수 var(--이름)이나 이 파일의 상수를 쓴다.
-- 바탕은 어둡고 차분하게, 색은 '뜻'이 있을 때만 (목표 달성·미달, 경고).
+- 본문은 밝게, 색은 '뜻'이 있을 때만 (목표 달성·미달, 경고).
 - 글꼴은 IBM Plex Sans KR, 숫자는 같은 폭(tabular) — .streamlit/config.toml 테마와 같은 값.
 - 쪽 제목은 page_header, 영역 제목은 section_bar 또는 st.subheader (둘 다 같은 모양).
 - 글자 크기 단계: 0.75 · 0.85 · 0.95 · 1.05 · 1.25 · 1.6rem.
@@ -68,7 +68,7 @@ THEMES = {
         "logo": "logo_light.png", "base": "light",
     },
 }
-THEME_NAME = os.environ.get("EQUIP_THEME", "dark")
+THEME_NAME = os.environ.get("EQUIP_THEME", "navy")
 TOKENS = {k: v for k, v in THEMES.get(THEME_NAME, THEMES["dark"]).items() if k not in ("logo", "base")}
 T = TOKENS
 
