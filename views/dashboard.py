@@ -169,7 +169,7 @@ def render() -> None:
                 fig.add_vline(x=target, line_dash="dot", line_color=ORANGE)
             fig.update_layout(xaxis=dict(title=w("가동률(%)")))
             chart_layout(fig, max(180, 40 * len(g) + 70), legend=False).update_layout(bargap=0.4)
-            st.plotly_chart(fig, width="stretch", config=CFG)
+            st.plotly_chart(fig, width="stretch", config=CFG, key=f"dash_grp_{by}")
 
     # ── 장비별 ───────────────────────────────────────────
     hc1, hc2 = st.columns([3, 1.4], vertical_alignment="bottom")
@@ -264,7 +264,7 @@ def render() -> None:
                 if name and name != "(미입력)":
                     go_records(company=name, start=s, end=e_eff)
             else:
-                st.plotly_chart(fig, width="stretch", config=CFG)
+                st.plotly_chart(fig, width="stretch", config=CFG, key=f"dash_top_{by}")
 
 
 def _heatmap(daily: pd.DataFrame, eq: pd.DataFrame, end: dt.date, annual: float, cutoff, target: float) -> None:

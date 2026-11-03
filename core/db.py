@@ -396,7 +396,7 @@ UNDO_KEEP = 20
 
 
 def who() -> str:
-    """지금 앱을 쓰는 사람 (접속할 때 고른 이름)."""
+    """지금 앱을 쓰는 사람 (이름을 고르지 않으므로 보통 빈 값)."""
     try:
         return to_str(st.session_state.get("me", ""))
     except Exception:  # noqa: BLE001 - 화면 밖(테스트)
@@ -465,7 +465,7 @@ def last_undo() -> dict | None:
 def log(action: str, target: str, summary: str) -> None:
     """수정 기록 한 줄. 기록이 실패해도 저장은 그대로 둡니다."""
     try:
-        get_store().append("history", _rows("history", [{"at": _now(), "who": who() or "(이름 없음)",
+        get_store().append("history", _rows("history", [{"at": _now(), "who": who() or "-",
                                                           "action": action, "target": target,
                                                           "summary": summary[:500]}]))
         load_history.clear()
