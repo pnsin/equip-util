@@ -61,27 +61,6 @@ def check_password() -> bool:
     return False
 
 
-def pick_name() -> bool:
-    """접속한 사람이 누구인지 한 번 고릅니다. 실적의 담당자 기본값과 수정 기록에 쓰입니다."""
-    if st.session_state.get("me"):
-        return True
-    names = db.staff_names()
-    _, mid, _ = st.columns([1, 1.25, 1])
-    with mid:
-        st.markdown('<div style="height:7vh"></div>', unsafe_allow_html=True)
-        with st.container(key="login_card"):
-            ui_style.login_head()
-            with st.form("whoami", border=False, enter_to_submit=True):
-                name = st.selectbox("이름", names, index=None, placeholder="이름을 고르세요 (목록에 없으면 입력)",
-                                    accept_new_options=True, label_visibility="collapsed")
-                sent = st.form_submit_button("시작하기", type="primary", width="stretch")
-    if sent and db.to_str(name):
-        st.session_state.me = db.to_str(name)
-        st.session_state.setdefault("last_staff", st.session_state.me)
-        st.rerun()
-    return False
-
-
 def undo_bar() -> None:
     """방금 한 저장·삭제를 되돌리는 띠 (1분 30초 동안 화면 위에 보임)."""
     last = db.last_undo()
@@ -174,19 +153,12 @@ def sidebar(local: bool) -> None:
                      help="다른 팀원이 방금 저장한 내용이나 구글 시트에서 직접 고친 내용을 다시 불러옵니다."):
             db.clear_caches()
             st.rerun()
-        me = st.session_state.get("me")
-        if me:
-            c1, c2 = st.columns([3, 1.4], vertical_alignment="center")
-            c1.markdown(f'<div class="me-line"><b>{html.escape(me)}</b> 님</div>', unsafe_allow_html=True)
-            if c2.button("바꾸기", key="me_change", type="tertiary", help="다른 사람 이름으로 바꿉니다."):
-                st.session_state.pop("me", None)
-                st.rerun()
         where = "임시 저장소 (재시작 시 지워질 수 있음)" if local else "구글 시트에 자동 저장"
         st.markdown(f'<div class="side-foot"><span class="dot{" off" if local else ""}"></span>{where}</div>',
                     unsafe_allow_html=True)
 
 
-# 주소(예: /input)로 바로 들어와도 접속·이름 고르기 뒤에 그 화면이 열리도록 먼저 등록
+# 주소(예: /input)로 바로 들어와도 접속 뒤에 그 화면이 열리도록 먼저 등록
 pg = st.navigation({**PAGES, "": ALIASES}, position="hidden")
 
 if check_password():
@@ -194,8 +166,6 @@ if check_password():
         db.get_store()
     except db.StorageError as e:
         st.error(f"데이터 저장소(구글 시트)에 연결하지 못했습니다. 잠시 뒤 새로고침해 보세요.\n\n자세한 내용: {e}")
-        st.stop()
-    if not pick_name():
         st.stop()
     local = db.is_local()
     sidebar(local)
