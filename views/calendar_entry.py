@@ -37,7 +37,17 @@ CSS = """<style>
   width: 2.25rem; height: 2.25rem; min-height: 0; padding: 0; border-radius: 6px;}
 .st-key-calnav div[class*="st-key-cal_today"] {margin-left: auto;}
 /* 날짜 칸 */
-.st-key-calgrid div[class*="st-key-cell_"] {min-height: 128px; padding: 6px 6px 8px; gap: 3px; border-radius: 10px;}
+.st-key-calgrid div[class*="st-key-cell_"] {min-height: 128px; padding: 30px 6px 8px; gap: 3px; border-radius: 10px;
+  position: relative; cursor: pointer;}
+/* 날짜 버튼을 칸 전체에 깔아서 칸 어디를 눌러도 되게 함 (실적 줄은 그 위에 올라옴) */
+.st-key-calgrid div[class*="st-key-day_"] {position: absolute !important; inset: 0; z-index: 0; width: auto !important;}
+.st-key-calgrid div[class*="st-key-day_"] div:has(button),
+.st-key-calgrid div[class*="st-key-day_"] span:has(button),
+.st-key-calgrid div[class*="st-key-day_"] button {width: 100% !important; height: 100% !important;}
+.st-key-calgrid div[class*="st-key-day_"] button {align-items: flex-start !important; padding: 6px 8px !important;
+  border-radius: 10px;}
+.st-key-calgrid div[class*="st-key-day_"] button:hover {background: rgba(45, 143, 213, 0.05);}
+.st-key-calgrid div[class*="st-key-ent_"], .st-key-calgrid div[class*="st-key-more_"] {position: relative; z-index: 1;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {border-color: var(--accent);}
 .st-key-calgrid div[class*="st-key-cell_"] [data-testid="stVerticalBlock"] {gap: 3px;}
 .st-key-calgrid button div[data-testid="stMarkdownContainer"] {width: 100%; min-width: 0; text-align: left;}
@@ -48,7 +58,6 @@ CSS = """<style>
 .st-key-calgrid div[class*="st-key-ent_"] button {justify-content: flex-start; text-align: left;}
 .st-key-calgrid div[class*="st-key-day_"] button > div,
 .st-key-calgrid div[class*="st-key-ent_"] button > div {width: 100%; min-width: 0; justify-content: flex-start;}
-.st-key-calgrid div[class*="st-key-day_"] button {min-height: 0; padding: 0 2px;}
 .st-key-calgrid div[class*="st-key-day_"] button p {font-size: 0.78rem; opacity: 0.75;}
 .st-key-calgrid div[class*="st-key-day_"] button strong {font-size: 0.95rem;}
 /* 실적 한 줄 (누르면 이 실적만 복사) */
@@ -65,7 +74,8 @@ CSS = """<style>
   .st-key-calgrid [data-testid="stColumn"] {min-width: 0 !important; width: auto !important; flex: 1 1 0 !important;}
   .st-key-calgrid div[class*="st-key-cell_"] {min-height: 54px; padding: 3px 2px; border-radius: 8px;}
   .st-key-calgrid div[class*="st-key-ent_"], .st-key-calgrid div[class*="st-key-more_"] {display: none;}
-  .st-key-calgrid div[class*="st-key-day_"] button {padding: 0;}
+  .st-key-calgrid div[class*="st-key-day_"] button {padding: 4px 1px !important; justify-content: center !important;}
+  .st-key-calgrid div[class*="st-key-day_"] button > div {justify-content: center !important;}
   .st-key-calgrid div[class*="st-key-day_"] button p {white-space: normal !important; font-size: .62rem; line-height: 1.25;
     text-align: center !important; overflow: visible;}
   .st-key-calgrid div[class*="st-key-day_"] button strong {display: block; font-size: .9rem;}
@@ -275,31 +285,39 @@ def _edit_period(rec: dict, label_of: dict, comp_opts: list, staff_opts: list) -
         st.rerun()
 
 
+def _click_day(d: dt.date, clip: dict | None, logs: pd.DataFrame) -> None:
+    """날짜 칸을 누름: 복사 중이면 붙여넣기, 아니면 그날 선택. (콜백이라 화면을 한 번만 다시 그림)"""
+    if clip and d != clip["from"]:
+        _paste(d, clip, logs)
+    _pick_day(d)
+
+
+def _click_entry(d: dt.date, e: dict, clip: dict | None, logs: pd.DataFrame) -> None:
+    """실적 한 줄을 누름: 복사 중이고 다른 날이면 붙여넣기, 아니면 이 실적을 복사."""
+    if clip and d != clip["from"]:
+        _paste(d, clip, logs)
+    else:
+        st.session_state.cal_clip = {"from": d, "rows": [e["rec"]],
+                                     "label": f"{e['equip']} · {e['company']} · {_hours(e['hours'])}"}
+    _pick_day(d)
+
+
 def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: bool, today: bool,
               clip: dict | None, logs: pd.DataFrame) -> None:
     cell = col.container(border=True, key=f"cell_{d}")
     head, tip = _day_head(d, entries, holiday, today)
     pasting = bool(clip) and d != clip["from"]
-    if cell.button(head, key=f"day_{d}", type="tertiary", width="stretch",
-                   help=("여기를 누르면 붙여 넣습니다" if pasting else tip)):
-        if pasting:
-            _paste(d, clip, logs)
-        _pick_day(d)
-        st.rerun()
+    # 날짜 버튼은 칸 전체를 덮음 → 칸 어디를 눌러도 선택/붙여넣기 (CSS 참고)
+    cell.button(head, key=f"day_{d}", type="tertiary", width="stretch",
+                help=("누르면 여기에 붙여 넣습니다" if pasting else tip),
+                on_click=_click_day, args=(d, clip, logs))
     for e in entries[:CELL_LINES]:
         label = f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}"
         hint = "누르면 여기에 붙여 넣습니다" if pasting else "누르면 이 실적을 복사합니다. 그다음 붙여 넣을 날짜를 누르세요."
-        if cell.button(label, key=f"ent_{d}_{e['id']}", width="stretch", help=f"{_entry_text(e)}\n\n{hint}"):
-            if pasting:
-                _paste(d, clip, logs)
-                _pick_day(d)
-            else:
-                st.session_state.cal_clip = {"from": d, "rows": [e["rec"]],
-                                             "label": f"{e['equip']} · {e['company']} · {_hours(e['hours'])}"}
-                _pick_day(d)
-            st.rerun()
+        cell.button(label, key=f"ent_{d}_{e['id']}", width="stretch", help=f"{_entry_text(e)}\n\n{hint}",
+                    on_click=_click_entry, args=(d, e, clip, logs))
     if len(entries) > CELL_LINES:
-        cell.container(key=f"more_{d}").markdown(f"+{len(entries) - CELL_LINES}건 더 · 날짜에 마우스를 올려 보기")
+        cell.container(key=f"more_{d}").markdown(f"+{len(entries) - CELL_LINES}건 더 · 칸에 마우스를 올려 보기")
 
 
 def render(header: bool = True) -> None:
