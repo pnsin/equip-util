@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import calendar
 import datetime as dt
+import html
 
 import pandas as pd
 import streamlit as st
@@ -25,11 +26,13 @@ FIELDS = {
 
 CELL_LINES = 4  # 달력 칸에 바로 보여 줄 실적 수 (나머지는 "+N건")
 CSS = """<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap');
 .block-container {padding-top: 2.5rem;}
 .st-key-calgrid [data-testid="stHorizontalBlock"] {gap: 0.4rem;}
 /* 달 이동 줄 */
 .st-key-calnav {margin-bottom: .8rem; align-items: center;}
-.st-key-calnav .cal-title {font-size: 1.25rem; font-weight: 700; color: var(--ink); min-width: 8.5rem; text-align: center;
+.st-key-calnav .cal-title {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif; font-size: 1.45rem; font-weight: 800;
+  color: var(--ink); min-width: 8.5rem; text-align: center;
   line-height: 2.25rem;}
 .st-key-calnav [data-testid="stElementContainer"]:has(.cal-title) {width: auto !important; flex: none;}
 .st-key-calnav [data-testid="stMarkdownContainer"] {margin: 0;}
@@ -37,7 +40,7 @@ CSS = """<style>
   width: 2.25rem; height: 2.25rem; min-height: 0; padding: 0; border-radius: 6px;}
 .st-key-calnav div[class*="st-key-cal_today"] {margin-left: auto;}
 /* 날짜 칸 */
-.st-key-calgrid div[class*="st-key-cell_"] {min-height: 128px; padding: 30px 6px 8px; gap: 3px; border-radius: 10px;
+.st-key-calgrid div[class*="st-key-cell_"] {min-height: 156px; padding: 30px 6px 8px; overflow: visible; gap: 3px; border-radius: 10px;
   position: relative; cursor: pointer;}
 /* 날짜 버튼을 칸 전체에 깔아서 칸 어디를 눌러도 되게 함 (실적 줄은 그 위에 올라옴) */
 .st-key-calgrid div[class*="st-key-day_"] {position: absolute !important; inset: 0; z-index: 0; width: auto !important;}
@@ -47,7 +50,48 @@ CSS = """<style>
 .st-key-calgrid div[class*="st-key-day_"] button {align-items: flex-start !important; padding: 6px 8px !important;
   border-radius: 10px;}
 .st-key-calgrid div[class*="st-key-day_"] button:hover {background: rgba(45, 143, 213, 0.05);}
-.st-key-calgrid div[class*="st-key-ent_"], .st-key-calgrid div[class*="st-key-more_"] {position: relative; z-index: 1;}
+.st-key-calgrid div[class*="st-key-er_"], .st-key-calgrid div[class*="st-key-more_"] {position: relative; z-index: 1;}
+.st-key-calgrid div[class*="st-key-er_"] {gap: 0;}
+/* 실적 줄에 마우스를 올리면 오른쪽 위에 ✕ (누르면 바로 삭제, 되돌리기 가능) */
+.st-key-calgrid div[class*="st-key-x_"] {position: absolute !important; top: 2px; right: 2px; width: auto !important;
+  z-index: 2; opacity: 0; transition: opacity .12s;}
+.st-key-calgrid div[class*="st-key-er_"]:hover div[class*="st-key-x_"] {opacity: 1;}
+.st-key-calgrid div[class*="st-key-x_"] button {min-height: 0; height: 20px; width: 20px; padding: 0; border-radius: 4px;
+  background: var(--panel, #fff); border: 1px solid var(--line2, #ccd); color: var(--muted, #667);}
+.st-key-calgrid div[class*="st-key-x_"] button:hover {background: #d9534f; border-color: #d9534f; color: #fff;}
+.st-key-calgrid div[class*="st-key-x_"] button span {font-size: 14px !important;}
+/* 드래그 선택 */
+.st-key-calgrid {user-select: none; -webkit-user-select: none;}
+.st-key-calgrid div[class*="st-key-cell_"].cal-drag {background: rgba(45, 143, 213, 0.14) !important;
+  border-color: var(--accent) !important;}
+.st-key-cal_cmd {display: none !important;}
+/* 날짜 칸에 마우스를 올리면 뜨는 카드 */
+.st-key-calgrid div[class*="st-key-card"] {position: absolute !important; top: calc(100% + 6px); left: -2px;
+  width: 320px !important; min-width: 320px !important; max-width: none !important; z-index: 60; pointer-events: none; opacity: 0; visibility: hidden;
+  transform: translateY(-4px); transition: opacity .15s ease .35s, transform .15s ease .35s, visibility 0s linear .5s;}
+.st-key-calgrid div[class*="st-key-cardr_"] {left: auto; right: -2px;}
+.st-key-calgrid div[class*="st-key-cell_"]:hover div[class*="st-key-card"] {opacity: 1; visibility: visible;
+  transform: none; transition-delay: .35s, .35s, 0s;}
+.st-key-calgrid div[class*="st-key-cell_"]:hover {z-index: 40;}
+.cal-card {background: var(--panel, #fff); border: 1px solid var(--line2, #d5dbe3); border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(15, 30, 60, .18); padding: 12px 14px; color: var(--ink, #1b2533);}
+.cal-card .cc-h {display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--line, #e3e8ee);}
+.cal-card .cc-d {font-size: 1.05rem; font-weight: 700;}
+.cal-card .cc-sum {font-size: .85rem; color: var(--accent, #2D8FD5); font-weight: 600;}
+.cal-card .cc-e {padding: 7px 0 7px 10px; border-left: 3px solid var(--accent, #2D8FD5); margin: 6px 0;}
+.cal-card .cc-n {font-size: .95rem; font-weight: 700; line-height: 1.35; margin-bottom: 4px; word-break: keep-all;}
+.cal-card .cc-r {display: grid; grid-template-columns: 3.2em 1fr; gap: 2px 8px; font-size: .88rem; line-height: 1.5;}
+.cal-card .cc-r span:nth-child(odd) {color: var(--muted, #7b8794);}
+.cal-card .cc-h2 {font-weight: 700;}
+/* 마우스를 올리면 뜨는 작은 설명 */
+div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] {max-width: 340px; padding: .55rem .75rem;
+  font-size: .82rem; line-height: 1.65;}
+div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] hr {margin: .45rem 0; opacity: .5;}
+div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
+.st-key-cal_selbar {padding: .45rem .75rem; border-radius: 8px; background: rgba(45, 143, 213, 0.10);
+  border: 1px solid rgba(45, 143, 213, 0.35); margin-bottom: .6rem;}
+.st-key-cal_selbar p {margin: 0;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {border-color: var(--accent);}
 .st-key-calgrid div[class*="st-key-cell_"] [data-testid="stVerticalBlock"] {gap: 3px;}
 .st-key-calgrid button div[data-testid="stMarkdownContainer"] {width: 100%; min-width: 0; text-align: left;}
@@ -59,21 +103,38 @@ CSS = """<style>
 .st-key-calgrid div[class*="st-key-day_"] button > div,
 .st-key-calgrid div[class*="st-key-ent_"] button > div {width: 100%; min-width: 0; justify-content: flex-start;}
 .st-key-calgrid div[class*="st-key-day_"] button p {font-size: 0.78rem; opacity: 0.75;}
-.st-key-calgrid div[class*="st-key-day_"] button strong {font-size: 0.95rem;}
+.st-key-calgrid div[class*="st-key-day_"] button strong {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif;
+  font-size: 1.12rem; font-weight: 800; letter-spacing: -.01em; display: inline-flex; align-items: center;
+  justify-content: center; min-width: 1.75em; height: 1.75em; border-radius: 999px; margin-right: 2px;}
+.st-key-calgrid div[class*="st-key-day_"] button:hover strong {background: rgba(45, 143, 213, 0.12);}
 /* 실적 한 줄 (누르면 이 실적만 복사) */
 .st-key-calgrid div[class*="st-key-ent_"] button {
-  justify-content: flex-start; min-height: 0; padding: 3px 7px; border: none; border-radius: 6px;
-  background: rgba(45, 143, 213, 0.10); border-left: 3px solid var(--accent);}
-.st-key-calgrid div[class*="st-key-ent_"] button:hover {background: rgba(45, 143, 213, 0.22);}
-.st-key-calgrid div[class*="st-key-ent_"] button p {font-size: 0.72rem; line-height: 1.35;}
+  justify-content: flex-start; min-height: 0; padding: 4px 8px; border: none; border-radius: 8px;
+  background: var(--chip-bg, #E8F1FD); border-left: 3px solid var(--chip-fg, #3B82F6);
+  transition: transform .1s ease, box-shadow .1s ease;}
+.st-key-calgrid div[class*="st-key-ent_"] button:hover {transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(20, 40, 80, .12); filter: saturate(1.15);}
+.st-key-calgrid div[class*="st-key-ent_"] button p {font-size: 0.72rem; line-height: 1.38; color: #243042;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:first-child {font-weight: 600;}
+/* 달력 모양: 둥근 흰 칸, 은은한 그림자, 주말은 옅은 색 */
+.st-key-calgrid div[class*="st-key-cell_"] {background: #fff; border: 1px solid #E6EBF2 !important; border-radius: 14px !important;
+  box-shadow: 0 1px 2px rgba(20, 40, 80, .04); transition: box-shadow .15s ease, border-color .15s ease;}
+.st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 6px 16px rgba(20, 40, 80, .10);
+  border-color: #C9D8EC !important;}
+.st-key-calgrid .cal-wk {text-align: center; font-size: .78rem; font-weight: 700; letter-spacing: .08em;
+  color: var(--muted, #7b8794); padding: 4px 0 2px;}
+.st-key-calgrid .cal-wk.sat {color: #4A86E8;} .st-key-calgrid .cal-wk.sun {color: #E0626F;}
+.st-key-calgrid .cal-out {min-height: 156px; border-radius: 14px; border: 1px dashed #E6EBF2; padding: 8px 10px;
+  font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1.05rem; color: #C3CBD6; background: rgba(255,255,255,.4);}
 .st-key-calgrid div[class*="st-key-more_"] p {font-size: 0.7rem; color: #777; margin: 0 0 0 4px;}
 /* 휴대폰: 7칸을 한 줄에 유지한 작은 달력 (날짜·건수만, 누르면 아래에 그날 실적) */
 .cal-mobile-hint {display: none;}
 @media (max-width: 640px) {
+  .st-key-calgrid div[class*="st-key-card"] {display: none !important;}
   .st-key-calgrid [data-testid="stHorizontalBlock"] {flex-wrap: nowrap !important; gap: 3px !important;}
   .st-key-calgrid [data-testid="stColumn"] {min-width: 0 !important; width: auto !important; flex: 1 1 0 !important;}
   .st-key-calgrid div[class*="st-key-cell_"] {min-height: 54px; padding: 3px 2px; border-radius: 8px;}
-  .st-key-calgrid div[class*="st-key-ent_"], .st-key-calgrid div[class*="st-key-more_"] {display: none;}
+  .st-key-calgrid div[class*="st-key-er_"], .st-key-calgrid div[class*="st-key-more_"] {display: none;}
   .st-key-calgrid div[class*="st-key-day_"] button {padding: 4px 1px !important; justify-content: center !important;}
   .st-key-calgrid div[class*="st-key-day_"] button > div {justify-content: center !important;}
   .st-key-calgrid div[class*="st-key-day_"] button p {white-space: normal !important; font-size: .62rem; line-height: 1.25;
@@ -205,18 +266,56 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
 def _day_head(d: dt.date, entries: list[dict], holiday: bool, today: bool) -> tuple[str, str | None]:
     """날짜 머리 글자와, 마우스를 올렸을 때 보일 그날 실적 전체."""
     num = f"**{d.day}**"
-    if today:
-        num = f":blue-background[:blue[**{d.day}**]]"
-    elif holiday or d.weekday() == 6:
+    if holiday or d.weekday() == 6:
         num = f":red[**{d.day}**]"
+    elif d.weekday() == 5:
+        num = f":blue[**{d.day}**]"  # 오늘은 CSS로 동그라미 표시
     total = sum(e["hours"] for e in entries)
     head = num + (f"\u2002{len(entries)}건 · {_hours(total)}" if entries else "")
     if not entries:
         return head, None
-    tip = [f"**{d:%m/%d} ({WEEKDAYS[d.weekday()]}) · {len(entries)}건 · {_hours(total)}**", ""]
-    for e in entries:
-        tip.append(f"- {_entry_text(e)}")
-    return head, "\n".join(tip)
+    tip = [f"**{d:%m/%d} ({WEEKDAYS[d.weekday()]})**\u2003:gray[{len(entries)}건 · {_hours(total)}]"]
+    tip += [_entry_card(e) for e in entries]
+    return head, "\n\n---\n\n".join(tip)
+
+
+CHIP_COLORS = [("#E8F1FD", "#3B82F6"), ("#E7F7EF", "#10B981"), ("#FFF3E2", "#F59E0B"),
+               ("#F1ECFD", "#8B5CF6"), ("#FDEBF1", "#EC4899"), ("#E4F6F9", "#06B6D4")]
+
+
+def _chip_color(name: str) -> tuple[str, str]:
+    """장비마다 늘 같은 파스텔 색 (이름으로 정함)."""
+    h = sum(ord(c) * (i + 1) for i, c in enumerate(str(name)))
+    return CHIP_COLORS[h % len(CHIP_COLORS)]
+
+
+def _card_html(d: dt.date, entries: list[dict]) -> str:
+    """날짜 칸 위에 뜨는 카드 (그날 실적 전체를 큰 글씨로)."""
+    e_ = html.escape
+    total = sum(x["hours"] for x in entries)
+    rows = []
+    for x in entries:
+        cells = [("업체", x["company"]), ("시간", _hours(x["hours"]))]
+        if x["staff"]:
+            cells.append(("담당", x["staff"]))
+        if x["period"]:
+            cells.append(("기간", x["period"]))
+        grid = "".join(f"<span>{e_(k)}</span><span>{e_(str(v))}</span>" for k, v in cells)
+        rows.append(f"<div class='cc-e'><div class='cc-n'>{e_(x['equip'])}</div><div class='cc-r'>{grid}</div></div>")
+    return (f"<div class='cal-card'><div class='cc-h'><span class='cc-d'>{d.month}월 {d.day}일 "
+            f"({WEEKDAYS[d.weekday()]})</span><span class='cc-sum'>{len(entries)}건 · {_hours(total)}</span></div>"
+            + "".join(rows) + "</div>")
+
+
+def _entry_card(e: dict) -> str:
+    """마우스를 올리면 뜨는 작은 카드: 장비명 굵게, 아래 줄에 업체·시간·담당자."""
+    lines = [f"**{_md(e['equip'])}**",
+             f":gray[업체]\u2003{_md(e['company'])}",
+             f":gray[시간]\u2003**{_hours(e['hours'])}**"
+             + (f"\u2003\u2003:gray[담당]\u2003{_md(e['staff'])}" if e["staff"] else "")]
+    if e["period"]:
+        lines.append(f":gray[기간]\u2003{e['period']}")
+    return "  \n".join(lines)
 
 
 def _entry_text(e: dict) -> str:
@@ -287,6 +386,7 @@ def _edit_period(rec: dict, label_of: dict, comp_opts: list, staff_opts: list) -
 
 def _click_day(d: dt.date, clip: dict | None, logs: pd.DataFrame) -> None:
     """날짜 칸을 누름: 복사 중이면 붙여넣기, 아니면 그날 선택. (콜백이라 화면을 한 번만 다시 그림)"""
+    _clear_sel()
     if clip and d != clip["from"]:
         _paste(d, clip, logs)
     _pick_day(d)
@@ -302,22 +402,184 @@ def _click_entry(d: dt.date, e: dict, clip: dict | None, logs: pd.DataFrame) -> 
     _pick_day(d)
 
 
+def _delete_ids(ids: list[int], label: str) -> int:
+    if not ids:
+        return 0
+    with db.undo_group(label):
+        n = db.delete_logs(ids)
+    clip = st.session_state.get("cal_clip")
+    if clip and int(clip["rows"][0]["id"]) in set(ids):
+        st.session_state.pop("cal_clip", None)
+    st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
+    return n
+
+
+def _click_x(d: dt.date, e: dict) -> None:
+    """✕: 이 실적 한 건을 바로 지움 (확인창 없음, 되돌리기 가능)."""
+    n = _delete_ids([e["id"]], f"{d:%m/%d} {_cut(e['equip'], 12)} 삭제")
+    if n:
+        st.session_state.cal_saved = f"{d:%m/%d} {_cut(e['equip'], 20)} 실적을 지웠습니다. 실수면 Ctrl+Z 또는 '되돌리기'."
+
+
+def _sel_days() -> list[dt.date]:
+    return list(st.session_state.get("cal_sel") or [])
+
+
+def _delete_days(days: list[dt.date]) -> None:
+    """선택한 날들의 하루짜리 실적을 지움. 여러 날에 걸친 기간 실적은 남김."""
+    logs = db.load_logs()
+    ids, kept = [], 0
+    for d in days:
+        rows = _day_rows(logs, d)
+        ids += [int(i) for i in rows["id"]]
+        ts = pd.Timestamp(d)
+        if not logs.empty:
+            kept += int(((logs["start_date"] <= ts) & (logs["end_date"] >= ts)).sum()) - len(rows)
+    span = f"{days[0]:%m/%d}" + (f"~{days[-1]:%m/%d}" if len(days) > 1 else "")
+    n = _delete_ids(ids, f"{span} 실적 삭제")
+    msg = f"{span} 실적 {n}건을 지웠습니다. 실수면 Ctrl+Z 또는 '되돌리기'." if n else f"{span}에는 지울 실적이 없습니다."
+    if kept:
+        msg += f" (여러 날에 걸친 기간 실적 {kept}건은 그대로 두었습니다)"
+    st.session_state.cal_saved = msg
+
+
+def _paste_days(days: list[dt.date]) -> None:
+    clip = st.session_state.get("cal_clip")
+    if not clip:
+        st.session_state.cal_saved = "먼저 달력에서 복사할 실적을 누르세요."
+        return
+    logs = db.load_logs()
+    targets = [d for d in days if d != clip["from"]]
+    plan, skipped = _paste_plan(clip["rows"], targets, logs)
+    span = f"{targets[0]:%m/%d}" + (f"~{targets[-1]:%m/%d}" if len(targets) > 1 else "") if targets else ""
+    with db.undo_group(f"{span} 붙여넣기"):
+        added = db.insert_logs(plan) if plan else 0
+    st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
+    st.session_state.cal_saved = (f"{span} {added}일에 {_cut(clip['label'], 24)} 붙여 넣었습니다"
+                                  + (f" (이미 있는 {skipped}일은 건너뜀)" if skipped else "")) if added else \
+        "선택한 날에는 같은 장비·업체가 이미 있어 붙여 넣지 않았습니다"
+
+
+def _on_cmd() -> None:
+    """화면의 키보드·드래그 동작이 숨은 입력칸으로 보내는 명령을 처리."""
+    raw = str(st.session_state.get("cal_cmd") or "")
+    parts = raw.split("|")
+    cmd = parts[0]
+    if cmd == "sel" and len(parts) >= 3:
+        a, b = sorted([dt.date.fromisoformat(parts[1]), dt.date.fromisoformat(parts[2])])
+        st.session_state.cal_sel = [a + dt.timedelta(days=i) for i in range((b - a).days + 1)]
+        st.session_state.cal_day = b if b.month == st.session_state.get("cal_month", b).month else a
+    elif cmd == "del":
+        days = _sel_days()
+        clip = st.session_state.get("cal_clip")
+        if days:
+            _delete_days(days)
+        elif clip and clip["rows"][0].get("start_date") == clip["rows"][0].get("end_date"):
+            rec = clip["rows"][0]
+            n = _delete_ids([int(rec["id"])], f"{clip['from']:%m/%d} 실적 삭제")
+            if n:
+                st.session_state.cal_saved = f"{clip['from']:%m/%d} {_cut(clip['label'], 24)}을(를) 지웠습니다. 실수면 Ctrl+Z."
+        elif st.session_state.get("cal_day"):
+            _delete_days([st.session_state.cal_day])
+    elif cmd == "paste":
+        _paste_days(_sel_days() or [st.session_state.get("cal_day")])
+    elif cmd == "esc":
+        st.session_state.pop("cal_sel", None)
+        st.session_state.pop("cal_clip", None)
+
+
+def _clear_sel() -> None:
+    st.session_state.pop("cal_sel", None)
+
+
+KEYS_JS = r"""
+<script>
+(function () {
+  const doc = window.parent.document;
+  const win = window.parent;
+  // 화면을 다시 그리면 이 iframe이 새로 생기므로, 예전 iframe이 단 이벤트는 떼고 새로 담
+  const old = win.__calKeys || [];
+  old.forEach(([t, f, o]) => doc.removeEventListener(t, f, o));
+  const mine = [];
+  const on = (t, f, o) => { doc.addEventListener(t, f, o); mine.push([t, f, o]); };
+  win.__calKeys = mine;
+  const send = (v) => {
+    const inp = doc.querySelector('.st-key-cal_cmd input');
+    if (!inp) return;
+    const set = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set;
+    set.call(inp, v + '|' + Date.now());
+    inp.dispatchEvent(new win.Event('input', {bubbles: true}));
+    inp.dispatchEvent(new win.KeyboardEvent('keydown', {key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true}));
+  };
+  const onCal = () => !!doc.querySelector('.st-key-calgrid');
+  const typing = (el) => el && (el.closest('input, textarea, select, [contenteditable="true"]') ||
+                                 el.closest('[data-testid="stDataFrame"], [data-testid="stDataEditor"], [role="dialog"]'));
+  const cellOf = (el) => el && el.closest && el.closest('.st-key-calgrid div[class*="st-key-cell_"]');
+  const dateOf = (cell) => { const m = cell && cell.className.match(/st-key-cell_(\d{4}-\d{2}-\d{2})/); return m ? m[1] : null; };
+  let start = null, cur = null, dragging = false;
+  const paint = () => {
+    doc.querySelectorAll('.st-key-calgrid .cal-drag').forEach(c => c.classList.remove('cal-drag'));
+    if (!dragging) return;
+    const [a, b] = [start, cur].sort();
+    doc.querySelectorAll('.st-key-calgrid div[class*="st-key-cell_"]').forEach(c => {
+      const d = dateOf(c); if (d && d >= a && d <= b) c.classList.add('cal-drag');
+    });
+  };
+  on('mousedown', (e) => {
+    if (e.button !== 0) return;
+    const c = cellOf(e.target); start = dateOf(c); cur = start; dragging = false;
+  }, true);
+  on('mouseover', (e) => {
+    if (!start) return;
+    const d = dateOf(cellOf(e.target));
+    if (d && d !== cur) { cur = d; if (cur !== start) dragging = true; paint(); }
+  }, true);
+  on('mouseup', (e) => {
+    if (start && dragging) {
+      e.preventDefault(); e.stopPropagation();
+      const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+      doc.addEventListener('click', swallow, {capture: true, once: true});
+      setTimeout(() => doc.removeEventListener('click', swallow, true), 300);
+      send('sel|' + start + '|' + cur);
+    }
+    start = null; dragging = false;
+  }, true);
+  on('keydown', (e) => {
+    if (!onCal() || typing(e.target)) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); send('del'); }
+    else if (mod && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); send('paste'); }
+    else if (mod && (e.key === 'z' || e.key === 'Z')) {
+      const b = doc.querySelector('.st-key-undo_top button, .st-key-undo_side button');
+      if (b) { e.preventDefault(); b.click(); }
+    }
+    else if (e.key === 'Escape') { send('esc'); }
+  }, true);
+})();
+</script>
+"""
+
+
 def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: bool, today: bool,
               clip: dict | None, logs: pd.DataFrame) -> None:
     cell = col.container(border=True, key=f"cell_{d}")
-    head, tip = _day_head(d, entries, holiday, today)
-    pasting = bool(clip) and d != clip["from"]
+    head, _ = _day_head(d, entries, holiday, today)
     # 날짜 버튼은 칸 전체를 덮음 → 칸 어디를 눌러도 선택/붙여넣기 (CSS 참고)
     cell.button(head, key=f"day_{d}", type="tertiary", width="stretch",
-                help=("누르면 여기에 붙여 넣습니다" if pasting else tip),
                 on_click=_click_day, args=(d, clip, logs))
     for e in entries[:CELL_LINES]:
         label = f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}"
-        hint = "누르면 여기에 붙여 넣습니다" if pasting else "누르면 이 실적을 복사합니다. 그다음 붙여 넣을 날짜를 누르세요."
-        cell.button(label, key=f"ent_{d}_{e['id']}", width="stretch", help=f"{_entry_text(e)}\n\n{hint}",
-                    on_click=_click_entry, args=(d, e, clip, logs))
+        row = cell.container(key=f"er_{d}_{e['id']}")
+        row.button(label, key=f"ent_{d}_{e['id']}", width="stretch", 
+                   on_click=_click_entry, args=(d, e, clip, logs))
+        if not e["period"]:  # 기간 실적은 아래 '기간 실적'에서 고침
+            row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
+                       on_click=_click_x, args=(d, e))
     if len(entries) > CELL_LINES:
-        cell.container(key=f"more_{d}").markdown(f"+{len(entries) - CELL_LINES}건 더 · 칸에 마우스를 올려 보기")
+        cell.container(key=f"more_{d}").markdown(f"+{len(entries) - CELL_LINES}건 더")
+    if entries:
+        side = "r" if d.weekday() >= 4 else ""  # 오른쪽 칸은 카드를 왼쪽으로 펼침
+        cell.container(key=f"card{side}_{d}").markdown(_card_html(d, entries), unsafe_allow_html=True)
 
 
 def render(header: bool = True) -> None:
@@ -342,7 +604,8 @@ def render(header: bool = True) -> None:
         if st.button("", icon=":material/chevron_left:", key="cal_prev", help="이전 달"):
             st.session_state.cal_month = _shift_month(month, -1)
             st.rerun()
-        st.markdown(f"<div class='cal-title'>{month.year}년 {month.month}월</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='cal-title'><span style='opacity:.55;font-size:.8em'>{month.year}</span>&nbsp; "
+                    f"<span style='color:var(--accent)'>{month.month}월</span></div>", unsafe_allow_html=True)
         if st.button("", icon=":material/chevron_right:", key="cal_next", help="다음 달"):
             st.session_state.cal_month = _shift_month(month, 1)
             st.rerun()
@@ -369,8 +632,37 @@ def render(header: bool = True) -> None:
             st.session_state.pop("cal_clip", None)
             st.rerun()
 
+    sel_days = [d for d in _sel_days() if d.month == month.month]
+    if sel_days:
+        with st.container(key="cal_selbar", horizontal=True, vertical_alignment="center", gap="small"):
+            span = f"{sel_days[0]:%m/%d}~{sel_days[-1]:%m/%d}"
+            st.markdown(f"**{span} {len(sel_days)}일 선택** · Delete 삭제 · Ctrl+V 붙여넣기 · Esc 해제")
+            st.button("삭제", icon=":material/delete:", key="cal_sel_del", on_click=_delete_days, args=(sel_days,))
+            if clip:
+                st.button("붙여넣기", icon=":material/content_paste:", key="cal_sel_paste",
+                          on_click=_paste_days, args=(sel_days,))
+            st.button("해제", icon=":material/close:", key="cal_sel_clear", on_click=_clear_sel)
+    st.text_input("cmd", key="cal_cmd", on_change=_on_cmd, label_visibility="collapsed")
+    import streamlit.components.v1 as components
+    components.html(KEYS_JS, height=0)
+
     grid = st.container(key="calgrid")
-    sel = (f".st-key-cell_{day} {{border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent);}}")
+    sel = "".join(f".st-key-cell_{d} {{background: rgba(45, 143, 213, 0.14) !important; border-color: var(--accent) !important;}}"
+                  for d in sel_days)
+    for dd, ents in by_day.items():
+        if dd.month != month.month:
+            continue
+        for e in ents[:CELL_LINES]:
+            bg, fg = _chip_color(e["equip"])
+            sel += f" .st-key-ent_{dd}_{e['id']} button {{--chip-bg: {bg}; --chip-fg: {fg};}}"
+    for week in weeks:
+        if week[5].month == month.month:
+            sel += f" .st-key-cell_{week[5]} {{background: #F5F8FF !important;}}"
+        if week[6].month == month.month:
+            sel += f" .st-key-cell_{week[6]} {{background: #FFF6F7 !important;}}"
+    sel += (f" .st-key-day_{today} button strong {{background: var(--accent) !important; color: #fff !important; "
+            "box-shadow: 0 2px 6px rgba(45, 143, 213, .35);}")
+    sel += (f".st-key-cell_{day} {{border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent);}}")
     if clip:  # 복사한 실적은 진하게 표시
         sel += (f" .st-key-ent_{clip['from']}_{clip['rows'][0]['id']} button "
                 "{background: var(--accent) !important;} "
@@ -378,18 +670,16 @@ def render(header: bool = True) -> None:
     grid.markdown(f"<style>{sel}</style>", unsafe_allow_html=True)
     head = grid.columns(7)
     for i, w in enumerate(WEEKDAYS):
-        color = T["ng"] if i == 6 else (T["accent-hi"] if i == 5 else "inherit")
-        head[i].markdown(f"<div style='text-align:center;font-weight:600;color:{color}'>{w}</div>",
-                         unsafe_allow_html=True)
+        cls = " sun" if i == 6 else (" sat" if i == 5 else "")
+        head[i].markdown(f"<div class='cal-wk{cls}'>{w}</div>", unsafe_allow_html=True)
     for week in weeks:
         cols = grid.columns(7)
         for i, d in enumerate(week):
             if d.month != month.month:
-                cols[i].write("")
+                cols[i].markdown(f"<div class='cal-out'>{d.day}</div>", unsafe_allow_html=True)
                 continue
             _day_cell(cols[i], d, by_day.get(d, []), selected=d == day, holiday=d in hol, today=d == today,
                       clip=clip, logs=logs)
-    st.caption("빨간 날짜는 일요일·공휴일, 파란 날짜는 오늘입니다.")
     st.markdown("<div class='cal-mobile-hint'>날짜를 누르면 아래에 그날 실적이 나옵니다. "
                 "다른 날로 복사는 '실적 목록'의 복제를 쓰세요.</div>", unsafe_allow_html=True)
 
