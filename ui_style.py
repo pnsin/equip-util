@@ -220,7 +220,6 @@ _CSS = """
   .st-key-login_card { position: relative; z-index: 1; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent);
         border-radius: 8px; padding: 2rem 2rem 1.4rem 2rem; box-shadow: var(--shadow); }
   .login-head img { width: 150px; display: block; margin: 0 0 1.4rem 0; }
-  .login-head .eb { font-size: .75rem; font-weight: 600; letter-spacing: .16em; color: var(--muted); }
   .login-head .t { font-size: 1.6rem; font-weight: 700; color: var(--ink); letter-spacing: -.02em; margin: .25rem 0 1.4rem 0; line-height: 1.25; }
   .login-head .d { font-size: .85rem; color: var(--muted); margin: 0 0 1.2rem 0; line-height: 1.6; word-break: keep-all; }
   .st-key-login_card [data-testid="stForm"] { border: none; padding: 0; }
@@ -296,7 +295,7 @@ def login_head():
     uri = _data_uri(os.path.join(_DIR, "assets", "logo_dark.png" if base == "dark" else "logo_light.png"))
     logo = f'<img src="{uri}" alt="로고">' if uri else ""
     st.markdown('<div class="login-bg"></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="login-head">{logo}<div class="eb">{html.escape(TEAM_NAME)} · 공동장비</div>'
+    st.markdown(f'<div class="login-head">{logo}'
                 f'<div class="t">{html.escape(SYSTEM_TITLE)}</div></div>', unsafe_allow_html=True)
 
 
