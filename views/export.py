@@ -57,7 +57,7 @@ def _itube_filename(cfg: dict, s: dt.date, e: dt.date) -> str:
 
 
 def _common(title: str, key: str):
-    page_header(title, "보고")
+    page_header(title, "실적")
     cfg = db.get_settings()
     logs = db.load_logs()
     eq = db.load_equipment()

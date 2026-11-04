@@ -161,6 +161,16 @@ _CSS = """
   .empty .ic { font-size: 1.6rem; color: var(--dim); line-height: 1; margin-bottom: .5rem; }
   .empty .h { font-size: 1.05rem; font-weight: 700; color: var(--ink); margin-bottom: .3rem; }
   .empty .b { font-size: .85rem; color: var(--muted); line-height: 1.6; word-break: keep-all; }
+  .soon { max-width: 460px; margin: 3rem auto 2rem auto; text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--card-shadow); padding: 2.4rem 1.6rem 2rem 1.6rem; }
+  .soon-ic { width: 84px; height: 84px; margin: 0 auto 1rem auto; border-radius: 50%; background: var(--accent-bg); display: flex; align-items: center; justify-content: center; font-size: 2.4rem; animation: soon-bob 2.6s ease-in-out infinite; }
+  .soon-tag { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .08em; color: var(--accent); background: var(--accent-bg); border-radius: 999px; padding: .18rem .7rem; margin-bottom: .7rem; }
+  .soon-h { font-size: 1.2rem; font-weight: 700; color: var(--ink); margin-bottom: .35rem; }
+  .soon-b { font-size: .88rem; color: var(--muted); line-height: 1.6; word-break: keep-all; }
+  .soon-dots { margin-top: 1.1rem; display: flex; gap: .4rem; justify-content: center; }
+  .soon-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line2); animation: soon-dot 1.4s ease-in-out infinite; }
+  .soon-dots i:nth-child(2) { animation-delay: .2s; } .soon-dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes soon-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  @keyframes soon-dot { 0%, 100% { background: var(--line2); } 50% { background: var(--accent); } }
 
   /* ---------- 안내 한 줄 (회색 띠) ---------- */
   .note { font-size: .85rem; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--line2);
