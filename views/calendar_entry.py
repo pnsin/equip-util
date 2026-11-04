@@ -90,6 +90,9 @@ div[class*="st-key-ep_row_anal_"] button {--chip-fg: #7C5CE0;}
 .st-key-ep_form {border-top: 1px solid #EEF1F6; padding-top: 14px; gap: .65rem;}
 .ep-t {font-weight: 800; font-size: 1.05rem; color: var(--ink); display: flex; align-items: center; gap: 8px;}
 .ep-t span {font-size: .72rem; font-weight: 800; padding: 2px 9px; border-radius: 999px;}
+.ep-path {margin: -8px 0 8px; font-size: .74rem; color: var(--muted); line-height: 1.45;}
+.ep-path span {display: inline-block; margin-right: 6px; padding: 0 8px; border-radius: 999px; font-weight: 700;
+  background: var(--accent-bg); color: var(--accent);}
 .st-key-ep_form [data-testid="stWidgetLabel"] p {font-size: .8rem; font-weight: 700; color: #5A6680;}
 .st-key-ep_form [data-baseweb="select"] > div, .st-key-ep_form [data-baseweb="input"], .st-key-ep_form [data-baseweb="textarea"],
 .st-key-ep_form [data-testid="stNumberInputContainer"] {background: #F4F6FA !important; border: 1.5px solid transparent !important; border-radius: 11px !important;}
@@ -403,6 +406,18 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 .cal-sec-h.none {opacity: .55 !important;}
 .st-key-calgrid div[class*="st-key-sec_edu_"] {--sec-bg: #FDF3E2; --sec-fg: #E39A2D; --chip-fg: #E39A2D;}
 .st-key-calgrid div[class*="st-key-sec_sup_"] {--sec-bg: #E5F3FB; --sec-fg: #2E9BD6; --chip-fg: #2E9BD6;}
+/* 줄 이름(시험·제조·분석)을 누르면 그 구분 장비로 새 실적 — 이름 위에 투명 버튼 */
+.st-key-calgrid div[class*="st-key-lane_"] {position: absolute !important; top: 0; left: 0; right: 0; height: 19px;
+  z-index: 2; pointer-events: auto; margin: 0 !important;}
+.st-key-calgrid div[class*="st-key-lane_"] button {width: 100%; height: 100%; min-height: 0 !important; padding: 0 !important;
+  opacity: 0; cursor: pointer;}
+.st-key-calgrid div[class*="st-key-sec_"]:has(div[class*="st-key-lane_"]:hover) .cal-sec-h {
+  background: var(--sec-bg); border-radius: 999px; opacity: 1 !important;}
+.st-key-calgrid div[class*="st-key-sec_"]:has(div[class*="st-key-lane_"]:hover) .cal-sec-h b::after {content: ' +'; font-weight: 800;}
+/* 입력 카드: 장비 구분 고르기 (작은 알약) */
+.st-key-ep_grp {margin-bottom: -6px;}
+.st-key-ep_grp [data-testid="stButtonGroup"] button {min-height: 28px !important; padding: 0 12px !important; border-radius: 999px !important;
+  font-size: .78rem !important;}
 /* 스티커: 연한 구분 색 + 왼쪽 진한 막대, 1줄 장비·시간 / 2줄 업체 */
 .st-key-calgrid div[class*="st-key-ent_"] button {padding: 5px 8px 5px 13px !important; border-radius: 9px !important;}
 .st-key-calgrid div[class*="st-key-ent_"] button::before {top: 6px !important; bottom: 6px !important;}
@@ -575,6 +590,7 @@ FIXED_CATS = ["시험", "제조", "분석", "교육", "지원"]
 LANE_CATS = ["시험", "제조", "분석"]  # 칸마다 비어 있어도 보이는 구역
 CAT_KEY = {"시험": "test", "제조": "make", "분석": "anal", "교육": "edu", "지원": "sup", "기타": "etc"}
 PURPOSE_CAT = {"시험": "시험", "생산": "제조", "분석": "분석", "계측": "분석", "교육": "교육", "기타": "지원"}
+LANE_PURPOSE = {"시험": "시험", "제조": "생산", "분석": "분석", "교육": "교육", "지원": "기타"}  # 줄을 눌러 열 때 사용목적
 
 
 def _cat_of(use: str) -> str:
@@ -630,7 +646,7 @@ def _reset_period_pick() -> None:
 
 @st.dialog("기간 실적 고치기", width="medium", on_dismiss=_reset_period_pick)
 def _edit_period(rec: dict, label_of: dict, comp_opts: list, staff_opts: list) -> None:
-    eq_ids = list(label_of)
+    eq_ids = list(label_of)  # 고를 수 있는 장비 (맨 아래 장비) + 원래 장비
     eid = st.selectbox("장비", eq_ids, index=eq_ids.index(rec["equip_id"]) if rec["equip_id"] in eq_ids else 0,
                        format_func=label_of.get, key="pe_eq")
     c1, c2 = st.columns(2)
@@ -680,6 +696,16 @@ def _click_day(d: dt.date, clip: dict | None, logs: pd.DataFrame) -> None:
     """날짜 칸을 누름: 그날을 선택만 함 (붙여넣기는 Ctrl+V)."""
     _clear_sel()
     st.session_state.pop("cal_pick", None)
+    st.session_state.pop("cal_lane", None)
+    st.session_state.cal_open = True
+    _pick_day(d)
+
+
+def _click_lane(d: dt.date, cat: str) -> None:
+    """칸 안의 '시험·제조·분석' 줄을 누름: 그날 새 실적을 열고 그 구분 장비만 보여 줌."""
+    _clear_sel()
+    st.session_state.pop("cal_pick", None)
+    st.session_state.cal_lane = cat
     st.session_state.cal_open = True
     _pick_day(d)
 
@@ -1005,8 +1031,11 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
         hours = _hours(sum(e["hours"] for e in ents)) if ents else ""
         sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{c}<b>{hours}</b></div>",
                      unsafe_allow_html=True)
+        # 줄 이름 위에 투명 버튼: 누르면 이 구분 장비만 보이는 새 실적 입력
+        sec.button(c, key=f"lane_{CAT_KEY[c]}_{d}", type="tertiary", help=f"{c} 장비로 새 실적",
+                   on_click=_click_lane, args=(d, c))
         for e in ents[:CELL_LINES]:
-            short = e["equip"].split("(")[0].strip() or e["equip"]
+            short = e["equip"]  # 세부장비 이름 그대로 (양극·음극 구분이 보이게, 길면 … 처리)
             label = f"{_md(short)}\n\n{_hours(e['hours'])}\n\n{_md(e['company'])}"
             if st.session_state.get("cal_xconfirm") == (d, e["id"]):
                 cf = sec.container(key=f"cf_{d}_{e['id']}")
@@ -1188,6 +1217,7 @@ def _close_panel() -> None:
 
 def _new_entry() -> None:
     st.session_state.pop("cal_pick", None)
+    st.session_state.pop("cal_lane", None)
 
 
 def _pick_row(day: dt.date, e: dict) -> None:
@@ -1206,11 +1236,14 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
     period = logs[(logs["start_date"] <= ts) & (logs["end_date"] >= ts)] if not logs.empty else logs
     period = period.drop(rows.index) if not period.empty else period
 
-    active = eq[(eq["retired_on"].isna() | (eq["retired_on"] >= ts)) &
-                (eq["acquired_on"].isna() | (eq["acquired_on"] <= ts))]
-    label_of = dict(zip(eq["id"], eq["label"]))
+    pickable = db.pick_ids(eq, day)  # 세부장비가 없는 맨 아래 장비만 (예: 5L 믹서(양극))
+    short_of = dict(zip(eq["id"], eq["short"]))
     name_of = dict(zip(eq["id"], eq["name"]))
-    eq_id = dict(zip(eq["label"], eq["id"]))
+    eq_id = {**dict(zip(eq["label"], eq["id"])), **dict(zip(eq["short"], eq["id"]))}
+
+    def pick_opts(keep) -> dict:
+        ids = pickable + ([int(keep)] if pd.notna(keep) and int(keep) not in pickable and int(keep) in short_of else [])
+        return {i: short_of[i] for i in ids}
     cat_of = dict(zip(eq["id"].astype(int), (_cat_of(u) for u in eq.get("use", pd.Series([""] * len(eq))))))
     comp_by_name = {r["name"]: r for r in comp.to_dict("records")}
     staff_opts = db.staff_names(list(rows["created_by"]))
@@ -1254,9 +1287,13 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             return
 
         last_staff = st.session_state.get("last_staff") or st.session_state.get("me")
-        eq_opts = list(active["label"])
-        if cur is not None and label_of.get(cur["equip_id"]) not in eq_opts:
-            eq_opts.append(label_of.get(cur["equip_id"]))
+        lane = st.session_state.get("cal_lane")
+        groups = ["전체"] + [c for c in LANE_CATS if any(cat_of.get(i) == c for i in pickable)]
+        cur_cat = cat_of.get(int(cur["equip_id"])) if cur is not None else None
+        want = lane if lane in groups else (cur_cat if cur_cat in groups else "전체")
+        eq_opts = [short_of[i] for i in pickable]
+        if cur is not None and short_of.get(cur["equip_id"]) not in eq_opts:
+            eq_opts.append(short_of.get(cur["equip_id"]))
         comp_opts = list(comp_by_name)
         if cur is not None and db.to_str(cur["company"]) and cur["company"] not in comp_opts:
             comp_opts.append(cur["company"])
@@ -1268,8 +1305,20 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
 
         form = st.container(key="ep_form")
         with form:
-            v_eq = st.selectbox("장비", eq_opts, index=ix(eq_opts, label_of.get(cur["equip_id"]) if cur is not None else None),
+            if len(groups) > 2:  # 시험·제조·분석 중 하나만 골라 목록을 짧게
+                with st.container(key="ep_grp"):
+                    g = st.segmented_control("장비 구분", groups, default=want, key=f"ep_grp_{k}_{lane}",
+                                             label_visibility="collapsed") or "전체"
+                if g != "전체":
+                    keep = short_of.get(cur["equip_id"]) if cur is not None else None
+                    eq_opts = [short_of[i] for i in pickable if cat_of.get(i) == g]
+                    if keep and keep not in eq_opts:
+                        eq_opts.append(keep)
+            v_eq = st.selectbox("장비", eq_opts, index=ix(eq_opts, short_of.get(cur["equip_id"]) if cur is not None else None),
                                 placeholder="장비 이름을 입력해 찾기", key=f"ep_eq_{k}")
+            where = db.path_text(eq, eq_id[v_eq]) if v_eq in eq_id else ""
+            if where:  # 어느 주장비 소속인지 작게 (시간은 주장비에 합산)
+                st.markdown(f"<div class='ep-path'><span>소속</span>{html.escape(where)}</div>", unsafe_allow_html=True)
             c1, c2 = st.columns(2, gap="small")
             v_comp = c1.selectbox("업체", comp_opts,
                                   index=ix(comp_opts, db.to_str(cur["company"])) if cur is not None else None,
@@ -1283,7 +1332,8 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                                           default=db.to_str(cur["usage_type"]) if cur is not None else "외부")
             v_purp = st.segmented_control("사용목적", seed.purpose_choices(db.to_str(cur["purpose"]) if cur is not None else ""),
                                           format_func=seed.purpose_label, key=f"ep_purp_{k}",
-                                          default=db.to_str(cur["purpose"]) if cur is not None else "생산")
+                                          default=db.to_str(cur["purpose"]) if cur is not None
+                                          else LANE_PURPOSE.get(lane, "생산"))
             c1, c2 = st.columns(2, gap="small")
             v_h = num_input(c1, "사용시간(h)", f"ep_h_{k}", float(cur["hours"]) if cur is not None else 8, 1, 0, 24)
             v_s = num_input(c2, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 1, 1, 0)
@@ -1340,11 +1390,12 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             with st.expander(f"이 날이 포함된 기간 실적 {len(period)}건", expanded=False):
                 pv = period.reset_index(drop=True)
                 ev = st.dataframe(pd.DataFrame({
-                    "장비": pv["equip_id"].map(label_of), "업체": pv["company"].replace("", "(내부)"),
+                    "장비": pv["equip_id"].map(short_of), "업체": pv["company"].replace("", "(내부)"),
                     "기간": [f"{a:%m/%d}~{b:%m/%d}" for a, b in zip(pv["start_date"], pv["end_date"])],
                     "시간": pv["hours"].astype(int),
                 }), hide_index=True, width="stretch", on_select="rerun", selection_mode="single-row",
                     key=f"cal_period_{day}_{ver}_{st.session_state.get('cal_pnonce', 0)}")
                 picked = ev.selection.rows if ev else []
                 if picked:
-                    _edit_period(pv.iloc[picked[0]].to_dict(), label_of, list(comp_by_name), staff_opts)
+                    _edit_period(pv.iloc[picked[0]].to_dict(), pick_opts(pv.iloc[picked[0]]["equip_id"]),
+                                 list(comp_by_name), staff_opts)

@@ -822,7 +822,86 @@ def load_equipment() -> pd.DataFrame:
     for lb in labels:
         seen[lb] = seen.get(lb, 0) + 1
     df["label"] = [f"{lb} #{i}" if seen[lb] > 1 else lb for lb, i in zip(labels, df["id"])]
+    return add_pick_labels(df)
+
+
+def _center(loc: str) -> str:
+    """'배터리연구지원센터(문백)' → '문백' (괄호 안 지역명, 없으면 그대로)."""
+    loc = to_str(loc)
+    if "(" in loc and loc.endswith(")"):
+        return loc[loc.rindex("(") + 1:-1].strip()
+    return loc
+
+
+def add_pick_labels(df: pd.DataFrame) -> pd.DataFrame:
+    """입력 화면용 짧은 이름(short)과 맨 아래 장비 여부(leaf)를 붙입니다.
+
+    short 는 장비 이름만 씁니다 (예: '5L 믹서(양극)'). 이름이 겹칠 때만 구분할 말을 붙입니다:
+    센터 지역명 → 그래도 겹치면 i-Tube 장비번호 → 그래도 겹치면 #ID.
+    leaf = 세부장비가 없는 장비 (실적은 여기에 입력).
+    """
+    df = df.copy()
+    if df.empty:
+        df["short"], df["leaf"] = pd.Series(dtype=str), pd.Series(dtype=bool)
+        return df
+    ids = df["id"].astype(int)
+    has_kids = set(int(p) for p in df["parent_id"].dropna()) if "parent_id" in df else set()
+    df["leaf"] = [i not in has_kids for i in ids]
+    code_of = dict(zip(ids, df["code"]))
+    itube = df["itube_id"] if "itube_id" in df else pd.Series([pd.NA] * len(df))
+    tube = [code_of.get(int(t), "") if pd.notna(t) else "" for t in itube]
+    names = list(df["name"])
+    extras = ([_center(v) for v in df.get("location", [""] * len(df))], tube)
+    groups: dict = {}
+    for k, n in enumerate(names):
+        groups.setdefault(n, []).append(k)
+    out = list(names)
+    for n, ks in groups.items():
+        if len(ks) < 2:
+            continue
+        for ex in extras:  # 이 묶음을 서로 다르게 만드는 첫 구분 말을 씀
+            vals = [ex[k] for k in ks]
+            if all(vals) and len(set(vals)) == len(ks):
+                for k in ks:
+                    out[k] = f"{n} · {ex[k]}"
+                break
+    cnt: dict = {}
+    for o in out:
+        cnt[o] = cnt.get(o, 0) + 1
+    d = {o for o, c in cnt.items() if c > 1}
+    df["short"] = [f"{o} #{i}" if o in d else o for o, i in zip(out, ids)]
     return df
+
+
+def pick_ids(eq: pd.DataFrame, day: dt.date | None = None) -> list[int]:
+    """실적을 입력할 장비 = 세부장비가 없는 맨 아래 장비 (그날 보유 중인 것만, 장비 목록 순서).
+
+    세부장비가 전부 불용이면 그 위 장비를 고를 수 있게 합니다.
+    """
+    if eq.empty:
+        return []
+    act = eq
+    if day is not None:
+        ts = pd.Timestamp(day)
+        act = eq[(eq["retired_on"].isna() | (eq["retired_on"] >= ts)) &
+                 (eq["acquired_on"].isna() | (eq["acquired_on"] <= ts))]
+    has_kids = set(int(p) for p in act["parent_id"].dropna()) if "parent_id" in act else set()
+    return [int(i) for i in act["id"] if int(i) not in has_kids]
+
+
+def path_text(eq: pd.DataFrame, eid: int) -> str:
+    """'5L 믹서 › 고안전성 전지 시제품 전극제조 시스템 (2212-C-0709)' 처럼 위쪽 장비들 (가까운 것부터)."""
+    if eq.empty or "parent_id" not in eq:
+        return ""
+    rec = {int(r["id"]): r for r in eq[["id", "name", "code", "parent_id"]].to_dict("records")}
+    parts, seen = [], {int(eid)}
+    p = rec.get(int(eid), {}).get("parent_id")
+    while p is not None and pd.notna(p) and int(p) in rec and int(p) not in seen:
+        r = rec[int(p)]
+        parts.append(f"{r['name']} ({r['code']})" if r["code"] else r["name"])
+        seen.add(int(p))
+        p = r["parent_id"]
+    return " › ".join(parts)
 
 
 def _equip_record(r: dict) -> dict:

@@ -367,3 +367,36 @@ def test_summary_rolls_up_children_once():
     assert sm.at[1, "사용시간"] == 8 and sm.at[1, "건수"] == 2
     assert sm.at[2, "사용시간"] == 5 and sm.at[2, "건수"] == 1
     assert bool(sm.at[2, "KPI"]) is False  # 상위가 이미 산정 대상
+
+
+def _tree():
+    rows = [  # id, name, code, parent, location
+        (1, "전극제조 시스템", "2212-C-0709", None, "센터(문백)"),
+        (2, "전극 코터", "", 1, "센터(문백)"),
+        (3, "전극 코터(양극)", "", 2, "센터(문백)"),
+        (4, "극판 제조 시스템", "2312-C-0436", None, "센터(오창)"),
+        (5, "전극 코터(양극)", "", 4, "센터(오창)"),
+        (6, "방폭챔버", "2406-C-0013", None, "센터(오창)"),
+        (7, "방폭챔버", "2406-C-0010", None, "센터(오창)"),
+    ]
+    df = pd.DataFrame([{"id": i, "name": n, "code": c, "parent_id": p, "location": loc, "kind": "", "in_kpi": "Y"}
+                       for i, n, c, p, loc in rows])
+    return db.add_pick_labels(db._equipment_frame(df))
+
+
+def test_pick_only_leaf_devices_with_short_names():
+    eq = _tree()
+    short = dict(zip(eq["id"], eq["short"]))
+    assert sorted(db.pick_ids(eq)) == [3, 5, 6, 7]  # 세부장비가 있는 장비(1, 2, 4)는 고를 수 없음
+    assert short[3] == "전극 코터(양극) · 문백" and short[5] == "전극 코터(양극) · 오창"  # 같은 이름만 구분
+    assert short[2] == "전극 코터"
+    assert short[6] == "방폭챔버 · 2406-C-0013"  # 센터도 같으면 장비번호로
+    assert db.path_text(eq, 3) == "전극 코터 › 전극제조 시스템 (2212-C-0709)"
+
+
+def test_leaf_hours_roll_up_to_parent():
+    eq = _tree()
+    logs = pd.DataFrame([_log(id=1, equip_id=3, hours=6), _log(id=2, equip_id=5, hours=4)])
+    sm = calc.equipment_summary(calc.expand_daily(logs), eq, D(2026, 7, 1), D(2026, 7, 1), 2000).set_index("equip_id")
+    assert sm.at[3, "사용시간"] == 6 and sm.at[2, "사용시간"] == 6 and sm.at[1, "사용시간"] == 6
+    assert sm.at[4, "사용시간"] == 4

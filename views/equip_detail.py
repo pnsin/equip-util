@@ -28,6 +28,42 @@ def _info(r: dict, annual: float, parent: str = "", kids: list[str] | None = Non
     st.markdown(f"<div class='eq-info'>{cells}</div>", unsafe_allow_html=True)
 
 
+def _sub_breakdown(eq: pd.DataFrame, family: list[int], daily: pd.DataFrame, s, e, annual: float,
+                   target: float, top: int) -> None:
+    """세부장비별 가동률 + 위 장비 합계. 세부장비 시간은 위 장비에 더해집니다."""
+    fam = eq[eq["id"].isin(family)]  # 장비 목록 순서 = 위 장비 바로 아래 세부장비
+    sm = calc.equipment_summary(daily, fam, s, e, annual, eq).set_index("equip_id")
+    base = int(fam.loc[fam["id"] == top, "depth"].iloc[0])
+    top_used = float(sm.at[top, "사용시간"]) if top in sm.index else 0.0
+    rows = []
+    for r in fam.itertuples(index=False):
+        i = int(r.id)
+        u = float(sm.at[i, "사용시간"]) if i in sm.index else 0.0
+        a = float(sm.at[i, "가용시간"]) if i in sm.index else 0.0
+        util = u / a * 100 if a else 0.0
+        d = int(r.depth) - base
+        share = u / top_used * 100 if top_used else 0.0
+        cls = "top" if i == top else ("leaf" if r.leaf else "mid")
+        hit = " hit" if target and util >= target else ""
+        name = html.escape(r.name if i == top else r.short)
+        note = "합계" if i == top else (f"{share:.0f}%" if top_used else "")
+        rows.append(
+            f"<div class='sb-r {cls}' style='--d:{d}'><div class='sb-n'>{'' if i == top else '<i></i>'}{name}</div>"
+            f"<div class='sb-bar'><b class='{hit}' style='width:{min(util, 100):.1f}%'></b></div>"
+            f"<div class='sb-v'>{util:.1f}%</div><div class='sb-h'>{u:,.0f} h</div>"
+            f"<div class='sb-s'>{note}</div></div>")
+    win = calc.window(daily, s, e)
+    own = float(win.loc[win["equip_id"].isin(fam.loc[~fam["leaf"], "id"]), "hours"].sum())
+    if own > 0:  # 세부장비가 생기기 전에 위 장비에 바로 넣은 실적
+        rows.append(f"<div class='sb-r leaf' style='--d:1'><div class='sb-n'><i></i>(위 장비에 바로 입력)</div>"
+                    f"<div class='sb-bar'></div><div class='sb-v'></div><div class='sb-h'>{own:,.0f} h</div>"
+                    f"<div class='sb-s'>{own / top_used * 100 if top_used else 0:.0f}%</div></div>")
+    section_bar(w("세부장비별 가동률"), sub="세부장비 사용시간은 위 장비에 더해집니다 · 오른쪽 %는 합계 중 차지하는 몫")
+    head = ("<div class='sb-r sb-head'><div class='sb-n'>장비</div><div class='sb-bar'></div>"
+            f"<div class='sb-v'>{html.escape(w('가동률'))}</div><div class='sb-h'>사용시간</div><div class='sb-s'>몫</div></div>")
+    st.markdown(f"<div class='sb'>{head}{''.join(rows)}</div>", unsafe_allow_html=True)
+
+
 def render() -> None:
     st.markdown("""<style>
     .eq-info {display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .5rem .9rem;
@@ -35,6 +71,26 @@ def render() -> None:
     .eq-info div {display: flex; flex-direction: column; gap: .1rem; min-width: 0;}
     .eq-info span {font-size: .75rem; color: var(--muted);}
     .eq-info b {font-size: .92rem; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+    .sb {background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: .5rem .9rem; margin-bottom: .6rem;}
+    .sb-r {display: grid; grid-template-columns: minmax(150px, 1.6fr) minmax(90px, 2fr) 64px 76px 48px; gap: .7rem;
+      align-items: center; padding: .42rem 0; border-bottom: 1px dashed var(--line); font-size: .88rem;}
+    .sb-r:last-child {border-bottom: none;}
+    .sb-head {font-size: .72rem; color: var(--muted); padding: .2rem 0 .35rem;}
+    .sb-n {padding-left: calc(var(--d, 0) * 18px - 18px); min-width: 0; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; color: var(--ink); display: flex; align-items: center; gap: 6px;}
+    .sb-r.top .sb-n {padding-left: 0; font-weight: 800;}
+    .sb-r.mid .sb-n {font-weight: 700;}
+    .sb-n i {flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+      opacity: .35;}
+    .sb-r.leaf .sb-n i {opacity: .8; background: var(--accent-hi);}
+    .sb-bar {height: 9px; border-radius: 999px; background: var(--accent-bg); overflow: hidden;}
+    .sb-head .sb-bar {background: none;}
+    .sb-bar b {display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--accent) 55%, #fff);}
+    .sb-r.top .sb-bar b {background: var(--accent);}
+    .sb-bar b.hit {background: var(--accent);}
+    .sb-v {text-align: right; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums;}
+    .sb-h, .sb-s {text-align: right; color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums;}
+    @media (max-width: 640px) {.sb-r {grid-template-columns: minmax(110px, 1.4fr) 1fr 56px; } .sb-h, .sb-s {display: none;}}
     </style>""", unsafe_allow_html=True)
     page_header("장비 상세", "현황")
     cfg = db.get_settings()
@@ -85,6 +141,9 @@ def render() -> None:
     past = logs[logs["start_date"] <= pd.Timestamp(cutoff)]
     last = past["end_date"].max() if not past.empty else None
     m[4].metric("최근 사용일", f"{last:%Y-%m-%d}" if last is not None and pd.notna(last) else "기록 없음")
+
+    if len(family) > 1:
+        _sub_breakdown(eq, family, daily, s, e_eff, annual, target, int(eid))
 
     # 월별 추이 (최근 12개월)
     section_bar("월별 추이", sub="최근 12개월")
