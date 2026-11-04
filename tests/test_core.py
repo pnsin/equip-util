@@ -206,3 +206,94 @@ def test_compare_period_modes():
     # 직접 지정: 같은 길이만큼 바로 앞
     ps, pe, _ = compare_period("직접 지정", dt.date(2026, 3, 11), dt.date(2026, 3, 20), dt.date(2026, 3, 20))
     assert (ps, pe) == (dt.date(2026, 3, 1), dt.date(2026, 3, 10))
+
+
+# ── 장비 › 세부장비 계층 ─────────────────────────────────────────
+
+def _tree_store(store):
+    store.rewrite("equipment", db._rows("equipment", [
+        {"id": 1, "name": "시스템", "code": "2312-C-0001", "in_kpi": True, "order": 1},
+        {"id": 2, "name": "믹서", "parent_id": 1, "kind": "세부장비", "in_kpi": False, "order": 2},
+        {"id": 3, "name": "믹서(양극)", "parent_id": 2, "kind": "세부장비", "in_kpi": True, "order": 3},
+        {"id": 4, "name": "단독장비", "in_kpi": True, "order": 4},
+    ]))
+    db.clear_caches()
+
+
+def test_tree_order_labels_and_itube_unit(store):
+    _tree_store(store)
+    eq = db.load_equipment()
+    assert list(eq["id"]) == [1, 2, 3, 4]
+    assert list(eq["depth"]) == [0, 1, 2, 0]
+    assert eq.set_index("id").at[3, "label"] == "믹서(양극) · 시스템"
+    assert eq.set_index("id").at[3, "itube_id"] == 1 and pd.isna(eq.set_index("id").at[4, "itube_id"])
+    assert sorted(db.descendants(eq)[1]) == [1, 2, 3]
+
+
+def test_rollup_adds_child_hours_without_double_count(store):
+    _tree_store(store)
+    eq = db.load_equipment()
+    logs = pd.DataFrame([_log(id=1, equip_id=3, hours=10), _log(id=2, equip_id=1, hours=5),
+                         _log(id=3, equip_id=4, hours=2)])
+    daily = calc.expand_daily(logs, "spread")
+    sm = calc.equipment_summary(daily, eq, D(2026, 7, 1), D(2026, 7, 31), 2000).set_index("equip_id")
+    assert sm.at[1, "사용시간"] == 15 and sm.at[2, "사용시간"] == 10 and sm.at[3, "사용시간"] == 10
+    assert not sm.at[3, "KPI"]  # 상위가 대상이면 하위는 합계에서 뺌
+    assert calc.totals(sm.reset_index())["used"] == 17
+
+
+def test_logs_carry_itube_parent(store):
+    _tree_store(store)
+    db.insert_logs([dict(equip_id=3, start_date=D(2026, 7, 1), end_date=D(2026, 7, 1), hours=3, purpose="시험",
+                         usage_type="내부", company="")], "t")
+    r = db.load_logs().iloc[0]
+    assert (r["equip_name"], r["itube_name"], r["itube_code"]) == ("믹서(양극)", "시스템", "2312-C-0001")
+
+
+def test_delete_parent_reattaches_children(store):
+    _tree_store(store)
+    eq = db.load_equipment()
+    db.save_equipment(eq[eq["id"] != 2])
+    eq = db.load_equipment().set_index("id")
+    assert eq.at[3, "parent_id"] == 1
+
+
+def _excel(rows):
+    import io
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "내부기준_test"
+    head = ["대분류", "주장비(종)", "관리자", "0", "장비명(한글)", "장비구분", "ITUBE번호", "국가연구시설장비번호", "구분",
+            "자산번호", "자산기준\n수량", "세부장비", "대수", "세세부장비/추후정리", "구매처", "제조사", "모델명", "장비위치",
+            "시스템 구성", "장비용도", "비고"]
+    ws.append(head)
+    for r in rows:
+        ws.append([r.get(h) for h in head])
+    ws.merge_cells("E2:E4")
+    ws.merge_cells("G2:G4")
+    ws.merge_cells("L2:L3")
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def test_excel_import_builds_tree_and_keeps_ids():
+    from core import equip_import as ei
+    data = _excel([
+        {"대분류": "5Ah", "장비명(한글)": "시스템", "장비구분": "주장비", "ITUBE번호": "2212-C-0709", "자산번호": "A1",
+         "자산기준\n수량": 1, "세부장비": "5L 믹서", "대수": 1, "세세부장비/추후정리": "5L 믹서(양극)"},
+        {"세세부장비/추후정리": "5L 믹서(음극)"},
+        {"세부장비": "침수", "대수": 1, "세세부장비/추후정리": "침수시험기"},
+        {"장비명(한글)": None, "ITUBE번호": "미등록장비", "장비구분": "주장비", "세부장비": "건조오븐", "대수": 0,
+         "세세부장비/추후정리": "건조오븐", "자산번호": "B2"},
+    ])
+    parsed = ei.parse(data)
+    names = [(p["name"], p["parent_tmp"]) for p in parsed]
+    assert names == [("시스템", None), ("5L 믹서", 0), ("5L 믹서(양극)", 1), ("5L 믹서(음극)", 1),
+                     ("침수시험기", 0), ("건조오븐", None)]
+    existing = pd.DataFrame([{"id": 7, "name": "시스템", "code": "2212-C-0709", "in_kpi": True},
+                             {"id": 9, "name": "건조오븐", "code": "", "in_kpi": True}])
+    out = ei.merge_with_existing(parsed, existing)
+    assert [r["id"] for r in out][:1] == [7] and out[-1]["id"] == 9
+    assert out[1]["parent_id"] == 7 and out[2]["parent_id"] == out[1]["id"]

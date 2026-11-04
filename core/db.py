@@ -27,6 +27,10 @@ TABLES = {
         ("in_kpi", "가동률산정"), ("manager", "담당자"), ("note", "비고"),
         # 아래는 2026-11 추가 (장비 현황 엑셀 항목). 새 열은 항상 맨 뒤에만 덧붙임
         ("nfec", "국가연구시설장비번호"), ("model", "모델명"), ("location", "장비위치"), ("use", "장비용도"),
+        # 2026-11-04 장비 분류 (장비 리스트 엑셀 '내부기준' 탭). 상위장비ID 로 장비 › 세부장비 › 세세부를 잇습니다.
+        ("parent_id", "상위장비ID"), ("group", "대분류"), ("species", "주장비(종)"), ("category", "구분"),
+        ("asset_no", "자산번호"), ("qty", "대수"), ("maker", "제조사"), ("vendor", "구매처"),
+        ("system", "시스템 구성"), ("order", "순서"),
     ]),
     "companies": ("업체", [
         ("id", "ID"), ("name", "기업명"), ("brn", "사업자등록번호"), ("contact", "담당자"),
@@ -663,6 +667,10 @@ def save_settings(**kv) -> None:
 
 # ── 장비 ────────────────────────────────────────────────────────
 
+EQUIP_TEXT = ("name", "code", "kind", "manager", "note", "nfec", "model", "location", "use",
+              "group", "species", "category", "asset_no", "maker", "vendor", "system")
+
+
 def _equipment_frame(df: pd.DataFrame) -> pd.DataFrame:
     df = df.reindex(columns=cols("equipment"))  # 빠진 열이 있어도 멈추지 않게
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
@@ -672,16 +680,91 @@ def _equipment_frame(df: pd.DataFrame) -> pd.DataFrame:
     for c in ("acquired_on", "retired_on"):
         df[c] = pd.to_datetime(df[c], errors="coerce")
     df["in_kpi"] = df["in_kpi"].map(lambda v: str(v).strip().upper() not in ("N", "FALSE", "0", "아니오"))
-    for c in ("name", "code", "kind", "manager", "note", "nfec", "model", "location", "use"):
+    for c in EQUIP_TEXT:
         df[c] = df[c].fillna("").astype(str).str.strip()
     df["kind"] = df["kind"].replace("", "주장비")
-    return df.sort_values(["name", "code"]).reset_index(drop=True)
+    for c in ("parent_id", "qty", "order"):
+        df[c] = pd.to_numeric(df[c].astype(str).str.replace(",", ""), errors="coerce")
+    ids = set(df["id"])
+    # 없는 장비나 자기 자신을 가리키면 최상위로
+    df["parent_id"] = [p if pd.notna(p) and int(p) in ids and int(p) != i else pd.NA
+                       for p, i in zip(df["parent_id"], df["id"])]
+    df["parent_id"] = df["parent_id"].astype("Int64")
+    return _tree_sort(df)
+
+
+def _tree_sort(df: pd.DataFrame) -> pd.DataFrame:
+    """상위 장비 바로 아래에 하위 장비가 오도록 정렬하고 depth·root_id·itube_id 를 붙입니다.
+
+    정렬 기준은 '순서' 열(엑셀 순서), 없으면 이름. 고리(A의 상위가 B, B의 상위가 A)는 끊어서 최상위로 둡니다.
+    itube_id = 자신 또는 가장 가까운 상위 중 ITUBE번호가 있는 장비 (i-Tube 제출 단위).
+    """
+    if df.empty:
+        for c, v in (("depth", 0), ("root_id", 0), ("itube_id", 0)):
+            df[c] = pd.Series(dtype="int64")
+        return df.reset_index(drop=True)
+    recs = {int(r["id"]): r for r in df.to_dict("records")}
+    parent = {i: (int(r["parent_id"]) if pd.notna(r["parent_id"]) else None) for i, r in recs.items()}
+    for i in list(parent):  # 고리 끊기
+        seen, cur = {i}, parent[i]
+        while cur is not None:
+            if cur in seen:
+                parent[i] = None
+                break
+            seen.add(cur)
+            cur = parent.get(cur)
+    kids: dict = {}
+    for i, p in parent.items():
+        kids.setdefault(p, []).append(i)
+
+    def key(i):
+        o = recs[i]["order"]
+        return (o if pd.notna(o) else float("inf"), recs[i]["name"], recs[i]["code"], i)
+
+    out, depth, root, itube = [], {}, {}, {}
+
+    def walk(i, d, r, t):
+        t = i if recs[i]["code"] else t
+        out.append(i)
+        depth[i], root[i], itube[i] = d, r, t
+        for k in sorted(kids.get(i, []), key=key):
+            walk(k, d + 1, r, t)
+
+    for i in sorted(kids.get(None, []), key=key):
+        walk(i, 0, i, None)
+    df = df.set_index("id").loc[out].reset_index()
+    df["parent_id"] = pd.array([parent[i] for i in out], dtype="Int64")
+    df["depth"] = [depth[i] for i in out]
+    df["root_id"] = [root[i] for i in out]
+    df["itube_id"] = pd.array([itube[i] for i in out], dtype="Int64")
+    return df
+
+
+def descendants(eq: pd.DataFrame) -> dict[int, list[int]]:
+    """장비 ID → 자신과 모든 하위 장비 ID (세부장비 시간을 위로 더할 때 씀)."""
+    if eq.empty or "parent_id" not in eq:
+        return {int(i): [int(i)] for i in eq.get("id", [])}
+    parent = {int(i): (int(p) if pd.notna(p) else None) for i, p in zip(eq["id"], eq["parent_id"])}
+    out = {i: [i] for i in parent}
+    for i in parent:
+        seen, cur = {i}, parent[i]
+        while cur is not None and cur not in seen and cur in out:
+            out[cur].append(i)
+            seen.add(cur)
+            cur = parent.get(cur)
+    return out
 
 
 @st.cache_data(ttl=30)
 def load_equipment() -> pd.DataFrame:
     df = _equipment_frame(get_store().read("equipment"))
-    labels = [f"{n} ({c})" if c else n for n, c in zip(df["name"], df["code"])]
+    names = dict(zip(df["id"], df["name"]))
+    labels = []
+    for n, c, d, r in zip(df["name"], df["code"], df["depth"], df["root_id"]):
+        lb = f"{n} ({c})" if c else n
+        if d > 0 and names.get(r) and names[r] != n:
+            lb = f"{lb} · {names[r]}"  # 세부장비는 어느 장비 소속인지 함께
+        labels.append(lb)
     seen: dict[str, int] = {}
     for lb in labels:
         seen[lb] = seen.get(lb, 0) + 1
@@ -705,11 +788,25 @@ def _equip_record(r: dict) -> dict:
         "model": to_str(r.get("model")),
         "location": to_str(r.get("location")),
         "use": to_str(r.get("use")),
+        "parent_id": None if to_num(r.get("parent_id")) is None else int(to_num(r.get("parent_id"))),
+        "group": to_str(r.get("group")),
+        "species": to_str(r.get("species")),
+        "category": to_str(r.get("category")),
+        "asset_no": to_str(r.get("asset_no")),
+        "qty": to_num(r.get("qty")),
+        "maker": to_str(r.get("maker")),
+        "vendor": to_str(r.get("vendor")),
+        "system": to_str(r.get("system")),
+        "order": to_num(r.get("order")),
     }
 
 
 def save_equipment(edited: pd.DataFrame) -> list[str]:
-    """장비 표 편집 결과를 반영합니다. 실적이 있는 장비는 삭제하지 않고 오류로 돌려줍니다."""
+    """장비 표 편집 결과를 반영합니다. 실적이 있는 장비는 삭제하지 않고 오류로 돌려줍니다.
+
+    표의 행 순서를 '순서'로 저장합니다 (새 행은 소속 장비의 맨 아래로 감).
+    지운 장비 아래에 있던 세부장비는 한 단계 위 장비로 옮겨 붙습니다.
+    """
     store = get_store()
     current = _equipment_frame(store.read("equipment"))
     orig = {int(r["id"]): r for r in current.to_dict("records")}
@@ -717,7 +814,7 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
     errors: list[str] = []
     out, keep = [], set()
     next_id = (max(orig) if orig else 0) + 1
-    for r in edited.to_dict("records"):
+    for pos, r in enumerate(edited.to_dict("records"), start=1):
         rec = _equip_record(r)
         if not rec["name"]:
             continue
@@ -728,11 +825,20 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
         else:
             rec["id"] = next_id
             next_id += 1
+        rec["order"] = pos
         out.append(rec)
-    for gone in set(orig) - keep:
+    for gone in sorted(set(orig) - keep):
         if gone in used_ids:
             errors.append(f"'{orig[gone]['name']}'은(는) 사용실적이 있어 삭제하지 않았습니다. 불용일을 입력해 주세요.")
-            out.append(_equip_record(orig[gone]) | {"id": gone})
+            o = orig[gone]
+            out.append(_equip_record(o) | {"id": gone, "order": o["order"] if pd.notna(o["order"]) else None})
+    alive = {r["id"] for r in out}
+    old_parent = {i: (int(r["parent_id"]) if pd.notna(r["parent_id"]) else None) for i, r in orig.items()}
+    for rec in out:
+        p = rec["parent_id"]
+        while p is not None and p not in alive:  # 지운 상위 장비 → 그 위 장비로
+            p = old_parent.get(p)
+        rec["parent_id"] = p if p != rec["id"] else None
     _save_master("equipment", out)
     clear_caches()
     return errors
@@ -888,6 +994,14 @@ def load_logs() -> pd.DataFrame:
     df = df.merge(eq, left_on="equip_id", right_on="_eid", how="left").drop(columns=["_eid"])
     for c in ("equip_name", "equip_code", "equip_kind"):
         df[c] = df[c].fillna("")
+    # i-Tube 에 올릴 때 쓰는 장비 = 자신 또는 ITUBE번호가 있는 가장 가까운 상위 장비
+    full = load_equipment()
+    by_id = full.set_index("id")
+    it = {int(i): (int(t) if pd.notna(t) else None) for i, t in zip(full["id"], full["itube_id"])}
+    tid = df["equip_id"].map(lambda v: it.get(int(v)) if pd.notna(v) else None)
+    df["itube_name"] = tid.map(lambda t: by_id.at[t, "name"] if t is not None else "")
+    df["itube_code"] = tid.map(lambda t: by_id.at[t, "code"] if t is not None else "")
+    df["itube_kind"] = tid.map(lambda t: by_id.at[t, "kind"] if t is not None else "")
     return df.sort_values(["start_date", "id"], ascending=False).reset_index(drop=True)
 
 

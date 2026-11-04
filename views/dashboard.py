@@ -268,7 +268,7 @@ def render() -> None:
 
 
 def _heatmap(daily: pd.DataFrame, eq: pd.DataFrame, end: dt.date, annual: float, cutoff, target: float) -> None:
-    mat = calc.monthly_matrix(daily, eq, end, 12, annual, cutoff)
+    mat = calc.monthly_matrix(daily, eq, end, 12, annual, cutoff, db.load_equipment())
     if mat.empty:
         empty_state("표시할 장비가 없습니다")
         return

@@ -14,12 +14,16 @@ from views.common import go_records, period_picker
 CFG = CHART_CONFIG
 
 
-def _info(r: dict, annual: float) -> None:
-    items = [("센터", r["location"]), ("장비용도", r["use"]), ("장비구분", r["kind"]), ("모델명", r["model"]),
+def _info(r: dict, annual: float, parent: str = "", kids: list[str] | None = None) -> None:
+    items = [("대분류", r.get("group", "")), ("주장비(종)", r.get("species", "")), ("소속 장비", parent),
+             ("센터", r["location"]), ("장비용도", r["use"]), ("장비구분", r["kind"]), ("모델명", r["model"]),
              ("ITUBE번호", r["code"]), ("국가연구시설장비번호", r["nfec"]), ("관리자", r["manager"]),
              ("연간기준시간", f"{(r['annual_hours'] if pd.notna(r['annual_hours']) else annual):,.0f} h"),
+             ("제조사", r.get("maker", "")), ("자산번호", r.get("asset_no", "")),
              (w("가동률 산정"), "대상" if r["in_kpi"] else "제외")]
-    cells = "".join(f"<div><span>{html.escape(k)}</span><b>{html.escape(str(v) or '-')}</b></div>"
+    if kids:
+        items.append((f"세부장비 {len(kids)}", ", ".join(kids)))
+    cells = "".join(f"<div><span>{html.escape(k)}</span><b title='{html.escape(str(v))}'>{html.escape(str(v) or '-')}</b></div>"
                     for k, v in items if str(v).strip())
     st.markdown(f"<div class='eq-info'>{cells}</div>", unsafe_allow_html=True)
 
@@ -51,19 +55,23 @@ def render() -> None:
     eid = st.selectbox("장비", ids, format_func=label_of.get, key="detail_sel", label_visibility="collapsed",
                        placeholder="장비 검색")
     r = eq[eq["id"] == eid].iloc[0].to_dict()
-    _info(r, annual)
+    pid = r.get("parent_id")
+    parent = label_of.get(int(pid), "") if pid is not None and pd.notna(pid) else ""
+    kids = list(eq.loc[eq["parent_id"] == eid, "name"]) if "parent_id" in eq else []
+    _info(r, annual, parent, kids)
 
     years = sorted({d.year for d in logs_all["start_date"].dropna()}) if not logs_all.empty else []
     s, e, label, kind = period_picker("detail", calc.PERIOD_KINDS, "연", years=years)
     cutoff = dt.date.today()
     e_eff = calc.effective_end(s, e, cutoff)
     one = eq[eq["id"] == eid]
-    logs = logs_all[logs_all["equip_id"] == eid]
+    family = db.descendants(eq).get(int(eid), [int(eid)])  # 세부장비 실적도 함께
+    logs = logs_all[logs_all["equip_id"].isin(family)]
     daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"))
-    sm = calc.equipment_summary(daily, one, s, e_eff, annual)
+    sm = calc.equipment_summary(daily, one, s, e_eff, annual, eq)
     row = sm.iloc[0] if not sm.empty else None
     ps, pe, plabel = calc.compare_period(kind, s, e, e_eff, "직전")
-    pv = calc.equipment_summary(daily, one, ps, pe, annual)
+    pv = calc.equipment_summary(daily, one, ps, pe, annual, eq)
     prev_util = float(pv.iloc[0]["가동률"] or 0) if not pv.empty else 0.0
 
     section_bar(label, sub=(f"{e_eff:%m/%d}까지 집계 · " if e_eff < e else "") + f"비교: {plabel}", first=True)
@@ -80,7 +88,7 @@ def render() -> None:
 
     # 월별 추이 (최근 12개월)
     section_bar("월별 추이", sub="최근 12개월")
-    tr = calc.trend(daily, one, "월", e_eff, 12, annual, cutoff)
+    tr = calc.trend(daily, one, "월", e_eff, 12, annual, cutoff, eq)
     if not tr.empty:
         fig = go.Figure()
         fig.add_bar(x=tr["기간"], y=tr["사용시간"], name="사용시간(h)", marker_color=T["accent"], opacity=0.9,
