@@ -11,7 +11,7 @@ import streamlit as st
 from core import db, rules, seed
 from core.calc import expand_daily, kr_holidays
 from ui_style import T, page_header
-from views.common import new_company_dialog
+from views.common import new_company_dialog, num_input
 
 WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
 DEFAULT_INDUSTRY = ("전기전자", "이차전지_에너지", "이차전지")
@@ -24,7 +24,7 @@ FIELDS = {
 }
 
 
-CELL_LINES = 4  # 달력 칸에 바로 보여 줄 실적 수 (나머지는 "+N건 더")
+CELL_LINES = 3  # 달력 칸에 바로 보여 줄 실적 수 (나머지는 "+N")
 CSS = """<style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap');
 .block-container {padding-top: 2.5rem;}
@@ -41,21 +41,30 @@ CSS = """<style>
 .st-key-calnav div[class*="st-key-cal_today"] {margin-left: auto;}
 /* 화면 폭을 넓게 쓰고, 넓은 화면에서는 달력 오른쪽에 입력 카드 */
 .block-container {max-width: 2300px !important;}
+/* 좁은 화면: 입력 카드는 오른쪽에 떠 있는 서랍처럼 */
 @media (max-width: 1500px) {
-  .st-key-calwrap > [data-testid="stHorizontalBlock"] {flex-wrap: wrap !important;}
-  .st-key-calwrap > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {width: 100% !important; flex: 1 1 100% !important; min-width: 100% !important;}
-}
-@media (min-width: 1501px) {
+  .st-key-calwrap > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:not(:has(.st-key-ep_panel)) {
+    width: 100% !important; flex: 1 1 100% !important;}
   .st-key-calwrap > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(.st-key-ep_panel) {
-    position: sticky; top: 3.8rem; align-self: flex-start; max-height: calc(100vh - 4.6rem); overflow-y: auto;
-    min-width: 380px; scrollbar-width: thin;}
+    position: fixed !important; right: 16px; top: 4.2rem; width: 380px !important; flex: none !important; z-index: 900;}
+  .st-key-ep_panel {box-shadow: 0 18px 48px rgba(15, 30, 60, .25) !important;}
 }
-.st-key-calwrap > [data-testid="stHorizontalBlock"] {align-items: flex-start;}
-.st-key-ep_panel {background: #fff; border: none; border-radius: 22px; padding: 22px 22px 18px;
-  box-shadow: 0 2px 4px rgba(30, 50, 90, .04), 0 12px 32px rgba(30, 50, 90, .08); gap: .6rem;}
+/* 입력 카드는 화면을 내려도 따라옴 (길면 카드 안에서 스크롤) */
+.st-key-calwrap > [data-testid="stHorizontalBlock"] {align-items: stretch !important;}
+.st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) > [data-testid="stVerticalBlock"] {height: 100%;}
+.st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) {min-width: 360px;}
+.st-key-ep_panel {position: sticky !important; top: 4.2rem; max-height: calc(100vh - 5.2rem); overflow-y: auto !important;
+  scrollbar-width: thin; animation: epIn .18s ease-out;}
+@keyframes epIn {from {opacity: 0; transform: translateX(10px);} to {opacity: 1; transform: none;}}
+.st-key-ep_panel {background: #fff; border: none; border-radius: 20px; padding: 16px 16px 14px;
+  box-shadow: 0 2px 4px rgba(30, 50, 90, .04), 0 12px 32px rgba(30, 50, 90, .08); gap: .45rem;}
+.st-key-ep_close {width: auto !important;}
+.st-key-ep_close button {height: 38px; width: 38px; padding: 0; border-radius: 12px; border: none; background: #F4F6FA;}
+.st-key-ep_form {gap: .45rem !important;}
+.st-key-ep_form [data-testid="stWidgetLabel"] {margin-bottom: 0; min-height: 0;}
 .st-key-ep_head {align-items: flex-start !important;}
 .ep-h {line-height: 1.25;}
-.ep-d {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif; font-size: 1.5rem; font-weight: 900; color: var(--ink);}
+.ep-d {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif; font-size: 1.3rem; font-weight: 900; color: var(--ink);}
 .ep-d em {font-style: normal; font-size: .95rem; color: #8592A8; font-weight: 700; margin-left: 4px;}
 .ep-n {display: block; font-size: .85rem; font-weight: 700; color: var(--accent); margin-top: 2px;}
 .st-key-ep_new {width: auto !important;}
@@ -278,6 +287,142 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .st-key-calnav .cal-title {min-width: 0; font-size: 1.05rem;}
   .cal-mobile-hint {display: block; font-size: .8rem; color: var(--muted); margin: .2rem 0 .4rem;}
 }
+/* ===== v3: 작은 달력 카드 + 작은 입력 카드 ===== */
+.st-key-calcard {background: #fff; border-radius: 22px; padding: 16px 16px 14px;
+  box-shadow: 0 1px 2px rgba(30, 50, 90, .04), 0 10px 30px rgba(30, 50, 90, .06); gap: .5rem;}
+.st-key-calnav {margin-bottom: .2rem !important;}
+.st-key-calnav .cal-title {font-size: 1.35rem; min-width: 7.5rem;}
+.st-key-calnav div[class*="st-key-cal_prev"] button, .st-key-calnav div[class*="st-key-cal_next"] button,
+.st-key-cal_today button {border: none !important; background: #F3F5FA !important; border-radius: 10px !important;
+  height: 32px; min-height: 0;}
+.st-key-calnav div[class*="st-key-cal_prev"] button, .st-key-calnav div[class*="st-key-cal_next"] button {width: 32px;}
+.st-key-cal_today {margin-left: 0 !important;} .st-key-cal_today button p {font-weight: 700; font-size: .82rem;}
+.st-key-cal_legend {margin-left: auto;}
+div[class*="st-key-cal_cats"] {margin: 0 !important;}
+div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 0; height: 28px; padding: 0 11px;}
+.st-key-calgrid [data-testid="stHorizontalBlock"] {gap: 6px !important;}
+.st-key-calgrid > [data-testid="stLayoutWrapper"], .st-key-calgrid {gap: 6px !important;}
+.st-key-calgrid .cal-wk {font-size: .82rem !important; font-weight: 800; color: #7A869C; padding: 0 0 2px !important;}
+.st-key-calgrid .cal-wk.sat {color: #3D7BE0 !important;} .st-key-calgrid .cal-wk.sun {color: #E0566A !important;}
+.st-key-calgrid div[class*="st-key-cell_"] {min-height: 112px !important; padding: 32px 6px 7px !important; gap: 3px !important;
+  background: #FAFBFD; border-radius: 14px !important; box-shadow: none !important; border: 1.5px solid transparent !important;}
+.st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 4px 14px rgba(30, 50, 90, .08) !important; background: #fff;}
+.st-key-calgrid .cal-out {min-height: 112px !important; background: transparent !important; border: none !important;
+  font-size: .9rem !important; padding: 8px 10px !important; color: #CBD2DE !important;}
+.st-key-calgrid div[class*="st-key-day_"] button {padding: 5px 6px !important; border-radius: 14px !important;}
+.st-key-calgrid div[class*="st-key-day_"] button strong {font-size: .9rem !important; min-width: 24px !important; height: 24px !important;}
+.st-key-calgrid div[class*="st-key-day_"] button:hover strong {background: rgba(45, 143, 213, .10);}
+[data-testid="stElementContainer"]:has(> div .cal-dh) {position: absolute !important; top: 9px; left: 36px; right: 8px;
+  width: auto !important; z-index: 1; pointer-events: none;}
+.st-key-calgrid [data-testid="stMarkdownContainer"]:has(.cal-dh) {margin: 0 !important;}
+.cal-dh {display: flex; align-items: center; gap: 4px; height: 18px;}
+.cal-dots {display: flex; gap: 2px;} .cal-dots i {width: 6px; height: 6px; border-radius: 50%; display: block;}
+.cal-tot {margin-left: auto; font-size: .7rem; font-weight: 700; color: #8A96AB;}
+.c-test {background: #E35D78;} .c-make {background: #1FA971;} .c-anal {background: #7C5CE0;}
+.c-edu {background: #E39A2D;} .c-sup {background: #2E9BD6;} .c-etc {background: #8A97A8;}
+/* 스티커 한 줄: 장비 이름 ··· 시간 */
+.st-key-calgrid div[class*="st-key-ent_"] button {background: var(--chip-bg, #F1F3F7) !important; border-radius: 8px !important;
+  padding: 3px 7px 3px 12px !important; min-height: 0 !important; box-shadow: none !important; position: relative;}
+.st-key-calgrid div[class*="st-key-ent_"] button::before {content: ''; position: absolute; left: 5px; top: 5px; bottom: 5px;
+  width: 3px; border-radius: 3px; background: var(--chip-fg, #8A97A8);}
+.st-key-calgrid div[class*="st-key-ent_"] button div[data-testid="stMarkdownContainer"] {display: flex; align-items: center; gap: 4px;}
+.st-key-calgrid div[class*="st-key-ent_"] button p {font-size: .72rem !important; line-height: 1.5 !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:first-child {flex: 1; min-width: 0; font-weight: 700; color: #2A3448 !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:first-child::before {content: none !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:last-child {flex: none; font-weight: 800; color: var(--chip-fg) !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button:hover {transform: none; filter: brightness(.97);}
+.st-key-calgrid div[class*="st-key-x_"] {top: -4px !important; right: -4px !important;}
+.st-key-calgrid div[class*="st-key-x_"] button {height: 18px !important; width: 18px !important; border-radius: 50% !important;}
+.st-key-calgrid div[class*="st-key-more_"] p {font-size: .68rem !important; font-weight: 700; color: #8A96AB; margin-left: 6px;}
+.st-key-calgrid div[class*="st-key-cf_"] {padding: 4px 5px !important; gap: 3px !important;}
+/* 입력 카드 */
+.st-key-calwrap [data-testid="stHorizontalBlock"] {align-items: stretch !important;}
+.st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) > [data-testid="stVerticalBlock"] {height: 100%;}
+.st-key-ep_panel {position: sticky !important; top: 4rem; max-height: calc(100vh - 5rem); overflow-y: auto !important;
+  padding: 16px !important; border-radius: 22px !important; gap: .5rem !important;
+  box-shadow: 0 1px 2px rgba(30, 50, 90, .04), 0 10px 30px rgba(30, 50, 90, .06) !important;}
+@media (max-width: 1500px) {
+  .st-key-calwrap [data-testid="stColumn"]:not(:has(.st-key-ep_panel)) {width: 100% !important; flex: 1 1 100% !important;}
+  .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) {position: fixed !important; right: 16px; top: 4rem;
+    width: 360px !important; flex: none !important; z-index: 900;}
+  .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) > [data-testid="stVerticalBlock"] {height: auto;}
+  .st-key-ep_panel {position: relative !important; top: 0; box-shadow: 0 18px 48px rgba(15, 30, 60, .25) !important;}
+}
+.ep-d {font-size: 1.2rem !important;} .ep-d em {font-size: .85rem !important;}
+.ep-n {font-size: .75rem !important;}
+.st-key-ep_new button {height: 32px !important; padding: 0 11px !important; font-size: .8rem; border-radius: 10px !important;}
+.st-key-ep_close button {height: 32px !important; width: 32px !important; border-radius: 10px !important;}
+.st-key-ep_list {gap: 4px !important;}
+.st-key-ep_list button {padding: 6px 10px 6px 24px !important; border-radius: 10px !important;}
+.st-key-ep_list button::before {left: 10px !important; width: 8px !important; height: 8px !important; margin-top: -4px !important;}
+.st-key-ep_list button div[data-testid="stMarkdownContainer"] {display: flex; align-items: center; gap: 6px;}
+.st-key-ep_list button p {font-size: .76rem !important;}
+.st-key-ep_list button p:first-child {flex: 1; min-width: 0; font-size: .8rem !important;}
+.st-key-ep_list button p:last-child {flex: none;}
+.ep-empty {padding: 9px !important; font-size: .8rem !important;}
+.st-key-ep_form {border-top: 1px dashed #E3E8F0 !important; padding-top: 10px !important; gap: .5rem !important;}
+.ep-t {font-size: .92rem !important;}
+.st-key-ep_form [data-testid="stWidgetLabel"] p, .num-l {font-size: .72rem !important; font-weight: 700; color: #7A869C !important;}
+.num-l {margin-bottom: 4px;}
+.st-key-ep_form [data-baseweb="select"] > div, .st-key-ep_form [data-baseweb="input"] {min-height: 36px;}
+.st-key-ep_form [data-baseweb="select"] div, .st-key-ep_form input, .st-key-ep_form textarea {font-size: .82rem !important;}
+.st-key-ep_form [data-testid="stButtonGroup"] button {height: 28px !important; padding: 0 10px !important;}
+.st-key-ep_form [data-testid="stButtonGroup"] button p {font-size: .76rem !important; font-weight: 700 !important;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(1) {--pc: #E35D78; --pb: #FDEEF1;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(2) {--pc: #1FA971; --pb: #E6F6EE;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(3) {--pc: #7C5CE0; --pb: #EFEAFE;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(4) {--pc: #E39A2D; --pb: #FDF3E2;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(5) {--pc: #2E9BD6; --pb: #E5F3FB;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button {background: var(--pb, #F3F5FA) !important;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button p {color: var(--pc, #5A6680) !important;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: var(--pc, #2D8FD5) !important;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
+div[class*="st-key-ep_type_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #2D3A55 !important;}
+/* 숫자 칸 (−/＋) */
+div[class*="st-key-num_"] {gap: 0 !important;}
+div[class*="st-key-num_"] [data-testid="stMarkdownContainer"] {margin-bottom: 0 !important;}
+div[class*="st-key-numr_"] {background: #F3F5FA; border-radius: 10px; padding: 3px; flex-wrap: nowrap !important; min-height: 36px;}
+div[class*="st-key-numr_"] [data-testid="stElementContainer"]:has(button) {width: auto !important; flex: none;}
+div[class*="st-key-numr_"] button {min-height: 0 !important; height: 28px; width: 28px; padding: 0 !important; border: none !important;
+  background: #fff !important; border-radius: 8px !important; box-shadow: 0 1px 2px rgba(0, 0, 0, .06);}
+div[class*="st-key-numr_"] button p {font-size: .9rem !important; color: #5A6680; font-weight: 700;}
+div[class*="st-key-numr_"] [data-baseweb="input"] {background: transparent !important; border: none !important; min-height: 28px !important;}
+div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding: 0 2px !important;}
+.st-key-ep_form [data-testid="stExpander"] details {border: none !important; background: transparent;}
+.st-key-ep_form [data-testid="stExpander"] summary {padding: 0 !important; font-size: .78rem; color: var(--accent); font-weight: 700;}
+.st-key-ep_save button, .st-key-ep_del button {height: 40px !important;}
+/* ===== v4: 구역형 달력 (시험/제조/분석 줄) + 시안 색 ===== */
+.st-key-calgrid div[class*="st-key-cell_"] {min-height: 150px !important; padding: 34px 6px 8px !important; gap: 4px !important;}
+.st-key-calgrid .cal-out {min-height: 150px !important;}
+.st-key-calgrid div[class*="st-key-day_"] button p {font-size: .72rem; color: #8A96AB; font-weight: 700;}
+.st-key-calgrid div[class*="st-key-sec_"] {background: transparent !important; padding: 0 !important; gap: 3px !important;
+  border: none !important; border-radius: 0 !important;}
+.st-key-calgrid div[class*="st-key-sec_"]:not(:has(div[class*="st-key-er_"])):not(:has(div[class*="st-key-cf_"])) {
+  border: 1px dashed color-mix(in srgb, var(--sec-fg) 30%, transparent) !important; border-radius: 999px !important;
+  padding: 0 4px !important;}
+.cal-sec-h {font-size: .68rem !important; line-height: 1.55 !important; padding: 0 4px !important;}
+.cal-sec-h.none {opacity: .55 !important;}
+.st-key-calgrid div[class*="st-key-sec_edu_"] {--sec-bg: #FDF3E2; --sec-fg: #E39A2D; --chip-fg: #E39A2D;}
+.st-key-calgrid div[class*="st-key-sec_sup_"] {--sec-bg: #E5F3FB; --sec-fg: #2E9BD6; --chip-fg: #2E9BD6;}
+/* 스티커: 연한 구분 색 + 왼쪽 진한 막대, 1줄 장비·시간 / 2줄 업체 */
+.st-key-calgrid div[class*="st-key-ent_"] button {padding: 5px 8px 5px 13px !important; border-radius: 9px !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button::before {top: 6px !important; bottom: 6px !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button div[data-testid="stMarkdownContainer"] {display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto; column-gap: 6px; row-gap: 1px; width: 100%;}
+.st-key-calgrid div[class*="st-key-ent_"] button p {white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0 !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:nth-child(1) {font-size: .76rem !important; font-weight: 800; color: #2A3448 !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:nth-child(2) {font-size: .74rem !important; font-weight: 800; color: var(--chip-fg) !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:nth-child(3) {grid-column: 1 / -1; font-size: .68rem !important;
+  font-weight: 500 !important; color: #6B7790 !important;}
+.st-key-calgrid div[class*="st-key-ent_"] button > div > span {flex: 1 1 auto; min-width: 0; width: 100%;}
+.st-key-calgrid div[class*="st-key-ent_"] button > div, .st-key-calgrid div[class*="st-key-ent_"] button div[data-testid="stMarkdownContainer"] {
+  width: 100% !important; min-width: 0;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:nth-child(2) {text-align: right;}
+.st-key-calgrid div[class*="st-key-more_"] p {margin-left: 4px !important;}
+.st-key-calgrid .cal-wk {padding-bottom: 8px !important;}
+.st-key-calwrap [data-testid="stHorizontalBlock"]:has(.st-key-ep_panel) {flex-wrap: nowrap !important;}
+.st-key-calwrap [data-testid="stColumn"]:not(:has(.st-key-ep_panel)) {min-width: 0 !important;}
+.st-key-calgrid [data-testid="stColumn"], .st-key-calgrid div[class*="st-key-cell_"] {min-width: 0 !important;}
 </style>"""
 
 
@@ -389,7 +534,7 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
         out.setdefault(r.day.date(), []).append({
             "id": int(r.log_id), "rec": rec,
             "equip": name_of.get(int(r.equip_id), "?"), "company": db.to_str(lg["company"]) or "내부",
-            "cat": cat_of.get(int(r.equip_id), "기타"),
+            "cat": PURPOSE_CAT.get(db.to_str(lg["purpose"]), "지원"),
             "hours": float(r.hours), "staff": db.to_str(lg["created_by"]),
             "period": f"{lg['start_date']:%m/%d}~{lg['end_date']:%m/%d}" if multi else "",
         })
@@ -415,11 +560,13 @@ def _day_head(d: dt.date, entries: list[dict], holiday: bool, today: bool) -> tu
 
 
 # 장비용도(장비 정보) → 달력 구분. 색은 구분마다 고정 (배경, 진한 색)
-CATS = {"시험": ("#FDECEF", "#E35D78"), "제조": ("#E5F6EC", "#1FA971"), "분석": ("#EEE9FD", "#7C5CE0"),
-        "기타": ("#EEF1F5", "#8A97A8")}
+CATS = {"시험": ("#FDEEF1", "#E35D78"), "제조": ("#E6F6EE", "#1FA971"), "분석": ("#EFEAFE", "#7C5CE0"),
+        "교육": ("#FDF3E2", "#E39A2D"), "지원": ("#E5F3FB", "#2E9BD6"), "기타": ("#EEF1F5", "#8A97A8")}
 CAT_ORDER = list(CATS)
-FIXED_CATS = ["시험", "제조", "분석"]  # 칸마다 비어 있어도 항상 보이는 구역
-CAT_KEY = {"시험": "test", "제조": "make", "분석": "anal", "기타": "etc"}
+FIXED_CATS = ["시험", "제조", "분석", "교육", "지원"]
+LANE_CATS = ["시험", "제조", "분석"]  # 칸마다 비어 있어도 보이는 구역
+CAT_KEY = {"시험": "test", "제조": "make", "분석": "anal", "교육": "edu", "지원": "sup", "기타": "etc"}
+PURPOSE_CAT = {"시험": "시험", "생산": "제조", "분석": "분석", "계측": "분석", "교육": "교육", "기타": "지원"}
 
 
 def _cat_of(use: str) -> str:
@@ -469,6 +616,8 @@ def _entry_text(e: dict) -> str:
 
 def _reset_period_pick() -> None:
     st.session_state.cal_pnonce = st.session_state.get("cal_pnonce", 0) + 1  # 표 선택을 풀어 창이 다시 뜨지 않게
+    for k in ("pe_h", "pe_f", "pe_n"):
+        st.session_state.pop(k, None)
 
 
 @st.dialog("기간 실적 고치기", width="medium", on_dismiss=_reset_period_pick)
@@ -483,9 +632,9 @@ def _edit_period(rec: dict, label_of: dict, comp_opts: list, staff_opts: list) -
     opts = [""] + comp_opts + ([comp] if comp and comp not in comp_opts else [])
     company = st.selectbox("업체", opts, index=opts.index(comp), format_func=lambda v: v or "(내부 사용)", key="pe_c")
     c1, c2, c3 = st.columns(3)
-    hours = c1.number_input("사용시간(h)", min_value=0, step=1, value=int(rec["hours"]), key="pe_h")
-    fee = c2.number_input("사용료(원)", min_value=0, step=1000, value=int(rec["fee"]), key="pe_f")
-    samples = c3.number_input("시료수", min_value=0, step=1, value=int(rec["samples"]), key="pe_n")
+    hours = num_input(c1, "사용시간(h)", f"pe_h_{rec['id']}", float(rec["hours"]), 1, 0)
+    fee = num_input(c2, "사용료(원)", f"pe_f_{rec['id']}", float(rec["fee"]), 1000, 0, steppers=False)
+    samples = num_input(c3, "시료수", f"pe_n_{rec['id']}", float(rec["samples"]), 1, 0)
     c1, c2, c3 = st.columns(3)
     p_opts = seed.purpose_choices(rec["purpose"])
     purpose = c1.selectbox("사용목적", p_opts, index=p_opts.index(rec["purpose"]) if rec["purpose"] in p_opts else 1,
@@ -523,6 +672,7 @@ def _click_day(d: dt.date, clip: dict | None, logs: pd.DataFrame) -> None:
     """날짜 칸을 누름: 그날을 선택만 함 (붙여넣기는 Ctrl+V)."""
     _clear_sel()
     st.session_state.pop("cal_pick", None)
+    st.session_state.cal_open = True
     _pick_day(d)
 
 
@@ -531,6 +681,7 @@ def _click_entry(d: dt.date, e: dict, clip: dict | None, logs: pd.DataFrame) -> 
     _clear_sel()
     st.session_state.cal_pick = {"day": d, "id": e["id"], "rec": e["rec"], "period": bool(e["period"]),
                                  "label": f"{e['equip']} · {e['company']} · {_hours(e['hours'])}"}
+    st.session_state.cal_open = True
     _pick_day(d)
 
 
@@ -838,32 +989,34 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
     # 날짜 버튼은 칸 전체를 덮음 → 칸 어디를 눌러도 선택/붙여넣기 (CSS 참고)
     cell.button(head, key=f"day_{d}", type="tertiary", width="stretch",
                 on_click=_click_day, args=(d, clip, logs))
-    # 구분 알약: 시험·제조·분석 건수가 항상 보임 (없으면 회색)
-    cats = [c for c in shown_cats if c in FIXED_CATS or any(e["cat"] == c for e in entries)]
-    chips = "".join(
-        f"<span class='cal-chip c-{CAT_KEY[c]}{' on' if n else ''}'>{c} {n}</span>"
-        for c in cats for n in [sum(e["cat"] == c for e in entries)])
-    cell.markdown(f"<div class='cal-chips'>{chips}</div>", unsafe_allow_html=True)
-    # 실적은 구분 순서대로 색깔 스티커로
-    for e in entries[:CELL_LINES]:
-        label = f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}"
-        if st.session_state.get("cal_xconfirm") == (d, e["id"]):
-            cf = cell.container(key=f"cf_{d}_{e['id']}")
-            cf.markdown(f"<div class='cal-cf-q'><b>{html.escape(_cut(e['equip'], 14))}</b><br>삭제할까요?</div>",
-                        unsafe_allow_html=True)
-            with cf.container(horizontal=True, gap="small"):
-                st.button("삭제", key=f"cfy_{d}_{e['id']}", type="primary", width="stretch",
-                          on_click=_confirm_x, args=(d, e))
-                st.button("취소", key=f"cfn_{d}_{e['id']}", width="stretch", on_click=_cancel_x)
-            continue
-        row = cell.container(key=f"er_{d}_{e['id']}")
-        row.button(label, key=f"ent_{d}_{e['id']}", width="stretch",
-                   on_click=_click_entry, args=(d, e, clip, logs))
-        if not e["period"]:  # 기간 실적은 입력 카드의 '기간 실적'에서 고침
-            row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
-                       on_click=_click_x, args=(d, e))
-    if len(entries) > CELL_LINES:
-        cell.container(key=f"more_{d}").markdown(f"+{len(entries) - CELL_LINES}건 더")
+    # 구역: 시험·제조·분석은 비어 있어도 항상, 교육·지원은 실적이 있을 때만
+    cats = [c for c in shown_cats if c in LANE_CATS or any(e["cat"] == c for e in entries)]
+    for c in cats:
+        ents = [e for e in entries if e["cat"] == c]
+        sec = cell.container(key=f"sec_{CAT_KEY[c]}_{d}")
+        hours = _hours(sum(e["hours"] for e in ents)) if ents else ""
+        sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{c}<b>{hours}</b></div>",
+                     unsafe_allow_html=True)
+        for e in ents[:CELL_LINES]:
+            short = e["equip"].split("(")[0].strip() or e["equip"]
+            label = f"{_md(short)}\n\n{_hours(e['hours'])}\n\n{_md(e['company'])}"
+            if st.session_state.get("cal_xconfirm") == (d, e["id"]):
+                cf = sec.container(key=f"cf_{d}_{e['id']}")
+                cf.markdown(f"<div class='cal-cf-q'><b>{html.escape(_cut(short, 10))}</b> 삭제할까요?</div>",
+                            unsafe_allow_html=True)
+                with cf.container(horizontal=True, gap="small"):
+                    st.button("삭제", key=f"cfy_{d}_{e['id']}", type="primary", width="stretch",
+                              on_click=_confirm_x, args=(d, e))
+                    st.button("취소", key=f"cfn_{d}_{e['id']}", width="stretch", on_click=_cancel_x)
+                continue
+            row = sec.container(key=f"er_{d}_{e['id']}")
+            row.button(label, key=f"ent_{d}_{e['id']}", width="stretch",
+                       on_click=_click_entry, args=(d, e, clip, logs))
+            if not e["period"]:
+                row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
+                           on_click=_click_x, args=(d, e))
+        if len(ents) > CELL_LINES:
+            sec.container(key=f"more_{d}_{CAT_KEY[c]}").markdown(f"+{len(ents) - CELL_LINES}")
     if entries:
         side = "r" if d.weekday() >= 4 else ""  # 오른쪽 칸은 카드를 왼쪽으로 펼침
         cell.container(key=f"card{side}_{d}").markdown(_card_html(d, entries), unsafe_allow_html=True)
@@ -886,8 +1039,15 @@ def render(header: bool = True) -> None:
     day: dt.date = st.session_state.setdefault("cal_day", today)
     month: dt.date = st.session_state.setdefault("cal_month", day.replace(day=1))
 
-    # ── 달력 ──────────────────────────────────────────────
-    with st.container(key="calnav", horizontal=True, vertical_alignment="center", gap="small"):
+    # ── 달력 (흰 카드 하나) + 날짜를 누르면 오른쪽에 입력 카드 ──────────────
+    is_open = bool(st.session_state.get("cal_open"))
+    wrap = st.container(key="calwrap")
+    if is_open:
+        left, right = wrap.columns([2.6, 1], gap="medium")
+    else:
+        left, right = wrap, None
+    card = left.container(key="calcard")
+    with card.container(key="calnav", horizontal=True, vertical_alignment="center", gap="small"):
         if st.button("", icon=":material/chevron_left:", key="cal_prev", help="이전 달"):
             st.session_state.cal_month = _shift_month(month, -1)
             st.rerun()
@@ -896,7 +1056,8 @@ def render(header: bool = True) -> None:
         if st.button("", icon=":material/chevron_right:", key="cal_next", help="다음 달"):
             st.session_state.cal_month = _shift_month(month, 1)
             st.rerun()
-        if st.button("오늘", key="cal_today", icon=":material/today:"):
+        legend = st.container(key="cal_legend", width="content")
+        if st.button("오늘", key="cal_today"):
             _pick_day(today)
             st.rerun()
 
@@ -905,16 +1066,17 @@ def render(header: bool = True) -> None:
     daily = expand_daily(logs, cfg.get("alloc_mode", "spread"))
     in_month = daily[(daily["day"] >= pd.Timestamp(weeks[0][0])) & (daily["day"] <= pd.Timestamp(weeks[-1][-1]))]
     by_day = _cell_entries(in_month, logs, eq)
-    present = FIXED_CATS + (["기타"] if any(e["cat"] == "기타" for v in by_day.values() for e in v) else [])
-    shown = st.pills("구분", present, selection_mode="multi", default=present, key=f"cal_cats_{month}",
+    present = list(FIXED_CATS)
+    shown = legend.pills("구분", present, selection_mode="multi", default=present, key=f"cal_cats_{month}",
                      label_visibility="collapsed",
-                     format_func=lambda c: f"{c} {sum(e['cat'] == c for dd, v in by_day.items() if dd.month == month.month for e in v)}건")
+                     format_func=lambda c: f"{c} {sum(e['cat'] == c for dd, v in by_day.items() if dd.month == month.month for e in v)}")
     pill_css = ""
     for i, c in enumerate(present, start=1):
         bg, fg = CATS[c]
         b = f'div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button:nth-of-type({i})'
-        pill_css += (f"{b} {{border-color: {fg}55 !important; color: {fg} !important;}} "
-                     f"{b}[kind$='Active'] {{background: {bg} !important; border-color: {fg} !important;}} "
+        pill_css += (f"{b} {{border: none !important; color: {fg} !important; background: #F3F5FA !important; opacity: .7;}} "
+                     f"{b}[aria-checked='true'] {{background: {bg} !important; opacity: 1;}} "
+                     f"{b} p {{color: {fg} !important; font-weight: 700; font-size: .78rem;}} "
                      f"{b} p::before {{content: ''; display: inline-block; width: .55em; height: .55em; border-radius: 50%; "
                      f"background: {fg}; margin-right: .4em; vertical-align: .05em;}}")
     st.markdown(f"<style>{pill_css}</style>", unsafe_allow_html=True)
@@ -964,8 +1126,7 @@ def render(header: bool = True) -> None:
     import streamlit.components.v1 as components
     components.html(KEYS_JS, height=0)
 
-    left, right = st.container(key="calwrap").columns([2.5, 1], gap="medium")
-    grid = left.container(key="calgrid")
+    grid = card.container(key="calgrid")
     sel = ""
     for week in weeks:
         if week[5].month == month.month:
@@ -982,7 +1143,7 @@ def render(header: bool = True) -> None:
     for dd, ents in by_day.items():  # 실적 스티커 색 (구분별)
         if dd.month != month.month:
             continue
-        for e in ents[:CELL_LINES]:
+        for e in ents:
             bg, fg = CATS[e["cat"]]
             sel += f" .st-key-er_{dd}_{e['id']} {{--chip-bg: {bg}; --chip-fg: {fg}; --cat-label: '{e['cat']}';}}"
     if pick:  # 선택한 실적: 파란 테두리
@@ -1004,11 +1165,17 @@ def render(header: bool = True) -> None:
                 continue
             _day_cell(cols[i], d, by_day.get(d, []), selected=d == day, holiday=d in hol, today=d == today,
                       clip=clip, logs=logs, shown_cats=shown_cats)
-    left.markdown("<div class='cal-mobile-hint'>날짜를 누르면 아래에 그날 실적이 나옵니다. "
-                "다른 날로 복사는 '실적 목록'의 복제를 쓰세요.</div>", unsafe_allow_html=True)
+    card.markdown("<div class='cal-mobile-hint'>날짜를 누르면 그날 실적을 입력할 수 있어요.</div>",
+                  unsafe_allow_html=True)
 
-    with right:
-        _entry_panel(day, logs, eq, comp, cfg)
+    if right is not None:
+        with right:
+            _entry_panel(day, logs, eq, comp, cfg)
+
+
+def _close_panel() -> None:
+    st.session_state.cal_open = False
+    st.session_state.pop("cal_pick", None)
 
 
 def _new_entry() -> None:
@@ -1050,13 +1217,14 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                         f"<span class='ep-n'>실적 {len(rows)}건 · {_hours(total)}</span></div>",
                         unsafe_allow_html=True, width="stretch")
             st.button("새 실적", icon=":material/add:", key="ep_new", on_click=_new_entry)
+            st.button("", icon=":material/close:", key="ep_close", help="닫기", on_click=_close_panel)
         # 그날 실적 목록 (누르면 아래 칸에서 고침)
         with st.container(key="ep_list", gap="small"):
             if rows.empty:
                 st.markdown("<div class='ep-empty'>아직 실적이 없어요</div>", unsafe_allow_html=True)
             for r in rows.sort_values("id").to_dict("records"):
                 rid = int(r["id"])
-                c = cat_of.get(int(r["equip_id"]), "기타")
+                c = PURPOSE_CAT.get(db.to_str(r["purpose"]), "지원")
                 e = {"id": rid, "rec": r, "period": "", "equip": name_of.get(r["equip_id"], "?"),
                      "company": db.to_str(r["company"]) or "내부", "hours": float(r["hours"])}
                 st.button(f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}",
@@ -1086,7 +1254,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
         form = st.container(key="ep_form")
         with form:
             if cur is not None:
-                cc = cat_of.get(int(cur["equip_id"]), "기타")
+                cc = PURPOSE_CAT.get(db.to_str(cur["purpose"]), "지원")
                 bg, fg = CATS[cc]
                 tag = f"<span style='background:{bg};color:{fg}'>{cc}</span>"
             else:
@@ -1110,12 +1278,14 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                                           format_func=seed.purpose_label, key=f"ep_purp_{k}",
                                           default=db.to_str(cur["purpose"]) if cur is not None else "생산")
             c1, c2, c3 = st.columns([1.2, 1, 1], gap="small")
-            v_h = c1.number_input("사용시간(h)", 0, 24, int(cur["hours"]) if cur is not None else 8, 1, key=f"ep_h_{k}")
-            v_s = c2.number_input("시료수", 0, None, int(cur["samples"]) if cur is not None else 0, 1, key=f"ep_s_{k}")
-            v_f = c3.number_input("사용료(원)", 0, None, int(cur["fee"]) if cur is not None else 0, 1000, key=f"ep_f_{k}")
+            v_h = num_input(c1, "사용시간(h)", f"ep_h_{k}", float(cur["hours"]) if cur is not None else 8, 1, 0, 24)
+            v_s = num_input(c2, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 0, 1, 0)
+            v_f = num_input(c3, "사용료(원)", f"ep_f_{k}", float(cur["fee"]) if cur is not None else 0, 1000, 0,
+                            steppers=False)
             v_ov = st.text_input("지원개요", ov, placeholder="예: 전극 코팅", key=f"ep_ov_{k}")
-            v_ct = st.text_area("지원내용", content, height=90, placeholder="자세한 내용", key=f"ep_ct_{k}")
-            v_etc = st.text_input("기타", db.to_str(cur["etc"]) if cur is not None else "", key=f"ep_etc_{k}")
+            with st.expander("지원내용 · 기타", expanded=bool(content or (cur is not None and db.to_str(cur["etc"])))):
+                v_ct = st.text_area("지원내용", content, height=80, placeholder="자세한 내용", key=f"ep_ct_{k}")
+                v_etc = st.text_input("기타", db.to_str(cur["etc"]) if cur is not None else "", key=f"ep_etc_{k}")
 
             with st.container(horizontal=True, gap="small", key="ep_btns"):
                 save = st.button("저장" if cur is not None else "추가", icon=":material/check:", type="primary",

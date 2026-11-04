@@ -181,3 +181,36 @@ def new_company_dialog() -> None:
         for k in [k for k in st.session_state if str(k).startswith("nc_")]:
             st.session_state.pop(k, None)
         st.rerun()
+
+
+def _num_step(key: str, delta: float, lo: float, hi: float | None) -> None:
+    try:
+        v = float(str(st.session_state.get(key, "0")).replace(",", "") or 0)
+    except ValueError:
+        v = 0
+    v = max(lo, v + delta)
+    if hi is not None:
+        v = min(hi, v)
+    st.session_state[key] = f"{int(v):,}" if v == int(v) else f"{v:g}"
+
+
+def num_input(container, label: str, key: str, value: float, step: float = 1, lo: float = 0,
+              hi: float | None = None, steppers: bool = True) -> float:
+    """숫자 칸 (−/＋ 버튼 + 직접 입력). Streamlit 숫자 칸 대신 글자 칸을 써서 가볍고 오류가 없음."""
+    if key not in st.session_state:
+        st.session_state[key] = f"{int(value):,}" if float(value) == int(value) else f"{value:g}"
+    box = container.container(key=f"num_{key}", gap=None)
+    box.markdown(f"<div class='num-l'>{label}</div>", unsafe_allow_html=True)
+    with box.container(horizontal=True, gap=None, vertical_alignment="center", key=f"numr_{key}"):
+        if steppers:
+            st.button("−", key=f"{key}_dn", on_click=_num_step, args=(key, -step, lo, hi))
+        st.text_input(label, key=key, label_visibility="collapsed")
+        if steppers:
+            st.button("＋", key=f"{key}_up", on_click=_num_step, args=(key, step, lo, hi))
+    try:
+        v = float(str(st.session_state.get(key, "0")).replace(",", "") or 0)
+    except ValueError:
+        box.caption(":red[숫자만 입력하세요]")
+        return float(value)
+    v = max(lo, v)
+    return min(hi, v) if hi is not None else v
