@@ -40,7 +40,6 @@ CSS = """<style>
   width: 2.25rem; height: 2.25rem; min-height: 0; padding: 0; border-radius: 6px;}
 .st-key-calnav div[class*="st-key-cal_today"] {margin-left: auto;}
 /* 화면 폭을 넓게 쓰고, 넓은 화면에서는 달력 오른쪽에 입력 카드 */
-.block-container {max-width: 2300px !important;}
 /* 좁은 화면: 입력 카드는 오른쪽에 떠 있는 서랍처럼 */
 @media (max-width: 1500px) {
   .st-key-calwrap > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:not(:has(.st-key-ep_panel)) {
@@ -392,8 +391,8 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 .st-key-ep_form [data-testid="stExpander"] summary {padding: 0 !important; font-size: .78rem; color: var(--accent); font-weight: 700;}
 .st-key-ep_save button, .st-key-ep_del button {height: 40px !important;}
 /* ===== v4: 구역형 달력 (시험/제조/분석 줄) + 시안 색 ===== */
-.st-key-calgrid div[class*="st-key-cell_"] {min-height: 150px !important; padding: 34px 6px 8px !important; gap: 4px !important;}
-.st-key-calgrid .cal-out {min-height: 150px !important;}
+.st-key-calgrid div[class*="st-key-cell_"] {min-height: 168px !important; padding: 34px 6px 8px !important; gap: 4px !important;}
+.st-key-calgrid .cal-out {min-height: 168px !important;}
 .st-key-calgrid div[class*="st-key-day_"] button p {font-size: .72rem; color: #8A96AB; font-weight: 700;}
 .st-key-calgrid div[class*="st-key-sec_"] {background: transparent !important; padding: 0 !important; gap: 3px !important;
   border: none !important; border-radius: 0 !important;}
@@ -1041,6 +1040,8 @@ def render(header: bool = True) -> None:
 
     # ── 달력 (흰 카드 하나) + 날짜를 누르면 오른쪽에 입력 카드 ──────────────
     is_open = bool(st.session_state.get("cal_open"))
+    if is_open:  # 입력 카드가 열릴 때만 넓게, 닫히면 다른 화면과 같은 폭
+        st.markdown("<style>.block-container {max-width: 2300px !important;}</style>", unsafe_allow_html=True)
     wrap = st.container(key="calwrap")
     if is_open:
         left, right = wrap.columns([2.6, 1], gap="medium")
