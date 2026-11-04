@@ -45,13 +45,20 @@ def render_itube() -> None:
         sel = logs[(logs["start_date"] <= pd.Timestamp(e)) & (logs["end_date"] >= pd.Timestamp(s))]
     if types:
         sel = sel[sel["usage_type"].isin(types)]
-    sel = sel.sort_values(["start_date", "equip_name", "id"])
+    sel = sel.sort_values(["start_date", "equip_name", "id"]).copy()
+    # 세부장비 실적은 ITUBE번호가 있는 상위 장비 이름으로 올림. 번호가 없는 장비(미등록) 실적은 뺌
+    no_code = sel[sel["itube_code"] == ""]
+    sel = sel[sel["itube_code"] != ""].copy()
+    sel["equip_name"], sel["equip_code"], sel["equip_kind"] = sel["itube_name"], sel["itube_code"], sel["itube_kind"]
 
     m1, m2, m3 = st.columns(3)
     m1.metric("건수", f"{len(sel):,}")
     m2.metric("사용시간", f"{sel['hours'].sum():,.0f} h")
     m3.metric("사용료", f"{sel['fee'].sum():,.0f} 원")
 
+    if not no_code.empty:
+        names = ", ".join(sorted(set(no_code["equip_name"])))
+        st.caption(f"ITUBE번호가 없는 장비 실적 {len(no_code)}건은 넣지 않았습니다: {names}")
     records = sel.to_dict("records")
     issues = []
     for r in records:
@@ -69,7 +76,7 @@ def render_itube() -> None:
     fname = st.text_input("파일 이름", value=_itube_filename(cfg, s, e))
     template = base64.b64decode(cfg["template_b64"]) if cfg.get("template_b64") else None
     if records:
-        data = itube.make_itube_file(records, list(zip(eq["name"], eq["code"])), template)
+        data = itube.make_itube_file(records, [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], template)
         st.download_button("i-Tube 장비일지 내려받기", data=data, file_name=fname, mime=XLSX,
                            type="primary", width="stretch", icon=":material/download:")
         if template:

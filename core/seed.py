@@ -111,7 +111,8 @@ ITEMS = {ind: _range_values(_NAMES[ind]) for ind in INDUSTRIES}
 SUBITEMS = {item: _range_values(_NAMES[item]) for items in ITEMS.values() for item in items}
 ALL_ITEMS = sorted({i for v in ITEMS.values() for i in v})
 ALL_SUBITEMS = sorted({s for v in SUBITEMS.values() for s in v})
-EQUIP_KINDS = ["주장비", "부장비"]
+EQUIP_KINDS = ["주장비", "부장비"]  # i-Tube 장비구분
+EQUIP_KINDS_ALL = EQUIP_KINDS + ["세부장비"]  # 세부장비는 i-Tube에 상위 장비 이름으로 올라감
 YN = ["Y", "N"]
 
 DETAIL_LABELS = ("지원개요", "인증/인정/시험법", "지원내용")

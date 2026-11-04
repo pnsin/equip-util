@@ -170,7 +170,7 @@ def group_util(summary: pd.DataFrame, by: str) -> pd.DataFrame:
 
 
 def monthly_matrix(daily: pd.DataFrame, equip: pd.DataFrame, end: dt.date, n: int, default_annual: float,
-                   cutoff: dt.date | None) -> pd.DataFrame:
+                   cutoff: dt.date | None, tree: pd.DataFrame | None = None) -> pd.DataFrame:
     """장비 × 최근 n개월 가동률 표 (행: equip_id, 열: 'yy.mm')."""
     months = []
     cur = dt.date(end.year, end.month, 1)
@@ -183,7 +183,7 @@ def monthly_matrix(daily: pd.DataFrame, equip: pd.DataFrame, end: dt.date, n: in
         if cutoff and ms > cutoff:
             continue
         me = effective_end(ms, me, cutoff)
-        sm = equipment_summary(daily, equip, ms, me, default_annual)
+        sm = equipment_summary(daily, equip, ms, me, default_annual, tree)
         out[short_label("월", ms)] = sm.set_index("equip_id")["가동률"]
     return pd.DataFrame(out)
 
@@ -201,13 +201,36 @@ def available_hours(eq_row, s: dt.date, e: dt.date, default_annual: float) -> fl
 
 
 def equipment_summary(daily: pd.DataFrame, equip: pd.DataFrame, s: dt.date, e: dt.date,
-                      default_annual: float) -> pd.DataFrame:
+                      default_annual: float, tree: pd.DataFrame | None = None) -> pd.DataFrame:
+    """장비별 사용시간·가용시간·가동률.
+
+    세부장비의 사용시간은 상위 장비에 더해집니다 (상위 장비 = 자신 + 모든 하위 장비의 합).
+    산정 대상(KPI)은 상위 장비가 이미 대상이면 하위 장비는 빼서 전체 합계에서 두 번 세지 않게 합니다.
+    tree 는 전체 장비 목록 (equip 이 일부만 넘어올 때 하위 장비를 찾기 위해).
+    """
+    from core.db import descendants
+    tree = equip if tree is None else tree
     d = window(daily, s, e)
-    g = d.groupby("equip_id").agg(used=("hours", "sum"), fee=("fee", "sum"), cnt=("log_id", "nunique"))
+    g = d.groupby("equip_id").agg(used=("hours", "sum"), fee=("fee", "sum"))
+    desc = descendants(tree)
+    parent = ({int(i): (int(p) if pd.notna(p) else None) for i, p in zip(tree["id"], tree["parent_id"])}
+              if "parent_id" in tree else {})
+    kpi = dict(zip(tree["id"].astype(int), tree["in_kpi"].astype(bool))) if not tree.empty else {}
+
+    def ancestor_in_kpi(i: int) -> bool:
+        seen, cur = {i}, parent.get(i)
+        while cur is not None and cur not in seen:
+            if kpi.get(cur):
+                return True
+            seen.add(cur)
+            cur = parent.get(cur)
+        return False
+
     rows = []
     for r in equip.itertuples(index=False):
         avail = available_hours(r, s, e, default_annual)
-        used = float(g["used"].get(r.id, 0.0))
+        ids = desc.get(int(r.id), [int(r.id)])
+        used = float(sum(g["used"].get(i, 0.0) for i in ids))
         if avail == 0 and used == 0:
             continue  # 해당 기간에 보유하지 않은 장비
         rows.append({
@@ -221,11 +244,13 @@ def equipment_summary(daily: pd.DataFrame, equip: pd.DataFrame, s: dt.date, e: d
             "사용시간": used,
             "가용시간": avail,
             "가동률": used / avail * 100 if avail else None,
-            "사용료": float(g["fee"].get(r.id, 0.0)),
-            "건수": int(g["cnt"].get(r.id, 0)),
-            "KPI": bool(r.in_kpi),
+            "사용료": float(sum(g["fee"].get(i, 0.0) for i in ids)),
+            "건수": int(d.loc[d["equip_id"].isin(ids), "log_id"].nunique()) if len(d) else 0,
+            "KPI": bool(r.in_kpi) and not ancestor_in_kpi(int(r.id)),
+            "최상위": parent.get(int(r.id)) is None,
         })
-    cols = ["equip_id", "장비명", "장비번호", "센터", "용도", "구분", "담당자", "사용시간", "가용시간", "가동률", "사용료", "건수", "KPI"]
+    cols = ["equip_id", "장비명", "장비번호", "센터", "용도", "구분", "담당자", "사용시간", "가용시간", "가동률", "사용료", "건수",
+            "KPI", "최상위"]
     return pd.DataFrame(rows, columns=cols)
 
 
@@ -237,20 +262,22 @@ def totals(summary: pd.DataFrame) -> dict:
         "used": used,
         "avail": avail,
         "util": used / avail * 100 if avail else 0.0,
-        "fee": float(summary["사용료"].sum()) if not summary.empty else 0.0,
+        # 세부장비 사용료는 상위 장비에 이미 더해져 있으므로 최상위 장비만 합산
+        "fee": float(summary.loc[summary["최상위"], "사용료"].sum() if "최상위" in summary else summary["사용료"].sum())
+        if not summary.empty else 0.0,
         "equip_count": int(len(k)),
         "idle_count": int((k["사용시간"] <= 0).sum()) if not k.empty else 0,
     }
 
 
 def trend(daily: pd.DataFrame, equip: pd.DataFrame, kind: str, ref: dt.date, n: int,
-          default_annual: float, cutoff: dt.date | None) -> pd.DataFrame:
+          default_annual: float, cutoff: dt.date | None, tree: pd.DataFrame | None = None) -> pd.DataFrame:
     out = []
     s, e, label = period_bounds(kind, ref)
     for _ in range(n):
         e_eff = effective_end(s, e, cutoff)
         if cutoff is None or s <= cutoff:
-            t = totals(equipment_summary(daily, equip, s, e_eff, default_annual))
+            t = totals(equipment_summary(daily, equip, s, e_eff, default_annual, tree))
             out.append({"기간": short_label(kind, s), "기간명": label, "시작": s,
                         "사용시간": t["used"], "가용시간": t["avail"], "가동률": t["util"], "사용료": t["fee"]})
         s, e, label = period_bounds(kind, s - dt.timedelta(days=1))

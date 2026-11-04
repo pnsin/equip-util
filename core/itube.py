@@ -224,7 +224,7 @@ def make_report(period_label: str, summary: pd.DataFrame, tot: dict, monthly: pd
         ("연간 기준시간(h)", annual),
         ("작성일", dt.date.today().isoformat()),
     ]
-    eq = summary.drop(columns=["equip_id"]).copy()
+    eq = summary.drop(columns=["equip_id", "최상위"], errors="ignore").copy()
     eq["KPI"] = eq["KPI"].map({True: "대상", False: "제외"})
     eq["목표달성"] = eq["가동률"].map(lambda v: "" if v is None or pd.isna(v) else ("달성" if v >= target else "미달"))
     eq = eq.sort_values("가동률", ascending=False, na_position="last").round({"사용시간": 1, "가용시간": 1, "가동률": 1, "사용료": 0})
