@@ -170,7 +170,7 @@ def merge_with_existing(parsed: list[dict], existing: pd.DataFrame) -> list[dict
         if hit is not None:  # 앱에서 넣어 둔 값은 엑셀이 비어 있을 때 살림
             for k in ("annual_hours", "acquired_on", "retired_on", "in_kpi"):
                 rec[k] = hit.get(k)
-            for k in ("manager", "model", "location", "use", "nfec", "note"):
+            for k in ("manager", "model", "location", "use", "nfec"):
                 if not rec.get(k) and str(hit.get(k) or "").strip():
                     rec[k] = hit[k]
         elif p["parent_tmp"] is None and not p["code"]:
