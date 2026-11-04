@@ -106,6 +106,18 @@ def _range_values(ref: str) -> list[str]:
 _NAMES = dict(DEFINED_NAMES)
 PURPOSES = SHEET2_COLUMNS["A"]
 USAGE_TYPES = SHEET2_COLUMNS["B"]
+# 화면에 보이는 사용목적 (팀 용어). 저장은 i-Tube 값 그대로 (제조 = 생산, 지원 = 기타)
+PURPOSE_CHOICES = ["시험", "생산", "분석", "교육", "기타"]
+PURPOSE_LABEL = {"생산": "제조", "기타": "지원"}
+
+
+def purpose_label(code: str) -> str:
+    return PURPOSE_LABEL.get(code, code)
+
+
+def purpose_choices(current: str = "") -> list[str]:
+    """입력 칸에 보일 사용목적 (예전 값 '계측'은 그 실적을 고칠 때만 보임)."""
+    return PURPOSE_CHOICES + ([current] if current in PURPOSES and current not in PURPOSE_CHOICES else [])
 INDUSTRIES = _range_values(_NAMES["업종"])
 ITEMS = {ind: _range_values(_NAMES[ind]) for ind in INDUSTRIES}
 SUBITEMS = {item: _range_values(_NAMES[item]) for items in ITEMS.values() for item in items}

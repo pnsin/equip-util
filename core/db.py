@@ -539,14 +539,14 @@ def undo_last() -> str | None:
     return entry["label"]
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=120)
 def load_trash() -> pd.DataFrame:
     df = get_store().read("trash")
     df["deleted_at"] = pd.to_datetime(df["deleted_at"], errors="coerce")
     return df.sort_values("deleted_at", ascending=False).reset_index(drop=True)
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=120)
 def load_history() -> pd.DataFrame:
     df = get_store().read("history")
     df["at"] = pd.to_datetime(df["at"], errors="coerce")
@@ -628,7 +628,7 @@ def _settings_raw() -> dict[str, str]:
     return {to_str(k): str(v) for k, v in zip(df["key"], df["value"]) if to_str(k)}
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=120)
 def get_settings() -> dict:
     plain, chunks = {}, {}
     for k, v in _settings_raw().items():
@@ -755,7 +755,7 @@ def descendants(eq: pd.DataFrame) -> dict[int, list[int]]:
     return out
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=120)
 def load_equipment() -> pd.DataFrame:
     df = _equipment_frame(get_store().read("equipment"))
     names = dict(zip(df["id"], df["name"]))
@@ -849,7 +849,7 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
 COMPANY_TEXT = ("name", "brn", "contact", "phone", "industry", "item", "sub_item", "note")
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=120)
 def load_companies() -> pd.DataFrame:
     df = get_store().read("companies").copy()
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
@@ -912,7 +912,7 @@ def save_companies(edited: pd.DataFrame) -> None:
 STAFF_TEXT = ("name", "phone", "email", "role", "note")
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=120)
 def load_staff() -> pd.DataFrame:
     df = get_store().read("staff").copy()
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
@@ -986,7 +986,7 @@ def _usage_frame(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=120)
 def load_logs() -> pd.DataFrame:
     df = _usage_frame(get_store().read("usage")).drop(columns=["equip_ref"])
     eq = load_equipment()[["id", "name", "code", "kind"]].rename(columns={
