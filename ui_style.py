@@ -215,8 +215,8 @@ _CSS = """
   [data-testid="stTooltipContent"] { font-size: .9rem; line-height: 1.55; max-width: 520px; }
 
   /* ---------- 접속 화면 (2026-11-04 시안 C "자물쇠 친구") ---------- */
-  .login-gap { height: 17vh; }
-  .stApp:has(.login-bg) [data-testid="stHeader"] { background: transparent; }
+  .login-gap { height: 18vh; }
+  .stApp:has(.login-bg) [data-testid="stHeader"] { background: transparent; backdrop-filter: none; }
   .login-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none;
         background: radial-gradient(circle at 1px 1px, #D9E0EE 1.2px, transparent 1.3px) 0 0 / 22px 22px,
                     linear-gradient(160deg, #EEF3FF, #F6F1FF 55%, #FFF4EE); }
@@ -254,10 +254,22 @@ _CSS = """
   .st-key-login_card [data-testid="stFormSubmitButton"] button:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(19,32,54,.32); }
   .st-key-login_card [data-testid="stFormSubmitButton"] button p { font-size: 1rem; font-weight: 600; }
   .st-key-login_card [data-testid="InputInstructions"] { display: none; }
-  .login-foot { display: flex; align-items: center; justify-content: space-between; margin-top: .9rem;
-        padding-top: 1rem; border-top: 1px dashed #E3E7EF; }
-  .login-foot img { width: 84px; display: block; }
-  .login-foot span { display: inline-flex; align-items: center; gap: 5px; font-size: .78rem; color: #2E8B60; }
+  .login-foot { text-align: center; margin-top: 1rem; }
+  .login-foot span { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: #2E8B60;
+        background: #E8F6EF; padding: .25rem .75rem; border-radius: 99px; }
+  .login-logo { position: fixed; left: 40px; top: 30px; width: 170px; z-index: 1000001; pointer-events: none; }
+  .login-bg .lb, .login-bg .ls { position: absolute; transform: translate(-50%, -50%); }
+  .login-bg .lb { animation: login-float 6s ease-in-out infinite; filter: drop-shadow(0 6px 10px rgba(80,100,160,.08)); }
+  .login-bg svg { width: 100%; height: 100%; display: block; }
+  @keyframes login-float { 0%, 100% { transform: translate(-50%, -50%); } 50% { transform: translate(-50%, calc(-50% - 10px)); } }
+  @media (prefers-reduced-motion: reduce) { .login-bg .lb { animation: none; } }
+  @media (max-width: 760px) {
+    .login-bg .desk { display: none; }
+    .login-bg .lb { width: 64px !important; height: 64px !important; }
+    .login-bg .lb:nth-child(1) { left: 14% !important; top: 12% !important; }
+    .login-bg .lb:nth-child(2) { left: 86% !important; top: 12% !important; }
+    .login-logo { left: 50%; transform: translateX(-50%); top: 22px; width: 120px; }
+  }
   .login-foot svg { width: 13px; height: 13px; }
   .login-err { font-size: .85rem; color: var(--ng); background: var(--ng-bg); border-radius: 12px;
         padding: .5rem .8rem; margin: .1rem 0 .3rem 0; text-align: center; }
@@ -340,9 +352,51 @@ _SHIELD = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wi
            'stroke-linejoin="round"><path d="M12 3l7 3v5.5c0 4.5-3 8-7 9.5-4-1.5-7-5-7-9.5V6z"/><path d="M9 12l2 2 4-4"/></svg>')
 
 
+
+def _face(x, y, s=1.0, c="#24324F"):
+    return (f'<g transform="translate({x} {y}) scale({s})"><circle cx="-7" cy="0" r="3" fill="{c}"/><circle cx="7" cy="0" r="3" fill="{c}"/>'
+            f'<circle cx="-6" cy="-1" r="1" fill="#fff"/><circle cx="8" cy="-1" r="1" fill="#fff"/>'
+            f'<ellipse cx="-12" cy="5" rx="3.5" ry="2.2" fill="#FF9FB5" opacity=".6"/><ellipse cx="12" cy="5" rx="3.5" ry="2.2" fill="#FF9FB5" opacity=".6"/>'
+            f'<path d="M-3 4q1.5 2 3 0q1.5 2 3 0" stroke="{c}" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>')
+
+
+def _spark(color):
+    return (f'<svg viewBox="-10 -10 20 20"><path d="M0 -10Q0 0 10 0Q0 0 0 10Q0 0 -10 0Q0 0 0 -10z" fill="{color}"/></svg>')
+
+
+_ICONS = {
+    "battery": '<rect x="-14" y="-20" width="28" height="42" rx="8" fill="#9FDDBF"/><rect x="-6" y="-25" width="12" height="6" rx="2" fill="#7CC7A8"/>' + _face(0, 2, .8),
+    "gear": '<g fill="#FFB49A">' + "".join(f'<rect x="-5" y="-24" width="10" height="12" rx="3" transform="rotate({a})"/>' for a in range(0, 360, 45))
+            + '<circle r="17"/></g>' + _face(0, 0, .75),
+    "flask": '<path d="M-6 -24h12v14l14 24a6 6 0 0 1-5 9h-30a6 6 0 0 1-5-9l14-24z" fill="#FFB3C7"/><rect x="-9" y="-27" width="18" height="5" rx="2.5" fill="#F58FAA"/>' + _face(0, 8, .7),
+    "bulb": '<circle cy="-4" r="17" fill="#FFE08A"/><rect x="-8" y="11" width="16" height="10" rx="3" fill="#E9C46A"/>' + _face(0, -4, .75),
+    "chart": '<rect x="-20" y="-20" width="40" height="40" rx="10" fill="#C9B8FF"/><rect x="-11" y="0" width="6" height="12" rx="2" fill="#fff"/>'
+             '<rect x="-3" y="-8" width="6" height="20" rx="2" fill="#fff"/><rect x="5" y="-14" width="6" height="26" rx="2" fill="#fff"/>',
+    "dot": '<circle r="16" fill="#A9C8FF"/>' + _face(0, 0, .6),
+}
+# (아이콘, 바탕색, 왼쪽 %, 위 %, 지름 px, 기울기, 휴대폰에서도 보임)
+_BUBBLES = [("battery", "#E6F7EF", 19.5, 31, 104, -8, True), ("gear", "#FFEDE6", 80.5, 29, 96, 10, True),
+            ("flask", "#FFE9EF", 15.5, 70, 92, 6, False), ("bulb", "#FFF5D6", 84.5, 70, 108, -6, False),
+            ("chart", "#EFEAFF", 31, 86, 68, 8, False), ("dot", "#E6F0FF", 70, 11, 60, 0, False)]
+_SPARKS = [("#FFD3C2", 29.5, 21, 16), ("#C9B8FF", 72.5, 86, 18), ("#A9C8FF", 9.5, 50, 12), ("#FFB3C7", 92, 50, 14)]
+
+
+def _login_deco() -> str:
+    out = []
+    for i, (icon, bg, x, y, d, rot, phone) in enumerate(_BUBBLES):
+        out.append(f'<div class="lb{"" if phone else " desk"}" style="left:{x}%;top:{y}%;width:{d}px;height:{d}px;--r:{rot}deg;'
+                   f'animation-delay:-{i * 1.3:.1f}s"><svg viewBox="-50 -50 100 100"><circle r="50" fill="{bg}"/>'
+                   f'<g transform="rotate({rot})">{_ICONS[icon]}</g></svg></div>')
+    for c, x, y, d in _SPARKS:
+        out.append(f'<div class="ls desk" style="left:{x}%;top:{y}%;width:{d}px;height:{d}px">{_spark(c)}</div>')
+    return "".join(out)
+
+
 def login_bg():
     """접속 화면 배경 (카드 밖에 그려야 카드 위를 덮지 않음)."""
-    st.markdown('<div class="login-bg"></div>', unsafe_allow_html=True)
+    uri = _data_uri(os.path.join(_DIR, "assets", "logo_light.png"))
+    logo = f'<img class="login-logo" src="{uri}" alt="로고">' if uri else ""
+    st.markdown(f'<div class="login-bg">{_login_deco()}</div>{logo}', unsafe_allow_html=True)
 
 
 def login_head(failed: bool = False):
@@ -353,10 +407,8 @@ def login_head(failed: bool = False):
 
 
 def login_foot():
-    """접속 화면 아래쪽: 작은 로고 + 보안 표시."""
-    uri = _data_uri(os.path.join(_DIR, "assets", "logo_light.png"))
-    logo = f'<img src="{uri}" alt="로고">' if uri else "<i></i>"
-    st.markdown(f'<div class="login-foot">{logo}<span>{_SHIELD}보안 연결됨</span></div>', unsafe_allow_html=True)
+    """접속 화면 아래쪽: 보안 표시 (로고는 화면 왼쪽 위에 크게)."""
+    st.markdown(f'<div class="login-foot"><span>{_SHIELD}보안 연결됨</span></div>', unsafe_allow_html=True)
 
 
 # 그래프 오른쪽 위 버튼: 그림으로 저장(보고서 붙여넣기용)만 남김
