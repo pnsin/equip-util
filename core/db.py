@@ -999,9 +999,9 @@ def load_logs() -> pd.DataFrame:
     by_id = full.set_index("id")
     it = {int(i): (int(t) if pd.notna(t) else None) for i, t in zip(full["id"], full["itube_id"])}
     tid = df["equip_id"].map(lambda v: it.get(int(v)) if pd.notna(v) else None)
-    df["itube_name"] = tid.map(lambda t: by_id.at[t, "name"] if t is not None else "")
-    df["itube_code"] = tid.map(lambda t: by_id.at[t, "code"] if t is not None else "")
-    df["itube_kind"] = tid.map(lambda t: by_id.at[t, "kind"] if t is not None else "")
+    # ITUBE번호 없는 장비가 섞이면 tid 가 숫자+NaN 이 되므로 None 대신 notna 로 확인
+    for col, key in (("itube_name", "name"), ("itube_code", "code"), ("itube_kind", "kind")):
+        df[col] = tid.map(lambda t, k=key: by_id.at[int(t), k] if pd.notna(t) and int(t) in by_id.index else "")
     return df.sort_values(["start_date", "id"], ascending=False).reset_index(drop=True)
 
 

@@ -297,3 +297,35 @@ def test_excel_import_builds_tree_and_keeps_ids():
     out = ei.merge_with_existing(parsed, existing)
     assert [r["id"] for r in out][:1] == [7] and out[-1]["id"] == 9
     assert out[1]["parent_id"] == 7 and out[2]["parent_id"] == out[1]["id"]
+
+
+def test_performance_file_fills_old_sheet_layout(store):
+    import io as _io
+    from openpyxl import load_workbook
+    from core import perf_export
+    _tree_store(store)
+    db.insert_logs([
+        dict(equip_id=3, start_date=D(2026, 7, 30), end_date=D(2026, 8, 2), hours=40, purpose="생산",
+             usage_type="내부", company="", dept="연구팀", include_holidays="Y", created_by="홍길동"),
+        dict(equip_id=1, start_date=D(2026, 8, 1), end_date=D(2026, 8, 1), hours=5, purpose="시험",
+             usage_type="외부", company="가나전지", include_holidays="Y"),
+        dict(equip_id=4, start_date=D(2026, 9, 1), end_date=D(2026, 9, 1), hours=3, purpose="분석",
+             usage_type="외부", company="가나전지", include_holidays="Y"),
+    ], "t")
+    logs, eq = db.load_logs(), db.load_equipment()
+    data, info = perf_export.make_performance_file(logs, eq, None, D(2026, 8, 1), D(2026, 8, 31),
+                                                   today=D(2026, 11, 4))
+    assert info["count"] == 2 and info["hours"] == 25  # 7/30~8/2 40h 중 8월 몫 20h + 5h
+    wb = load_workbook(_io.BytesIO(data))
+    assert wb.sheetnames == ["가동데이터(2026)", "ooo_전체", "ooo_시험", "ooo_제조", "장비목록"]
+    ws = wb["가동데이터(2026)"]
+    assert ws["A4"].value == "접수번호" and ws["P5"].value == "장비명" and ws["S5"].value.date() == D(2026, 8, 1)
+    row = {ws.cell(8 + 1, c).value for c in range(1, 19)} | {ws.cell(10, c).value for c in range(1, 19)}
+    assert "연구팀" in row and "제조" in row and "믹서(양극)" in row
+    allsh = wb["ooo_전체"]
+    names = [allsh.cell(r, 2).value for r in range(8, 12)]
+    assert names[0] == "시스템" and allsh.cell(8, 5).value == 25  # 세부장비 시간이 주장비에 더해짐
+    assert allsh.cell(8, 6).value == 15  # 8/1: 세부 10 + 주장비 5
+    assert "합계" in names and allsh.cell(names.index("합계") + 8, 5).value == 25
+    assert perf_export.file_name(D(2026, 8, 1), D(2026, 8, 31)) == "장비실적_2026년8월.xlsx"
+    assert perf_export._weeknum(D(2026, 1, 3)) == 1 and perf_export._weeknum(D(2026, 1, 4)) == 2

@@ -2,13 +2,19 @@
 import streamlit as st
 
 from ui_style import page_header
-from views import calendar_entry, entry
+from views import calendar_entry, entry, export
 
 MODES = {"day": "하루씩 · 달력", "period": "여러 날 한 번에"}
 
 
 def render() -> None:
-    page_header("실적 입력", "실적")
+    head, btn = st.columns([1, 0.2], vertical_alignment="center")
+    with head:
+        page_header("실적 입력", "실적")
+    with btn:
+        if st.button("실적 내려받기", icon=":material/download:", key="open_dl",
+                     help="기간을 고르면 그 기간 실적을 예전 입력시트 양식 엑셀로 내려받습니다.", width="stretch"):
+            export.download_dialog()
     mode = st.segmented_control(
         "입력 방식", list(MODES), format_func=MODES.get, key="input_mode", label_visibility="collapsed",
         default=st.session_state.get("input_mode_last", "day"),

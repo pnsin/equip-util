@@ -12,7 +12,7 @@ import importlib  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
 
-from core import calc, db, itube, rules, seed  # noqa: E402
+from core import calc, db, itube, perf_export, rules, seed  # noqa: E402
 from views import (calendar_entry, companies, common, dashboard, entry, equip_detail, equipment, export,  # noqa: E402
                    input_page,
                    records, settings, staff, trash)
@@ -21,7 +21,7 @@ from core.terms import w  # noqa: E402
 # 새 코드가 배포된 직후 Streamlit Cloud가 일부 파일만 새로 읽고 나머지는 옛 버전을 쓰는 일이 있어
 # (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
-for _m in (ui_style, seed, db, calc, rules, itube, common, calendar_entry, entry, input_page, companies, dashboard,
+for _m in (ui_style, seed, db, calc, rules, itube, perf_export, common, calendar_entry, entry, input_page, companies, dashboard,
            equip_detail,
            equipment, export, records, settings, staff, trash):
     _mt = os.path.getmtime(_m.__file__)
@@ -112,6 +112,7 @@ PAGES = {
     "실적": [
         st.Page(input_page.render, title="실적 입력", url_path="input"),
         st.Page(records.render, title="실적 목록", url_path="records"),
+        st.Page(export.render_download, title="실적 내려받기", url_path="download"),
     ],
     "보고": [
         st.Page(export.render_itube, title="i-Tube 장비일지", url_path="itube"),
