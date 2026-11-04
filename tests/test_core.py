@@ -400,3 +400,21 @@ def test_leaf_hours_roll_up_to_parent():
     sm = calc.equipment_summary(calc.expand_daily(logs), eq, D(2026, 7, 1), D(2026, 7, 1), 2000).set_index("equip_id")
     assert sm.at[3, "사용시간"] == 6 and sm.at[2, "사용시간"] == 6 and sm.at[1, "사용시간"] == 6
     assert sm.at[4, "사용시간"] == 4
+
+
+def test_maint_save_load_and_delete(store):
+    rows = pd.DataFrame([
+        {"id": None, "date": D(2026, 10, 1), "equip_id": 1, "equip_ref": "", "kind": "점검", "content": "분기 점검",
+         "staff": "김", "note": ""},
+        {"id": None, "date": D(2026, 11, 3), "equip_id": None, "equip_ref": "", "kind": "", "content": "",
+         "staff": "", "note": ""},  # 빈 줄은 버림
+        {"id": None, "date": D(2026, 11, 2), "equip_id": None, "equip_ref": "옛 장비", "kind": "수리",
+         "content": "보드 교체", "staff": "", "note": ""},
+    ])
+    assert db.save_maint(rows) == 2
+    df = db.load_maint()
+    assert list(df["content"]) == ["보드 교체", "분기 점검"]  # 최근 날짜부터
+    assert df.loc[1, "equip_ref"] == "장비A" and df.loc[0, "equip_ref"] == "옛 장비"
+    db.save_maint(df[df["content"] == "분기 점검"])
+    assert list(db.load_maint()["content"]) == ["분기 점검"]
+    assert list(store.read("trash")["table"]) == ["maint"]
