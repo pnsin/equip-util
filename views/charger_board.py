@@ -160,7 +160,7 @@ def render() -> None:
             who = (f"<td class='co'>{html.escape(b['company'])}</td>" if b else "<td class='m'>—</td>")
             when = chargers.span_text(b["start"], b["end"], today) + ("" if r["now"] else " 예약") if b else ""
             rows.append(f"<tr class='{'grp' if new_u and rows else ''}'><td class='u'>{u}</td><td class='c'>{c}</td>"
-                        f"<td>{html.escape(r['chamber'])}</td><td class='m'>{html.escape(r['channels'])}</td>{who}"
+                        f"<td>{html.escape(r['chamber']) or '<span style="color:#97A1AE">—</span>'}</td><td class='m'>{html.escape(r['channels'])}</td>{who}"
                         f"<td class='m'>{html.escape(when)}</td>"
                         f"<td class='tl'><div class='cb-tl'>{grid}{now_line}{bars}</div></td></tr>")
         rows.append(f"<tr class='cb-sum'><td colspan='3'>{html.escape(center)} 합계</td><td>{total} ch</td>"
