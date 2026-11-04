@@ -1034,9 +1034,7 @@ def render(header: bool = True) -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     if header:
         page_header("달력 입력", "실적")
-    msg = st.session_state.pop("cal_saved", None)
-    if msg:
-        st.success(msg, icon=":material/check_circle:")
+    st.session_state.pop("cal_saved", None)  # 저장·삭제 알림은 띄우지 않음 (달력 칸에 바로 보임)
 
     cfg = db.get_settings()
     eq = db.load_equipment()
@@ -1250,9 +1248,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                     _pick_row(day, e)
                     st.rerun()
 
-        added = st.session_state.pop("company_added", None)
-        if added:
-            st.toast(f"'{added}' 업체를 등록했습니다.", icon=":material/check_circle:")
+        st.session_state.pop("company_added", None)
         if eq.empty or not staff_opts:
             st.warning("장비와 담당자를 먼저 '기준 정보'에서 등록하세요.")
             return
