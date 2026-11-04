@@ -84,6 +84,15 @@ CSS = """<style>
 .cal-card .cc-r {display: grid; grid-template-columns: 3.2em 1fr; gap: 2px 8px; font-size: .88rem; line-height: 1.5;}
 .cal-card .cc-r span:nth-child(odd) {color: var(--muted, #7b8794);}
 .cal-card .cc-h2 {font-weight: 700;}
+.cal-card .cc-tag {display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+  margin-right: 6px; vertical-align: 1px;}
+/* 구분 태그 (실적 줄 첫 줄 앞) */
+.st-key-calgrid div[class*="st-key-ent_"] button p:first-child::before {content: var(--cat-label, ""); display: inline-block;
+  font-size: .62rem; font-weight: 800; padding: 0 5px; margin-right: 4px; border-radius: 999px; line-height: 1.5;
+  background: var(--chip-fg, #3B82F6); color: #fff; vertical-align: 1px;}
+/* 구분 필터 */
+div[class*="st-key-cal_cats"] {margin: .1rem 0 .4rem;}
+div[class*="st-key-cal_cats"] button {border-radius: 999px !important; font-weight: 600;}
 /* 마우스를 올리면 뜨는 작은 설명 */
 div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] {max-width: 340px; padding: .55rem .75rem;
   font-size: .82rem; line-height: 1.65;}
@@ -242,6 +251,7 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
     if in_month.empty:
         return {}
     name_of = dict(zip(eq["id"].astype(int), eq["name"]))
+    cat_of = dict(zip(eq["id"].astype(int), (_cat_of(u) for u in eq.get("use", pd.Series([""] * len(eq))))))
     info = logs.set_index("id")
     out: dict[dt.date, list[dict]] = {}
     for r in in_month.itertuples(index=False):
@@ -255,11 +265,12 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
         out.setdefault(r.day.date(), []).append({
             "id": int(r.log_id), "rec": rec,
             "equip": name_of.get(int(r.equip_id), "?"), "company": db.to_str(lg["company"]) or "내부",
+            "cat": cat_of.get(int(r.equip_id), "기타"),
             "hours": float(r.hours), "staff": db.to_str(lg["created_by"]),
             "period": f"{lg['start_date']:%m/%d}~{lg['end_date']:%m/%d}" if multi else "",
         })
     for v in out.values():
-        v.sort(key=lambda e: (e["period"] != "", -e["hours"]))
+        v.sort(key=lambda e: (CAT_ORDER.index(e["cat"]), e["period"] != "", -e["hours"]))
     return out
 
 
@@ -279,14 +290,17 @@ def _day_head(d: dt.date, entries: list[dict], holiday: bool, today: bool) -> tu
     return head, "\n\n---\n\n".join(tip)
 
 
-CHIP_COLORS = [("#E8F1FD", "#3B82F6"), ("#E7F7EF", "#10B981"), ("#FFF3E2", "#F59E0B"),
-               ("#F1ECFD", "#8B5CF6"), ("#FDEBF1", "#EC4899"), ("#E4F6F9", "#06B6D4")]
+# 장비용도(장비 정보) → 달력 구분. 색은 구분마다 고정 (배경, 진한 색)
+CATS = {"제조": ("#E5F6EC", "#1FA971"), "시험": ("#FDECEF", "#E35D78"), "분석": ("#EEE9FD", "#7C5CE0"),
+        "기타": ("#EEF1F5", "#8A97A8")}
+CAT_ORDER = list(CATS)
 
 
-def _chip_color(name: str) -> tuple[str, str]:
-    """장비마다 늘 같은 파스텔 색 (이름으로 정함)."""
-    h = sum(ord(c) * (i + 1) for i, c in enumerate(str(name)))
-    return CHIP_COLORS[h % len(CHIP_COLORS)]
+def _cat_of(use: str) -> str:
+    u = str(use or "").strip()
+    if u in ("생산", "제조"):
+        return "제조"
+    return u if u in CATS else "기타"
 
 
 def _card_html(d: dt.date, entries: list[dict]) -> str:
@@ -301,7 +315,10 @@ def _card_html(d: dt.date, entries: list[dict]) -> str:
         if x["period"]:
             cells.append(("기간", x["period"]))
         grid = "".join(f"<span>{e_(k)}</span><span>{e_(str(v))}</span>" for k, v in cells)
-        rows.append(f"<div class='cc-e'><div class='cc-n'>{e_(x['equip'])}</div><div class='cc-r'>{grid}</div></div>")
+        bg, fg = CATS[x["cat"]]
+        tag = f"<span class='cc-tag' style='background:{bg};color:{fg}'>{x['cat']}</span>"
+        rows.append(f"<div class='cc-e' style='border-left-color:{fg}'><div class='cc-n'>{tag}{e_(x['equip'])}</div>"
+                    f"<div class='cc-r'>{grid}</div></div>")
     return (f"<div class='cal-card'><div class='cc-h'><span class='cc-d'>{d.month}월 {d.day}일 "
             f"({WEEKDAYS[d.weekday()]})</span><span class='cc-sum'>{len(entries)}건 · {_hours(total)}</span></div>"
             + "".join(rows) + "</div>")
@@ -618,6 +635,21 @@ def render(header: bool = True) -> None:
     daily = expand_daily(logs, cfg.get("alloc_mode", "spread"))
     in_month = daily[(daily["day"] >= pd.Timestamp(weeks[0][0])) & (daily["day"] <= pd.Timestamp(weeks[-1][-1]))]
     by_day = _cell_entries(in_month, logs, eq)
+    present = [c for c in CAT_ORDER if any(e["cat"] == c for v in by_day.values() for e in v)]
+    shown = st.pills("구분", present, selection_mode="multi", default=present, key=f"cal_cats_{month}",
+                     label_visibility="collapsed",
+                     format_func=lambda c: f"{c} {sum(e['cat'] == c for dd, v in by_day.items() if dd.month == month.month for e in v)}건")
+    pill_css = ""
+    for i, c in enumerate(present, start=1):
+        bg, fg = CATS[c]
+        b = f'div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button:nth-of-type({i})'
+        pill_css += (f"{b} {{border-color: {fg}55 !important; color: {fg} !important;}} "
+                     f"{b}[kind$='Active'] {{background: {bg} !important; border-color: {fg} !important;}} "
+                     f"{b} p::before {{content: ''; display: inline-block; width: .55em; height: .55em; border-radius: 50%; "
+                     f"background: {fg}; margin-right: .4em; vertical-align: .05em;}}")
+    st.markdown(f"<style>{pill_css}</style>", unsafe_allow_html=True)
+    if present and set(shown or []) != set(present):
+        by_day = {dd: [e for e in v if e["cat"] in (shown or [])] for dd, v in by_day.items()}
 
     # ── 복사 / 붙여넣기 ─────────────────────────────────────
     clip = st.session_state.get("cal_clip")
@@ -653,8 +685,8 @@ def render(header: bool = True) -> None:
         if dd.month != month.month:
             continue
         for e in ents[:CELL_LINES]:
-            bg, fg = _chip_color(e["equip"])
-            sel += f" .st-key-ent_{dd}_{e['id']} button {{--chip-bg: {bg}; --chip-fg: {fg};}}"
+            bg, fg = CATS[e["cat"]]
+            sel += f" .st-key-ent_{dd}_{e['id']} button {{--chip-bg: {bg}; --chip-fg: {fg}; --cat-label: '{e['cat']}';}}"
     for week in weeks:
         if week[5].month == month.month:
             sel += f" .st-key-cell_{week[5]} {{background: #F5F8FF !important;}}"
