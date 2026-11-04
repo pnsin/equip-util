@@ -12,6 +12,7 @@ import datetime as dt
 import io
 import json
 import os
+import threading
 import time
 
 import pandas as pd
@@ -246,11 +247,21 @@ class SheetStore:
                                        f"열 제목을 고치거나 열을 옮기지 마세요. (기대: {', '.join(head[:4])} …)")
             self.ws[t] = ws
 
-    def read(self, t: str) -> pd.DataFrame:
+    @staticmethod
+    def _frame(t: str, values: list[list]) -> pd.DataFrame:
         n = len(cols(t))
-        values = _call(self.ws[t].get_all_values)
         rows = [(list(r) + [""] * n)[:n] for r in values[1:] if any(str(c).strip() for c in r)]
         return pd.DataFrame(rows, columns=cols(t))
+
+    def read(self, t: str) -> pd.DataFrame:
+        return self._frame(t, _call(self.ws[t].get_all_values))
+
+    def read_many(self, ts: list[str]) -> dict[str, pd.DataFrame]:
+        """여러 탭을 구글 API 요청 한 번으로 읽습니다 (탭마다 따로 읽으면 그만큼 기다림)."""
+        ranges = ["'" + self.ws[t].title.replace("'", "''") + "'" for t in ts]
+        res = _call(self.ss.values_batch_get, ranges)
+        vrs = res.get("valueRanges", [])
+        return {t: self._frame(t, (vrs[i].get("values", []) if i < len(vrs) else [])) for i, t in enumerate(ts)}
 
     def append(self, t: str, rows: list[list]) -> None:
         if rows:
@@ -303,6 +314,9 @@ class CsvStore:
 
     def _path(self, t: str) -> str:
         return os.path.join(self.folder, f"{t}.csv")
+
+    def read_many(self, ts: list[str]) -> dict[str, pd.DataFrame]:
+        return {t: self.read(t) for t in ts}
 
     def read(self, t: str) -> pd.DataFrame:
         if not os.path.exists(self._path(t)):
@@ -375,7 +389,31 @@ def storage_label() -> str:
     return get_store().label
 
 
+# 화면에서 늘 쓰는 탭은 한 번에 읽어 2분 동안 기억합니다 (휴지통·수정기록은 그 화면에서만 따로 읽음)
+SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings")
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def _snapshot() -> dict[str, pd.DataFrame]:
+    return get_store().read_many(list(SNAPSHOT_TABS))
+
+
+def _tab(t: str) -> pd.DataFrame:
+    return _snapshot()[t].copy()
+
+
+def refresh_data() -> None:
+    """저장한 뒤: 화면용 데이터를 버려 다음 화면에서 시트를 새로 읽게 함 (요청 한 번)."""
+    _snapshot.clear()
+    load_equipment.clear()
+    load_companies.clear()
+    load_staff.clear()
+    load_logs.clear()
+    get_settings.clear()
+
+
 def clear_caches() -> None:
+    _snapshot.clear()
     load_trash.clear()
     load_history.clear()
     load_equipment.clear()
@@ -466,15 +504,30 @@ def last_undo() -> dict | None:
     return stack[-1] if stack else None
 
 
+_LOG_LOCK = threading.Lock()
+
+
 def log(action: str, target: str, summary: str) -> None:
-    """수정 기록 한 줄. 기록이 실패해도 저장은 그대로 둡니다."""
+    """수정 기록 한 줄. 저장을 기다리게 하지 않도록 뒤에서 씁니다. 기록이 실패해도 저장은 그대로 둡니다."""
     try:
-        get_store().append("history", _rows("history", [{"at": _now(), "who": who() or "-",
-                                                          "action": action, "target": target,
-                                                          "summary": summary[:500]}]))
-        load_history.clear()
+        store = get_store()
+        rows = _rows("history", [{"at": _now(), "who": who() or "-", "action": action, "target": target,
+                                  "summary": summary[:500]}])
     except Exception:  # noqa: BLE001
-        pass
+        return
+
+    def write() -> None:
+        try:
+            with _LOG_LOCK:  # 기록 순서가 섞이지 않게 한 줄씩
+                store.append("history", rows)
+            load_history.clear()
+        except Exception:  # noqa: BLE001
+            pass
+
+    if getattr(store, "persistent", False):
+        threading.Thread(target=write, daemon=True).start()
+    else:  # 로컬 파일(시험용)은 바로 씀
+        write()
 
 
 def _usage_summary(r: dict) -> str:
@@ -623,15 +676,15 @@ def _save_master(t: str, out: list[dict]) -> None:
 
 # ── 설정 ────────────────────────────────────────────────────────
 
-def _settings_raw() -> dict[str, str]:
-    df = get_store().read("settings")
+def _settings_raw(df: pd.DataFrame | None = None) -> dict[str, str]:
+    df = get_store().read("settings") if df is None else df
     return {to_str(k): str(v) for k, v in zip(df["key"], df["value"]) if to_str(k)}
 
 
 @st.cache_data(ttl=120)
 def get_settings() -> dict:
     plain, chunks = {}, {}
-    for k, v in _settings_raw().items():
+    for k, v in _settings_raw(_tab("settings")).items():
         if "#" in k:
             base, i = k.rsplit("#", 1)
             chunks.setdefault(base, []).append((int(i) if i.isdigit() else 0, v))
@@ -662,7 +715,7 @@ def save_settings(**kv) -> None:
     get_store().rewrite("settings", [[k, v] for k, v in raw.items()])
     _step(("rewrite", "settings", old), "설정 저장")
     log("저장", "설정", ", ".join(k for k in kv if k != "template_b64") or "i-Tube 양식")
-    get_settings.clear()
+    refresh_data()
 
 
 # ── 장비 ────────────────────────────────────────────────────────
@@ -757,7 +810,7 @@ def descendants(eq: pd.DataFrame) -> dict[int, list[int]]:
 
 @st.cache_data(ttl=120)
 def load_equipment() -> pd.DataFrame:
-    df = _equipment_frame(get_store().read("equipment"))
+    df = _equipment_frame(_tab("equipment"))
     names = dict(zip(df["id"], df["name"]))
     labels = []
     for n, c, d, r in zip(df["name"], df["code"], df["depth"], df["root_id"]):
@@ -851,7 +904,7 @@ COMPANY_TEXT = ("name", "brn", "contact", "phone", "industry", "item", "sub_item
 
 @st.cache_data(ttl=120)
 def load_companies() -> pd.DataFrame:
-    df = get_store().read("companies").copy()
+    df = _tab("companies")
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
     df = df.dropna(subset=["id"])
     df["id"] = df["id"].astype("int64")
@@ -904,7 +957,7 @@ def save_companies(edited: pd.DataFrame) -> None:
             next_id += 1
         out.append(rec)
     _save_master("companies", out)
-    load_companies.clear()
+    refresh_data()
 
 
 # ── 담당자 ──────────────────────────────────────────────────────
@@ -914,7 +967,7 @@ STAFF_TEXT = ("name", "phone", "email", "role", "note")
 
 @st.cache_data(ttl=120)
 def load_staff() -> pd.DataFrame:
-    df = get_store().read("staff").copy()
+    df = _tab("staff")
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
     df = df.dropna(subset=["id"])
     df["id"] = df["id"].astype("int64")
@@ -967,7 +1020,7 @@ def save_staff(edited: pd.DataFrame) -> None:
             next_id += 1
         out.append(rec)
     _save_master("staff", out)
-    load_staff.clear()
+    refresh_data()
 
 
 # ── 사용실적 ────────────────────────────────────────────────────
@@ -988,7 +1041,7 @@ def _usage_frame(df: pd.DataFrame) -> pd.DataFrame:
 
 @st.cache_data(ttl=120)
 def load_logs() -> pd.DataFrame:
-    df = _usage_frame(get_store().read("usage")).drop(columns=["equip_ref"])
+    df = _usage_frame(_tab("usage")).drop(columns=["equip_ref"])
     eq = load_equipment()[["id", "name", "code", "kind"]].rename(columns={
         "id": "_eid", "name": "equip_name", "code": "equip_code", "kind": "equip_kind"})
     df = df.merge(eq, left_on="equip_id", right_on="_eid", how="left").drop(columns=["_eid"])
@@ -1047,7 +1100,7 @@ def insert_logs(records: list[dict], user: str = "", ids_out: list | None = None
     _step(("delete", "usage", [str(r["id"]) for r in rows]), f"실적 {len(rows)}건 추가")
     log("추가", "실적", f"{len(rows)}건: " + " / ".join(_usage_summary(r) for r in rows[:3])
         + (" …" if len(rows) > 3 else ""))
-    load_logs.clear()
+    refresh_data()
     return len(rows)
 
 
@@ -1081,7 +1134,7 @@ def update_logs(changes: dict[int, dict]) -> int:
         _step(("put", "usage", before), f"실적 {n}건 수정")
         log("수정", "실적", f"{n}건: " + " / ".join(
             _usage_summary(dict(zip(cols("usage"), out[k]))) for k in list(out)[:3]) + (" …" if n > 3 else ""))
-    load_logs.clear()
+    refresh_data()
     return n
 
 
@@ -1097,7 +1150,7 @@ def delete_logs(ids: list[int]) -> int:
         _step(("readd", "usage", gone.values.tolist(), trash_ids), f"실적 {n}건 삭제")
         log("삭제", "실적", f"{n}건: " + " / ".join(_usage_summary(r) for r in gone.to_dict("records")[:3])
             + (" …" if n > 3 else ""))
-    load_logs.clear()
+    refresh_data()
     return n
 
 

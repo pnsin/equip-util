@@ -169,6 +169,7 @@ def group_util(summary: pd.DataFrame, by: str) -> pd.DataFrame:
     return g.sort_values("가동률", ascending=False)
 
 
+@st.cache_data(ttl=300, max_entries=32, show_spinner=False)  # 같은 데이터·조건이면 다시 계산하지 않음
 def monthly_matrix(daily: pd.DataFrame, equip: pd.DataFrame, end: dt.date, n: int, default_annual: float,
                    cutoff: dt.date | None, tree: pd.DataFrame | None = None) -> pd.DataFrame:
     """장비 × 최근 n개월 가동률 표 (행: equip_id, 열: 'yy.mm')."""
@@ -211,8 +212,21 @@ def equipment_summary(daily: pd.DataFrame, equip: pd.DataFrame, s: dt.date, e: d
     from core.db import descendants
     tree = equip if tree is None else tree
     d = window(daily, s, e)
-    g = d.groupby("equip_id").agg(used=("hours", "sum"), fee=("fee", "sum"))
     desc = descendants(tree)
+    # 장비별 '자신 + 모든 상위 장비' 로 실적을 펼쳐 한 번에 묶음 (장비마다 표 전체를 훑지 않도록)
+    anc: dict[int, list[int]] = {}
+    for top, ids_ in desc.items():
+        for i in ids_:
+            anc.setdefault(i, []).append(top)
+    if len(d):
+        x = d[["equip_id", "log_id", "hours", "fee"]].copy()
+        x["up"] = [anc.get(int(i), [int(i)]) for i in x["equip_id"]]
+        x = x.explode("up")
+        g = x.groupby("up").agg(used=("hours", "sum"), fee=("fee", "sum"), n=("log_id", "nunique"))
+        g.index = g.index.astype(int)
+        used_of, fee_of, n_of = g["used"].to_dict(), g["fee"].to_dict(), g["n"].to_dict()
+    else:
+        used_of, fee_of, n_of = {}, {}, {}
     parent = ({int(i): (int(p) if pd.notna(p) else None) for i, p in zip(tree["id"], tree["parent_id"])}
               if "parent_id" in tree else {})
     kpi = dict(zip(tree["id"].astype(int), tree["in_kpi"].astype(bool))) if not tree.empty else {}
@@ -229,8 +243,13 @@ def equipment_summary(daily: pd.DataFrame, equip: pd.DataFrame, s: dt.date, e: d
     rows = []
     for r in equip.itertuples(index=False):
         avail = available_hours(r, s, e, default_annual)
-        ids = desc.get(int(r.id), [int(r.id)])
-        used = float(sum(g["used"].get(i, 0.0) for i in ids))
+        rid = int(r.id)
+        if rid in desc:
+            used, fee, cnt = float(used_of.get(rid, 0.0)), float(fee_of.get(rid, 0.0)), int(n_of.get(rid, 0))
+        else:  # 전체 목록에 없는 장비: 자기 실적만
+            mine = d[d["equip_id"] == rid] if len(d) else d
+            used, fee = float(mine["hours"].sum()) if len(mine) else 0.0, float(mine["fee"].sum()) if len(mine) else 0.0
+            cnt = int(mine["log_id"].nunique()) if len(mine) else 0
         if avail == 0 and used == 0:
             continue  # 해당 기간에 보유하지 않은 장비
         rows.append({
@@ -244,8 +263,8 @@ def equipment_summary(daily: pd.DataFrame, equip: pd.DataFrame, s: dt.date, e: d
             "사용시간": used,
             "가용시간": avail,
             "가동률": used / avail * 100 if avail else None,
-            "사용료": float(sum(g["fee"].get(i, 0.0) for i in ids)),
-            "건수": int(d.loc[d["equip_id"].isin(ids), "log_id"].nunique()) if len(d) else 0,
+            "사용료": fee,
+            "건수": cnt,
             "KPI": bool(r.in_kpi) and not ancestor_in_kpi(int(r.id)),
             "최상위": parent.get(int(r.id)) is None,
         })
@@ -270,6 +289,7 @@ def totals(summary: pd.DataFrame) -> dict:
     }
 
 
+@st.cache_data(ttl=300, max_entries=32, show_spinner=False)  # 같은 데이터·조건이면 다시 계산하지 않음
 def trend(daily: pd.DataFrame, equip: pd.DataFrame, kind: str, ref: dt.date, n: int,
           default_annual: float, cutoff: dt.date | None, tree: pd.DataFrame | None = None) -> pd.DataFrame:
     out = []

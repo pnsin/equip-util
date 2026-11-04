@@ -329,3 +329,41 @@ def test_performance_file_fills_old_sheet_layout(store):
     assert "합계" in names and allsh.cell(names.index("합계") + 8, 5).value == 25
     assert perf_export.file_name(D(2026, 8, 1), D(2026, 8, 31)) == "장비실적_2026년8월.xlsx"
     assert perf_export._weeknum(D(2026, 1, 3)) == 1 and perf_export._weeknum(D(2026, 1, 4)) == 2
+
+
+def test_sheet_read_many_one_request():
+    """화면용 탭을 구글 API 요청 한 번으로 읽고, 빈 탭·짧은 행도 표 모양으로 맞춥니다."""
+    class WS:
+        def __init__(self, title):
+            self.title = title
+
+    class SS:
+        calls = 0
+
+        def values_batch_get(self, ranges):
+            SS.calls += 1
+            assert ranges == ["'업체'", "'담당자'"]
+            return {"valueRanges": [{"values": [db.heads("companies"), ["1", "가나"], ["", ""]]}, {}]}
+
+    store = db.SheetStore.__new__(db.SheetStore)
+    store.ss, store.ws = SS(), {"companies": WS("업체"), "staff": WS("담당자")}
+    out = store.read_many(["companies", "staff"])
+    assert SS.calls == 1
+    assert list(out["companies"].columns) == db.cols("companies") and len(out["companies"]) == 1
+    assert out["companies"].iloc[0]["name"] == "가나" and out["companies"].iloc[0]["note"] == ""
+    assert out["staff"].empty and list(out["staff"].columns) == db.cols("staff")
+
+
+def test_summary_rolls_up_children_once():
+    """세부장비 실적은 상위 장비에 더해지고, 건수는 같은 실적을 두 번 세지 않습니다."""
+    eq = pd.DataFrame([
+        dict(id=1, name="주", code="A", kind="", manager="", annual_hours=2000, acquired_on=None, retired_on=None,
+             in_kpi=True, parent_id=None),
+        dict(id=2, name="세부", code="", kind="", manager="", annual_hours=2000, acquired_on=None, retired_on=None,
+             in_kpi=True, parent_id=1),
+    ])
+    logs = pd.DataFrame([_log(id=1, equip_id=1, hours=3), _log(id=2, equip_id=2, hours=5)])
+    sm = calc.equipment_summary(calc.expand_daily(logs), eq, D(2026, 7, 1), D(2026, 7, 31), 2000).set_index("equip_id")
+    assert sm.at[1, "사용시간"] == 8 and sm.at[1, "건수"] == 2
+    assert sm.at[2, "사용시간"] == 5 and sm.at[2, "건수"] == 1
+    assert bool(sm.at[2, "KPI"]) is False  # 상위가 이미 산정 대상

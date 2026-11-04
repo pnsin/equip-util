@@ -1187,8 +1187,13 @@ def _pick_row(day: dt.date, e: dict) -> None:
     _click_entry(day, e, None, None)
 
 
+@st.fragment
 def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.DataFrame, cfg: dict) -> None:
-    """달력 옆 입력 카드: 그날 실적 목록 + 세로로 놓인 입력 칸 (옆으로 넘길 일 없음)."""
+    """달력 옆 입력 카드: 그날 실적 목록 + 세로로 놓인 입력 칸 (옆으로 넘길 일 없음).
+
+    카드 안에서 장비·업체 등을 고를 때 달력 전체를 다시 그리지 않도록 카드만 따로 다시 그립니다 (fragment).
+    달력 모양이 바뀌어야 하는 버튼(닫기·새 실적·목록 선택·삭제·저장)은 st.rerun() 으로 화면 전체를 다시 그립니다.
+    """
     ts = pd.Timestamp(day)
     rows = _day_rows(logs, day)
     period = logs[(logs["start_date"] <= ts) & (logs["end_date"] >= ts)] if not logs.empty else logs
@@ -1217,8 +1222,12 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                         f"<em>{WEEKDAYS[day.weekday()]}요일</em></span>"
                         f"<span class='ep-n'>실적 {len(rows)}건 · {_hours(total)}</span></div>",
                         unsafe_allow_html=True, width="stretch")
-            st.button("새 실적", icon=":material/add:", key="ep_new", on_click=_new_entry)
-            st.button("", icon=":material/close:", key="ep_close", help="닫기", on_click=_close_panel)
+            if st.button("새 실적", icon=":material/add:", key="ep_new"):
+                _new_entry()
+                st.rerun()
+            if st.button("", icon=":material/close:", key="ep_close", help="닫기"):
+                _close_panel()
+                st.rerun()
         # 그날 실적 목록 (누르면 아래 칸에서 고침)
         with st.container(key="ep_list", gap="small"):
             if rows.empty:
@@ -1228,9 +1237,11 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 c = PURPOSE_CAT.get(db.to_str(r["purpose"]), "지원")
                 e = {"id": rid, "rec": r, "period": "", "equip": name_of.get(r["equip_id"], "?"),
                      "company": db.to_str(r["company"]) or "내부", "hours": float(r["hours"])}
-                st.button(f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}",
-                          key=f"ep_row_{CAT_KEY[c]}_{rid}", width="stretch", on_click=_pick_row, args=(day, e),
-                          type="primary" if rid == edit_id else "secondary")
+                if st.button(f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}",
+                             key=f"ep_row_{CAT_KEY[c]}_{rid}", width="stretch",
+                             type="primary" if rid == edit_id else "secondary"):
+                    _pick_row(day, e)
+                    st.rerun()
 
         added = st.session_state.pop("company_added", None)
         if added:
@@ -1292,7 +1303,9 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 save = st.button("저장" if cur is not None else "추가", icon=":material/check:", type="primary",
                                  key="ep_save", width="stretch")
                 if cur is not None:
-                    st.button("삭제", icon=":material/delete:", key="ep_del", on_click=_ask_delete)
+                    if st.button("삭제", icon=":material/delete:", key="ep_del"):
+                        _ask_delete()
+                        st.rerun()
         if save:
             row = {"장비": v_eq, "업체": v_comp, "담당자": v_staff, "활용유형": v_type, "사용목적": v_purp,
                    "사용시간": v_h, "시료수": v_s, "사용료": v_f, "지원개요": v_ov, "지원내용": v_ct, "기타": v_etc}
