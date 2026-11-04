@@ -40,6 +40,8 @@ TABLES = {
     "staff": ("담당자", [
         ("id", "ID"), ("name", "이름"), ("phone", "연락처"), ("email", "이메일"), ("role", "담당업무"),
         ("active", "재직"), ("note", "비고"),
+        # 2026-11-04 팀원 명단(부서·팀·파트) 추가. 새 열은 항상 맨 뒤에만 덧붙임
+        ("dept", "부서"), ("team", "팀"), ("part", "파트"),
     ]),
     "usage": ("사용실적", [
         ("id", "ID"), ("equip_id", "장비ID"), ("equip_ref", "장비명(참고)"),
@@ -1041,7 +1043,7 @@ def save_companies(edited: pd.DataFrame) -> None:
 
 # ── 담당자 ──────────────────────────────────────────────────────
 
-STAFF_TEXT = ("name", "phone", "email", "role", "note")
+STAFF_TEXT = ("name", "phone", "email", "role", "note", "dept", "team", "part")
 
 
 @st.cache_data(ttl=120)
@@ -1057,7 +1059,7 @@ def load_staff() -> pd.DataFrame:
     if df.empty:  # 예전 '설정 → 팀원 명단'에 적어 둔 이름이 있으면 그대로 보여 줌 (저장하면 담당자 탭으로 옮겨짐)
         members = [to_str(m) for m in (get_settings().get("members") or []) if to_str(m)]
         df = pd.DataFrame({"id": range(1, len(members) + 1), "name": members, "phone": "", "email": "",
-                           "role": "", "active": True, "note": ""})
+                           "role": "", "active": True, "note": "", "dept": "", "team": "", "part": ""})
     return df.sort_values("name").reset_index(drop=True)
 
 

@@ -6,9 +6,10 @@ from ui_style import page_header
 from views.common import confirm_delete, delete_config, split_deleted, with_delete_column
 
 COLS = {
-    "id": "id", "name": "이름", "phone": "연락처", "email": "이메일", "role": "담당업무",
-    "active": "재직", "note": "비고",
+    "id": "id", "dept": "부서", "team": "팀", "name": "이름", "phone": "내선번호", "part": "파트",
+    "role": "담당업무", "email": "이메일", "active": "재직", "note": "비고",
 }
+TEXT = ("부서", "팀", "이름", "내선번호", "파트", "담당업무", "이메일", "비고")
 
 
 def render() -> None:
@@ -19,7 +20,7 @@ def render() -> None:
         st.toast(msg, icon=":material/check_circle:")
     view = db.load_staff()[list(COLS)].rename(columns=COLS)
     # 빈 목록이면 열 형식을 알 수 없어 편집기가 오류를 내므로 형식을 고정
-    view = view.astype({c: "string" for c in ("이름", "연락처", "이메일", "담당업무", "비고")} | {"재직": "bool", "id": "Int64"})
+    view = view.astype({c: "string" for c in TEXT} | {"재직": "bool", "id": "Int64"})
     edited = st.data_editor(
         with_delete_column(view), key="staff_editor", num_rows="dynamic", hide_index=True, width="stretch",
         column_order=["삭제"] + [c for c in COLS.values() if c != "id"],
@@ -27,6 +28,8 @@ def render() -> None:
             "이름": st.column_config.TextColumn(required=True),
             "재직": st.column_config.CheckboxColumn(default=True, width="small",
                                                   help="그만둔 사람은 지우지 말고 끄세요. 지난 실적의 이름은 그대로 남습니다."),
+            "파트": st.column_config.TextColumn(width="small", help="예: 팀장, 운영, 시험, 제조"),
+            "내선번호": st.column_config.TextColumn(help="예: 043-270-2410"),
             "담당업무": st.column_config.TextColumn(help="예: 시험 장비, 5Ah 제조 라인"),
             "비고": st.column_config.TextColumn(width="medium"),
         },
