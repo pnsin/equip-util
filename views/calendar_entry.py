@@ -1323,16 +1323,29 @@ def _set_end(key: str, start: dt.date, days: int) -> None:
     st.session_state[key] = start + dt.timedelta(days=days - 1)
 
 
-def _busy_chambers(logs: pd.DataFrame, s: dt.date, e: dt.date, skip: set) -> dict[int, str]:
-    """s~e 에 다른 실적이 쓰는 챔버 → 업체명."""
+def _busy_chambers(logs: pd.DataFrame, s: dt.date, e: dt.date, skip: set,
+                   chans: pd.DataFrame | None = None) -> dict[int, str]:
+    """s~e 에 다른 실적이 쓰는 챔버 → 업체명.
+
+    같은 건물의 같은 챔버(예: MV chamber2)를 충방전기 여러 대가 같이 쓰므로, 다른 충방전기 예약이라도
+    챔버 이름이 같으면 쓰는 중으로 봅니다.
+    """
     out: dict[int, str] = {}
     if logs.empty or "chambers" not in logs:
         return out
+    same: dict[int, list[int]] = {}
+    if chans is not None and not chans.empty:
+        key = {int(i): (c, ch) for i, c, ch in zip(chans["id"], chans["center"], chans["chamber"]) if ch}
+        groups: dict[tuple, list[int]] = {}
+        for i, k in key.items():
+            groups.setdefault(k, []).append(i)
+        same = {i: groups[k] for i, k in key.items()}
     hit = logs[(logs["chambers"].map(db.to_str) != "") & (logs["start_date"] <= pd.Timestamp(e))
                & (logs["end_date"] >= pd.Timestamp(s)) & ~logs["id"].isin(skip)]
     for c, comp_ in zip(hit["chambers"], hit["company"]):
         for i in db.chamber_ids(c):
-            out.setdefault(i, db.to_str(comp_) or "내부")
+            for j in same.get(i, [i]):
+                out.setdefault(j, db.to_str(comp_) or "내부")
     return out
 
 
@@ -1512,7 +1525,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             mine = chans[chans["equip_id"] == v_eid] if v_eid is not None and not chans.empty else chans.iloc[0:0]
             if not mine.empty:
                 skip_ids = set(series["id"].astype(int)) | ({int(edit_id)} if edit_id else set())
-                busy = _busy_chambers(logs, v_ps, v_pe, skip_ids)
+                busy = _busy_chambers(logs, v_ps, v_pe, skip_ids, chans)
                 ch_ids = [int(i) for i in mine["id"]]
                 ch_name = dict(zip(mine["id"].astype(int), mine["chamber"]))
                 ch_cyc = dict(zip(mine["id"].astype(int), mine["cycler"]))
