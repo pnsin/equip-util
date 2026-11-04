@@ -631,10 +631,10 @@ def _edit_period(rec: dict, label_of: dict, comp_opts: list, staff_opts: list) -
     comp = rec.get("company") or ""
     opts = [""] + comp_opts + ([comp] if comp and comp not in comp_opts else [])
     company = st.selectbox("업체", opts, index=opts.index(comp), format_func=lambda v: v or "(내부 사용)", key="pe_c")
-    c1, c2, c3 = st.columns(3)
+    c1, c2 = st.columns(2)
     hours = num_input(c1, "사용시간(h)", f"pe_h_{rec['id']}", float(rec["hours"]), 1, 0)
-    fee = num_input(c2, "사용료(원)", f"pe_f_{rec['id']}", float(rec["fee"]), 1000, 0, steppers=False)
-    samples = num_input(c3, "시료수", f"pe_n_{rec['id']}", float(rec["samples"]), 1, 0)
+    samples = num_input(c2, "시료수", f"pe_n_{rec['id']}", float(rec["samples"]), 1, 0)
+    fee = rec["fee"]  # 사용료는 입력 화면에서 받지 않음 (기존 값 유지)
     c1, c2, c3 = st.columns(3)
     p_opts = seed.purpose_choices(rec["purpose"])
     purpose = c1.selectbox("사용목적", p_opts, index=p_opts.index(rec["purpose"]) if rec["purpose"] in p_opts else 1,
@@ -1280,11 +1280,11 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             v_purp = st.segmented_control("사용목적", seed.purpose_choices(db.to_str(cur["purpose"]) if cur is not None else ""),
                                           format_func=seed.purpose_label, key=f"ep_purp_{k}",
                                           default=db.to_str(cur["purpose"]) if cur is not None else "생산")
-            c1, c2, c3 = st.columns([1.2, 1, 1], gap="small")
+            c1, c2 = st.columns(2, gap="small")
             v_h = num_input(c1, "사용시간(h)", f"ep_h_{k}", float(cur["hours"]) if cur is not None else 8, 1, 0, 24)
-            v_s = num_input(c2, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 0, 1, 0)
-            v_f = num_input(c3, "사용료(원)", f"ep_f_{k}", float(cur["fee"]) if cur is not None else 0, 1000, 0,
-                            steppers=False)
+            v_s = num_input(c2, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 1, 1, 0)
+            # 사용료는 시험이 끝난 뒤 따로 매기므로 입력 카드에서는 받지 않음 (고칠 때는 기존 값 그대로 둠)
+            v_f = db.to_num(cur["fee"], 0) if cur is not None else 0
             v_ov = st.text_input("지원개요", ov, placeholder="예: 전극 코팅", key=f"ep_ov_{k}")
             with st.expander("지원내용 · 기타", expanded=bool(content or (cur is not None and db.to_str(cur["etc"])))):
                 v_ct = st.text_area("지원내용", content, height=80, placeholder="자세한 내용", key=f"ep_ct_{k}")
