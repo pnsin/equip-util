@@ -83,6 +83,14 @@ TABLES = {
         ("id", "ID"), ("date", "날짜"), ("equip_id", "장비ID"), ("equip_ref", "장비명(참고)"),
         ("kind", "종류"), ("content", "내용"), ("staff", "담당자"), ("note", "비고"),
     ]),
+    # 2026-11-04 CS활동 (업체 대상 문의·방문·기술지원 등). 관련 장비는 장비ID를 쉼표로 이어 저장
+    "cs": ("CS활동", [
+        ("id", "ID"), ("date", "활동일"), ("kind", "유형"), ("title", "제목"), ("company", "업체"),
+        ("contact", "업체 담당자"), ("staff", "우리 담당자"), ("equip_ids", "관련 장비ID"),
+        ("equip_ref", "관련 장비(참고)"), ("content", "내용"), ("action", "조치·결과"), ("status", "상태"),
+        ("follow_up", "후속 일정"), ("created_by", "작성자"), ("created_at", "작성일시"),
+        ("updated_at", "수정일시"), ("updated_by", "수정자"),
+    ]),
     # 지운 행을 보관했다가 '관리 › 휴지통 · 기록'에서 되살림 (data = 원래 행, JSON)
     "trash": ("휴지통", [
         ("id", "ID"), ("deleted_at", "지운 시각"), ("deleted_by", "지운 사람"), ("table", "종류"),
@@ -455,6 +463,8 @@ def refresh_data() -> None:
     load_logs.clear()
     load_channels.clear()
     get_settings.clear()
+    from core import cs  # CS활동 탭은 그 화면에서만 따로 읽음
+    cs.load.clear()
 
 
 def clear_caches() -> None:
@@ -471,6 +481,8 @@ def clear_caches() -> None:
     load_logs.clear()
     load_channels.clear()
     get_settings.clear()
+    from core import cs
+    cs.load.clear()
 
 
 def _new_ids(n: int) -> list[str]:
@@ -486,7 +498,7 @@ def _new_ids(n: int) -> list[str]:
 TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정",
                "channels": "챔버 구성", "rates": "장비 단가", "quotes": "견적서", "maint": "유지보수",
                "equip_specs": "장비 사양", "equip_docs": "장비 자료", "equip_photos": "장비 사진",
-               "equip_notes": "장비 메모"}
+               "equip_notes": "장비 메모", "cs": "CS활동"}
 UNDO_KEEP = 30
 
 
@@ -595,6 +607,8 @@ def _master_summary(t: str, r: dict) -> str:
             or f"ID {to_str(r.get('id'))}"
     if t == "channels":
         return f"{to_str(r.get('unit'))} {to_str(r.get('chamber'))}".strip() or f"ID {to_str(r.get('id'))}"
+    if t == "cs":
+        return " · ".join(x for x in (to_str(r.get("date"))[:10], to_str(r.get("company")), to_str(r.get("title"))) if x)
     if t == "quotes":
         return f"{to_str(r.get('no'))} {to_str(r.get('company'))}".strip() or f"ID {to_str(r.get('id'))}"
     for k in ("name", "item", "title"):
@@ -691,7 +705,7 @@ def restore_trash(trash_ids: list[str]) -> dict:
             used[t] = set(store.read(t)["id"].astype(str).str.strip())
         rid = str(data.get("id", "")).strip()
         if rid in used[t]:
-            if t == "usage":
+            if t in ("usage", "cs"):
                 skipped += 1
                 done.append(r["id"])
                 continue
@@ -1602,12 +1616,13 @@ def backup_bytes() -> bytes:
         store.read("quotes").to_excel(xw, sheet_name="quotes", index=False)
         for t in ("equip_specs", "equip_docs", "equip_notes"):  # 사진은 엑셀 셀에 안 들어가 뺌
             store.read(t).to_excel(xw, sheet_name=t, index=False)
+        store.read("cs").to_excel(xw, sheet_name="cs", index=False)
     return bio.getvalue()
 
 
 def restore_bytes(data: bytes) -> dict:
     with undo_group("백업 복원"):
-        for t in ("equipment", "usage", "staff", "companies", "settings", "rates", "quotes", "maint"):
+        for t in ("equipment", "usage", "staff", "companies", "settings", "rates", "quotes", "maint", "cs"):
             _step(("rewrite", t, _raw(t).values.tolist()), "백업 복원")
         res = _restore_bytes(data)
     log("복원", "전체", f"장비 {res['equipment']}대, 실적 {res['usage_log']}건")
@@ -1630,6 +1645,8 @@ def _restore_bytes(data: bytes) -> dict:
             store.rewrite(t, sheets[t].reindex(columns=cols(t)).fillna("").values.tolist())
     if "maint" in sheets:  # 유지보수 탭이 생기기 전 백업에는 없음
         store.rewrite("maint", sheets["maint"].reindex(columns=cols("maint")).fillna("").values.tolist())
+    if "cs" in sheets:  # CS활동 탭이 생기기 전 백업에는 없음
+        store.rewrite("cs", sheets["cs"].reindex(columns=cols("cs")).fillna("").values.tolist())
     if "settings" in sheets:
         keep = {k: v for k, v in _settings_raw().items() if k.startswith("template_b64")}
         st_df = sheets["settings"].reindex(columns=["key", "value"]).fillna("")
