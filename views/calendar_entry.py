@@ -24,7 +24,7 @@ FIELDS = {
 }
 
 
-CELL_LINES = 4  # 달력 칸에 바로 보여 줄 실적 수 (나머지는 "+N건")
+CELL_LINES = 3  # 구역(시험/제조/분석)마다 바로 보여 줄 실적 수 (나머지는 "+N건")
 CSS = """<style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap');
 .block-container {padding-top: 2.5rem;}
@@ -40,7 +40,7 @@ CSS = """<style>
   width: 2.25rem; height: 2.25rem; min-height: 0; padding: 0; border-radius: 6px;}
 .st-key-calnav div[class*="st-key-cal_today"] {margin-left: auto;}
 /* 날짜 칸 */
-.st-key-calgrid div[class*="st-key-cell_"] {min-height: 156px; padding: 30px 6px 8px; overflow: visible; gap: 3px; border-radius: 10px;
+.st-key-calgrid div[class*="st-key-cell_"] {min-height: 230px; padding: 32px 6px 8px; overflow: visible; gap: 5px; border-radius: 10px;
   position: relative; cursor: pointer;}
 /* 날짜 버튼을 칸 전체에 깔아서 칸 어디를 눌러도 되게 함 (실적 줄은 그 위에 올라옴) */
 .st-key-calgrid div[class*="st-key-day_"] {position: absolute !important; inset: 0; z-index: 0; width: auto !important;}
@@ -65,31 +65,58 @@ CSS = """<style>
 .st-key-calgrid div[class*="st-key-cell_"].cal-drag {background: rgba(45, 143, 213, 0.14) !important;
   border-color: var(--accent) !important;}
 .st-key-cal_cmd {display: none !important;}
+[data-testid="stElementContainer"]:has(iframe[height="0"]) {position: absolute !important; width: 0; height: 0;}
 /* 날짜 칸에 마우스를 올리면 뜨는 카드 */
-.st-key-calgrid div[class*="st-key-card"] {position: absolute !important; top: calc(100% + 6px); left: -2px;
+.st-key-calgrid div[class*="st-key-card"] {position: absolute !important; top: auto; bottom: calc(100% + 8px); left: -2px;
   width: 320px !important; min-width: 320px !important; max-width: none !important; z-index: 60; pointer-events: none; opacity: 0; visibility: hidden;
-  transform: translateY(-4px); transition: opacity .15s ease .35s, transform .15s ease .35s, visibility 0s linear .5s;}
+  transform: translateY(4px); transition: opacity .15s ease .35s, transform .15s ease .35s, visibility 0s linear .5s;}
 .st-key-calgrid div[class*="st-key-cardr_"] {left: auto; right: -2px;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover div[class*="st-key-card"] {opacity: 1; visibility: visible;
   transform: none; transition-delay: .35s, .35s, 0s;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {z-index: 40;}
-.cal-card {background: var(--panel, #fff); border: 1px solid var(--line2, #d5dbe3); border-radius: 12px;
-  box-shadow: 0 10px 28px rgba(15, 30, 60, .18); padding: 12px 14px; color: var(--ink, #1b2533);}
+.cal-card {background: #26324A; border: 1px solid #3A4866; border-radius: 14px;
+  box-shadow: 0 14px 32px rgba(15, 30, 60, .32); padding: 13px 15px; color: #F3F6FB;}
+.cal-card::after {content: ''; position: absolute; bottom: -7px; left: 26px; width: 12px; height: 12px;
+  background: #26324A; transform: rotate(45deg); border-radius: 2px;}
+div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 .cal-card .cc-h {display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
-  padding-bottom: 8px; border-bottom: 1px solid var(--line, #e3e8ee);}
-.cal-card .cc-d {font-size: 1.05rem; font-weight: 700;}
-.cal-card .cc-sum {font-size: .85rem; color: var(--accent, #2D8FD5); font-weight: 600;}
-.cal-card .cc-e {padding: 7px 0 7px 10px; border-left: 3px solid var(--accent, #2D8FD5); margin: 6px 0;}
-.cal-card .cc-n {font-size: .95rem; font-weight: 700; line-height: 1.35; margin-bottom: 4px; word-break: keep-all;}
+  padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, .14);}
+.cal-card .cc-d {font-size: 1.05rem; font-weight: 700; color: #fff;}
+.cal-card .cc-sum {font-size: .85rem; color: #9CCBFF; font-weight: 700;}
+.cal-card .cc-e {padding: 7px 10px; border-left: 3px solid var(--accent, #2D8FD5); margin: 6px 0;
+  background: rgba(255, 255, 255, .06); border-radius: 0 8px 8px 0;}
+.cal-card .cc-n {font-size: .95rem; font-weight: 700; line-height: 1.35; margin-bottom: 4px; word-break: keep-all; color: #fff;}
 .cal-card .cc-r {display: grid; grid-template-columns: 3.2em 1fr; gap: 2px 8px; font-size: .88rem; line-height: 1.5;}
-.cal-card .cc-r span:nth-child(odd) {color: var(--muted, #7b8794);}
+.cal-card .cc-r span:nth-child(odd) {color: #A9B5CA;}
 .cal-card .cc-h2 {font-weight: 700;}
 .cal-card .cc-tag {display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 7px; border-radius: 999px;
   margin-right: 6px; vertical-align: 1px;}
-/* 구분 태그 (실적 줄 첫 줄 앞) */
-.st-key-calgrid div[class*="st-key-ent_"] button p:first-child::before {content: var(--cat-label, ""); display: inline-block;
-  font-size: .62rem; font-weight: 800; padding: 0 5px; margin-right: 4px; border-radius: 999px; line-height: 1.5;
-  background: var(--chip-fg, #3B82F6); color: #fff; vertical-align: 1px;}
+/* 칸 안의 구역 (시험 / 제조 / 분석): 비어 있어도 항상 보임 */
+.st-key-calgrid div[class*="st-key-sec_"] {position: relative; z-index: 1; pointer-events: none; gap: 4px !important;
+  border-radius: 9px; padding: 3px 4px 4px; background: var(--sec-bg); border: 1px solid var(--sec-line);}
+.st-key-calgrid div[class*="st-key-sec_"] div[class*="st-key-er_"],
+.st-key-calgrid div[class*="st-key-sec_"] div[class*="st-key-more_"] {pointer-events: auto;}
+.st-key-calgrid div[class*="st-key-sec_"] [data-testid="stMarkdownContainer"]:has(.cal-sec-h) {margin-bottom: 0 !important;}
+.cal-sec-h {display: flex; align-items: center; gap: 5px; font-size: .68rem; font-weight: 800; line-height: 1.5;
+  color: var(--sec-fg); padding: 0 2px; letter-spacing: .02em;}
+.cal-sec-h::before {content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--sec-fg);}
+.cal-sec-h b {margin-left: auto; font-weight: 700; opacity: .8;}
+.cal-sec-h.none {opacity: .5;}
+.st-key-calgrid div[class*="st-key-sec_"]:not(:has(div[class*="st-key-er_"])):not(:has(div[class*="st-key-cf_"])) {
+  background: transparent; border-style: dashed; padding: 2px 4px;}
+.st-key-calgrid div[class*="st-key-cf_"] [data-testid="stMarkdownContainer"]:has(.cal-cf-q),
+.st-key-calgrid div[class*="st-key-sec_"] [data-testid="stMarkdownContainer"] {margin-bottom: 0 !important;}
+/* ✕ 누른 뒤 '삭제할까요?' */
+.st-key-calgrid div[class*="st-key-cf_"] {pointer-events: auto; position: relative; z-index: 3; gap: 4px !important;
+  background: #FFF1F1; border: 1px solid #F3B4B4; border-radius: 8px; padding: 5px 6px;}
+.cal-cf-q {font-size: .7rem; line-height: 1.35; color: #8A2C2C; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.st-key-calgrid div[class*="st-key-cf_"] button {min-height: 0; height: 24px; padding: 0 4px; border-radius: 6px;}
+.st-key-calgrid div[class*="st-key-cf_"] button p {font-size: .72rem !important; font-weight: 700;}
+.st-key-calgrid div[class*="st-key-cfy_"] button {background: #E5484D !important; border-color: #E5484D !important; color: #fff !important;}
+.st-key-calgrid div[class*="st-key-sec_test_"] {--sec-bg: #FDECEF99; --sec-line: #E35D7833; --sec-fg: #E35D78; --chip-fg: #E35D78;}
+.st-key-calgrid div[class*="st-key-sec_make_"] {--sec-bg: #E5F6EC99; --sec-line: #1FA97133; --sec-fg: #1FA971; --chip-fg: #1FA971;}
+.st-key-calgrid div[class*="st-key-sec_anal_"] {--sec-bg: #EEE9FD99; --sec-line: #7C5CE033; --sec-fg: #7C5CE0; --chip-fg: #7C5CE0;}
+.st-key-calgrid div[class*="st-key-sec_etc_"] {--sec-bg: #EEF1F599; --sec-line: #8A97A833; --sec-fg: #8A97A8; --chip-fg: #8A97A8;}
 /* 구분 필터 */
 div[class*="st-key-cal_cats"] {margin: .1rem 0 .4rem;}
 div[class*="st-key-cal_cats"] button {border-radius: 999px !important; font-weight: 600;}
@@ -101,6 +128,11 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 .st-key-cal_selbar {padding: .45rem .75rem; border-radius: 8px; background: rgba(45, 143, 213, 0.10);
   border: 1px solid rgba(45, 143, 213, 0.35); margin-bottom: .6rem;}
 .st-key-cal_selbar p {margin: 0;}
+.st-key-cal_delbar {padding: .5rem .8rem; border-radius: 10px; background: #FFF1F1; border: 1px solid #F3B4B4;
+  margin-bottom: .6rem;}
+.st-key-cal_delbar p {margin: 0; color: #8A2C2C;}
+.st-key-cal_delbar [data-testid="stMarkdownContainer"] {margin-bottom: 0 !important;}
+.st-key-cal_del_yes button {background: #E5484D !important; border-color: #E5484D !important; color: #fff !important;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {border-color: var(--accent);}
 .st-key-calgrid div[class*="st-key-cell_"] [data-testid="stVerticalBlock"] {gap: 3px;}
 .st-key-calgrid button div[data-testid="stMarkdownContainer"] {width: 100%; min-width: 0; text-align: left;}
@@ -111,7 +143,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 .st-key-calgrid div[class*="st-key-ent_"] button {justify-content: flex-start; text-align: left;}
 .st-key-calgrid div[class*="st-key-day_"] button > div,
 .st-key-calgrid div[class*="st-key-ent_"] button > div {width: 100%; min-width: 0; justify-content: flex-start;}
-.st-key-calgrid div[class*="st-key-day_"] button p {font-size: 0.78rem; opacity: 0.75;}
+.st-key-calgrid div[class*="st-key-day_"] button p {font-size: 0.76rem; color: #6B7790;}
 .st-key-calgrid div[class*="st-key-day_"] button strong {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif;
   font-size: 1.12rem; font-weight: 800; letter-spacing: -.01em; display: inline-flex; align-items: center;
   justify-content: center; min-width: 1.75em; height: 1.75em; border-radius: 999px; margin-right: 2px;}
@@ -119,7 +151,8 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 /* 실적 한 줄 (누르면 이 실적만 복사) */
 .st-key-calgrid div[class*="st-key-ent_"] button {
   justify-content: flex-start; min-height: 0; padding: 4px 8px; border: none; border-radius: 8px;
-  background: var(--chip-bg, #E8F1FD); border-left: 3px solid var(--chip-fg, #3B82F6);
+  background: #fff; border-left: 3px solid var(--chip-fg, #3B82F6);
+  box-shadow: 0 1px 2px rgba(20, 40, 80, .08);
   transition: transform .1s ease, box-shadow .1s ease;}
 .st-key-calgrid div[class*="st-key-ent_"] button:hover {transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(20, 40, 80, .12); filter: saturate(1.15);}
@@ -130,10 +163,11 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   box-shadow: 0 1px 2px rgba(20, 40, 80, .04); transition: box-shadow .15s ease, border-color .15s ease;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 6px 16px rgba(20, 40, 80, .10);
   border-color: #C9D8EC !important;}
-.st-key-calgrid .cal-wk {text-align: center; font-size: .78rem; font-weight: 700; letter-spacing: .08em;
-  color: var(--muted, #7b8794); padding: 4px 0 2px;}
-.st-key-calgrid .cal-wk.sat {color: #4A86E8;} .st-key-calgrid .cal-wk.sun {color: #E0626F;}
-.st-key-calgrid .cal-out {min-height: 156px; border-radius: 14px; border: 1px dashed #E6EBF2; padding: 8px 10px;
+.st-key-calgrid .cal-wk {text-align: center; font-size: 1.02rem; font-weight: 800; letter-spacing: .04em;
+  color: #4A5670; background: #EAEFF7; border-radius: 999px; padding: 6px 0; margin: 0 6px 4px;}
+.st-key-calgrid .cal-wk.sat {color: #3D7BE0; background: #E3EEFD;}
+.st-key-calgrid .cal-wk.sun {color: #E0566A; background: #FDE7EB;}
+.st-key-calgrid .cal-out {min-height: 230px; border-radius: 14px; border: 1px dashed #E6EBF2; padding: 8px 10px;
   font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1.05rem; color: #C3CBD6; background: rgba(255,255,255,.4);}
 .st-key-calgrid div[class*="st-key-more_"] p {font-size: 0.7rem; color: #777; margin: 0 0 0 4px;}
 /* 휴대폰: 7칸을 한 줄에 유지한 작은 달력 (날짜·건수만, 누르면 아래에 그날 실적) */
@@ -143,7 +177,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .st-key-calgrid [data-testid="stHorizontalBlock"] {flex-wrap: nowrap !important; gap: 3px !important;}
   .st-key-calgrid [data-testid="stColumn"] {min-width: 0 !important; width: auto !important; flex: 1 1 0 !important;}
   .st-key-calgrid div[class*="st-key-cell_"] {min-height: 54px; padding: 3px 2px; border-radius: 8px;}
-  .st-key-calgrid div[class*="st-key-er_"], .st-key-calgrid div[class*="st-key-more_"] {display: none;}
+  .st-key-calgrid div[class*="st-key-sec_"] {display: none !important;}
   .st-key-calgrid div[class*="st-key-day_"] button {padding: 4px 1px !important; justify-content: center !important;}
   .st-key-calgrid div[class*="st-key-day_"] button > div {justify-content: center !important;}
   .st-key-calgrid div[class*="st-key-day_"] button p {white-space: normal !important; font-size: .62rem; line-height: 1.25;
@@ -291,9 +325,11 @@ def _day_head(d: dt.date, entries: list[dict], holiday: bool, today: bool) -> tu
 
 
 # 장비용도(장비 정보) → 달력 구분. 색은 구분마다 고정 (배경, 진한 색)
-CATS = {"제조": ("#E5F6EC", "#1FA971"), "시험": ("#FDECEF", "#E35D78"), "분석": ("#EEE9FD", "#7C5CE0"),
+CATS = {"시험": ("#FDECEF", "#E35D78"), "제조": ("#E5F6EC", "#1FA971"), "분석": ("#EEE9FD", "#7C5CE0"),
         "기타": ("#EEF1F5", "#8A97A8")}
 CAT_ORDER = list(CATS)
+FIXED_CATS = ["시험", "제조", "분석"]  # 칸마다 비어 있어도 항상 보이는 구역
+CAT_KEY = {"시험": "test", "제조": "make", "분석": "anal", "기타": "etc"}
 
 
 def _cat_of(use: str) -> str:
@@ -432,7 +468,17 @@ def _delete_ids(ids: list[int], label: str) -> int:
 
 
 def _click_x(d: dt.date, e: dict) -> None:
-    """✕: 이 실적 한 건을 바로 지움 (확인창 없음, 되돌리기 가능)."""
+    """✕: 그 자리에서 '삭제할까요?'를 한 번 더 물음."""
+    st.session_state.cal_xconfirm = (d, e["id"])
+
+
+def _cancel_x() -> None:
+    st.session_state.pop("cal_xconfirm", None)
+
+
+def _confirm_x(d: dt.date, e: dict) -> None:
+    """삭제 확인: 이 실적 한 건을 지움 (되돌리기 가능)."""
+    st.session_state.pop("cal_xconfirm", None)
     n = _delete_ids([e["id"]], f"{d:%m/%d} {_cut(e['equip'], 12)} 삭제")
     if n:
         st.session_state.cal_saved = f"{d:%m/%d} {_cut(e['equip'], 20)} 실적을 지웠습니다. 실수면 Ctrl+Z 또는 '되돌리기'."
@@ -477,6 +523,47 @@ def _paste_days(days: list[dt.date]) -> None:
         "선택한 날에는 같은 장비·업체가 이미 있어 붙여 넣지 않았습니다"
 
 
+def _ask_delete(days: list[dt.date] | None = None) -> None:
+    """Delete 키 / 선택 막대의 '삭제': 바로 지우지 않고 '삭제할까요?'를 먼저 띄움."""
+    days = days or _sel_days()
+    clip = st.session_state.get("cal_clip")
+    if days:
+        ask = {"kind": "days", "days": days}
+    elif clip and clip["rows"][0].get("start_date") == clip["rows"][0].get("end_date"):
+        ask = {"kind": "clip", "id": int(clip["rows"][0]["id"]), "day": clip["from"], "label": clip["label"]}
+    elif st.session_state.get("cal_day"):
+        ask = {"kind": "days", "days": [st.session_state.cal_day]}
+    else:
+        return
+    if ask["kind"] == "days":
+        logs = db.load_logs()
+        n = sum(len(_day_rows(logs, d)) for d in ask["days"])
+        if not n:
+            return
+        a, b = ask["days"][0], ask["days"][-1]
+        span = f"{a:%m/%d}" if a == b else f"{a:%m/%d}~{b:%m/%d}"
+        ask["text"] = f"{span}의 실적 {n}건을 삭제할까요?"
+    else:
+        ask["text"] = f"{ask['day']:%m/%d} {_cut(ask['label'], 24)}을(를) 삭제할까요?"
+    st.session_state.cal_delask = ask
+
+
+def _do_pending_delete() -> None:
+    ask = st.session_state.pop("cal_delask", None)
+    if not ask:
+        return
+    if ask["kind"] == "days":
+        _delete_days(ask["days"])
+    else:
+        n = _delete_ids([ask["id"]], f"{ask['day']:%m/%d} 실적 삭제")
+        if n:
+            st.session_state.cal_saved = f"{ask['day']:%m/%d} {_cut(ask['label'], 24)}을(를) 지웠습니다. 실수면 Ctrl+Z."
+
+
+def _cancel_delete() -> None:
+    st.session_state.pop("cal_delask", None)
+
+
 def _on_cmd() -> None:
     """화면의 키보드·드래그 동작이 숨은 입력칸으로 보내는 명령을 처리."""
     raw = str(st.session_state.get("cal_cmd") or "")
@@ -487,20 +574,15 @@ def _on_cmd() -> None:
         st.session_state.cal_sel = [a + dt.timedelta(days=i) for i in range((b - a).days + 1)]
         st.session_state.cal_day = b if b.month == st.session_state.get("cal_month", b).month else a
     elif cmd == "del":
-        days = _sel_days()
-        clip = st.session_state.get("cal_clip")
-        if days:
-            _delete_days(days)
-        elif clip and clip["rows"][0].get("start_date") == clip["rows"][0].get("end_date"):
-            rec = clip["rows"][0]
-            n = _delete_ids([int(rec["id"])], f"{clip['from']:%m/%d} 실적 삭제")
-            if n:
-                st.session_state.cal_saved = f"{clip['from']:%m/%d} {_cut(clip['label'], 24)}을(를) 지웠습니다. 실수면 Ctrl+Z."
-        elif st.session_state.get("cal_day"):
-            _delete_days([st.session_state.cal_day])
+        if st.session_state.get("cal_delask"):  # 확인창이 떠 있을 때 Delete를 한 번 더 → 삭제
+            _do_pending_delete()
+        else:
+            _ask_delete()
     elif cmd == "paste":
         _paste_days(_sel_days() or [st.session_state.get("cal_day")])
     elif cmd == "esc":
+        if st.session_state.pop("cal_delask", None) or st.session_state.pop("cal_xconfirm", None):
+            return
         st.session_state.pop("cal_sel", None)
         st.session_state.pop("cal_clip", None)
 
@@ -578,22 +660,38 @@ KEYS_JS = r"""
 
 
 def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: bool, today: bool,
-              clip: dict | None, logs: pd.DataFrame) -> None:
+              clip: dict | None, logs: pd.DataFrame, shown_cats: list[str]) -> None:
     cell = col.container(border=True, key=f"cell_{d}")
     head, _ = _day_head(d, entries, holiday, today)
     # 날짜 버튼은 칸 전체를 덮음 → 칸 어디를 눌러도 선택/붙여넣기 (CSS 참고)
     cell.button(head, key=f"day_{d}", type="tertiary", width="stretch",
                 on_click=_click_day, args=(d, clip, logs))
-    for e in entries[:CELL_LINES]:
-        label = f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}"
-        row = cell.container(key=f"er_{d}_{e['id']}")
-        row.button(label, key=f"ent_{d}_{e['id']}", width="stretch", 
-                   on_click=_click_entry, args=(d, e, clip, logs))
-        if not e["period"]:  # 기간 실적은 아래 '기간 실적'에서 고침
-            row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
-                       on_click=_click_x, args=(d, e))
-    if len(entries) > CELL_LINES:
-        cell.container(key=f"more_{d}").markdown(f"+{len(entries) - CELL_LINES}건 더")
+    cats = [c for c in shown_cats if c in FIXED_CATS or any(e["cat"] == c for e in entries)]
+    for c in cats:
+        ents = [e for e in entries if e["cat"] == c]
+        sec = cell.container(key=f"sec_{CAT_KEY[c]}_{d}")
+        hours = f"{_hours(sum(e['hours'] for e in ents))}" if ents else ""
+        sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{c}<b>{hours}</b></div>",
+                     unsafe_allow_html=True)
+        for e in ents[:CELL_LINES]:
+            label = f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}"
+            if st.session_state.get("cal_xconfirm") == (d, e["id"]):
+                cf = sec.container(key=f"cf_{d}_{e['id']}")
+                cf.markdown(f"<div class='cal-cf-q'><b>{html.escape(_cut(e['equip'], 14))}</b><br>삭제할까요?</div>",
+                            unsafe_allow_html=True)
+                with cf.container(horizontal=True, gap="small"):
+                    st.button("삭제", key=f"cfy_{d}_{e['id']}", type="primary", width="stretch",
+                              on_click=_confirm_x, args=(d, e))
+                    st.button("취소", key=f"cfn_{d}_{e['id']}", width="stretch", on_click=_cancel_x)
+                continue
+            row = sec.container(key=f"er_{d}_{e['id']}")
+            row.button(label, key=f"ent_{d}_{e['id']}", width="stretch",
+                       on_click=_click_entry, args=(d, e, clip, logs))
+            if not e["period"]:  # 기간 실적은 아래 '기간 실적'에서 고침
+                row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
+                           on_click=_click_x, args=(d, e))
+        if len(ents) > CELL_LINES:
+            sec.container(key=f"more_{d}_{CAT_KEY[c]}").markdown(f"+{len(ents) - CELL_LINES}건 더")
     if entries:
         side = "r" if d.weekday() >= 4 else ""  # 오른쪽 칸은 카드를 왼쪽으로 펼침
         cell.container(key=f"card{side}_{d}").markdown(_card_html(d, entries), unsafe_allow_html=True)
@@ -635,7 +733,7 @@ def render(header: bool = True) -> None:
     daily = expand_daily(logs, cfg.get("alloc_mode", "spread"))
     in_month = daily[(daily["day"] >= pd.Timestamp(weeks[0][0])) & (daily["day"] <= pd.Timestamp(weeks[-1][-1]))]
     by_day = _cell_entries(in_month, logs, eq)
-    present = [c for c in CAT_ORDER if any(e["cat"] == c for v in by_day.values() for e in v)]
+    present = FIXED_CATS + (["기타"] if any(e["cat"] == "기타" for v in by_day.values() for e in v) else [])
     shown = st.pills("구분", present, selection_mode="multi", default=present, key=f"cal_cats_{month}",
                      label_visibility="collapsed",
                      format_func=lambda c: f"{c} {sum(e['cat'] == c for dd, v in by_day.items() if dd.month == month.month for e in v)}건")
@@ -648,8 +746,8 @@ def render(header: bool = True) -> None:
                      f"{b} p::before {{content: ''; display: inline-block; width: .55em; height: .55em; border-radius: 50%; "
                      f"background: {fg}; margin-right: .4em; vertical-align: .05em;}}")
     st.markdown(f"<style>{pill_css}</style>", unsafe_allow_html=True)
-    if present and set(shown or []) != set(present):
-        by_day = {dd: [e for e in v if e["cat"] in (shown or [])] for dd, v in by_day.items()}
+    shown_cats = [c for c in present if c in (shown or [])]
+    by_day = {dd: [e for e in v if e["cat"] in shown_cats] for dd, v in by_day.items()}
 
     # ── 복사 / 붙여넣기 ─────────────────────────────────────
     clip = st.session_state.get("cal_clip")
@@ -669,11 +767,18 @@ def render(header: bool = True) -> None:
         with st.container(key="cal_selbar", horizontal=True, vertical_alignment="center", gap="small"):
             span = f"{sel_days[0]:%m/%d}~{sel_days[-1]:%m/%d}"
             st.markdown(f"**{span} {len(sel_days)}일 선택** · Delete 삭제 · Ctrl+V 붙여넣기 · Esc 해제")
-            st.button("삭제", icon=":material/delete:", key="cal_sel_del", on_click=_delete_days, args=(sel_days,))
+            st.button("삭제", icon=":material/delete:", key="cal_sel_del", on_click=_ask_delete, args=(sel_days,))
             if clip:
                 st.button("붙여넣기", icon=":material/content_paste:", key="cal_sel_paste",
                           on_click=_paste_days, args=(sel_days,))
             st.button("해제", icon=":material/close:", key="cal_sel_clear", on_click=_clear_sel)
+    ask = st.session_state.get("cal_delask")
+    if ask:
+        with st.container(key="cal_delbar", horizontal=True, vertical_alignment="center", gap="small"):
+            st.markdown(f":material/delete: **{_md(ask['text'])}**\u2003:gray[Delete 한 번 더 = 삭제 · Esc = 취소]",
+                        width="stretch")
+            st.button("삭제", key="cal_del_yes", type="primary", on_click=_do_pending_delete)
+            st.button("취소", key="cal_del_no", on_click=_cancel_delete)
     st.text_input("cmd", key="cal_cmd", on_change=_on_cmd, label_visibility="collapsed")
     import streamlit.components.v1 as components
     components.html(KEYS_JS, height=0)
@@ -681,12 +786,6 @@ def render(header: bool = True) -> None:
     grid = st.container(key="calgrid")
     sel = "".join(f".st-key-cell_{d} {{background: rgba(45, 143, 213, 0.14) !important; border-color: var(--accent) !important;}}"
                   for d in sel_days)
-    for dd, ents in by_day.items():
-        if dd.month != month.month:
-            continue
-        for e in ents[:CELL_LINES]:
-            bg, fg = CATS[e["cat"]]
-            sel += f" .st-key-ent_{dd}_{e['id']} button {{--chip-bg: {bg}; --chip-fg: {fg}; --cat-label: '{e['cat']}';}}"
     for week in weeks:
         if week[5].month == month.month:
             sel += f" .st-key-cell_{week[5]} {{background: #F5F8FF !important;}}"
@@ -711,7 +810,7 @@ def render(header: bool = True) -> None:
                 cols[i].markdown(f"<div class='cal-out'>{d.day}</div>", unsafe_allow_html=True)
                 continue
             _day_cell(cols[i], d, by_day.get(d, []), selected=d == day, holiday=d in hol, today=d == today,
-                      clip=clip, logs=logs)
+                      clip=clip, logs=logs, shown_cats=shown_cats)
     st.markdown("<div class='cal-mobile-hint'>날짜를 누르면 아래에 그날 실적이 나옵니다. "
                 "다른 날로 복사는 '실적 목록'의 복제를 쓰세요.</div>", unsafe_allow_html=True)
 
