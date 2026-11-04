@@ -33,12 +33,12 @@ FIELDS = {
 }
 
 
-DEFAULT_COLS = ["장비", "시작일", "종료일", "업체", "사용목적", "활용유형", "사용시간", "사용료", "시료수", "담당자",
+DEFAULT_COLS = ["장비", "시작일", "종료일", "업체", "사용료", "사용목적", "활용유형", "사용시간", "시료수", "담당자",
                 "세부지원내용", "수정자"]
 
 
 def render() -> None:
-    page_header("실적 목록", "실적")
+    page_header("수수료 입력", "실적")
     saved = st.session_state.pop("records_saved", None)
     if saved:
         st.success(saved, icon=":material/check_circle:")
@@ -66,6 +66,7 @@ def render() -> None:
     comp_q = c3.text_input("업체", placeholder="검색", key="rec_comp")
     writers = sorted(w for w in logs["created_by"].unique() if w)
     writer = c4.selectbox("담당자", ["전체"] + writers, key="rec_writer")
+    no_fee = st.toggle("수수료 안 넣은 것만", key="rec_nofee", help="수수료가 0원인 업체 실적만 보여 줍니다.")
 
     df = logs.copy()
     if isinstance(rng, (tuple, list)) and len(rng) == 2:
@@ -76,11 +77,13 @@ def render() -> None:
         df = df[df["company"].str.contains(comp_q, case=False, regex=False)]
     if writer != "전체":
         df = df[df["created_by"] == writer]
+    if no_fee:
+        df = df[(df["fee"].fillna(0) <= 0) & (df["company"].fillna("") != "")]
 
     m1, m2, m3 = st.columns(3)
     m1.metric("건수", f"{len(df):,}")
     m2.metric("사용시간 합계", f"{df['hours'].sum():,.0f} h")
-    m3.metric("사용료 합계", f"{df['fee'].sum():,.0f} 원")
+    m3.metric("수수료 합계", f"{df['fee'].sum():,.0f} 원")
 
     if df.empty:
         empty_state("조건에 맞는 실적이 없습니다", icon="⌕")
@@ -128,7 +131,8 @@ def render() -> None:
             "시작일": st.column_config.DateColumn(format="YYYY-MM-DD", required=True),
             "종료일": st.column_config.DateColumn(format="YYYY-MM-DD", required=True),
             "사용시간": st.column_config.NumberColumn(min_value=0, step=1, format="%d", required=True),
-            "사용료": st.column_config.NumberColumn(min_value=0, step=1000, format="%d"),
+            "사용료": st.column_config.NumberColumn("수수료(원)", min_value=0, step=1000, format="localized",
+                                                help="시험이 끝난 뒤 매긴 수수료. 칸을 눌러 바로 입력하세요."),
             "시료수": st.column_config.NumberColumn(min_value=0, step=1, format="%d"),
             "세부지원내용": st.column_config.TextColumn(width="large"),
         },
@@ -170,7 +174,7 @@ def render() -> None:
             for e in errors:
                 st.error(e)
         else:
-            with db.undo_group(f"실적 목록 저장 (수정 {len(updates)} · 삭제 {len(to_delete)})"):
+            with db.undo_group(f"수수료 입력 저장 (수정 {len(updates)} · 삭제 {len(to_delete)})"):
                 n_up = db.update_logs(updates) if updates else 0
                 n_del = db.delete_logs(to_delete)
             st.session_state.records_saved = f"수정 {n_up}건 · 삭제 {n_del}건 반영했습니다."

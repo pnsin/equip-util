@@ -168,7 +168,7 @@ def render(header: bool = True) -> None:
                        fee=db.to_num(r["사용료(원)"], 0), samples=db.to_num(r["시료수"], 0))
             errors += [f"[{r['장비']}] {e}" for e in rules.validate(rec) if e not in common_errs]
             if (rec["equip_id"], start, end, company) in existing:
-                errors.append(f"[{r['장비']}] 같은 업체·기간의 실적이 이미 있습니다. '실적 목록'에서 확인하세요.")
+                errors.append(f"[{r['장비']}] 같은 업체·기간의 실적이 이미 있습니다. '수수료 입력'에서 확인하세요.")
             recs.append(rec)
         if errors:
             for e in errors:

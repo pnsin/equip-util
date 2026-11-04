@@ -266,7 +266,7 @@ def render() -> None:
     col_name = BASES[base]
     unit = "h" if base == "hours" else "원"
     with hc1:
-        section_bar("사용 구성", sub=f"{col_name} 기준 · 업체 막대를 누르면 그 업체 실적 목록")
+        section_bar("사용 구성", sub=f"{col_name} 기준 · 업체 막대를 누르면 그 업체 실적")
     c1, c2, c3 = st.columns(3)
     for col, by, title in ((c1, "purpose", "사용목적별"), (c2, "usage_type", "활용유형별"), (c3, "company", "업체별 상위 10")):
         b = calc.breakdown(daily, logs, s, e_eff, by)

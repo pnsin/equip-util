@@ -97,7 +97,7 @@ PAGES = {
     ],
     "실적": [
         st.Page(input_page.render, title="실적 입력", url_path="input"),
-        st.Page(records.render, title="실적 목록", url_path="records"),
+        st.Page(records.render, title="수수료 입력", url_path="records"),
         st.Page(export.render_download, title="실적 내려받기", url_path="download"),
     ],
     "장비 정보": [
