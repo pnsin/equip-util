@@ -434,7 +434,7 @@ def _new_ids(n: int) -> list[str]:
 # 마지막 작업을 거꾸로 적용합니다. 지운 행은 '휴지통' 탭에 원본째 보관해 나중에도 되살릴 수 있습니다.
 
 TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정"}
-UNDO_KEEP = 20
+UNDO_KEEP = 30
 
 
 def who() -> str:
