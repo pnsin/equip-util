@@ -27,13 +27,12 @@ def period_picker(key: str, kinds: list[str], default_kind: str, completed: bool
     if completed and kind in ("월", "분기", "반기"):
         ref = period_bounds(kind, today)[0] - dt.timedelta(days=1)
 
-    if kind == "직접 지정":
-        s0 = ref.replace(day=1)
-        rng = row[1].date_input("기간", value=(s0, today), format="YYYY-MM-DD", key=f"{key}_range")
-        if isinstance(rng, (tuple, list)) and len(rng) == 2:
-            s, e = rng
-        else:
-            s = e = rng[0] if isinstance(rng, (tuple, list)) and rng else today
+    if kind == "직접 지정":  # 시작일과 종료일을 따로 고름 (기본: 이번 달 1일 ~ 오늘)
+        s = row[1].date_input("시작일", value=today.replace(day=1), format="YYYY-MM-DD", key=f"{key}_from")
+        e = row[2].date_input("종료일", value=today, format="YYYY-MM-DD", key=f"{key}_to")
+        s, e = s or today.replace(day=1), e or today
+        if e < s:
+            s, e = e, s
         return s, e, f"{s:%Y-%m-%d} ~ {e:%Y-%m-%d}", kind
     if kind == "주":
         d = row[1].date_input("기준일", value=today, format="YYYY-MM-DD", key=f"{key}_week",
