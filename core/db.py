@@ -75,7 +75,20 @@ TABLES = {
         ("at", "시각"), ("who", "누가"), ("action", "작업"), ("target", "대상"), ("summary", "내용"),
     ]),
     "settings": ("설정", [("key", "항목"), ("value", "값")]),
+    # 2026-11-04 '장비 정보' 화면: 장비 한 대의 사양 · 자료(링크) · 사진 · 메모. equip_id = 장비 탭 ID
+    "equip_specs": ("장비사양", [("id", "ID"), ("equip_id", "장비ID"), ("item", "항목"), ("value", "값"),
+                               ("order", "순서")]),
+    "equip_docs": ("장비자료", [("id", "ID"), ("equip_id", "장비ID"), ("kind", "종류"), ("title", "제목"),
+                              ("url", "링크"), ("note", "메모"), ("order", "순서")]),
+    # 사진은 앱에서 줄여 글자(base64 JPEG)로 저장. 셀 한도(50,000자) 안에 들게 줄임
+    "equip_photos": ("장비사진", [("id", "ID"), ("equip_id", "장비ID"), ("title", "설명"), ("order", "순서"),
+                                ("thumb", "작은사진"), ("photo", "사진"), ("created_at", "올린시각"),
+                                ("created_by", "올린사람")]),
+    # 장비마다 한 줄 (id = 장비ID)
+    "equip_notes": ("장비메모", [("id", "장비ID"), ("caution", "사용 시 주의"), ("contact", "A/S 연락처"),
+                               ("updated_at", "수정일시"), ("updated_by", "수정자")]),
 }
+INFO_TABS = ("equip_specs", "equip_docs", "equip_photos", "equip_notes")
 
 DEFAULT_SETTINGS = {
     "org_name": "차세대에너지센터 차세대전지팀",
@@ -427,6 +440,7 @@ def refresh_data() -> None:
 
 def clear_caches() -> None:
     _snapshot.clear()
+    load_info.clear()
     load_trash.clear()
     load_history.clear()
     load_equipment.clear()
@@ -448,7 +462,9 @@ def _new_ids(n: int) -> list[str]:
 # 마지막 작업을 거꾸로 적용합니다. 지운 행은 '휴지통' 탭에 원본째 보관해 나중에도 되살릴 수 있습니다.
 
 TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정",
-               "channels": "챔버 구성"}
+               "channels": "챔버 구성",
+               "equip_specs": "장비 사양", "equip_docs": "장비 자료", "equip_photos": "장비 사진",
+               "equip_notes": "장비 메모"}
 UNDO_KEEP = 30
 
 
@@ -554,7 +570,12 @@ def _usage_summary(r: dict) -> str:
 def _master_summary(t: str, r: dict) -> str:
     if t == "channels":
         return f"{to_str(r.get('unit'))} {to_str(r.get('chamber'))}".strip() or f"ID {to_str(r.get('id'))}"
-    return to_str(r.get("name")) or f"ID {to_str(r.get('id'))}"
+    for k in ("name", "item", "title"):
+        if to_str(r.get(k)):
+            return to_str(r.get(k))
+    if t == "equip_photos":
+        return f"사진 (장비 ID {to_str(r.get('equip_id'))})"
+    return f"ID {to_str(r.get('id'))}"
 
 
 def _to_trash(t: str, rows: list[dict]) -> list[str]:
@@ -565,7 +586,8 @@ def _to_trash(t: str, rows: list[dict]) -> list[str]:
     now = _now()
     recs = [{"id": i, "deleted_at": now, "deleted_by": who(), "table": t,
              "summary": _usage_summary(r) if t == "usage" else _master_summary(t, r),
-             "data": json.dumps({k: str(v) for k, v in r.items()}, ensure_ascii=False)} for i, r in zip(ids, rows)]
+             "data": json.dumps({k: ("" if k == "thumb" else str(v)) for k, v in r.items()}, ensure_ascii=False)}
+            for i, r in zip(ids, rows)]  # 작은사진은 빼서 셀 한도 안에 (되살리면 큰 사진으로 대신 보임)
     get_store().append("trash", _rows("trash", recs))
     load_trash.clear()
     return ids
@@ -689,6 +711,86 @@ def _save_master(t: str, out: list[dict]) -> None:
     _step(("rewrite", t, old_rows, trash_ids), f"{TABLE_NAMES[t]} 저장")
     log("저장", TABLE_NAMES[t], f"추가 {added} · 수정 {changed} · 삭제 {len(gone)}"
         + (" (" + ", ".join(_master_summary(t, g) for g in gone[:5]) + ")" if gone else ""))
+
+
+# ── 장비 정보 (사양 · 자료 · 사진 · 메모) ────────────────────────────
+
+@st.cache_data(ttl=120, show_spinner=False)
+def load_info() -> dict[str, pd.DataFrame]:
+    """장비 정보 화면에서만 읽는 네 탭 (사진이 커서 다른 화면의 묶음 읽기에는 넣지 않음)."""
+    out = get_store().read_many(list(INFO_TABS))
+    for t, df in out.items():
+        df = df.astype(str).apply(lambda c: c.str.strip())
+        df = df[df["id"] != ""]
+        if "order" in df:
+            df["order"] = pd.to_numeric(df["order"], errors="coerce").fillna(0)
+            df = df.sort_values(["equip_id", "order"], kind="stable")
+        out[t] = df.reset_index(drop=True)
+    return out
+
+
+def save_info_rows(t: str, equip_id: int, records: list[dict], label: str = "") -> int:
+    """장비 한 대의 사양·자료·사진 줄을 저장합니다. 그 장비 줄만 행 단위로 고치므로
+    다른 장비를 동시에 고치는 사람의 내용은 건드리지 않습니다. 바뀐 줄 수를 돌려줍니다."""
+    store = get_store()
+    cur = store.read(t).astype(str)
+    eid = str(int(equip_id))
+    mine = cur[cur["equip_id"].str.strip() == eid]
+    old = {str(r["id"]).strip(): r for r in mine.to_dict("records")}
+    recs = []
+    for i, r in enumerate(records):
+        r = dict(r)
+        r["equip_id"] = eid
+        if "order" in cols(t):
+            r["order"] = i
+        recs.append(r)
+    fresh = [r for r in recs if not to_str(r.get("id"))]
+    for r, nid in zip(fresh, _new_ids(len(fresh))):
+        r["id"] = nid
+    keep = {to_str(r["id"]) for r in recs}
+    gone = [r for k, r in old.items() if k not in keep]
+    rows = {to_str(r["id"]): _rows(t, [{**old.get(to_str(r["id"]), {}), **r}])[0] for r in recs}
+    changed = {k: v for k, v in rows.items() if k in old and [str(x) for x in v] != [str(old[k].get(c, "")) for c in cols(t)]}
+    added = [v for k, v in rows.items() if k not in old]
+    if not (gone or changed or added):
+        return 0
+    name = TABLE_NAMES.get(t, t)
+    with undo_group(label or f"{name} 저장"):
+        if changed:
+            store.update_rows(t, changed)
+            _step(("put", t, {k: [str(old[k].get(c, "")) for c in cols(t)] for k in changed}), label or name)
+        if added:
+            store.append(t, added)
+            _step(("delete", t, [str(v[0]) for v in added]), label or name)
+        if gone:
+            trash_ids = _to_trash(t, gone)
+            store.delete_ids(t, [to_str(r["id"]) for r in gone])
+            _step(("readd", t, [[str(r.get(c, "")) for c in cols(t)] for r in gone], trash_ids), label or name)
+    log("저장", name, f"장비 ID {eid} · 추가 {len(added)} · 수정 {len(changed)} · 삭제 {len(gone)}")
+    load_info.clear()
+    return len(gone) + len(changed) + len(added)
+
+
+def save_info_note(equip_id: int, caution: str, contact: str) -> bool:
+    """장비 한 대의 '사용 시 주의'와 'A/S 연락처'."""
+    store = get_store()
+    eid = str(int(equip_id))
+    cur = store.read("equip_notes").astype(str)
+    hit = cur[cur["id"].str.strip() == eid]
+    rec = {"id": eid, "caution": caution.strip(), "contact": contact.strip(), "updated_at": _now(),
+           "updated_by": who()}
+    if not hit.empty:
+        o = hit.iloc[0].to_dict()
+        if to_str(o.get("caution")) == rec["caution"] and to_str(o.get("contact")) == rec["contact"]:
+            return False
+        store.update_rows("equip_notes", {eid: _rows("equip_notes", [rec])[0]})
+        _step(("put", "equip_notes", {eid: [str(o.get(c, "")) for c in cols("equip_notes")]}), "장비 메모 저장")
+    else:
+        store.append("equip_notes", _rows("equip_notes", [rec]))
+        _step(("delete", "equip_notes", [eid]), "장비 메모 저장")
+    log("저장", "장비 메모", f"장비 ID {eid}")
+    load_info.clear()
+    return True
 
 
 # ── 설정 ────────────────────────────────────────────────────────
@@ -1419,6 +1521,8 @@ def backup_bytes() -> bytes:
         store.read("staff").to_excel(xw, sheet_name="staff", index=False)
         store.read("usage").to_excel(xw, sheet_name="usage_log", index=False)
         st_df.to_excel(xw, sheet_name="settings", index=False)
+        for t in ("equip_specs", "equip_docs", "equip_notes"):  # 사진은 엑셀 셀에 안 들어가 뺌
+            store.read(t).to_excel(xw, sheet_name=t, index=False)
     return bio.getvalue()
 
 
