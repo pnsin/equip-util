@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from core import db, rules, seed
+from core import period as per
 from core.calc import expand_daily, kr_holidays
 from ui_style import T, page_header
 from views.common import new_company_dialog, num_input
@@ -144,7 +145,7 @@ div[class*="st-key-ep_row_anal_"] button {--chip-fg: #7C5CE0;}
 .st-key-cal_cmd {display: none !important;}
 .st-key-calgrid div[class*="st-key-cell_"][data-jspick] {background: rgba(45, 143, 213, 0.12) !important;
   border: 2px solid var(--accent) !important; box-shadow: 0 0 0 3px rgba(45, 143, 213, .18) !important;}
-.st-key-calgrid div[class*="st-key-ent_"][data-jspick] button {box-shadow: 0 0 0 2px var(--accent) !important; background: #EAF3FD !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"])[data-jspick] button {box-shadow: 0 0 0 2px var(--accent) !important; background: #EAF3FD !important;}
 @keyframes calAnts {0% {outline-color: var(--accent);} 50% {outline-color: rgba(45, 143, 213, .35);} 100% {outline-color: var(--accent);}}
 [data-testid="stElementContainer"]:has(iframe[height="0"]) {position: absolute !important; width: 0; height: 0;}
 /* 날짜 칸에 마우스를 올리면 뜨는 카드 */
@@ -240,25 +241,25 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   display: block; text-align: left; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 /* 날짜 머리 (누르면 그날 선택) */
 .st-key-calgrid div[class*="st-key-day_"] button,
-.st-key-calgrid div[class*="st-key-ent_"] button {justify-content: flex-start; text-align: left;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button {justify-content: flex-start; text-align: left;}
 .st-key-calgrid div[class*="st-key-day_"] button > div,
-.st-key-calgrid div[class*="st-key-ent_"] button > div {width: 100%; min-width: 0; justify-content: flex-start;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button > div {width: 100%; min-width: 0; justify-content: flex-start;}
 .st-key-calgrid div[class*="st-key-day_"] button p {font-size: 0.76rem; color: #6B7790;}
 .st-key-calgrid div[class*="st-key-day_"] button strong {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif;
   font-size: 1.12rem; font-weight: 800; letter-spacing: -.01em; display: inline-flex; align-items: center;
   justify-content: center; min-width: 1.75em; height: 1.75em; border-radius: 999px; margin-right: 2px;}
 .st-key-calgrid div[class*="st-key-day_"] button:hover strong {background: rgba(45, 143, 213, 0.12);}
 /* 실적 한 줄 (누르면 이 실적 선택) */
-.st-key-calgrid div[class*="st-key-ent_"] button {
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button {
   justify-content: flex-start; min-height: 0; padding: 4px 8px; border: none; border-radius: 8px;
   background: var(--chip-bg, #F1F3F7); border-left: none; border-radius: 12px !important;
   box-shadow: none; padding: 6px 9px !important;
   transition: transform .1s ease, box-shadow .1s ease;}
-.st-key-calgrid div[class*="st-key-ent_"] button:hover {transform: translateY(-1px);
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button:hover {transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(20, 40, 80, .12); filter: saturate(1.15);}
-.st-key-calgrid div[class*="st-key-ent_"] button p {font-size: 0.72rem; line-height: 1.4; color: #6B7790;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:first-child {font-weight: 700; font-size: .78rem; color: #1F2A3D;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:first-child::before {content: var(--cat-label, ""); display: inline-block;
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p {font-size: 0.72rem; line-height: 1.4; color: #6B7790;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:first-child {font-weight: 700; font-size: .78rem; color: #1F2A3D;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:first-child::before {content: var(--cat-label, ""); display: inline-block;
   font-size: .62rem; font-weight: 800; padding: 0 6px; margin-right: 5px; border-radius: 999px; line-height: 1.6;
   background: var(--chip-fg, #8A97A8); color: #fff; vertical-align: 1px;}
 /* 달력 모양: 둥근 흰 칸, 은은한 그림자, 주말은 옅은 색 */
@@ -323,16 +324,16 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
 .c-test {background: #E35D78;} .c-make {background: #1FA971;} .c-anal {background: #7C5CE0;}
 .c-edu {background: #E39A2D;} .c-sup {background: #2E9BD6;} .c-etc {background: #8A97A8;}
 /* 스티커 한 줄: 장비 이름 ··· 시간 */
-.st-key-calgrid div[class*="st-key-ent_"] button {background: var(--chip-bg, #F1F3F7) !important; border-radius: 8px !important;
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button {background: var(--chip-bg, #F1F3F7) !important; border-radius: 8px !important;
   padding: 3px 7px 3px 12px !important; min-height: 0 !important; box-shadow: none !important; position: relative;}
-.st-key-calgrid div[class*="st-key-ent_"] button::before {content: ''; position: absolute; left: 5px; top: 5px; bottom: 5px;
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button::before {content: ''; position: absolute; left: 5px; top: 5px; bottom: 5px;
   width: 3px; border-radius: 3px; background: var(--chip-fg, #8A97A8);}
-.st-key-calgrid div[class*="st-key-ent_"] button div[data-testid="stMarkdownContainer"] {display: flex; align-items: center; gap: 4px;}
-.st-key-calgrid div[class*="st-key-ent_"] button p {font-size: .72rem !important; line-height: 1.5 !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:first-child {flex: 1; min-width: 0; font-weight: 700; color: #2A3448 !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:first-child::before {content: none !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:last-child {flex: none; font-weight: 800; color: var(--chip-fg) !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button:hover {transform: none; filter: brightness(.97);}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button div[data-testid="stMarkdownContainer"] {display: flex; align-items: center; gap: 4px;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p {font-size: .72rem !important; line-height: 1.5 !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:first-child {flex: 1; min-width: 0; font-weight: 700; color: #2A3448 !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:first-child::before {content: none !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:last-child {flex: none; font-weight: 800; color: var(--chip-fg) !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button:hover {transform: none; filter: brightness(.97);}
 .st-key-calgrid div[class*="st-key-x_"] {top: -4px !important; right: -4px !important;}
 .st-key-calgrid div[class*="st-key-x_"] button {height: 18px !important; width: 18px !important; border-radius: 50% !important;}
 .st-key-calgrid div[class*="st-key-more_"] p {font-size: .68rem !important; font-weight: 700; color: #8A96AB; margin-left: 6px;}
@@ -418,20 +419,48 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 .st-key-ep_grp {margin-bottom: -6px;}
 .st-key-ep_grp [data-testid="stButtonGroup"] button {min-height: 28px !important; padding: 0 12px !important; border-radius: 999px !important;
   font-size: .78rem !important;}
+.st-key-ep_grp [data-testid="stButtonGroup"] {flex-wrap: wrap; row-gap: 4px;}
+/* 입력 카드: 하루 / 기간 스위치 */
+div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] {background: #F1F4F8; border-radius: 999px; padding: 3px; width: fit-content;}
+div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button {border: none !important; border-radius: 999px !important;
+  min-height: 30px !important; padding: 0 20px !important; background: transparent !important; color: var(--muted) !important;}
+div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #fff !important;
+  color: var(--accent) !important; box-shadow: 0 1px 4px rgba(17, 28, 46, .15);}
+div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button p {font-weight: 700; font-size: .84rem; color: var(--muted) !important;}
+div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: var(--accent) !important;}
+/* 기간: 빠른 종료일 · 합계 상자 */
+.st-key-ep_quick {gap: 4px !important; margin-top: -6px; flex-wrap: wrap;}
+.st-key-ep_quick button {min-height: 24px !important; padding: 0 10px !important; border-radius: 999px !important;
+  background: #F3F5F8 !important; font-size: .74rem !important;}
+.st-key-ep_quick button p {font-size: .74rem !important; font-weight: 700; color: var(--muted) !important;}
+.st-key-ep_quick button:hover {background: #E7EEFA !important;}
+.st-key-ep_quick button:hover p {color: var(--accent) !important;}
+.ep-sum {background: linear-gradient(135deg, #EEF3FF, #F6F1FF); border-radius: 14px; padding: 9px 13px; margin: 2px 0 4px;}
+.ep-sum b {display: block; color: var(--accent); font-size: .98rem;}
+.ep-sum span {font-size: .74rem; color: var(--muted);}
+/* 충방전기 챔버 고르기 */
+.ep-chlab {font-size: .875rem; color: var(--ink); margin: 8px 0 2px; line-height: 1.4;}
+div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] {flex-wrap: wrap; gap: 5px;}
+div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button {border-radius: 10px !important; min-height: 30px !important;
+  padding: 0 10px !important;}
+div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button p {font-size: .76rem; font-weight: 700;}
+div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button[aria-pressed="true"] {background: var(--accent) !important;
+  border-color: var(--accent) !important;}
+div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button[aria-pressed="true"] p {color: #fff !important;}
 /* 스티커: 연한 구분 색 + 왼쪽 진한 막대, 1줄 장비·시간 / 2줄 업체 */
-.st-key-calgrid div[class*="st-key-ent_"] button {padding: 5px 8px 5px 13px !important; border-radius: 9px !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button::before {top: 6px !important; bottom: 6px !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button div[data-testid="stMarkdownContainer"] {display: grid !important;
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button {padding: 5px 8px 5px 13px !important; border-radius: 9px !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button::before {top: 6px !important; bottom: 6px !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button div[data-testid="stMarkdownContainer"] {display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto; column-gap: 6px; row-gap: 1px; width: 100%;}
-.st-key-calgrid div[class*="st-key-ent_"] button p {white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0 !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:nth-child(1) {font-size: .76rem !important; font-weight: 800; color: #2A3448 !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:nth-child(2) {font-size: .74rem !important; font-weight: 800; color: var(--chip-fg) !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:nth-child(3) {grid-column: 1 / -1; font-size: .68rem !important;
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p {white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0 !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:nth-child(1) {font-size: .76rem !important; font-weight: 800; color: #2A3448 !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:nth-child(2) {font-size: .74rem !important; font-weight: 800; color: var(--chip-fg) !important;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:nth-child(3) {grid-column: 1 / -1; font-size: .68rem !important;
   font-weight: 500 !important; color: #6B7790 !important;}
-.st-key-calgrid div[class*="st-key-ent_"] button > div > span {flex: 1 1 auto; min-width: 0; width: 100%;}
-.st-key-calgrid div[class*="st-key-ent_"] button > div, .st-key-calgrid div[class*="st-key-ent_"] button div[data-testid="stMarkdownContainer"] {
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button > div > span {flex: 1 1 auto; min-width: 0; width: 100%;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button > div, .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button div[data-testid="stMarkdownContainer"] {
   width: 100% !important; min-width: 0;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:nth-child(2) {text-align: right;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:nth-child(2) {text-align: right;}
 .st-key-calgrid div[class*="st-key-more_"] p {margin-left: 4px !important;}
 .st-key-calgrid .cal-wk {padding-bottom: 8px !important;}
 .st-key-calwrap [data-testid="stHorizontalBlock"]:has(.st-key-ep_panel) {flex-wrap: nowrap !important;}
@@ -550,21 +579,36 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
     name_of = dict(zip(eq["id"].astype(int), eq["name"]))
     cat_of = dict(zip(eq["id"].astype(int), (_cat_of(u) for u in eq.get("use", pd.Series([""] * len(eq))))))
     info = logs.set_index("id")
+    span: dict[str, tuple] = {}  # 묶음ID → 전체 기간 (달마다 나눠 저장한 기간 실적)
+    if "series" in logs:
+        sl = logs[logs["series"].map(db.to_str) != ""]
+        span = {k: (g["start_date"].min(), g["end_date"].max()) for k, g in sl.groupby("series")}
+    chans = db.load_channels()
+    ch_name = dict(zip(chans["id"].astype(int), chans["chamber"])) if not chans.empty else {}
+    chg = db.charger_ids(eq, chans)
+    root_of = dict(zip(eq["id"].astype(int), eq["root_id"])) if "root_id" in eq else {}
     out: dict[dt.date, list[dict]] = {}
     for r in in_month.itertuples(index=False):
         if r.log_id not in info.index:
             continue
         lg = info.loc[r.log_id]
-        multi = lg["start_date"] != lg["end_date"]
+        a, b = span.get(db.to_str(lg.get("series")), (lg["start_date"], lg["end_date"]))
+        multi = a != b
         rec = lg.to_dict() | {"id": int(r.log_id)}
         if multi:  # 기간 실적은 그날 몫만 하루짜리로 복사
             rec.update(hours=round(float(r.hours), 1), fee=round(float(r.fee)))
         out.setdefault(r.day.date(), []).append({
             "id": int(r.log_id), "rec": rec,
-            "equip": name_of.get(int(r.equip_id), "?"), "company": db.to_str(lg["company"]) or "내부",
+            "equip": name_of.get(int(r.equip_id), "?") + "".join(
+                f" · {ch_name[i]}" for i in db.chamber_ids(lg.get("chambers"))[:2] if i in ch_name)
+                + (" …" if len(db.chamber_ids(lg.get("chambers"))) > 2 else ""),
+            "company": db.to_str(lg["company"]) or "내부",
             "cat": PURPOSE_CAT.get(db.to_str(lg["purpose"]), "지원"),
             "hours": float(r.hours), "staff": db.to_str(lg["created_by"]),
-            "period": f"{lg['start_date']:%m/%d}~{lg['end_date']:%m/%d}" if multi else "",
+            "period": f"{a:%m/%d}~{b:%m/%d}" if multi else "",
+            "charger": int(r.equip_id) in chg, "equip_id": int(r.equip_id),
+            "root": int(root_of.get(int(r.equip_id), r.equip_id) or r.equip_id),
+            "n_ch": max(len(db.chamber_ids(lg.get("chambers"))), 1),
         })
     for v in out.values():
         v.sort(key=lambda e: (CAT_ORDER.index(e["cat"]), e["period"] != "", -e["hours"]))
@@ -593,9 +637,12 @@ CATS = {"시험": ("#FDEEF1", "#E35D78"), "제조": ("#E6F6EE", "#1FA971"), "분
 CAT_ORDER = list(CATS)
 FIXED_CATS = ["시험", "제조", "분석", "교육", "지원"]
 LANE_CATS = ["시험", "제조", "분석"]  # 칸마다 비어 있어도 보이는 구역
+CHARGER_GROUP = "시험(충방전기)"
+CARD_GROUPS = ["시험", CHARGER_GROUP, "제조", "분석"]  # 입력 카드 장비 구분 (시험 = 충방전기 뺀 시험 장비)
 CAT_KEY = {"시험": "test", "제조": "make", "분석": "anal", "교육": "edu", "지원": "sup", "기타": "etc"}
 PURPOSE_CAT = {"시험": "시험", "생산": "제조", "분석": "분석", "계측": "분석", "교육": "교육", "기타": "지원"}
-LANE_PURPOSE = {"시험": "시험", "제조": "생산", "분석": "분석", "교육": "교육", "지원": "기타"}  # 줄을 눌러 열 때 사용목적
+LANE_PURPOSE = {"시험": "시험", "제조": "생산", "분석": "분석", "교육": "교육", "지원": "기타",
+                CHARGER_GROUP: "시험"}  # 줄을 눌러 열 때 사용목적
 
 
 def _cat_of(use: str) -> str:
@@ -641,60 +688,6 @@ def _entry_text(e: dict) -> str:
     extra = " · ".join(x for x in (e["staff"], f"기간 {e['period']}" if e["period"] else "") if x)
     return (f"{_md(e['equip'])} · {_md(e['company'])} · {_hours(e['hours'])}"
             + (f" ({_md(extra)})" if extra else ""))
-
-
-def _reset_period_pick() -> None:
-    st.session_state.cal_pnonce = st.session_state.get("cal_pnonce", 0) + 1  # 표 선택을 풀어 창이 다시 뜨지 않게
-    for k in ("pe_h", "pe_f", "pe_n"):
-        st.session_state.pop(k, None)
-
-
-@st.dialog("기간 실적 고치기", width="medium", on_dismiss=_reset_period_pick)
-def _edit_period(rec: dict, label_of: dict, comp_opts: list, staff_opts: list) -> None:
-    eq_ids = list(label_of)  # 고를 수 있는 장비 (맨 아래 장비) + 원래 장비
-    eid = st.selectbox("장비", eq_ids, index=eq_ids.index(rec["equip_id"]) if rec["equip_id"] in eq_ids else 0,
-                       format_func=label_of.get, key="pe_eq")
-    c1, c2 = st.columns(2)
-    start = c1.date_input("사용시작일", value=rec["start_date"].date(), format="YYYY-MM-DD", key="pe_s")
-    end = c2.date_input("사용종료일", value=rec["end_date"].date(), format="YYYY-MM-DD", key="pe_e")
-    comp = rec.get("company") or ""
-    opts = [""] + comp_opts + ([comp] if comp and comp not in comp_opts else [])
-    company = st.selectbox("업체", opts, index=opts.index(comp), format_func=lambda v: v or "(내부 사용)", key="pe_c")
-    c1, c2 = st.columns(2)
-    hours = num_input(c1, "사용시간(h)", f"pe_h_{rec['id']}", float(rec["hours"]), 1, 0)
-    samples = num_input(c2, "시료수", f"pe_n_{rec['id']}", float(rec["samples"]), 1, 0)
-    fee = rec["fee"]  # 사용료는 입력 화면에서 받지 않음 (기존 값 유지)
-    c1, c2, c3 = st.columns(3)
-    p_opts = seed.purpose_choices(rec["purpose"])
-    purpose = c1.selectbox("사용목적", p_opts, index=p_opts.index(rec["purpose"]) if rec["purpose"] in p_opts else 1,
-                           format_func=seed.purpose_label, key="pe_p")
-    utype = c2.selectbox("활용유형", seed.USAGE_TYPES, index=seed.USAGE_TYPES.index(rec["usage_type"])
-                         if rec["usage_type"] in seed.USAGE_TYPES else 0, key="pe_u")
-    sopts = staff_opts + ([rec["created_by"]] if rec["created_by"] and rec["created_by"] not in staff_opts else [])
-    staff = c3.selectbox("담당자", sopts, index=sopts.index(rec["created_by"]) if rec["created_by"] in sopts else 0,
-                         key="pe_w")
-    new = {"equip_id": eid, "start_date": start, "end_date": end, "company": company, "hours": hours, "fee": fee,
-           "samples": samples, "purpose": purpose, "usage_type": utype, "created_by": staff}
-    b1, b2 = st.columns(2)
-    if b1.button("저장", type="primary", icon=":material/save:", width="stretch", key="pe_save"):
-        full = {k: rec.get(k) for k in db.LOG_FIELDS} | new
-        if company != comp:
-            m = {r["name"]: r for r in db.load_companies().to_dict("records")}.get(company)
-            full["brn"] = m["brn"] if m is not None else ""
-        errs = rules.validate(full)
-        if errs:
-            for e in errs:
-                st.error(e)
-            return
-        db.update_logs({int(rec["id"]): full})
-        st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
-        st.session_state.cal_saved = "기간 실적을 고쳤습니다."
-        st.rerun()
-    if b2.button("이 실적 삭제", icon=":material/delete:", width="stretch", key="pe_del"):
-        db.delete_logs([int(rec["id"])])
-        st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
-        st.session_state.cal_saved = "기간 실적을 지웠습니다. 실수면 '되돌리기'를 누르세요."
-        st.rerun()
 
 
 def _click_day(d: dt.date, clip: dict | None, logs: pd.DataFrame) -> None:
@@ -1143,8 +1136,12 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
     cats = [c for c in shown_cats if c in LANE_CATS or any(e["cat"] == c for e in entries)]
     for c in cats:
         ents = [e for e in entries if e["cat"] == c]
+        chg = [e for e in ents if e.get("charger")]  # 충방전기는 칸마다 한 줄로 묶음 (자세히는 '충방전기' 보기)
+        ents = [e for e in ents if not e.get("charger")]
+        chg_h = 0 if d.weekday() >= 5 else sum(  # 주장비마다 하루 최대 8h
+            min(db.CHARGER_DAY_MAX, sum(e["hours"] for e in chg if e["root"] == i)) for i in {e["root"] for e in chg})
         sec = cell.container(key=f"sec_{CAT_KEY[c]}_{d}")
-        hours = _hours(sum(e["hours"] for e in ents)) if ents else ""
+        hours = _hours(sum(e["hours"] for e in ents) + chg_h) if (ents or chg) else ""
         sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{c}<b>{hours}</b></div>",
                      unsafe_allow_html=True)
         # 줄 이름 위에 투명 버튼: 누르면 이 구분 장비만 보이는 새 실적 입력
@@ -1168,6 +1165,13 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
             if not e["period"]:
                 row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
                            on_click=_click_x, args=(d, e))
+        if chg:
+            comps = list(dict.fromkeys(e["company"] for e in chg))
+            who = comps[0] + (f" 외 {len(comps) - 1}곳" if len(comps) > 1 else "")
+            n_ch = sum(e["n_ch"] for e in chg)
+            row = sec.container(key=f"er_{d}_chg{CAT_KEY[c]}")
+            row.button(f"충방전기\n\n챔버 {n_ch}\n\n{_md(who)}", key=f"chg_{d}_{CAT_KEY[c]}", width="stretch",
+                       on_click=_open_board, help="충방전기 챔버별 현황 보기")
         if len(ents) > CELL_LINES:
             sec.container(key=f"more_{d}_{CAT_KEY[c]}").markdown(f"+{len(ents) - CELL_LINES}")
     if entries:
@@ -1279,6 +1283,8 @@ def render(header: bool = True) -> None:
         for e in ents:
             bg, fg = CATS[e["cat"]]
             sel += f" .st-key-er_{dd}_{e['id']} {{--chip-bg: {bg}; --chip-fg: {fg}; --cat-label: '{e['cat']}';}}"
+            if e.get("charger"):
+                sel += f" .st-key-er_{dd}_chg{CAT_KEY[e['cat']]} {{--chip-bg: {bg}; --chip-fg: {fg};}}"
     for p in picks:  # Ctrl+클릭으로 고른 실적들
         sel += (f" .st-key-ent_{p['day']}_{p['id']}:not([data-jsmulti='0']) button {{box-shadow: 0 0 0 2px var(--accent) !important;"
                 " background: #EAF3FD !important;}")
@@ -1307,6 +1313,27 @@ def render(header: bool = True) -> None:
     if right is not None:
         with right:
             _entry_panel(day, logs, eq, comp, cfg)
+
+
+def _open_board() -> None:
+    st.session_state.in_view = "충방전기"
+
+
+def _set_end(key: str, start: dt.date, days: int) -> None:
+    st.session_state[key] = start + dt.timedelta(days=days - 1)
+
+
+def _busy_chambers(logs: pd.DataFrame, s: dt.date, e: dt.date, skip: set) -> dict[int, str]:
+    """s~e 에 다른 실적이 쓰는 챔버 → 업체명."""
+    out: dict[int, str] = {}
+    if logs.empty or "chambers" not in logs:
+        return out
+    hit = logs[(logs["chambers"].map(db.to_str) != "") & (logs["start_date"] <= pd.Timestamp(e))
+               & (logs["end_date"] >= pd.Timestamp(s)) & ~logs["id"].isin(skip)]
+    for c, comp_ in zip(hit["chambers"], hit["company"]):
+        for i in db.chamber_ids(c):
+            out.setdefault(i, db.to_str(comp_) or "내부")
+    return out
 
 
 def _close_panel() -> None:
@@ -1340,10 +1367,10 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
     name_of = dict(zip(eq["id"], eq["name"]))
     eq_id = {**dict(zip(eq["label"], eq["id"])), **dict(zip(eq["short"], eq["id"]))}
 
-    def pick_opts(keep) -> dict:
-        ids = pickable + ([int(keep)] if pd.notna(keep) and int(keep) not in pickable and int(keep) in short_of else [])
-        return {i: short_of[i] for i in ids}
+    chans = db.load_channels()
+    chargers = db.charger_ids(eq, chans)
     cat_of = dict(zip(eq["id"].astype(int), (_cat_of(u) for u in eq.get("use", pd.Series([""] * len(eq))))))
+    cat_of.update({i: CHARGER_GROUP for i in chargers})  # 충방전기는 '시험(충방전기)'로 따로
     comp_by_name = {r["name"]: r for r in comp.to_dict("records")}
     staff_opts = db.staff_names(list(rows["created_by"]))
     ver = st.session_state.setdefault("cal_ver", 0)
@@ -1351,7 +1378,13 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
     pick = st.session_state.get("cal_pick")
     orig = {int(r["id"]): r for r in rows.to_dict("records")}
     edit_id = int(pick["id"]) if pick and pick["day"] == day and int(pick["id"]) in orig else None
-    cur = orig.get(edit_id) if edit_id else None
+    series = logs.iloc[0:0]  # 고치는 기간 실적 묶음 (달마다 한 줄)
+    if pick and pick["day"] == day and not logs.empty:
+        hit = logs[logs["id"] == int(pick["id"])]
+        if not hit.empty and per.is_period(hit.iloc[0]):
+            series = per.series_rows(logs, int(pick["id"]))
+            edit_id = int(series.iloc[0]["id"])
+    cur = series.iloc[0].to_dict() if not series.empty else (orig.get(edit_id) if edit_id else None)
 
     panel = st.container(key="ep_panel")
     with panel:
@@ -1387,7 +1420,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
 
         last_staff = st.session_state.get("last_staff") or st.session_state.get("me")
         lane = st.session_state.get("cal_lane")
-        groups = ["전체"] + [c for c in LANE_CATS if any(cat_of.get(i) == c for i in pickable)]
+        groups = ["전체"] + [c for c in CARD_GROUPS if any(cat_of.get(i) == c for i in pickable)]
         cur_cat = cat_of.get(int(cur["equip_id"])) if cur is not None else None
         want = lane if lane in groups else (cur_cat if cur_cat in groups else "전체")
         eq_opts = [short_of[i] for i in pickable]
@@ -1404,6 +1437,11 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
 
         form = st.container(key="ep_form")
         with form:
+            is_series = not series.empty
+            v_mode = st.segmented_control("입력 방식", ["하루", "기간"], key=f"ep_mode_{k}",
+                                          default="기간" if is_series else "하루", label_visibility="collapsed",
+                                          help="기간: 며칠~몇 달 계속 도는 시험을 한 번에 입력 (달력에는 매일 표시)") or (
+                                              "기간" if is_series else "하루")
             if len(groups) > 2:  # 시험·제조·분석 중 하나만 골라 목록을 짧게
                 with st.container(key="ep_grp"):
                     g = st.segmented_control("장비 구분", groups, default=want, key=f"ep_grp_{k}_{lane}",
@@ -1433,9 +1471,66 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                                           format_func=seed.purpose_label, key=f"ep_purp_{k}",
                                           default=db.to_str(cur["purpose"]) if cur is not None
                                           else LANE_PURPOSE.get(lane, "생산"))
+            v_eid = eq_id.get(v_eq)
+            chunks: list[dict] = []
+            if v_mode == "기간":
+                p_start, p_end = per.series_span(series) if is_series else (day, day + dt.timedelta(days=6))
+                c1, c2 = st.columns(2, gap="small")
+                v_ps = c1.date_input("시작일", value=p_start, format="YYYY-MM-DD", key=f"ep_ps_{k}")
+                if f"ep_pe_{k}" not in st.session_state or st.session_state[f"ep_pe_{k}"] < v_ps:
+                    st.session_state[f"ep_pe_{k}"] = max(p_end, v_ps)
+                v_pe = c2.date_input("종료일", min_value=v_ps, format="YYYY-MM-DD", key=f"ep_pe_{k}",
+                                     help="끝나는 날을 모르면 예상 날짜로 넣고, 나중에 바꾸면 돼요.")
+                with st.container(horizontal=True, gap="small", key="ep_quick"):
+                    for lab, days in (("+1주", 7), ("+2주", 14), ("+1달", 30), ("+3달", 91), ("+6달", 182)):
+                        st.button(lab, key=f"ep_q{days}_{k}", on_click=_set_end, args=(f"ep_pe_{k}", v_ps, days),
+                                  type="tertiary")
+                c1, c2 = st.columns(2, gap="small", vertical_alignment="bottom")
+                v_pd = num_input(c1, "하루 사용시간(h)", f"ep_pd_{k}", per.per_day_of(series) if is_series else 8, 1, 1, 24)
+                v_skip = c2.toggle("주말·공휴일 빼기", key=f"ep_skip_{k}",
+                                   value=not is_series or all(db.to_str(x) == "N" for x in series["include_holidays"]),
+                                   help="켜 두면 평일만 시간에 넣어요.")
+                chunks = per.split_period(v_ps, v_pe, v_pd, v_skip) if v_pe >= v_ps else []
+                n_days = sum(c["days"] for c in chunks)
+                tot = sum(c["hours"] for c in chunks)
+                split = f" · {len(chunks)}개월로 나눠 저장" if len(chunks) > 1 else ""
+                st.markdown(f"<div class='ep-sum'><b>{n_days}일 · 총 {tot:,}h</b>"
+                            f"<span>달력에 하루 {v_pd:g}h씩 자동으로 들어가요{split}</span></div>", unsafe_allow_html=True)
+                v_h = tot
+            else:
+                v_ps = v_pe = day
+                v_skip = False
             c1, c2 = st.columns(2, gap="small")
-            v_h = num_input(c1, "사용시간(h)", f"ep_h_{k}", float(cur["hours"]) if cur is not None else 8, 1, 0, 24)
-            v_s = num_input(c2, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 1, 1, 0)
+            if v_mode == "하루":
+                v_h = num_input(c1, "사용시간(h)", f"ep_h_{k}",
+                                float(cur["hours"]) if cur is not None and not is_series else 8, 1, 0, 24)
+                v_s = num_input(c2, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 1, 1, 0)
+            else:
+                v_s = num_input(c1, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 1, 1, 0)
+            # 충방전기: 챔버 고르기 (그 기간에 이미 쓰는 챔버는 업체명이 붙음)
+            v_ch, v_part, busy = [], "", {}
+            mine = chans[chans["equip_id"] == v_eid] if v_eid is not None and not chans.empty else chans.iloc[0:0]
+            if not mine.empty:
+                skip_ids = set(series["id"].astype(int)) | ({int(edit_id)} if edit_id else set())
+                busy = _busy_chambers(logs, v_ps, v_pe, skip_ids)
+                ch_ids = [int(i) for i in mine["id"]]
+                ch_name = dict(zip(mine["id"].astype(int), mine["chamber"]))
+                ch_cyc = dict(zip(mine["id"].astype(int), mine["cycler"]))
+                st.markdown("<div class='ep-chlab'>챔버</div>", unsafe_allow_html=True)
+                v_ch = st.pills("챔버", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",
+                                default=[i for i in db.chamber_ids(cur.get("chambers")) if i in ch_ids] if cur is not None else None,
+                                format_func=lambda i: (ch_name.get(i) or f"#{i}") + (f" · {busy[i]}" if i in busy else ""),
+                                label_visibility="collapsed",
+                                help="cycler: " + ", ".join(dict.fromkeys(c for c in ch_cyc.values() if c))) or []
+                pill_css = "".join(
+                    f'div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button:nth-of-type({n}) '
+                    "{background: #FDEEF1 !important; color: #B8435C !important; border-color: #F8D3DC !important;}"
+                    for n, i in enumerate(ch_ids, start=1) if i in busy and i not in v_ch)
+                if pill_css:
+                    st.markdown(f"<style>{pill_css}</style>", unsafe_allow_html=True)
+                v_part = st.text_input("채널 일부", db.to_str(cur.get("ch_part")) if cur is not None else "",
+                                       placeholder="챔버 일부 채널만 쓰면 (예: 1-8)", key=f"ep_part_{k}",
+                                       label_visibility="collapsed")
             # 사용료는 시험이 끝난 뒤 따로 매기므로 입력 카드에서는 받지 않음 (고칠 때는 기존 값 그대로 둠)
             v_f = db.to_num(cur["fee"], 0) if cur is not None else 0
             v_ov = st.text_input("지원개요", ov, placeholder="예: 전극 코팅", key=f"ep_ov_{k}")
@@ -1448,14 +1543,28 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                                  key="ep_save", width="stretch")
                 if cur is not None:
                     if st.button("삭제", icon=":material/delete:", key="ep_del"):
-                        _ask_delete()
+                        if is_series:
+                            a, b = per.series_span(series)
+                            st.session_state.cal_delask = {
+                                "kind": "ids", "ids": [int(i) for i in series["id"]],
+                                "text": f"{a:%m/%d}~{b:%m/%d} 기간 실적({_cut(v_eq or '', 16)})을 삭제할까요?"}
+                        else:
+                            _ask_delete()
                         st.rerun()
         if save:
             row = {"장비": v_eq, "업체": v_comp, "담당자": v_staff, "활용유형": v_type, "사용목적": v_purp,
                    "사용시간": v_h, "시료수": v_s, "사용료": v_f, "지원개요": v_ov, "지원내용": v_ct, "기타": v_etc}
             base = ({k_: cur.get(k_) for k_ in db.LOG_FIELDS if k_ in cur} if cur is not None else {})
-            base.update(start_date=day, end_date=day)
+            base.update(start_date=day, end_date=day, include_holidays="N" if v_skip else "Y",
+                        chambers=",".join(str(i) for i in v_ch), ch_part=v_part.strip() if v_ch else "")
             errors = []
+            if v_mode == "기간" and not chunks:
+                errors.append("기간에 시간을 넣을 날이 없어요. 종료일이나 '주말·공휴일 빼기'를 확인하세요.")
+            if not mine.empty and not v_ch:
+                errors.append("챔버를 고르세요.")
+            clash = [f"{ch_name.get(i, i)}({busy[i]})" for i in v_ch if i in busy] if not mine.empty else []
+            if clash:
+                errors.append("그 기간에 이미 쓰는 챔버예요: " + ", ".join(clash))
             if not v_eq:
                 errors.append("장비를 고르세요.")
             if not v_staff:
@@ -1463,18 +1572,30 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             if not v_type or not v_purp:
                 errors.append("활용유형과 사용목적을 고르세요.")
             rec = _record(row, base, comp_by_name, eq_id, cfg) if not errors else None
-            if rec is not None:
+            if rec is not None and v_mode == "기간":
+                for c in chunks:
+                    errors += [e_ for e_ in rules.validate(rec | c) if e_ not in errors]
+            elif rec is not None:
                 errors += rules.validate(rec)
                 same = sum(db.to_num(r["hours"], 0) for rid, r in orig.items()
                            if rid != edit_id and int(r["equip_id"]) == rec["equip_id"])
-                if same + db.to_num(rec["hours"], 0) > 24:
+                if rec["equip_id"] not in chargers and same + db.to_num(rec["hours"], 0) > 24:
                     errors.append(f"이 장비의 하루 사용시간 합계가 {same + rec['hours']:,.0f}h로 24h를 넘습니다.")
             if errors:
                 for e_ in errors:
                     st.error(e_)
             else:
                 with db.undo_group(f"{day:%m/%d} {'수정' if cur is not None else '추가'}"):
-                    if cur is not None:
+                    if v_mode == "기간" or is_series:
+                        old = series if is_series else (logs[logs["id"] == edit_id] if cur is not None else logs.iloc[0:0])
+                        key = (db.to_str(cur.get("series")) if cur is not None else "") or (
+                            f"S{db._new_ids(1)[0]}" if len(chunks) > 1 else "")
+                        parts = chunks if v_mode == "기간" else [{"start_date": day, "end_date": day, "hours": rec["hours"]}]
+                        upd, add, gone = per.plan_changes(old, parts, rec, key if v_mode == "기간" else "")
+                        db.update_logs(upd)
+                        db.insert_logs(add)
+                        db.delete_logs(gone)
+                    elif cur is not None:
                         db.update_logs({edit_id: rec})
                     else:
                         db.insert_logs([rec])
@@ -1495,6 +1616,9 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 }), hide_index=True, width="stretch", on_select="rerun", selection_mode="single-row",
                     key=f"cal_period_{day}_{ver}_{st.session_state.get('cal_pnonce', 0)}")
                 picked = ev.selection.rows if ev else []
-                if picked:
-                    _edit_period(pv.iloc[picked[0]].to_dict(), pick_opts(pv.iloc[picked[0]]["equip_id"]),
-                                 list(comp_by_name), staff_opts)
+                if picked:  # 고른 기간 실적을 위 카드에서 고침
+                    r = pv.iloc[picked[0]]
+                    st.session_state.cal_pick = {"day": day, "id": int(r["id"]), "rec": r.to_dict(), "period": True,
+                                                 "label": f"{short_of.get(r['equip_id'], '?')} · {db.to_str(r['company']) or '내부'}"}
+                    st.session_state.cal_pnonce = st.session_state.get("cal_pnonce", 0) + 1
+                    st.rerun()

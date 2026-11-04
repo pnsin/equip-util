@@ -55,6 +55,15 @@ TABLES = {
         ("created_at", "작성일시"), ("updated_at", "수정일시"),
         # 2026-11 추가. 새 열은 항상 맨 뒤에만 덧붙임
         ("updated_by", "수정자"),
+        # 2026-11-04 충방전기 챔버 (챔버구성 탭 ID, 쉼표로 여러 개) · 채널 일부만 쓸 때 (예: 1-8)
+        ("chambers", "챔버ID"), ("ch_part", "채널(일부)"),
+        # 몇 달짜리 기간 실적은 i-Tube 규칙(같은 해 · 2개월 이내) 때문에 달마다 한 줄씩 나눠 저장하고 같은 묶음ID로 이음
+        ("series", "묶음ID"),
+    ]),
+    # 충방전기 챔버 구성 (건물 › 장비명 › 싸이클러 › 챔버 › 채널). 예전 '충방전기 장비사용 현황표' 엑셀과 같은 모양
+    "channels": ("챔버구성", [
+        ("id", "ID"), ("equip_id", "장비ID"), ("center", "건물"), ("unit", "장비명"), ("cycler", "싸이클러"),
+        ("chamber", "챔버"), ("channels", "채널 no."), ("ch_count", "채널수"), ("order", "순서"),
     ]),
     # 지운 행을 보관했다가 '관리 › 휴지통 · 기록'에서 되살림 (data = 원래 행, JSON)
     "trash": ("휴지통", [
@@ -393,7 +402,7 @@ def storage_label() -> str:
 
 
 # 화면에서 늘 쓰는 탭은 한 번에 읽어 2분 동안 기억합니다 (휴지통·수정기록은 그 화면에서만 따로 읽음)
-SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings")
+SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings", "channels")
 
 
 @st.cache_data(ttl=120, show_spinner=False)
@@ -412,6 +421,7 @@ def refresh_data() -> None:
     load_companies.clear()
     load_staff.clear()
     load_logs.clear()
+    load_channels.clear()
     get_settings.clear()
 
 
@@ -423,6 +433,7 @@ def clear_caches() -> None:
     load_companies.clear()
     load_staff.clear()
     load_logs.clear()
+    load_channels.clear()
     get_settings.clear()
 
 
@@ -436,7 +447,8 @@ def _new_ids(n: int) -> list[str]:
 # 모든 저장 함수는 바꾸기 전 모습을 '되돌리기 단계'로 남깁니다. 화면에서 db.undo_last()를 부르면
 # 마지막 작업을 거꾸로 적용합니다. 지운 행은 '휴지통' 탭에 원본째 보관해 나중에도 되살릴 수 있습니다.
 
-TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정"}
+TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정",
+               "channels": "챔버 구성"}
 UNDO_KEEP = 30
 
 
@@ -540,6 +552,8 @@ def _usage_summary(r: dict) -> str:
 
 
 def _master_summary(t: str, r: dict) -> str:
+    if t == "channels":
+        return f"{to_str(r.get('unit'))} {to_str(r.get('chamber'))}".strip() or f"ID {to_str(r.get('id'))}"
     return to_str(r.get("name")) or f"ID {to_str(r.get('id'))}"
 
 
@@ -1105,6 +1119,96 @@ def save_staff(edited: pd.DataFrame) -> None:
     refresh_data()
 
 
+# ── 충방전기 챔버 구성 ────────────────────────────────────────
+
+CHARGER_DAY_MAX = 8  # 충방전기는 챔버·채널이 여러 개라도 하루 최대 8시간으로 셈 (주말·공휴일 제외)
+
+
+@st.cache_data(ttl=120)
+def load_channels() -> pd.DataFrame:
+    df = _tab("channels")
+    for c in ("id", "equip_id", "ch_count", "order"):
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    df = df.dropna(subset=["id"])
+    df["id"] = df["id"].astype("int64")
+    for c in ("center", "unit", "cycler", "chamber", "channels"):
+        df[c] = df[c].map(to_str)
+    df["ch_count"] = df["ch_count"].fillna(0).astype("int64")
+    df["order"] = df["order"].fillna(df["id"])
+    return df.sort_values(["order", "id"]).reset_index(drop=True)
+
+
+def charger_ids(eq: pd.DataFrame | None = None, ch: pd.DataFrame | None = None) -> set[int]:
+    """충방전기 = 챔버 구성에 연결된 장비, 또는 이름에 '충방전기'가 들어간 맨 아래 장비."""
+    eq = load_equipment() if eq is None else eq
+    ch = load_channels() if ch is None else ch
+    ids = {int(i) for i in ch["equip_id"].dropna()} if not ch.empty else set()
+    if not eq.empty:
+        leaf = eq["leaf"] if "leaf" in eq else pd.Series([True] * len(eq), index=eq.index)
+        ids |= {int(i) for i, n, lf in zip(eq["id"], eq["name"], leaf) if lf and "충방전기" in to_str(n)}
+    return ids
+
+
+def charger_caps() -> dict[int, tuple[float, int]]:
+    """ooo 계산용: 충방전기 장비 ID → (하루 최대 시간, 묶음 = 맨 위 주장비 ID).
+
+    같은 주장비 아래 충방전기 여러 대가 같은 날 돌아도 주장비 합계가 하루 최대 시간을 넘지 않게 묶어서 셉니다.
+    """
+    lim = float(to_num(get_settings().get("charger_day_max"), CHARGER_DAY_MAX) or CHARGER_DAY_MAX)
+    eq = load_equipment()
+    root = dict(zip(eq["id"].astype(int), eq["root_id"])) if "root_id" in eq else {}
+    return {i: (lim, int(root.get(i, i)) if pd.notna(root.get(i, i)) else i) for i in charger_ids(eq)}
+
+
+def chamber_ids(v) -> list[int]:
+    """실적의 '챔버ID' 칸 ('3,4') → [3, 4]."""
+    out = []
+    for x in to_str(v).replace(" ", "").split(","):
+        n = to_num(x)
+        if n is not None:
+            out.append(int(n))
+    return out
+
+
+def save_channels(edited: pd.DataFrame) -> None:
+    store = get_store()
+    old_ids = set(pd.to_numeric(store.read("channels")["id"], errors="coerce").dropna().astype(int))
+    next_id = (max(old_ids) if old_ids else 0) + 1
+    out = []
+    for k, r in enumerate(edited.to_dict("records"), start=1):
+        rec = {c: to_str(r.get(c)) for c in ("center", "unit", "cycler", "chamber", "channels")}
+        if not (rec["unit"] or rec["chamber"]):
+            continue
+        eid, n = to_num(r.get("equip_id")), to_num(r.get("ch_count"))
+        rec["equip_id"] = int(eid) if eid is not None else ""
+        rec["ch_count"] = int(n) if n is not None else _count_channels(rec["channels"])
+        rec["order"] = k
+        rid = to_num(r.get("id"))
+        if rid is not None and int(rid) in old_ids:
+            rec["id"] = int(rid)
+        else:
+            rec["id"] = next_id
+            next_id += 1
+        out.append(rec)
+    _save_master("channels", out)
+    refresh_data()
+
+
+def _count_channels(text: str) -> int | str:
+    """'17~32' → 16, '1' → 1. 모르면 빈 값."""
+    t = to_str(text).replace("~", "-").replace("–", "-").replace(" ", "")
+    if not t:
+        return ""
+    total = 0
+    for part in t.split(","):
+        a, _, b = part.partition("-")
+        try:
+            total += (int(b) - int(a) + 1) if b else 1
+        except ValueError:
+            return ""
+    return total
+
+
 # ── 사용실적 ────────────────────────────────────────────────────
 
 def _usage_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -1151,7 +1255,7 @@ def _clean_log(rec: dict) -> dict:
     if "brn" in out:
         out["brn"] = digits(out["brn"])
     for k in ("purpose", "usage_type", "company", "dept", "industry", "item", "sub_item", "product",
-              "disclose", "detail", "include_holidays", "purpose_detail", "etc", "created_by"):
+              "disclose", "detail", "include_holidays", "purpose_detail", "etc", "created_by", "chambers", "ch_part", "series"):
         if k in out:
             out[k] = to_str(out[k])
     return out

@@ -78,7 +78,13 @@ def kr_holidays(years) -> set[dt.date]:
 
 
 @st.cache_data(ttl=30)
-def expand_daily(logs: pd.DataFrame, mode: str = "spread") -> pd.DataFrame:
+def expand_daily(logs: pd.DataFrame, mode: str = "spread", caps: dict | None = None) -> pd.DataFrame:
+    """실적을 날짜별 시간으로 나눕니다.
+
+    caps = {장비ID: 하루 최대 시간 또는 (하루 최대 시간, 묶음ID)} 이면 (충방전기) 챔버·채널이 여러 개 돌아도
+    하루 합계를 그 시간까지만 세고 (같은 묶음ID = 같은 주장비 아래 충방전기는 합쳐서),
+    주말·공휴일 몫은 세지 않습니다. 실적(사용시간) 자체는 그대로이고 ooo 계산에만 씁니다.
+    """
     cols = ["log_id", "equip_id", "day", "hours", "fee"]
     if logs.empty:
         return pd.DataFrame(columns=cols).astype({"day": "datetime64[ns]", "hours": float, "fee": float})
@@ -106,7 +112,29 @@ def expand_daily(logs: pd.DataFrame, mode: str = "spread") -> pd.DataFrame:
         for d in days:
             recs.append((r.id, r.equip_id, d, h / n, f / n))
     df = pd.DataFrame(recs, columns=cols)
+    if caps and not df.empty:
+        df = cap_daily(df, caps, hol)
     df["day"] = pd.to_datetime(df["day"])
+    return df
+
+
+def cap_daily(df: pd.DataFrame, caps: dict, hol: set | None = None) -> pd.DataFrame:
+    """caps 장비의 날짜별 시간을 하루 최대 시간으로 줄이고 주말·공휴일은 0으로 (실적 행 비율대로 나눔)."""
+    df = df.copy()
+    norm = {int(k): (v if isinstance(v, tuple) else (v, k)) for k, v in caps.items()}
+    lim = df["equip_id"].map(lambda e: norm[int(e)][0] if pd.notna(e) and int(e) in norm else None)
+    grp = df["equip_id"].map(lambda e: norm[int(e)][1] if pd.notna(e) and int(e) in norm else -1)
+    hit = lim.notna()
+    if not hit.any():
+        return df
+    days = pd.to_datetime(df["day"])
+    if hol is None:
+        hol = kr_holidays(set(days.dt.year))
+    off = hit & ((days.dt.weekday >= 5) | days.dt.date.isin(hol))
+    df.loc[off, "hours"] = 0.0
+    tot = df.groupby([grp, days])["hours"].transform("sum")
+    over = hit & (tot > lim.astype(float))
+    df.loc[over, "hours"] = df.loc[over, "hours"] * lim[over].astype(float) / tot[over]
     return df
 
 

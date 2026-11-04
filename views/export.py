@@ -120,7 +120,7 @@ def render_report() -> None:
     annual = float(cfg.get("annual_hours") or 2000)
     target = float(cfg.get("target_util") or 0)
     cutoff = dt.date.today()
-    daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"))
+    daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"), db.charger_caps())
     e_eff = calc.effective_end(s, e, cutoff)
     summary = calc.equipment_summary(daily, eq, s, e_eff, annual)
     tot = calc.totals(summary)
