@@ -1136,12 +1136,11 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
     cats = [c for c in shown_cats if c in LANE_CATS or any(e["cat"] == c for e in entries)]
     for c in cats:
         ents = [e for e in entries if e["cat"] == c]
-        chg = [e for e in ents if e.get("charger")]  # 충방전기는 칸마다 한 줄로 묶음 (자세히는 '충방전기' 보기)
-        ents = [e for e in ents if not e.get("charger")]
+        chg = [e for e in ents if e.get("charger")]  # 충방전기도 다른 실적처럼 한 건씩 (누르면 입력 카드)
         chg_h = 0 if d.weekday() >= 5 else sum(  # 주장비마다 하루 최대 8h
             min(db.CHARGER_DAY_MAX, sum(e["hours"] for e in chg if e["root"] == i)) for i in {e["root"] for e in chg})
         sec = cell.container(key=f"sec_{CAT_KEY[c]}_{d}")
-        hours = _hours(sum(e["hours"] for e in ents) + chg_h) if (ents or chg) else ""
+        hours = _hours(sum(e["hours"] for e in ents if not e.get("charger")) + chg_h) if ents else ""
         sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{c}<b>{hours}</b></div>",
                      unsafe_allow_html=True)
         # 줄 이름 위에 투명 버튼: 누르면 이 구분 장비만 보이는 새 실적 입력
@@ -1165,13 +1164,6 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
             if not e["period"]:
                 row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
                            on_click=_click_x, args=(d, e))
-        if chg:
-            comps = list(dict.fromkeys(e["company"] for e in chg))
-            who = comps[0] + (f" 외 {len(comps) - 1}곳" if len(comps) > 1 else "")
-            n_ch = sum(e["n_ch"] for e in chg)
-            row = sec.container(key=f"er_{d}_chg{CAT_KEY[c]}")
-            row.button(f"충방전기\n\n챔버 {n_ch}\n\n{_md(who)}", key=f"chg_{d}_{CAT_KEY[c]}", width="stretch",
-                       on_click=_open_board, help="충방전기 챔버별 현황 보기")
         if len(ents) > CELL_LINES:
             sec.container(key=f"more_{d}_{CAT_KEY[c]}").markdown(f"+{len(ents) - CELL_LINES}")
     if entries:
@@ -1313,10 +1305,6 @@ def render(header: bool = True) -> None:
     if right is not None:
         with right:
             _entry_panel(day, logs, eq, comp, cfg)
-
-
-def _open_board() -> None:
-    st.session_state.in_view = "충방전기"
 
 
 def _set_end(key: str, start: dt.date, days: int) -> None:
