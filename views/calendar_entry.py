@@ -139,7 +139,7 @@ div[class*="st-key-ep_row_anal_"] button {--chip-fg: #7C5CE0;}
 .st-key-calgrid div[class*="st-key-x_"] button span {font-size: 14px !important;}
 /* 드래그 선택 */
 .st-key-calgrid {user-select: none; -webkit-user-select: none;}
-.st-key-calgrid div[class*="st-key-cell_"].cal-drag {background: rgba(45, 143, 213, 0.14) !important;
+.st-key-calgrid div[class*="st-key-cell_"][data-drag] {background: rgba(45, 143, 213, 0.14) !important;
   border-color: var(--accent) !important;}
 .st-key-cal_cmd {display: none !important;}
 .st-key-calgrid div[class*="st-key-cell_"][data-jspick] {background: rgba(45, 143, 213, 0.12) !important;
@@ -449,6 +449,8 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 .st-key-calgrid div[class*="st-key-cell_"][data-unsel] {background: #FAFBFD !important; border-color: transparent !important; box-shadow: none !important;}
 .st-key-calgrid div[class*="st-key-ent_"][data-jsmulti="1"] button {box-shadow: 0 0 0 2px var(--accent) !important; background: #EAF3FD !important;}
 .st-key-calgrid div[class*="st-key-ent_"][data-jsmulti="0"] button {box-shadow: none !important; background: var(--chip-bg, #F1F3F7) !important;}
+.st-key-calgrid[data-dragging] div[class*="st-key-card"] {display: none !important;}
+[data-testid="stElementContainer"]:has(> div .cal-state), [data-testid="stMarkdown"]:has(.cal-state) {display: none !important;}
 </style>"""
 
 
@@ -1013,11 +1015,11 @@ KEYS_JS = r"""
   const dateOf = (cell) => { const m = cell && cell.className.match(/st-key-cell_(\d{4}-\d{2}-\d{2})/); return m ? m[1] : null; };
   let start = null, cur = null, dragging = false;
   const paint = () => {
-    doc.querySelectorAll('.st-key-calgrid .cal-drag').forEach(c => c.classList.remove('cal-drag'));
+    doc.querySelectorAll('.st-key-calgrid [data-drag]').forEach(c => c.removeAttribute('data-drag'));
     if (!dragging) return;
     const [a, b] = [start, cur].sort();
     doc.querySelectorAll('.st-key-calgrid div[class*="st-key-cell_"]').forEach(c => {
-      const d = dateOf(c); if (d && d >= a && d <= b) c.classList.add('cal-drag');
+      const d = dateOf(c); if (d && d >= a && d <= b) c.setAttribute('data-drag', '1');
     });
   };
   // 바로 표시해 둔 선택을 지우고 서버가 그린 선택 표시로 돌아감
@@ -1049,22 +1051,36 @@ KEYS_JS = r"""
     if (e.button !== 0) return;
     if ((e.ctrlKey || e.metaKey) && entOf(e.target)) { start = null; return; }  // Ctrl+클릭은 mouseup에서 처리
     clearMulti();
+    if (cellOf(e.target)) {  // 칸 안에서는 글자 선택·끌어다 놓기가 시작되지 않게 (드래그 선택이 끊기는 원인)
+      e.preventDefault();
+      const sel = win.getSelection && win.getSelection(); if (sel) sel.removeAllRanges();
+    }
     if (!cellOf(e.target)) {
       clearQuick();  // 달력 밖(입력 카드 등)을 누르면 서버 표시를 따름
       // 여러 날을 골라 둔 상태에서 다른 곳을 누르면 선택을 풂 (엑셀처럼)
-      const bar = doc.querySelector('.st-key-cal_selbar');
+      const bar = doc.querySelector('.cal-state[data-multi]');
       const keep = e.target.closest && e.target.closest(
         '.st-key-cal_selbar, .st-key-cal_delbar, [role="dialog"], [data-testid="stSidebar"], [data-baseweb="popover"]');
-      if (!keep && bar && /(일|건) 선택/.test(bar.textContent || '')) {
+      if (!keep && bar) {
         doc.querySelectorAll('.st-key-calgrid div[class*="st-key-cell_"]').forEach(c => c.setAttribute('data-unsel', '1'));
         send('unsel');
       }
     }
     const c = cellOf(e.target); start = dateOf(c); cur = start; dragging = false;
+    const g = doc.querySelector('.st-key-calgrid'); if (g && start) g.setAttribute('data-dragging', '1');
   }, true);
-  on('mouseover', (e) => {
+  on('dragstart', (e) => { if (cellOf(e.target)) e.preventDefault(); }, true);
+  on('mousemove', (e) => {
     if (!start) return;
-    const d = dateOf(cellOf(e.target));
+    if (!(e.buttons & 1)) { start = null; dragging = false; paint(); return; }  // 버튼을 이미 뗀 경우
+    // 화면 위·아래 끝으로 끌면 저절로 스크롤 (아래 주까지 이어서 고를 수 있게)
+    const edge = 60, vh = win.innerHeight;
+    if (e.clientY > vh - edge || e.clientY < edge) {
+      const step = e.clientY > vh - edge ? 18 : -18;
+      const sc = doc.querySelector('[data-testid="stMain"]');
+      if (sc && sc.scrollHeight > sc.clientHeight) sc.scrollBy(0, step); else win.scrollBy(0, step);
+    }
+    const d = dateOf(cellOf(doc.elementFromPoint(e.clientX, e.clientY)));
     if (d && d !== cur) { cur = d; if (cur !== start) { dragging = true; clearQuick(); } paint(); }
   }, true);
   on('mouseup', (e) => {
@@ -1083,6 +1099,10 @@ KEYS_JS = r"""
       }
       start = null; dragging = false; return;
     }
+    if (start) {  // 손을 뗀 자리를 한 번 더 확인 (빠르게 끌었을 때 마지막 칸을 놓치지 않게)
+      const d = dateOf(cellOf(doc.elementFromPoint(e.clientX, e.clientY)));
+      if (d && d !== cur) { cur = d; if (cur !== start) dragging = true; }
+    }
     if (start && dragging) {
       e.preventDefault(); e.stopPropagation();
       const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
@@ -1093,6 +1113,7 @@ KEYS_JS = r"""
       quickPick(e.target);
     }
     start = null; dragging = false;
+    doc.querySelectorAll('[data-dragging]').forEach(el => el.removeAttribute('data-dragging'));
   }, true);
   on('keydown', (e) => {
     if (!onCal() || typing(e.target)) return;
@@ -1225,31 +1246,8 @@ def render(header: bool = True) -> None:
         pick = None
     sel_days = [d for d in _sel_days() if d.month == month.month]
     picks = _picks()
-    if sel_days or pick or clip or picks:
-        with st.container(key="cal_selbar", horizontal=True, vertical_alignment="center", gap="small"):
-            if sel_days:
-                what = f"{sel_days[0]:%m/%d}~{sel_days[-1]:%m/%d} {len(sel_days)}일 선택"
-            elif picks:
-                what = f"실적 {len(picks)}건 선택"
-            elif pick:
-                what = f"{_cut(pick['label'], 30)} 선택"
-            else:
-                what = "붙여 넣을 날짜를 고르세요"
-            if clip and not (sel_days or pick or picks):
-                st.markdown(f":blue[:material/content_paste: 복사됨]\u2002{_md(_cut(clip['label'], 26))}"
-                            "\u2003:blue[날짜를 고르고 Ctrl+V]", width="content")
-            else:
-                st.markdown(f"**{_md(what)}**" + ("\u2003:blue[복사됨]" if clip else ""), width="content")
-            if sel_days or pick or picks:
-                st.button("복사", icon=":material/content_copy:", key="cal_sel_copy", on_click=_copy,
-                          help="Ctrl+C")
-            if clip:
-                st.button("붙여넣기", icon=":material/content_paste:", key="cal_sel_paste",
-                          on_click=_paste_days, help="Ctrl+V")
-            if sel_days or (pick and not pick["period"]) or any(not p["period"] for p in picks):
-                st.button("삭제", icon=":material/delete:", key="cal_sel_del", on_click=_ask_delete,
-                          args=(sel_days or None,), help="Delete")
-            st.button("", icon=":material/close:", key="cal_sel_clear", on_click=_clear_all, help="닫기 (Esc)")
+    if sel_days or len(picks) > 1:  # 여러 날·여러 실적을 골라 둔 상태 (달력 밖을 누르면 풀림)
+        st.markdown("<div class='cal-state' data-multi='1'></div>", unsafe_allow_html=True)
     ask = st.session_state.get("cal_delask")
     if ask:
         with st.container(key="cal_delbar", horizontal=True, vertical_alignment="center", gap="small"):
