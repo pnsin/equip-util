@@ -123,7 +123,7 @@ def render() -> None:
     one = eq[eq["id"] == eid]
     family = db.descendants(eq).get(int(eid), [int(eid)])  # 세부장비 실적도 함께
     logs = logs_all[logs_all["equip_id"].isin(family)]
-    daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"))
+    daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"), db.charger_caps())
     sm = calc.equipment_summary(daily, one, s, e_eff, annual, eq)
     row = sm.iloc[0] if not sm.empty else None
     ps, pe, plabel = calc.compare_period(kind, s, e, e_eff, "직전")

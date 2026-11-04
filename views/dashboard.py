@@ -105,7 +105,7 @@ def render() -> None:
     if logs_all.empty:
         empty_state("아직 사용실적이 없습니다", "'실적 입력'에서 입력하거나 '가져오기 · 백업'에서 기존 엑셀을 가져오세요.", "◷")
 
-    daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"))
+    daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"), db.charger_caps())
     e_eff = calc.effective_end(s, e, cutoff)
     summary = calc.equipment_summary(daily, eq, s, e_eff, annual)
     tot = calc.totals(summary)

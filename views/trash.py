@@ -5,7 +5,7 @@ import streamlit as st
 from core import db
 from ui_style import empty_state, page_header
 
-KIND = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자"}
+KIND = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "channels": "챔버 구성"}
 
 
 def render() -> None:
