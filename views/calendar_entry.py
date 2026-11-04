@@ -423,6 +423,14 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 .st-key-calwrap [data-testid="stColumn"]:not(:has(.st-key-ep_panel)) {min-width: 0 !important;}
 .st-key-calgrid [data-testid="stColumn"], .st-key-calgrid div[class*="st-key-cell_"] {min-width: 0 !important;}
 .st-key-ep_list:not(:has(button)) {display: none !important;}
+/* 구역을 칸 안에 고르게: 시험/제조/분석이 처음부터 같은 높이로 나뉨 */
+.st-key-calgrid div[class*="st-key-cell_"] {min-height: 240px !important;}
+.st-key-calgrid div[class*="st-key-cell_"] > [data-testid="stLayoutWrapper"]:has(> div[class*="st-key-sec_"]),
+.st-key-calgrid div[class*="st-key-cell_"] > div[class*="st-key-sec_"] {flex: 1 1 0 !important; display: flex; flex-direction: column;}
+.st-key-calgrid div[class*="st-key-sec_"] {flex: 1 1 auto !important; min-height: 44px;}
+.st-key-calgrid div[class*="st-key-sec_"]:not(:has(div[class*="st-key-er_"])):not(:has(div[class*="st-key-cf_"])) {
+  border-radius: 10px !important; padding: 2px 4px !important;}
+.st-key-calgrid .cal-out {min-height: 240px !important;}
 </style>"""
 
 
