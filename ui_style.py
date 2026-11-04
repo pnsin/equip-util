@@ -214,23 +214,53 @@ _CSS = """
   /* ---------- 도움말 팝업 ---------- */
   [data-testid="stTooltipContent"] { font-size: .9rem; line-height: 1.55; max-width: 520px; }
 
-  /* ---------- 접속 화면 ---------- */
-  .st-key-login_card { position: relative; z-index: 1; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent);
-        border-radius: 8px; padding: 2rem 2rem 1.4rem 2rem; box-shadow: var(--shadow); }
-  .login-head img { width: 150px; display: block; margin: 0 0 1.4rem 0; }
-  .login-head .t { font-size: 1.6rem; font-weight: 700; color: var(--ink); letter-spacing: -.02em; margin: .25rem 0 1.4rem 0; line-height: 1.25; }
-  .login-head .d { font-size: .85rem; color: var(--muted); margin: 0 0 1.2rem 0; line-height: 1.6; word-break: keep-all; }
-  .st-key-login_card [data-testid="stForm"] { border: none; padding: 0; }
-  .st-key-login_card [data-testid="stFormSubmitButton"], .st-key-login_card [data-testid="stFormSubmitButton"] button { width: 100%; }
-  .st-key-login_card [data-testid="stFormSubmitButton"] button { min-height: 2.7rem; }
-  .st-key-login_card [data-testid="InputInstructions"] { display: none; }
-  .login-foot { font-size: .75rem; color: var(--dim); text-align: center; margin-top: 1rem; border-top: 1px solid var(--line); padding-top: .9rem; }
+  /* ---------- 접속 화면 (2026-11-04 시안 C "자물쇠 친구") ---------- */
+  .login-gap { height: 17vh; }
+  .stApp:has(.login-bg) [data-testid="stHeader"] { background: transparent; }
   .login-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none;
-        background: radial-gradient(900px 480px at 50% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
-                    linear-gradient(color-mix(in srgb, var(--muted) 5%, transparent) 1px, transparent 1px) 0 0 / 44px 44px,
-                    linear-gradient(90deg, color-mix(in srgb, var(--muted) 5%, transparent) 1px, transparent 1px) 0 0 / 44px 44px; }
-  .login-err { font-size: .85rem; color: var(--ng); background: var(--ng-bg); border: 1px solid color-mix(in srgb, var(--ng) 35%, transparent);
-        border-radius: 4px; padding: .45rem .7rem; margin: .2rem 0 .4rem 0; }
+        background: radial-gradient(circle at 1px 1px, #D9E0EE 1.2px, transparent 1.3px) 0 0 / 22px 22px,
+                    linear-gradient(160deg, #EEF3FF, #F6F1FF 55%, #FFF4EE); }
+  .st-key-login_card { position: relative; z-index: 1; max-width: 400px; margin: 0 auto; overflow: visible;
+        background: rgba(255,255,255,.95); border: 1px solid #fff; border-radius: 28px;
+        padding: 0 36px 26px 36px; box-shadow: 0 20px 50px rgba(60,70,120,.12); }
+  .login-mascot { display: block; width: 150px; height: 150px; margin: -80px auto -2px auto;
+        filter: drop-shadow(0 8px 12px rgba(80,100,160,.16)); }
+  .login-mascot .shut, .login-mascot .peek, .login-mascot .sad { display: none; }
+  .st-key-login_card:has(input[type="password"]:focus) .login-mascot .open,
+  .st-key-login_card:has(input[type="password"]:not(:placeholder-shown)) .login-mascot .open { display: none; }
+  .st-key-login_card:has(input[type="password"]:focus) .login-mascot .shut,
+  .st-key-login_card:has(input[type="password"]:not(:placeholder-shown)) .login-mascot .shut { display: inline; }
+  .st-key-login_card:has(input[type="text"]) .login-mascot .open,
+  .st-key-login_card:has(input[type="text"]) .login-mascot .shut { display: none; }
+  .st-key-login_card:has(input[type="text"]) .login-mascot .peek { display: inline; }
+  .login-mascot.failed .smile { display: none; }
+  .login-mascot.failed .sad { display: inline; }
+  .login-mascot.failed .shut, .login-mascot.failed .peek { display: none !important; }
+  .login-mascot.failed .open { display: inline !important; }
+  .login-head { text-align: center; }
+  .login-head .t { font-size: 1.4rem; font-weight: 700; color: var(--ink); letter-spacing: -.02em; line-height: 1.3; margin: 0 0 .35rem 0; }
+  .login-head .d { font-size: .85rem; color: #7A8597; margin: 0 0 1.3rem 0; }
+  .st-key-login_card [data-testid="stForm"] { border: none; padding: 0; }
+  .st-key-login_card [data-testid="stTextInputRootElement"] { border-radius: 14px; min-height: 3.1rem; background: #F7F9FC;
+        border: 1.5px solid #D9DFEA; transition: box-shadow .15s, border-color .15s; }
+  .st-key-login_card [data-testid="stTextInputRootElement"]:focus-within { border-color: #7FA6E8; background: #fff; box-shadow: 0 0 0 4px #E3ECFB; }
+  .st-key-login_card [data-testid="stTextInputRootElement"] > div, .st-key-login_card [data-testid="stTextInputRootElement"] input { background: transparent; }
+  .st-key-login_card [data-testid="stTextInputRootElement"] input { font-size: 1rem; }
+  .st-key-login_card [data-testid="stTextInputRootElement"] [data-testid="stTextInputIcon"],
+  .st-key-login_card [data-testid="stTextInputRootElement"] span[data-testid="stIconMaterial"] { color: #8A95A8; }
+  .st-key-login_card [data-testid="stFormSubmitButton"], .st-key-login_card [data-testid="stFormSubmitButton"] button { width: 100%; }
+  .st-key-login_card [data-testid="stFormSubmitButton"] button { min-height: 3.1rem; border-radius: 14px; border: none;
+        background: linear-gradient(135deg, #5B8DEF, #3F6FD8); box-shadow: 0 8px 18px rgba(63,111,216,.28); transition: transform .12s, box-shadow .12s; }
+  .st-key-login_card [data-testid="stFormSubmitButton"] button:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(63,111,216,.34); }
+  .st-key-login_card [data-testid="stFormSubmitButton"] button p { font-size: 1rem; font-weight: 600; }
+  .st-key-login_card [data-testid="InputInstructions"] { display: none; }
+  .login-foot { display: flex; align-items: center; justify-content: space-between; margin-top: .9rem;
+        padding-top: 1rem; border-top: 1px dashed #E3E7EF; }
+  .login-foot img { width: 84px; display: block; }
+  .login-foot span { display: inline-flex; align-items: center; gap: 5px; font-size: .78rem; color: #2E8B60; }
+  .login-foot svg { width: 13px; height: 13px; }
+  .login-err { font-size: .85rem; color: var(--ng); background: var(--ng-bg); border-radius: 12px;
+        padding: .5rem .8rem; margin: .1rem 0 .3rem 0; text-align: center; }
 </style>
 """.replace("__VARS__", _VARS)
 
@@ -288,13 +318,45 @@ def nav_group(name: str):
     st.markdown(f'<div class="nav-group">{html.escape(name)}</div>', unsafe_allow_html=True)
 
 
-def login_head():
-    base = THEMES.get(THEME_NAME, THEMES["dark"])["base"]
-    uri = _data_uri(os.path.join(_DIR, "assets", "logo_dark.png" if base == "dark" else "logo_light.png"))
-    logo = f'<img src="{uri}" alt="로고">' if uri else ""
+_MASCOT = """<svg class="login-mascot{cls}" viewBox="0 0 140 140" aria-hidden="true">
+<defs><linearGradient id="lm-body" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A9C8FF"/><stop offset="1" stop-color="#C9B8FF"/></linearGradient>
+<linearGradient id="lm-shackle" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8FB0F2"/><stop offset="1" stop-color="#A996EE"/></linearGradient></defs>
+<path d="M50 64V50a20 20 0 0 1 40 0v14" stroke="url(#lm-shackle)" stroke-width="12" fill="none" stroke-linecap="round"/>
+<path d="M47 52a23 23 0 0 1 12-17" stroke="#fff" stroke-opacity=".55" stroke-width="3" fill="none" stroke-linecap="round"/>
+<rect x="28" y="58" width="84" height="66" rx="32" fill="url(#lm-body)"/>
+<ellipse cx="50" cy="68" rx="13" ry="5" fill="#fff" opacity=".5" transform="rotate(-18 50 68)"/>
+<g class="open"><ellipse cx="56" cy="86" rx="6" ry="7" fill="#24324F"/><ellipse cx="84" cy="86" rx="6" ry="7" fill="#24324F"/>
+<circle cx="58.3" cy="83.3" r="2.4" fill="#fff"/><circle cx="86.3" cy="83.3" r="2.4" fill="#fff"/>
+<circle cx="54.5" cy="89" r="1.1" fill="#fff"/><circle cx="82.5" cy="89" r="1.1" fill="#fff"/></g>
+<g class="shut" stroke="#24324F" stroke-width="3.2" fill="none" stroke-linecap="round"><path d="M49 86q7 6 14 0"/><path d="M77 86q7 6 14 0"/></g>
+<g class="peek"><path d="M49 86q7 6 14 0" stroke="#24324F" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+<ellipse cx="84" cy="86" rx="6" ry="7" fill="#24324F"/><circle cx="86.3" cy="83.3" r="2.4" fill="#fff"/></g>
+<ellipse cx="46" cy="98" rx="7.5" ry="4.5" fill="#FF9FB5" opacity=".55"/><ellipse cx="94" cy="98" rx="7.5" ry="4.5" fill="#FF9FB5" opacity=".55"/>
+<path class="smile" d="M63 96q3.5 4 7 0q3.5 4 7 0" stroke="#24324F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<g class="sad" stroke="#24324F" stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M64 100q6 -5 12 0"/><path d="M49 77l8 -3"/><path d="M91 77l-8 -3"/></g>
+<path d="M116 33Q116 40 123 40Q116 40 116 47Q116 40 109 40Q116 40 116 33z" fill="#FFD3C2"/><path d="M24 51Q24 56 29 56Q24 56 24 61Q24 56 19 56Q24 56 24 51z" fill="#B9A6FF"/><path d="M120 100Q120 104 124 104Q120 104 120 108Q120 104 116 104Q120 104 120 100z" fill="#C9B8FF"/></svg>"""
+
+_SHIELD = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+           'stroke-linejoin="round"><path d="M12 3l7 3v5.5c0 4.5-3 8-7 9.5-4-1.5-7-5-7-9.5V6z"/><path d="M9 12l2 2 4-4"/></svg>')
+
+
+def login_bg():
+    """접속 화면 배경 (카드 밖에 그려야 카드 위를 덮지 않음)."""
     st.markdown('<div class="login-bg"></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="login-head">{logo}'
-                f'<div class="t">{html.escape(SYSTEM_TITLE)}</div></div>', unsafe_allow_html=True)
+
+
+def login_head(failed: bool = False):
+    """접속 화면 위쪽: 자물쇠 친구(비밀번호를 치는 동안 눈을 감음) + 제목."""
+    st.markdown(_MASCOT.replace("{cls}", " failed" if failed else "").replace("\n", "")
+                + f'<div class="login-head"><div class="t">{html.escape(SYSTEM_TITLE)}</div>'
+                '<div class="d">팀 비밀번호로 들어와 주세요</div></div>', unsafe_allow_html=True)
+
+
+def login_foot():
+    """접속 화면 아래쪽: 작은 로고 + 보안 표시."""
+    uri = _data_uri(os.path.join(_DIR, "assets", "logo_light.png"))
+    logo = f'<img src="{uri}" alt="로고">' if uri else "<i></i>"
+    st.markdown(f'<div class="login-foot">{logo}<span>{_SHIELD}보안 연결됨</span></div>', unsafe_allow_html=True)
 
 
 # 그래프 오른쪽 위 버튼: 그림으로 저장(보고서 붙여넣기용)만 남김
