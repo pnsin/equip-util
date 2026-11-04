@@ -24,7 +24,7 @@ FIELDS = {
 }
 
 
-CELL_LINES = 3  # 구역(시험/제조/분석)마다 바로 보여 줄 실적 수 (나머지는 "+N건")
+CELL_LINES = 4  # 달력 칸에 바로 보여 줄 실적 수 (나머지는 "+N건 더")
 CSS = """<style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap');
 .block-container {padding-top: 2.5rem;}
@@ -51,41 +51,60 @@ CSS = """<style>
     min-width: 380px; scrollbar-width: thin;}
 }
 .st-key-calwrap > [data-testid="stHorizontalBlock"] {align-items: flex-start;}
-.st-key-ep_panel {background: #fff; border: 1px solid #E6EBF2; border-radius: 18px; padding: 18px 18px 14px;
-  box-shadow: 0 4px 18px rgba(20, 40, 80, .06); gap: .55rem;}
-.ep-h {display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px;
-  border-bottom: 1px dashed #E1E7F0;}
-.ep-d {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif; font-size: 1.35rem; font-weight: 800; color: var(--ink);}
-.ep-d em {font-style: normal; font-size: .8em; color: var(--muted); margin-left: 2px;}
-.ep-n {font-size: .85rem; font-weight: 700; color: var(--accent); background: #EAF3FD; padding: 2px 10px; border-radius: 999px;}
-.st-key-ep_list button {justify-content: flex-start; text-align: left; padding: 6px 12px; border-radius: 10px;
-  border: 1px solid #E6EBF2; background: #FAFBFD; border-left: 4px solid var(--chip-fg, #8A97A8);}
+.st-key-ep_panel {background: #fff; border: none; border-radius: 22px; padding: 22px 22px 18px;
+  box-shadow: 0 2px 4px rgba(30, 50, 90, .04), 0 12px 32px rgba(30, 50, 90, .08); gap: .6rem;}
+.st-key-ep_head {align-items: flex-start !important;}
+.ep-h {line-height: 1.25;}
+.ep-d {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif; font-size: 1.5rem; font-weight: 900; color: var(--ink);}
+.ep-d em {font-style: normal; font-size: .95rem; color: #8592A8; font-weight: 700; margin-left: 4px;}
+.ep-n {display: block; font-size: .85rem; font-weight: 700; color: var(--accent); margin-top: 2px;}
+.st-key-ep_new {width: auto !important;}
+.st-key-ep_new button {border: none !important; background: var(--accent) !important; color: #fff !important; border-radius: 12px !important;
+  font-weight: 700; padding: 0 14px; height: 38px; box-shadow: 0 3px 10px rgba(45, 143, 213, .3);}
+.st-key-ep_new button p {color: #fff !important; font-weight: 700;}
+.st-key-ep_list {gap: 6px !important;}
+.st-key-ep_list button {justify-content: flex-start; text-align: left; padding: 8px 12px 8px 30px; border-radius: 12px;
+  border: none !important; background: #F7F9FC; position: relative; min-height: 0;}
+.st-key-ep_list button::before {content: ''; position: absolute; left: 12px; top: 50%; width: 10px; height: 10px; margin-top: -5px;
+  border-radius: 50%; background: var(--chip-fg, #8A97A8);}
+.st-key-ep_list button:hover {background: #EFF3F9;}
 .st-key-ep_list button div[data-testid="stMarkdownContainer"] {text-align: left; width: 100%;}
-.st-key-ep_list button p {margin: 0; font-size: .82rem; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #243042;}
-.st-key-ep_list button p:first-child {font-weight: 700;}
+.st-key-ep_list button p {margin: 0; font-size: .8rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6B7790;}
+.st-key-ep_list button p:first-child {font-weight: 700; font-size: .88rem; color: #1F2A3D;}
 .st-key-ep_list button > div {justify-content: flex-start !important; width: 100%; min-width: 0;}
-.st-key-ep_list button[data-testid="stBaseButton-primary"] {background: #EAF3FD !important; border-color: var(--accent) !important;
-  box-shadow: 0 0 0 1px var(--accent); border-left-color: var(--chip-fg, var(--accent)) !important;}
-.st-key-ep_list button[data-testid="stBaseButton-primary"] p {color: #1B3A66 !important;}
-.st-key-ep_panel [data-testid="stMarkdownContainer"]:has(.ep-sec, .ep-t, .ep-h) {margin-bottom: 0 !important;}
+.st-key-ep_list button[data-testid="stBaseButton-primary"] {background: #EAF3FD !important; box-shadow: inset 0 0 0 2px var(--accent);}
+.st-key-ep_list button[data-testid="stBaseButton-primary"] p {color: #6B7790 !important;}
+.st-key-ep_list button[data-testid="stBaseButton-primary"] p:first-child {color: #1F2A3D !important;}
+.st-key-ep_panel [data-testid="stMarkdownContainer"]:has(.ep-t, .ep-h, .ep-empty) {margin-bottom: 0 !important;}
+.ep-empty {font-size: .85rem; color: #98A3B8; background: #F7F9FC; border-radius: 12px; padding: 12px; text-align: center;}
 div[class*="st-key-ep_row_test_"] button {--chip-fg: #E35D78;} div[class*="st-key-ep_row_make_"] button {--chip-fg: #1FA971;}
 div[class*="st-key-ep_row_anal_"] button {--chip-fg: #7C5CE0;}
-.st-key-ep_new button {border: 1.5px dashed #C9D8EC !important; border-left-width: 1.5px !important; background: transparent !important;
-  justify-content: center !important; color: var(--accent) !important; font-weight: 700;}
-.st-key-ep_new button[data-testid="stBaseButton-primary"] {background: #EAF3FD !important; border-color: var(--accent) !important;}
-.st-key-ep_form {background: #F7F9FC; border-radius: 14px; padding: 12px 14px 14px; gap: .5rem;}
-.ep-t {font-weight: 800; font-size: 1rem; color: var(--ink);}
-.ep-sec {font-size: .74rem; font-weight: 800; color: #7C8AA5; letter-spacing: .06em; margin-top: .35rem;
-  display: flex; align-items: center; gap: 8px;}
-.ep-sec::after {content: ''; flex: 1; height: 1px; background: #E1E7F0;}
-.st-key-ep_form [data-testid="stWidgetLabel"] p {font-size: .8rem; font-weight: 600; color: #4A5670;}
-.st-key-ep_form [data-testid="stButtonGroup"] button {border-radius: 999px !important; padding: 2px 12px; min-height: 0; height: 30px;}
-.st-key-ep_form [data-testid="stButtonGroup"] button p {font-size: .8rem;}
-.st-key-ep_btns {margin-top: .4rem;}
+.st-key-ep_form {border-top: 1px solid #EEF1F6; padding-top: 14px; gap: .65rem;}
+.ep-t {font-weight: 800; font-size: 1.05rem; color: var(--ink); display: flex; align-items: center; gap: 8px;}
+.ep-t span {font-size: .72rem; font-weight: 800; padding: 2px 9px; border-radius: 999px;}
+.st-key-ep_form [data-testid="stWidgetLabel"] p {font-size: .8rem; font-weight: 700; color: #5A6680;}
+.st-key-ep_form [data-baseweb="select"] > div, .st-key-ep_form [data-baseweb="input"], .st-key-ep_form [data-baseweb="textarea"],
+.st-key-ep_form [data-testid="stNumberInputContainer"] {background: #F4F6FA !important; border: 1.5px solid transparent !important; border-radius: 11px !important;}
+.st-key-ep_form [data-baseweb="input"] > div, .st-key-ep_form [data-baseweb="textarea"] > div,
+.st-key-ep_form [data-testid="stNumberInputContainer"] input, .st-key-ep_form [data-baseweb="input"] input,
+.st-key-ep_form textarea {background: transparent !important;}
+.st-key-ep_form [data-baseweb="select"] > div:focus-within, .st-key-ep_form [data-baseweb="input"]:focus-within,
+.st-key-ep_form [data-baseweb="textarea"]:focus-within, .st-key-ep_form [data-testid="stNumberInputContainer"]:focus-within {
+  border-color: var(--accent) !important; background: #fff !important;}
+.st-key-ep_form [data-testid="stNumberInputContainer"] button {background: #fff !important; border-radius: 8px !important; margin: 3px;
+  width: 28px; box-shadow: 0 1px 2px rgba(0, 0, 0, .06);}
+.st-key-ep_form [data-testid="stButtonGroup"] button {border-radius: 999px !important; padding: 2px 13px; min-height: 0; height: 32px;
+  border: none !important; background: #F4F6FA;}
+.st-key-ep_form [data-testid="stButtonGroup"] button p {font-size: .82rem; font-weight: 600; color: #4A5670;}
+.st-key-ep_form [data-testid="stButtonGroup"] button[aria-checked="true"] {background: var(--accent) !important;}
+.st-key-ep_form [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
+.st-key-ep_newcomp {margin-top: -.45rem;}
+.st-key-ep_newcomp button {min-height: 0; padding: 0; color: var(--accent);} .st-key-ep_newcomp button p {font-size: .76rem; font-weight: 700;}
+.st-key-ep_btns {margin-top: .5rem;}
 .st-key-ep_btns div[class*="st-key-ep_del"] {width: auto !important;}
-.st-key-ep_save button {height: 42px; border-radius: 12px; font-weight: 700;}
-.st-key-ep_del button {height: 42px; border-radius: 12px; color: #D64545; border-color: #F3B4B4;}
-.st-key-ep_del button:hover {background: #FFF1F1; border-color: #E5484D; color: #E5484D;}
+.st-key-ep_save button {height: 46px; border-radius: 13px; font-weight: 800; box-shadow: 0 4px 12px rgba(45, 143, 213, .3); border: none;}
+.st-key-ep_del button {height: 46px; border-radius: 13px; color: #E5484D; background: #FFF0F1; border: none; padding: 0 18px;}
+.st-key-ep_del button:hover {background: #FFE1E3; color: #D63A40;}
 /* 날짜 칸 */
 .st-key-calgrid div[class*="st-key-cell_"] {min-height: 230px; padding: 32px 6px 8px; overflow: visible; gap: 5px; border-radius: 10px;
   position: relative; cursor: pointer;}
@@ -112,6 +131,9 @@ div[class*="st-key-ep_row_anal_"] button {--chip-fg: #7C5CE0;}
 .st-key-calgrid div[class*="st-key-cell_"].cal-drag {background: rgba(45, 143, 213, 0.14) !important;
   border-color: var(--accent) !important;}
 .st-key-cal_cmd {display: none !important;}
+.st-key-calgrid div[class*="st-key-cell_"][data-jspick] {background: rgba(45, 143, 213, 0.12) !important;
+  border: 2px solid var(--accent) !important; box-shadow: 0 0 0 3px rgba(45, 143, 213, .18) !important;}
+.st-key-calgrid div[class*="st-key-ent_"][data-jspick] button {box-shadow: 0 0 0 2px var(--accent) !important; background: #EAF3FD !important;}
 @keyframes calAnts {0% {outline-color: var(--accent);} 50% {outline-color: rgba(45, 143, 213, .35);} 100% {outline-color: var(--accent);}}
 [data-testid="stElementContainer"]:has(iframe[height="0"]) {position: absolute !important; width: 0; height: 0;}
 /* 날짜 칸에 마우스를 올리면 뜨는 카드 */
@@ -141,19 +163,27 @@ div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
   margin-right: 6px; vertical-align: 1px;}
 /* 칸 안의 구역 (시험 / 제조 / 분석): 비어 있어도 항상 보임 */
 .st-key-calgrid div[class*="st-key-sec_"] {position: relative; z-index: 1; pointer-events: none; gap: 4px !important;
-  border-radius: 9px; padding: 3px 4px 4px; background: var(--sec-bg); border: 1px solid var(--sec-line);}
+  border-radius: 12px; padding: 4px 5px 6px; background: var(--sec-bg); border: none;}
 .st-key-calgrid div[class*="st-key-sec_"] div[class*="st-key-er_"],
 .st-key-calgrid div[class*="st-key-sec_"] div[class*="st-key-more_"] {pointer-events: auto;}
-.st-key-calgrid div[class*="st-key-sec_"] [data-testid="stMarkdownContainer"]:has(.cal-sec-h) {margin-bottom: 0 !important;}
-.cal-sec-h {display: flex; align-items: center; gap: 5px; font-size: .68rem; font-weight: 800; line-height: 1.5;
-  color: var(--sec-fg); padding: 0 2px; letter-spacing: .02em;}
-.cal-sec-h::before {content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--sec-fg);}
-.cal-sec-h b {margin-left: auto; font-weight: 700; opacity: .8;}
-.cal-sec-h.none {opacity: .5;}
-.st-key-calgrid div[class*="st-key-sec_"]:not(:has(div[class*="st-key-er_"])):not(:has(div[class*="st-key-cf_"])) {
-  background: transparent; border-style: dashed; padding: 2px 4px;}
-.st-key-calgrid div[class*="st-key-cf_"] [data-testid="stMarkdownContainer"]:has(.cal-cf-q),
 .st-key-calgrid div[class*="st-key-sec_"] [data-testid="stMarkdownContainer"] {margin-bottom: 0 !important;}
+.cal-sec-h {display: flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 800; line-height: 1.6;
+  color: var(--sec-fg); padding: 0 3px;}
+.cal-sec-h::before {content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--sec-fg);}
+.cal-sec-h b {margin-left: auto; font-weight: 700;}
+/* B 스티커형: 구분 알약 + 색깔 스티커 */
+.st-key-calgrid [data-testid="stMarkdownContainer"]:has(.cal-chips) {margin-bottom: 0 !important;}
+[data-testid="stElementContainer"]:has(> div .cal-chips) {position: relative; z-index: 1; pointer-events: none;}
+.cal-chips {display: flex; gap: 4px; margin: 0 0 4px;}
+.cal-chip {flex: 1; text-align: center; font-size: .68rem; font-weight: 800; padding: 2px 0; border-radius: 999px;
+  background: #F3F5F9; color: #B3BCCB; white-space: nowrap;}
+.cal-chip.on.c-test {background: #FDEEF1; color: #E35D78;} .cal-chip.on.c-make {background: #E8F7EF; color: #1FA971;}
+.cal-chip.on.c-anal {background: #F0ECFE; color: #7C5CE0;} .cal-chip.on.c-etc {background: #F1F3F7; color: #6B7790;}
+.cal-chip.c-etc:not(.on) {display: none;}
+/* 빈 구역: 색 없이 얇은 줄과 흐린 글자만 */
+.st-key-calgrid div[class*="st-key-sec_"]:not(:has(div[class*="st-key-er_"])):not(:has(div[class*="st-key-cf_"])) {
+  background: transparent; border-radius: 0; padding: 1px 5px 3px; border-bottom: 1px solid #F0F2F6;}
+.cal-sec-h.none {opacity: .38;}
 /* ✕ 누른 뒤 '삭제할까요?' */
 .st-key-calgrid div[class*="st-key-cf_"] {pointer-events: auto; position: relative; z-index: 3; gap: 4px !important;
   background: #FFF1F1; border: 1px solid #F3B4B4; border-radius: 8px; padding: 5px 6px;}
@@ -161,10 +191,10 @@ div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 .st-key-calgrid div[class*="st-key-cf_"] button {min-height: 0; height: 24px; padding: 0 4px; border-radius: 6px;}
 .st-key-calgrid div[class*="st-key-cf_"] button p {font-size: .72rem !important; font-weight: 700;}
 .st-key-calgrid div[class*="st-key-cfy_"] button {background: #E5484D !important; border-color: #E5484D !important; color: #fff !important;}
-.st-key-calgrid div[class*="st-key-sec_test_"] {--sec-bg: #FDECEF99; --sec-line: #E35D7833; --sec-fg: #E35D78; --chip-fg: #E35D78;}
-.st-key-calgrid div[class*="st-key-sec_make_"] {--sec-bg: #E5F6EC99; --sec-line: #1FA97133; --sec-fg: #1FA971; --chip-fg: #1FA971;}
-.st-key-calgrid div[class*="st-key-sec_anal_"] {--sec-bg: #EEE9FD99; --sec-line: #7C5CE033; --sec-fg: #7C5CE0; --chip-fg: #7C5CE0;}
-.st-key-calgrid div[class*="st-key-sec_etc_"] {--sec-bg: #EEF1F599; --sec-line: #8A97A833; --sec-fg: #8A97A8; --chip-fg: #8A97A8;}
+.st-key-calgrid div[class*="st-key-sec_test_"] {--sec-bg: #FDEEF1; --sec-line: #E35D7833; --sec-fg: #E35D78; --chip-fg: #E35D78;}
+.st-key-calgrid div[class*="st-key-sec_make_"] {--sec-bg: #E8F7EF; --sec-line: #1FA97133; --sec-fg: #1FA971; --chip-fg: #1FA971;}
+.st-key-calgrid div[class*="st-key-sec_anal_"] {--sec-bg: #F0ECFE; --sec-line: #7C5CE033; --sec-fg: #7C5CE0; --chip-fg: #7C5CE0;}
+.st-key-calgrid div[class*="st-key-sec_etc_"] {--sec-bg: #F1F3F7; --sec-line: #8A97A833; --sec-fg: #8A97A8; --chip-fg: #8A97A8;}
 /* 구분 필터 */
 div[class*="st-key-cal_cats"] {margin: .1rem 0 .4rem;}
 div[class*="st-key-cal_cats"] button {border-radius: 999px !important; font-weight: 600;}
@@ -210,23 +240,23 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 /* 실적 한 줄 (누르면 이 실적 선택) */
 .st-key-calgrid div[class*="st-key-ent_"] button {
   justify-content: flex-start; min-height: 0; padding: 4px 8px; border: none; border-radius: 8px;
-  background: #fff; border-left: 3px solid var(--chip-fg, #3B82F6);
-  box-shadow: 0 1px 2px rgba(20, 40, 80, .08);
+  background: var(--chip-bg, #F1F3F7); border-left: none; border-radius: 12px !important;
+  box-shadow: none; padding: 6px 9px !important;
   transition: transform .1s ease, box-shadow .1s ease;}
 .st-key-calgrid div[class*="st-key-ent_"] button:hover {transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(20, 40, 80, .12); filter: saturate(1.15);}
-.st-key-calgrid div[class*="st-key-ent_"] button p {font-size: 0.72rem; line-height: 1.38; color: #243042;}
-.st-key-calgrid div[class*="st-key-ent_"] button p:first-child {font-weight: 600;}
+.st-key-calgrid div[class*="st-key-ent_"] button p {font-size: 0.72rem; line-height: 1.4; color: #6B7790;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:first-child {font-weight: 700; font-size: .78rem; color: #1F2A3D;}
+.st-key-calgrid div[class*="st-key-ent_"] button p:first-child::before {content: var(--cat-label, ""); display: inline-block;
+  font-size: .62rem; font-weight: 800; padding: 0 6px; margin-right: 5px; border-radius: 999px; line-height: 1.6;
+  background: var(--chip-fg, #8A97A8); color: #fff; vertical-align: 1px;}
 /* 달력 모양: 둥근 흰 칸, 은은한 그림자, 주말은 옅은 색 */
-.st-key-calgrid div[class*="st-key-cell_"] {background: #fff; border: 1px solid #E6EBF2 !important; border-radius: 14px !important;
-  box-shadow: 0 1px 2px rgba(20, 40, 80, .04); transition: box-shadow .15s ease, border-color .15s ease;}
-.st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 6px 16px rgba(20, 40, 80, .10);
-  border-color: #C9D8EC !important;}
-.st-key-calgrid .cal-wk {text-align: center; font-size: 1.02rem; font-weight: 800; letter-spacing: .04em;
-  color: #4A5670; background: #EAEFF7; border-radius: 999px; padding: 6px 0; margin: 0 6px 4px;}
-.st-key-calgrid .cal-wk.sat {color: #3D7BE0; background: #E3EEFD;}
-.st-key-calgrid .cal-wk.sun {color: #E0566A; background: #FDE7EB;}
-.st-key-calgrid .cal-out {min-height: 230px; border-radius: 14px; border: 1px dashed #E6EBF2; padding: 8px 10px;
+.st-key-calgrid div[class*="st-key-cell_"] {background: #fff; border: 2px solid transparent !important; border-radius: 18px !important;
+  box-shadow: 0 1px 2px rgba(30, 50, 90, .05), 0 4px 14px rgba(30, 50, 90, .04); transition: box-shadow .15s ease;}
+.st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 2px 4px rgba(30, 50, 90, .06), 0 10px 24px rgba(30, 50, 90, .10);}
+.st-key-calgrid .cal-wk {text-align: center; font-size: 1.05rem; font-weight: 800; color: #5A6680; padding: 2px 0 4px;}
+.st-key-calgrid .cal-wk.sat {color: #3D7BE0;} .st-key-calgrid .cal-wk.sun {color: #E0566A;}
+.st-key-calgrid .cal-out {min-height: 230px; border-radius: 18px; border: none; padding: 8px 10px;
   font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1.05rem; color: #C3CBD6; background: rgba(255,255,255,.4);}
 .st-key-calgrid div[class*="st-key-more_"] p {font-size: 0.7rem; color: #777; margin: 0 0 0 4px;}
 /* 휴대폰: 7칸을 한 줄에 유지한 작은 달력 (날짜·건수만, 누르면 아래에 그날 실적) */
@@ -236,7 +266,8 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .st-key-calgrid [data-testid="stHorizontalBlock"] {flex-wrap: nowrap !important; gap: 3px !important;}
   .st-key-calgrid [data-testid="stColumn"] {min-width: 0 !important; width: auto !important; flex: 1 1 0 !important;}
   .st-key-calgrid div[class*="st-key-cell_"] {min-height: 54px; padding: 3px 2px; border-radius: 8px;}
-  .st-key-calgrid div[class*="st-key-sec_"] {display: none !important;}
+  .st-key-calgrid div[class*="st-key-er_"], .st-key-calgrid div[class*="st-key-more_"],
+  .st-key-calgrid [data-testid="stElementContainer"]:has(.cal-chips) {display: none !important;}
   .st-key-calgrid div[class*="st-key-day_"] button {padding: 4px 1px !important; justify-content: center !important;}
   .st-key-calgrid div[class*="st-key-day_"] button > div {justify-content: center !important;}
   .st-key-calgrid div[class*="st-key-day_"] button p {white-space: normal !important; font-size: .62rem; line-height: 1.25;
@@ -456,8 +487,9 @@ def _edit_period(rec: dict, label_of: dict, comp_opts: list, staff_opts: list) -
     fee = c2.number_input("사용료(원)", min_value=0, step=1000, value=int(rec["fee"]), key="pe_f")
     samples = c3.number_input("시료수", min_value=0, step=1, value=int(rec["samples"]), key="pe_n")
     c1, c2, c3 = st.columns(3)
-    purpose = c1.selectbox("사용목적", seed.PURPOSES, index=seed.PURPOSES.index(rec["purpose"])
-                           if rec["purpose"] in seed.PURPOSES else 0, key="pe_p")
+    p_opts = seed.purpose_choices(rec["purpose"])
+    purpose = c1.selectbox("사용목적", p_opts, index=p_opts.index(rec["purpose"]) if rec["purpose"] in p_opts else 1,
+                           format_func=seed.purpose_label, key="pe_p")
     utype = c2.selectbox("활용유형", seed.USAGE_TYPES, index=seed.USAGE_TYPES.index(rec["usage_type"])
                          if rec["usage_type"] in seed.USAGE_TYPES else 0, key="pe_u")
     sopts = staff_opts + ([rec["created_by"]] if rec["created_by"] and rec["created_by"] not in staff_opts else [])
@@ -734,14 +766,38 @@ KEYS_JS = r"""
       const d = dateOf(c); if (d && d >= a && d <= b) c.classList.add('cal-drag');
     });
   };
+  // 바로 표시해 둔 선택을 지우고 서버가 그린 선택 표시로 돌아감
+  const clearQuick = () => {
+    doc.querySelectorAll('[data-jspick]').forEach(el => el.removeAttribute('data-jspick'));
+    const g = doc.querySelector('.st-key-calgrid'); if (g) g.removeAttribute('data-js');
+  };
+  // 누르는 순간 바로 선택 표시 (서버 응답을 기다리지 않음)
+  const quickPick = (t) => {
+    const c = cellOf(t); if (!c || t.closest('div[class*="st-key-x_"], div[class*="st-key-cf_"]')) return;
+    const g = doc.querySelector('.st-key-calgrid'); if (!g) return;
+    doc.querySelectorAll('[data-jspick]').forEach(el => el.removeAttribute('data-jspick'));
+    g.setAttribute('data-js', '1');
+    const ent = t.closest('div[class*="st-key-ent_"]');
+    c.setAttribute('data-jspick', '1');
+    if (ent) ent.setAttribute('data-jspick', '1');
+    // 서버가 같은 선택을 그려 주면(또는 8초가 지나면) 바로 표시를 걷어 냄
+    const want = ent ? (ent.className.match(/st-key-(ent_\S+)/) || [])[1] : 'cell_' + dateOf(c);
+    const t0 = Date.now();
+    clearInterval(win.__calQuickT);
+    win.__calQuickT = setInterval(() => {
+      const done = [...doc.querySelectorAll('style')].some(st => st.textContent.includes(':not([data-js]) .st-key-' + want + ' '));
+      if (done || Date.now() - t0 > 8000) { clearInterval(win.__calQuickT); clearQuick(); }
+    }, 80);
+  };
   on('mousedown', (e) => {
     if (e.button !== 0) return;
+    if (!cellOf(e.target)) clearQuick();  // 달력 밖(입력 카드 등)을 누르면 서버 표시를 따름
     const c = cellOf(e.target); start = dateOf(c); cur = start; dragging = false;
   }, true);
   on('mouseover', (e) => {
     if (!start) return;
     const d = dateOf(cellOf(e.target));
-    if (d && d !== cur) { cur = d; if (cur !== start) dragging = true; paint(); }
+    if (d && d !== cur) { cur = d; if (cur !== start) { dragging = true; clearQuick(); } paint(); }
   }, true);
   on('mouseup', (e) => {
     if (start && dragging) {
@@ -750,6 +806,8 @@ KEYS_JS = r"""
       doc.addEventListener('click', swallow, {capture: true, once: true});
       setTimeout(() => doc.removeEventListener('click', swallow, true), 300);
       send('sel|' + start + '|' + cur);
+    } else if (start && e.button === 0) {
+      quickPick(e.target);
     }
     start = null; dragging = false;
   }, true);
@@ -766,7 +824,7 @@ KEYS_JS = r"""
       const b = doc.querySelector('.st-key-undo_top button, .st-key-undo_side button');
       if (b) { e.preventDefault(); b.click(); }
     }
-    else if (e.key === 'Escape') { send('esc'); }
+    else if (e.key === 'Escape') { clearQuick(); send('esc'); }
   }, true);
 })();
 </script>
@@ -780,32 +838,32 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
     # 날짜 버튼은 칸 전체를 덮음 → 칸 어디를 눌러도 선택/붙여넣기 (CSS 참고)
     cell.button(head, key=f"day_{d}", type="tertiary", width="stretch",
                 on_click=_click_day, args=(d, clip, logs))
+    # 구분 알약: 시험·제조·분석 건수가 항상 보임 (없으면 회색)
     cats = [c for c in shown_cats if c in FIXED_CATS or any(e["cat"] == c for e in entries)]
-    for c in cats:
-        ents = [e for e in entries if e["cat"] == c]
-        sec = cell.container(key=f"sec_{CAT_KEY[c]}_{d}")
-        hours = f"{_hours(sum(e['hours'] for e in ents))}" if ents else ""
-        sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{c}<b>{hours}</b></div>",
-                     unsafe_allow_html=True)
-        for e in ents[:CELL_LINES]:
-            label = f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}"
-            if st.session_state.get("cal_xconfirm") == (d, e["id"]):
-                cf = sec.container(key=f"cf_{d}_{e['id']}")
-                cf.markdown(f"<div class='cal-cf-q'><b>{html.escape(_cut(e['equip'], 14))}</b><br>삭제할까요?</div>",
-                            unsafe_allow_html=True)
-                with cf.container(horizontal=True, gap="small"):
-                    st.button("삭제", key=f"cfy_{d}_{e['id']}", type="primary", width="stretch",
-                              on_click=_confirm_x, args=(d, e))
-                    st.button("취소", key=f"cfn_{d}_{e['id']}", width="stretch", on_click=_cancel_x)
-                continue
-            row = sec.container(key=f"er_{d}_{e['id']}")
-            row.button(label, key=f"ent_{d}_{e['id']}", width="stretch",
-                       on_click=_click_entry, args=(d, e, clip, logs))
-            if not e["period"]:  # 기간 실적은 아래 '기간 실적'에서 고침
-                row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
-                           on_click=_click_x, args=(d, e))
-        if len(ents) > CELL_LINES:
-            sec.container(key=f"more_{d}_{CAT_KEY[c]}").markdown(f"+{len(ents) - CELL_LINES}건 더")
+    chips = "".join(
+        f"<span class='cal-chip c-{CAT_KEY[c]}{' on' if n else ''}'>{c} {n}</span>"
+        for c in cats for n in [sum(e["cat"] == c for e in entries)])
+    cell.markdown(f"<div class='cal-chips'>{chips}</div>", unsafe_allow_html=True)
+    # 실적은 구분 순서대로 색깔 스티커로
+    for e in entries[:CELL_LINES]:
+        label = f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}"
+        if st.session_state.get("cal_xconfirm") == (d, e["id"]):
+            cf = cell.container(key=f"cf_{d}_{e['id']}")
+            cf.markdown(f"<div class='cal-cf-q'><b>{html.escape(_cut(e['equip'], 14))}</b><br>삭제할까요?</div>",
+                        unsafe_allow_html=True)
+            with cf.container(horizontal=True, gap="small"):
+                st.button("삭제", key=f"cfy_{d}_{e['id']}", type="primary", width="stretch",
+                          on_click=_confirm_x, args=(d, e))
+                st.button("취소", key=f"cfn_{d}_{e['id']}", width="stretch", on_click=_cancel_x)
+            continue
+        row = cell.container(key=f"er_{d}_{e['id']}")
+        row.button(label, key=f"ent_{d}_{e['id']}", width="stretch",
+                   on_click=_click_entry, args=(d, e, clip, logs))
+        if not e["period"]:  # 기간 실적은 입력 카드의 '기간 실적'에서 고침
+            row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
+                       on_click=_click_x, args=(d, e))
+    if len(entries) > CELL_LINES:
+        cell.container(key=f"more_{d}").markdown(f"+{len(entries) - CELL_LINES}건 더")
     if entries:
         side = "r" if d.weekday() >= 4 else ""  # 오른쪽 칸은 카드를 왼쪽으로 펼침
         cell.container(key=f"card{side}_{d}").markdown(_card_html(d, entries), unsafe_allow_html=True)
@@ -919,10 +977,16 @@ def render(header: bool = True) -> None:
     sel += (f" .st-key-day_{today} button strong {{background: var(--accent) !important; color: #fff !important; "
             "box-shadow: 0 2px 6px rgba(45, 143, 213, .35);}")
     if not sel_days:  # 한 날만 선택해도 드래그 선택처럼 또렷하게
-        sel += (f" .st-key-cell_{day} {{background: rgba(45, 143, 213, 0.12) !important; border: 2px solid var(--accent) !important;"
+        sel += (f" .st-key-calgrid:not([data-js]) .st-key-cell_{day} {{background: rgba(45, 143, 213, 0.12) !important; border: 2px solid var(--accent) !important;"
                 " box-shadow: 0 0 0 3px rgba(45, 143, 213, .18) !important;}")
+    for dd, ents in by_day.items():  # 실적 스티커 색 (구분별)
+        if dd.month != month.month:
+            continue
+        for e in ents[:CELL_LINES]:
+            bg, fg = CATS[e["cat"]]
+            sel += f" .st-key-er_{dd}_{e['id']} {{--chip-bg: {bg}; --chip-fg: {fg}; --cat-label: '{e['cat']}';}}"
     if pick:  # 선택한 실적: 파란 테두리
-        sel += (f" .st-key-ent_{pick['day']}_{pick['id']} button {{box-shadow: 0 0 0 2px var(--accent) !important;"
+        sel += (f" .st-key-calgrid:not([data-js]) .st-key-ent_{pick['day']}_{pick['id']} button {{box-shadow: 0 0 0 2px var(--accent) !important;"
                 " background: #EAF3FD !important;}")
     if clip:  # 복사한 실적: 엑셀처럼 움직이는 점선
         for kd, kid in clip["keys"]:
@@ -980,11 +1044,16 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
     panel = st.container(key="ep_panel")
     with panel:
         total = float(rows["hours"].sum()) if not rows.empty else 0
-        st.markdown(f"<div class='ep-h'><span class='ep-d'>{day.month}월 {day.day}일 "
-                    f"<em>({WEEKDAYS[day.weekday()]})</em></span>"
-                    f"<span class='ep-n'>{len(rows)}건 · {_hours(total)}</span></div>", unsafe_allow_html=True)
+        with st.container(key="ep_head", horizontal=True, vertical_alignment="top"):
+            st.markdown(f"<div class='ep-h'><span class='ep-d'>{day.month}월 {day.day}일"
+                        f"<em>{WEEKDAYS[day.weekday()]}요일</em></span>"
+                        f"<span class='ep-n'>실적 {len(rows)}건 · {_hours(total)}</span></div>",
+                        unsafe_allow_html=True, width="stretch")
+            st.button("새 실적", icon=":material/add:", key="ep_new", on_click=_new_entry)
         # 그날 실적 목록 (누르면 아래 칸에서 고침)
         with st.container(key="ep_list", gap="small"):
+            if rows.empty:
+                st.markdown("<div class='ep-empty'>아직 실적이 없어요</div>", unsafe_allow_html=True)
             for r in rows.sort_values("id").to_dict("records"):
                 rid = int(r["id"])
                 c = cat_of.get(int(r["equip_id"]), "기타")
@@ -993,8 +1062,6 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 st.button(f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}",
                           key=f"ep_row_{CAT_KEY[c]}_{rid}", width="stretch", on_click=_pick_row, args=(day, e),
                           type="primary" if rid == edit_id else "secondary")
-            st.button("새 실적 추가", icon=":material/add:", key="ep_new", width="stretch",
-                      type="primary" if edit_id is None else "tertiary", on_click=_new_entry)
 
         added = st.session_state.pop("company_added", None)
         if added:
@@ -1018,29 +1085,34 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
 
         form = st.container(key="ep_form")
         with form:
-            st.markdown(f"<div class='ep-t'>{'실적 고치기' if cur is not None else '새 실적'}</div>",
+            if cur is not None:
+                cc = cat_of.get(int(cur["equip_id"]), "기타")
+                bg, fg = CATS[cc]
+                tag = f"<span style='background:{bg};color:{fg}'>{cc}</span>"
+            else:
+                tag = ""
+            st.markdown(f"<div class='ep-t'>{'실적 고치기' if cur is not None else '새 실적 입력'}{tag}</div>",
                         unsafe_allow_html=True)
-            st.markdown("<div class='ep-sec'>기본 정보</div>", unsafe_allow_html=True)
             v_eq = st.selectbox("장비", eq_opts, index=ix(eq_opts, label_of.get(cur["equip_id"]) if cur is not None else None),
                                 placeholder="장비 이름을 입력해 찾기", key=f"ep_eq_{k}")
-            c1, c2 = st.columns([5, 1], vertical_alignment="bottom", gap="small")
-            v_comp = c1.selectbox("업체", comp_opts, index=ix(comp_opts, db.to_str(cur["company"])) if cur is not None else None,
-                                  placeholder="내부 사용이면 비워 두세요", key=f"ep_comp_{k}")
-            if c2.button("", icon=":material/add_business:", key="ep_newcomp", help="새 업체 등록", width="stretch"):
-                new_company_dialog()
-            v_staff = st.selectbox("담당자", staff_opts,
+            c1, c2 = st.columns(2, gap="small")
+            v_comp = c1.selectbox("업체", comp_opts,
+                                  index=ix(comp_opts, db.to_str(cur["company"])) if cur is not None else None,
+                                  placeholder="내부면 비워 두기", key=f"ep_comp_{k}")
+            v_staff = c2.selectbox("담당자", staff_opts,
                                    index=ix(staff_opts, db.to_str(cur["created_by"]) if cur is not None else last_staff),
                                    placeholder="담당자 선택", key=f"ep_staff_{k}")
-            st.markdown("<div class='ep-sec'>사용</div>", unsafe_allow_html=True)
+            if st.button("새 업체 등록", icon=":material/add:", key="ep_newcomp", type="tertiary"):
+                new_company_dialog()
             v_type = st.segmented_control("활용유형", seed.USAGE_TYPES, key=f"ep_type_{k}",
                                           default=db.to_str(cur["usage_type"]) if cur is not None else "외부")
-            v_purp = st.segmented_control("사용목적", seed.PURPOSES, key=f"ep_purp_{k}",
+            v_purp = st.segmented_control("사용목적", seed.purpose_choices(db.to_str(cur["purpose"]) if cur is not None else ""),
+                                          format_func=seed.purpose_label, key=f"ep_purp_{k}",
                                           default=db.to_str(cur["purpose"]) if cur is not None else "생산")
-            c1, c2, c3 = st.columns(3, gap="small")
+            c1, c2, c3 = st.columns([1.2, 1, 1], gap="small")
             v_h = c1.number_input("사용시간(h)", 0, 24, int(cur["hours"]) if cur is not None else 8, 1, key=f"ep_h_{k}")
             v_s = c2.number_input("시료수", 0, None, int(cur["samples"]) if cur is not None else 0, 1, key=f"ep_s_{k}")
             v_f = c3.number_input("사용료(원)", 0, None, int(cur["fee"]) if cur is not None else 0, 1000, key=f"ep_f_{k}")
-            st.markdown("<div class='ep-sec'>지원 내용</div>", unsafe_allow_html=True)
             v_ov = st.text_input("지원개요", ov, placeholder="예: 전극 코팅", key=f"ep_ov_{k}")
             v_ct = st.text_area("지원내용", content, height=90, placeholder="자세한 내용", key=f"ep_ct_{k}")
             v_etc = st.text_input("기타", db.to_str(cur["etc"]) if cur is not None else "", key=f"ep_etc_{k}")

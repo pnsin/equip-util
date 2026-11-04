@@ -69,7 +69,8 @@ def render(header: bool = True) -> None:
 
     usage_type = c2.selectbox("활용유형", seed.USAGE_TYPES, index=_idx(seed.USAGE_TYPES, prev.get("usage_type")),
                               key=k(f"utype_{pk}"))
-    purpose = c3.selectbox("사용목적", seed.PURPOSES, index=_idx(seed.PURPOSES, prev.get("purpose"), 3),
+    p_opts = seed.purpose_choices(prev.get("purpose") or "")
+    purpose = c3.selectbox("사용목적", p_opts, index=_idx(p_opts, prev.get("purpose"), 1), format_func=seed.purpose_label,
                            key=k(f"purpose_{pk}"))
 
     detail_label = "업체 세부 정보 · 사업자번호·업종·품목은 업체를 고르면 자동으로 채워집니다"
