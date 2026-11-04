@@ -52,7 +52,7 @@ CSS = """<style>
 .st-key-calgrid div[class*="st-key-day_"] button:hover {background: rgba(45, 143, 213, 0.05);}
 .st-key-calgrid div[class*="st-key-er_"], .st-key-calgrid div[class*="st-key-more_"] {position: relative; z-index: 1;}
 .st-key-calgrid div[class*="st-key-er_"] {gap: 0;}
-/* 실적 줄에 마우스를 올리면 오른쪽 위에 ✕ (누르면 바로 삭제, 되돌리기 가능) */
+/* 실적 줄에 마우스를 올리면 오른쪽 위에 ✕ (누르면 삭제 확인) */
 .st-key-calgrid div[class*="st-key-x_"] {position: absolute !important; top: 2px; right: 2px; width: auto !important;
   z-index: 2; opacity: 0; transition: opacity .12s;}
 .st-key-calgrid div[class*="st-key-er_"]:hover div[class*="st-key-x_"] {opacity: 1;}
@@ -65,6 +65,7 @@ CSS = """<style>
 .st-key-calgrid div[class*="st-key-cell_"].cal-drag {background: rgba(45, 143, 213, 0.14) !important;
   border-color: var(--accent) !important;}
 .st-key-cal_cmd {display: none !important;}
+@keyframes calAnts {0% {outline-color: var(--accent);} 50% {outline-color: rgba(45, 143, 213, .35);} 100% {outline-color: var(--accent);}}
 [data-testid="stElementContainer"]:has(iframe[height="0"]) {position: absolute !important; width: 0; height: 0;}
 /* 날짜 칸에 마우스를 올리면 뜨는 카드 */
 .st-key-calgrid div[class*="st-key-card"] {position: absolute !important; top: auto; bottom: calc(100% + 8px); left: -2px;
@@ -125,20 +126,31 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] {max-width: 340px; 
   font-size: .82rem; line-height: 1.65;}
 div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] hr {margin: .45rem 0; opacity: .5;}
 div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
-.st-key-cal_selbar {padding: .45rem .75rem; border-radius: 8px; background: rgba(45, 143, 213, 0.10);
-  border: 1px solid rgba(45, 143, 213, 0.35); margin-bottom: .6rem;}
-.st-key-cal_selbar p {margin: 0;}
-.st-key-cal_delbar {padding: .5rem .8rem; border-radius: 10px; background: #FFF1F1; border: 1px solid #F3B4B4;
-  margin-bottom: .6rem;}
-.st-key-cal_delbar p {margin: 0; color: #8A2C2C;}
-.st-key-cal_delbar [data-testid="stMarkdownContainer"] {margin-bottom: 0 !important;}
+/* 아래쪽에 떠 있는 작은 도구 막대 (선택·복사 상태) */
+.st-key-cal_selbar, .st-key-cal_delbar {position: fixed !important; left: 50%; bottom: 26px; transform: translateX(-50%);
+  z-index: 1000; width: auto !important; max-width: min(760px, calc(100vw - 32px)); flex-wrap: nowrap !important;
+  padding: 6px 8px 6px 18px; border-radius: 999px; background: #26324A; color: #fff;
+  box-shadow: 0 12px 30px rgba(15, 30, 60, .30); animation: calPop .18s ease-out;}
+.st-key-cal_delbar {bottom: 84px; background: #fff; border: 1px solid #F3B4B4; box-shadow: 0 12px 30px rgba(180, 40, 40, .18);}
+@keyframes calPop {from {opacity: 0; transform: translate(-50%, 8px);} to {opacity: 1; transform: translate(-50%, 0);}}
+.st-key-cal_selbar [data-testid="stMarkdownContainer"], .st-key-cal_delbar [data-testid="stMarkdownContainer"] {margin-bottom: 0 !important;}
+.st-key-cal_selbar p, .st-key-cal_delbar p {margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .88rem;}
+.st-key-cal_selbar p {color: #fff;} .st-key-cal_selbar p span {color: #9CCBFF !important;}
+.st-key-cal_delbar p {color: #8A2C2C;}
+.st-key-cal_selbar [data-testid="stElementContainer"]:has(button) {width: auto !important;}
+.st-key-cal_selbar button {background: rgba(255, 255, 255, .08) !important; border: none !important; color: #fff !important;
+  border-radius: 999px !important; min-height: 0; height: 34px; padding: 0 14px;}
+.st-key-cal_selbar button:hover {background: rgba(255, 255, 255, .18) !important;}
+.st-key-cal_selbar button p {font-size: .85rem;}
+.st-key-cal_delbar button {border-radius: 999px !important; min-height: 0; height: 34px; padding: 0 16px;}
+.st-key-cal_sel_clear button {padding: 0 10px !important;}
 .st-key-cal_del_yes button {background: #E5484D !important; border-color: #E5484D !important; color: #fff !important;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {border-color: var(--accent);}
 .st-key-calgrid div[class*="st-key-cell_"] [data-testid="stVerticalBlock"] {gap: 3px;}
 .st-key-calgrid button div[data-testid="stMarkdownContainer"] {width: 100%; min-width: 0; text-align: left;}
 .st-key-calgrid button div[data-testid="stMarkdownContainer"] p {
   display: block; text-align: left; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-/* 날짜 머리 (누르면 그날 선택 / 붙여넣기) */
+/* 날짜 머리 (누르면 그날 선택) */
 .st-key-calgrid div[class*="st-key-day_"] button,
 .st-key-calgrid div[class*="st-key-ent_"] button {justify-content: flex-start; text-align: left;}
 .st-key-calgrid div[class*="st-key-day_"] button > div,
@@ -148,7 +160,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   font-size: 1.12rem; font-weight: 800; letter-spacing: -.01em; display: inline-flex; align-items: center;
   justify-content: center; min-width: 1.75em; height: 1.75em; border-radius: 999px; margin-right: 2px;}
 .st-key-calgrid div[class*="st-key-day_"] button:hover strong {background: rgba(45, 143, 213, 0.12);}
-/* 실적 한 줄 (누르면 이 실적만 복사) */
+/* 실적 한 줄 (누르면 이 실적 선택) */
 .st-key-calgrid div[class*="st-key-ent_"] button {
   justify-content: flex-start; min-height: 0; padding: 4px 8px; border: none; border-radius: 8px;
   background: #fff; border-left: 3px solid var(--chip-fg, #3B82F6);
@@ -377,15 +389,6 @@ def _entry_text(e: dict) -> str:
             + (f" ({_md(extra)})" if extra else ""))
 
 
-def _paste(d: dt.date, clip: dict, logs: pd.DataFrame) -> None:
-    plan, skipped = _paste_plan(clip["rows"], [d], logs)
-    with db.undo_group(f"{d:%m/%d}에 붙여넣기"):
-        added = db.insert_logs(plan) if plan else 0
-    st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
-    st.session_state.cal_saved = (f"{d:%m/%d}에 {_cut(clip['label'], 30)} 붙여 넣었습니다" if added else
-                                  f"{d:%m/%d}에는 같은 장비·업체가 이미 있어 붙여 넣지 않았습니다")
-
-
 def _reset_period_pick() -> None:
     st.session_state.cal_pnonce = st.session_state.get("cal_pnonce", 0) + 1  # 표 선택을 풀어 창이 다시 뜨지 않게
 
@@ -438,21 +441,55 @@ def _edit_period(rec: dict, label_of: dict, comp_opts: list, staff_opts: list) -
 
 
 def _click_day(d: dt.date, clip: dict | None, logs: pd.DataFrame) -> None:
-    """날짜 칸을 누름: 복사 중이면 붙여넣기, 아니면 그날 선택. (콜백이라 화면을 한 번만 다시 그림)"""
+    """날짜 칸을 누름: 그날을 선택만 함 (붙여넣기는 Ctrl+V)."""
     _clear_sel()
-    if clip and d != clip["from"]:
-        _paste(d, clip, logs)
+    st.session_state.pop("cal_pick", None)
     _pick_day(d)
 
 
 def _click_entry(d: dt.date, e: dict, clip: dict | None, logs: pd.DataFrame) -> None:
-    """실적 한 줄을 누름: 복사 중이고 다른 날이면 붙여넣기, 아니면 이 실적을 복사."""
-    if clip and d != clip["from"]:
-        _paste(d, clip, logs)
-    else:
-        st.session_state.cal_clip = {"from": d, "rows": [e["rec"]],
-                                     "label": f"{e['equip']} · {e['company']} · {_hours(e['hours'])}"}
+    """실적 한 줄을 누름: 이 실적을 선택만 함 (복사는 Ctrl+C)."""
+    _clear_sel()
+    st.session_state.cal_pick = {"day": d, "id": e["id"], "rec": e["rec"], "period": bool(e["period"]),
+                                 "label": f"{e['equip']} · {e['company']} · {_hours(e['hours'])}"}
     _pick_day(d)
+
+
+def _targets() -> list[dt.date]:
+    """붙여 넣을 날짜: 드래그로 고른 날들, 없으면 선택한 날 하루."""
+    days = _sel_days()
+    if days:
+        return days
+    pick = st.session_state.get("cal_pick")
+    if pick:
+        return [pick["day"]]
+    d = st.session_state.get("cal_day")
+    return [d] if d else []
+
+
+def _copy() -> None:
+    """Ctrl+C: 선택한 실적 한 건, 또는 선택한 날(들)의 실적을 복사."""
+    pick = st.session_state.get("cal_pick")
+    if pick:
+        st.session_state.cal_clip = {"from": pick["day"], "rows": [dict(pick["rec"], _off=0)],
+                                     "label": pick["label"], "keys": [(pick["day"], pick["id"])]}
+        st.session_state.cal_saved = f"{_cut(pick['label'], 30)} 복사했습니다. 붙여 넣을 날짜를 고르고 Ctrl+V."
+        return
+    days = _targets()
+    if not days:
+        return
+    logs = db.load_logs()
+    rows, keys = [], []
+    for d in days:
+        for r in _day_rows(logs, d).to_dict("records"):
+            rows.append(dict(r, _off=(d - days[0]).days))
+            keys.append((d, int(r["id"])))
+    if not rows:
+        st.session_state.cal_saved = "선택한 날에는 복사할 실적이 없습니다."
+        return
+    span = f"{days[0]:%m/%d}" + (f"~{days[-1]:%m/%d}" if len(days) > 1 else "")
+    st.session_state.cal_clip = {"from": days[0], "rows": rows, "label": f"{span} 실적 {len(rows)}건", "keys": keys}
+    st.session_state.cal_saved = f"{span} 실적 {len(rows)}건을 복사했습니다. 붙여 넣을 날짜를 고르고 Ctrl+V."
 
 
 def _delete_ids(ids: list[int], label: str) -> int:
@@ -460,9 +497,9 @@ def _delete_ids(ids: list[int], label: str) -> int:
         return 0
     with db.undo_group(label):
         n = db.delete_logs(ids)
-    clip = st.session_state.get("cal_clip")
-    if clip and int(clip["rows"][0]["id"]) in set(ids):
-        st.session_state.pop("cal_clip", None)
+    pick = st.session_state.get("cal_pick")
+    if pick and int(pick["id"]) in set(ids):
+        st.session_state.pop("cal_pick", None)
     st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
     return n
 
@@ -506,31 +543,44 @@ def _delete_days(days: list[dt.date]) -> None:
     st.session_state.cal_saved = msg
 
 
-def _paste_days(days: list[dt.date]) -> None:
+def _paste_days(days: list[dt.date] | None = None) -> None:
+    """Ctrl+V: 엑셀처럼 붙여넣기. 한 날을 복사했으면 선택한 모든 날에, 여러 날을 복사했으면 첫 날부터 같은 간격으로."""
     clip = st.session_state.get("cal_clip")
     if not clip:
-        st.session_state.cal_saved = "먼저 달력에서 복사할 실적을 누르세요."
+        st.session_state.cal_saved = "먼저 실적이나 날짜를 고르고 Ctrl+C로 복사하세요."
         return
+    days = days or _targets()
+    if not days:
+        return
+    multi = any(r.get("_off", 0) for r in clip["rows"])
     logs = db.load_logs()
-    targets = [d for d in days if d != clip["from"]]
-    plan, skipped = _paste_plan(clip["rows"], targets, logs)
-    span = f"{targets[0]:%m/%d}" + (f"~{targets[-1]:%m/%d}" if len(targets) > 1 else "") if targets else ""
+    plan, skipped, filled = [], 0, set()
+    starts = days[:1] if multi else days
+    for t in starts:
+        for r in clip["rows"]:
+            d = t + dt.timedelta(days=int(r.get("_off", 0)))
+            p, sk = _paste_plan([r], [d], logs)
+            plan += p
+            skipped += sk
+            if p:
+                filled.add(d)
+    span = f"{min(filled):%m/%d}" + (f"~{max(filled):%m/%d}" if len(filled) > 1 else "") if filled else ""
     with db.undo_group(f"{span} 붙여넣기"):
         added = db.insert_logs(plan) if plan else 0
     st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
-    st.session_state.cal_saved = (f"{span} {added}일에 {_cut(clip['label'], 24)} 붙여 넣었습니다"
-                                  + (f" (이미 있는 {skipped}일은 건너뜀)" if skipped else "")) if added else \
-        "선택한 날에는 같은 장비·업체가 이미 있어 붙여 넣지 않았습니다"
+    st.session_state.cal_saved = (f"{span}에 {added}건 붙여 넣었습니다"
+                                  + (f" (같은 장비·업체가 이미 있는 {skipped}건은 건너뜀)" if skipped else "")) if added else \
+        "같은 장비·업체가 이미 있어 붙여 넣지 않았습니다"
 
 
 def _ask_delete(days: list[dt.date] | None = None) -> None:
     """Delete 키 / 선택 막대의 '삭제': 바로 지우지 않고 '삭제할까요?'를 먼저 띄움."""
     days = days or _sel_days()
-    clip = st.session_state.get("cal_clip")
+    pick = st.session_state.get("cal_pick")
     if days:
         ask = {"kind": "days", "days": days}
-    elif clip and clip["rows"][0].get("start_date") == clip["rows"][0].get("end_date"):
-        ask = {"kind": "clip", "id": int(clip["rows"][0]["id"]), "day": clip["from"], "label": clip["label"]}
+    elif pick and not pick["period"]:
+        ask = {"kind": "clip", "id": int(pick["id"]), "day": pick["day"], "label": pick["label"]}
     elif st.session_state.get("cal_day"):
         ask = {"kind": "days", "days": [st.session_state.cal_day]}
     else:
@@ -572,23 +622,36 @@ def _on_cmd() -> None:
     if cmd == "sel" and len(parts) >= 3:
         a, b = sorted([dt.date.fromisoformat(parts[1]), dt.date.fromisoformat(parts[2])])
         st.session_state.cal_sel = [a + dt.timedelta(days=i) for i in range((b - a).days + 1)]
+        st.session_state.pop("cal_pick", None)
         st.session_state.cal_day = b if b.month == st.session_state.get("cal_month", b).month else a
     elif cmd == "del":
         if st.session_state.get("cal_delask"):  # 확인창이 떠 있을 때 Delete를 한 번 더 → 삭제
             _do_pending_delete()
         else:
             _ask_delete()
+    elif cmd == "copy":
+        _copy()
     elif cmd == "paste":
-        _paste_days(_sel_days() or [st.session_state.get("cal_day")])
+        _paste_days()
     elif cmd == "esc":
         if st.session_state.pop("cal_delask", None) or st.session_state.pop("cal_xconfirm", None):
             return
         st.session_state.pop("cal_sel", None)
+        st.session_state.pop("cal_pick", None)
         st.session_state.pop("cal_clip", None)
 
 
 def _clear_sel() -> None:
     st.session_state.pop("cal_sel", None)
+
+
+def _clear_all() -> None:
+    for k in ("cal_sel", "cal_pick", "cal_clip"):
+        st.session_state.pop(k, None)
+
+
+def _drop_clip() -> None:
+    st.session_state.pop("cal_clip", None)
 
 
 KEYS_JS = r"""
@@ -648,6 +711,10 @@ KEYS_JS = r"""
     const mod = e.ctrlKey || e.metaKey;
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); send('del'); }
     else if (mod && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); send('paste'); }
+    else if (mod && (e.key === 'c' || e.key === 'C')) {
+      if (String(win.getSelection ? win.getSelection() : '').trim()) return;  // 글자를 드래그해 둔 경우는 보통 복사
+      e.preventDefault(); send('copy');
+    }
     else if (mod && (e.key === 'z' || e.key === 'Z')) {
       const b = doc.querySelector('.st-key-undo_top button, .st-key-undo_side button');
       if (b) { e.preventDefault(); b.click(); }
@@ -751,32 +818,41 @@ def render(header: bool = True) -> None:
 
     # ── 복사 / 붙여넣기 ─────────────────────────────────────
     clip = st.session_state.get("cal_clip")
-    if clip and "label" not in clip:  # 예전 방식(하루 전체)으로 복사해 둔 것은 버림
+    if clip and "keys" not in clip:  # 예전 방식으로 복사해 둔 것은 버림
         st.session_state.pop("cal_clip", None)
         clip = None
-    if clip:
-        c1, c3 = st.columns([6, 1], vertical_alignment="center")
-        c1.info(f"**{_md(_cut(clip['label'], 28))}** 복사됨 · 붙여 넣을 날짜를 누르세요",
-                icon=":material/content_copy:")
-        if c3.button("끝", icon=":material/close:", width="stretch", help="붙여넣기를 끝냅니다."):
-            st.session_state.pop("cal_clip", None)
-            st.rerun()
-
+    pick = st.session_state.get("cal_pick")
+    if pick and pick["day"].replace(day=1) != month:
+        pick = None
     sel_days = [d for d in _sel_days() if d.month == month.month]
-    if sel_days:
+    if sel_days or pick or clip:
         with st.container(key="cal_selbar", horizontal=True, vertical_alignment="center", gap="small"):
-            span = f"{sel_days[0]:%m/%d}~{sel_days[-1]:%m/%d}"
-            st.markdown(f"**{span} {len(sel_days)}일 선택** · Delete 삭제 · Ctrl+V 붙여넣기 · Esc 해제")
-            st.button("삭제", icon=":material/delete:", key="cal_sel_del", on_click=_ask_delete, args=(sel_days,))
+            if sel_days:
+                what = f"{sel_days[0]:%m/%d}~{sel_days[-1]:%m/%d} {len(sel_days)}일 선택"
+            elif pick:
+                what = f"{_cut(pick['label'], 30)} 선택"
+            else:
+                what = "붙여 넣을 날짜를 고르세요"
+            if clip and not (sel_days or pick):
+                st.markdown(f":blue[:material/content_paste: 복사됨]\u2002{_md(_cut(clip['label'], 26))}"
+                            "\u2003:blue[날짜를 고르고 Ctrl+V]", width="content")
+            else:
+                st.markdown(f"**{_md(what)}**" + ("\u2003:blue[복사됨]" if clip else ""), width="content")
+            if sel_days or pick:
+                st.button("복사", icon=":material/content_copy:", key="cal_sel_copy", on_click=_copy,
+                          help="Ctrl+C")
             if clip:
                 st.button("붙여넣기", icon=":material/content_paste:", key="cal_sel_paste",
-                          on_click=_paste_days, args=(sel_days,))
-            st.button("해제", icon=":material/close:", key="cal_sel_clear", on_click=_clear_sel)
+                          on_click=_paste_days, help="Ctrl+V")
+            if sel_days or (pick and not pick["period"]):
+                st.button("삭제", icon=":material/delete:", key="cal_sel_del", on_click=_ask_delete,
+                          args=(sel_days or None,), help="Delete")
+            st.button("", icon=":material/close:", key="cal_sel_clear", on_click=_clear_all, help="닫기 (Esc)")
     ask = st.session_state.get("cal_delask")
     if ask:
         with st.container(key="cal_delbar", horizontal=True, vertical_alignment="center", gap="small"):
-            st.markdown(f":material/delete: **{_md(ask['text'])}**\u2003:gray[Delete 한 번 더 = 삭제 · Esc = 취소]",
-                        width="stretch")
+            st.markdown(f":material/delete: **{_md(ask['text'])}**\u2003:gray[Delete 한 번 더 · Esc 취소]",
+                        width="content")
             st.button("삭제", key="cal_del_yes", type="primary", on_click=_do_pending_delete)
             st.button("취소", key="cal_del_no", on_click=_cancel_delete)
     st.text_input("cmd", key="cal_cmd", on_change=_on_cmd, label_visibility="collapsed")
@@ -794,10 +870,12 @@ def render(header: bool = True) -> None:
     sel += (f" .st-key-day_{today} button strong {{background: var(--accent) !important; color: #fff !important; "
             "box-shadow: 0 2px 6px rgba(45, 143, 213, .35);}")
     sel += (f".st-key-cell_{day} {{border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent);}}")
-    if clip:  # 복사한 실적은 진하게 표시
-        sel += (f" .st-key-ent_{clip['from']}_{clip['rows'][0]['id']} button "
-                "{background: var(--accent) !important;} "
-                f".st-key-ent_{clip['from']}_{clip['rows'][0]['id']} button p {{color: #fff;}}")
+    if pick:  # 선택한 실적: 파란 테두리
+        sel += (f" .st-key-ent_{pick['day']}_{pick['id']} button {{box-shadow: 0 0 0 2px var(--accent) !important;"
+                " background: #EAF3FD !important;}")
+    if clip:  # 복사한 실적: 엑셀처럼 움직이는 점선
+        for kd, kid in clip["keys"]:
+            sel += f" .st-key-ent_{kd}_{kid} button {{outline: 2px dashed var(--accent); outline-offset: 1px; animation: calAnts .9s linear infinite;}}"
     grid.markdown(f"<style>{sel}</style>", unsafe_allow_html=True)
     head = grid.columns(7)
     for i, w in enumerate(WEEKDAYS):
@@ -818,7 +896,7 @@ def render(header: bool = True) -> None:
     st.divider()
     st.subheader(f"{day:%Y-%m-%d} ({WEEKDAYS[day.weekday()]}) 입력",
                  help="맨 아래 빈 행에 입력하면 추가, '삭제' 칸에 체크하면 삭제. 다 고친 뒤 저장을 누르세요. "
-                      "달력에서 실적을 누르면 복사, 다른 날짜를 누르면 붙여넣기입니다.")
+                      "달력에서 실적이나 날짜를 고르고 Ctrl+C, 다른 날짜를 고르고 Ctrl+V로 복사할 수 있습니다.")
 
     ts = pd.Timestamp(day)
     rows = _day_rows(logs, day)
