@@ -4,3 +4,4 @@ openpyxl>=3.1
 plotly>=5.20
 holidays>=0.45
 gspread>=6.0
+pillow>=10.0
