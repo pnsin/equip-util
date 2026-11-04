@@ -279,6 +279,60 @@ _CSS = """
 
 def apply_style():
     st.markdown(_CSS, unsafe_allow_html=True)
+    _preload_editors()
+
+
+# 표 칸·숫자 칸을 처음 누를 때 Streamlit 화면은 편집기 조각(js 파일)을 그제야 내려받습니다.
+# 앱이 다시 배포되는 1~2분 사이에 누르면 그 파일을 못 받아
+# "Failed to fetch dynamically imported module …" 오류가 나고, 새로고침 전까지 그 표는 계속 깨져 있습니다.
+# 그래서 화면을 열자마자 편집기 조각을 미리 받아 둡니다 (브라우저가 한 번 받은 조각은 다시 받지 않음).
+_LAZY = ("data-grid-overlay-editor", "number-overlay-editor", "NumberInput")
+
+
+@functools.lru_cache(maxsize=1)
+def _lazy_chunks() -> tuple[str, ...]:
+    import glob
+    d = os.path.join(os.path.dirname(st.__file__), "static", "static", "js")
+    return tuple(os.path.basename(f) for n in _LAZY for f in glob.glob(os.path.join(d, n + ".*.js")))
+
+
+_PRELOAD_JS = """
+<script>
+(function () {
+  const files = __FILES__;
+  if (window.__edPre === files.join()) return;
+  window.__edPre = files.join();
+  const main = document.querySelector('script[src*="/static/js/index."]');
+  if (main) {
+    const base = new URL('.', main.src);
+    files.forEach((f) => import(new URL(f, base).href).catch(() => { window.__edPre = ''; }));
+  }
+  // 그래도 못 받았으면 (미리 받기 전에 배포가 시작된 경우) 오류 아래에 새로고침 단추를 붙임
+  if (window.__edWatch) return;
+  window.__edWatch = new MutationObserver(() => {
+    document.querySelectorAll('[data-testid="stException"], [data-testid="stAlertContainer"]').forEach((el) => {
+      if (el.dataset.edFix || !/dynamically imported module/.test(el.textContent)) return;
+      el.dataset.edFix = '1';
+      const b = document.createElement('button');
+      b.textContent = '앱이 방금 새로 바뀌었어요. 눌러서 새로고침';
+      b.style.cssText = 'margin-top:.6rem;padding:.45rem .9rem;border:0;border-radius:8px;'
+        + 'background:#2563C9;color:#fff;font-weight:600;cursor:pointer';
+      b.onclick = () => location.reload();
+      el.appendChild(b);
+    });
+  });
+  window.__edWatch.observe(document.body, {childList: true, subtree: true});
+})();
+</script>
+"""
+
+
+def _preload_editors():
+    files = _lazy_chunks()
+    if not files:
+        return
+    with st.sidebar:
+        st.html(_PRELOAD_JS.replace("__FILES__", repr(list(files)).replace("'", '"')), unsafe_allow_javascript=True)
 
 
 def page_header(title: str, eyebrow: str = "", chip: str = "", desc: str = "", accent: str | None = None):
