@@ -99,10 +99,8 @@ PAGES = {
     ],
     "실적": [
         st.Page(input_page.render, title="실적 입력", url_path="input"),
-        st.Page(records.render, title="실적 목록", url_path="records"),
+        st.Page(records.render, title="수수료 입력", url_path="records"),
         st.Page(export.render_download, title="실적 내려받기", url_path="download"),
-        st.Page(export.render_itube, title="i-Tube 장비일지", url_path="itube"),
-        st.Page(export.render_report, title=w("가동률 분석 보고서"), url_path="report"),
     ],
     "장비 정보": [
         st.Page(coming_soon.render_maint, title="유지보수", url_path="maintenance"),
@@ -128,6 +126,9 @@ ALIASES = [
     st.Page(input_page.render, title="실적 입력", url_path="calendar"),
     st.Page(input_page.render, title="실적 입력", url_path="entry"),
     st.Page(export.render_itube, title="i-Tube 장비일지", url_path="export"),
+    # 메뉴에서 뺀 화면 (2026-11-04). 주소로는 계속 열리고, 메뉴에 다시 넣으려면 PAGES 로 옮기면 됨.
+    st.Page(export.render_itube, title="i-Tube 장비일지", url_path="itube"),
+    st.Page(export.render_report, title=w("가동률 분석 보고서"), url_path="report"),
 ]
 
 

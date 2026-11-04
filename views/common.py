@@ -118,7 +118,7 @@ def filtered_editor(view, mask, **kwargs):
     return full.reset_index(drop=True), len(edited)
 
 
-# ── 다른 화면으로 바로 가기 (대시보드에서 누르면 장비 상세·실적 목록) ─────────
+# ── 다른 화면으로 바로 가기 (대시보드에서 누르면 장비 상세·수수료 입력) ─────────
 
 PAGES: dict = {}  # app.py 가 채움: {"equip": st.Page, "records": st.Page, ...}
 _CLICK_KEYS = ("dash_equip_chart", "dash_heat", "dash_equip_tbl", "dash_comp_chart")

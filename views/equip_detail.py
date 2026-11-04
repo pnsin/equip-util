@@ -189,5 +189,5 @@ def render() -> None:
                 column_config={"시작일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                "종료일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                "사용료": st.column_config.NumberColumn(format="%d")})
-        if st.button("실적 목록에서 고치기", icon=":material/edit_note:", key="detail_to_records"):
+        if st.button("수수료 입력에서 고치기", icon=":material/edit_note:", key="detail_to_records"):
             go_records(equip_label=label_of[eid], start=s, end=e_eff)

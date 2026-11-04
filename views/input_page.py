@@ -1,12 +1,13 @@
-"""실적 입력: 달력에서 날짜를 눌러 입력합니다. 충방전기는 같은 화면에서 '충방전기'로 바꿔 챔버별 현황을 봅니다."""
+"""실적 입력: 달력에서 날짜를 눌러 입력합니다. 충방전기는 같은 화면에서 '충방전기'로 바꿔 챔버별 현황을 봅니다.
+내려받기는 왼쪽 메뉴 '실적 내려받기'에서 합니다 (2026-11-04 위쪽 버튼은 중복이라 뺌)."""
 import streamlit as st
 
 from ui_style import page_header
-from views import calendar_entry, charger_board, export
+from views import calendar_entry, charger_board
 
 
 def render() -> None:
-    head, mid, btn = st.columns([0.55, 0.45, 0.2], vertical_alignment="center")
+    head, mid = st.columns([0.55, 0.45], vertical_alignment="center")
     with head:
         page_header("실적 입력", "실적")
     with mid:  # 메뉴를 늘리지 않고 같은 화면에서 보기만 바꿈 (입력은 달력 카드에서 한 번)
@@ -23,10 +24,6 @@ def render() -> None:
             view = st.segmented_control("보기", ["달력", "충방전기"], key="in_view", label_visibility="collapsed",
                                         format_func={"달력": ":material/calendar_month: 달력",
                                                      "충방전기": ":material/battery_charging_full: 충방전기"}.get)
-    with btn:
-        if st.button("실적 내려받기", icon=":material/download:", key="open_dl",
-                     help="기간을 고르면 그 기간 실적을 예전 입력시트 양식 엑셀로 내려받습니다.", width="stretch"):
-            export.download_dialog()
     if view == "충방전기":
         charger_board.render()
     else:
