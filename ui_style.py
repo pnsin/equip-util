@@ -250,8 +250,8 @@ _CSS = """
   .st-key-login_card [data-testid="stTextInputRootElement"] span[data-testid="stIconMaterial"] { color: #8A95A8; }
   .st-key-login_card [data-testid="stFormSubmitButton"], .st-key-login_card [data-testid="stFormSubmitButton"] button { width: 100%; }
   .st-key-login_card [data-testid="stFormSubmitButton"] button { min-height: 3.1rem; border-radius: 14px; border: none;
-        background: linear-gradient(135deg, #5B8DEF, #3F6FD8); box-shadow: 0 8px 18px rgba(63,111,216,.28); transition: transform .12s, box-shadow .12s; }
-  .st-key-login_card [data-testid="stFormSubmitButton"] button:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(63,111,216,.34); }
+        background: linear-gradient(135deg, #24395E, #132036); box-shadow: 0 8px 18px rgba(19,32,54,.25); transition: transform .12s, box-shadow .12s; }
+  .st-key-login_card [data-testid="stFormSubmitButton"] button:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(19,32,54,.32); }
   .st-key-login_card [data-testid="stFormSubmitButton"] button p { font-size: 1rem; font-weight: 600; }
   .st-key-login_card [data-testid="InputInstructions"] { display: none; }
   .login-foot { display: flex; align-items: center; justify-content: space-between; margin-top: .9rem;
