@@ -1,5 +1,4 @@
 import hmac
-import html
 
 import streamlit as st
 
@@ -65,18 +64,6 @@ def check_password() -> bool:
     return False
 
 
-def undo_bar() -> None:
-    """방금 한 저장·삭제를 되돌리는 띠 (1분 30초 동안 화면 위에 보임)."""
-    last = db.last_undo()
-    if not last or (db._now() - last["at"]).total_seconds() > 90:
-        return
-    with st.container(key="undo_bar", horizontal=True, vertical_alignment="center"):
-        st.markdown(f"<span class='undo-txt'>방금 한 작업: <b>{html.escape(last['label'])}</b></span>",
-                    unsafe_allow_html=True)
-        if st.button("되돌리기", icon=":material/undo:", key="undo_top"):
-            _undo()
-
-
 def _undo() -> None:
     label = db.undo_last()
     if label:
@@ -84,7 +71,6 @@ def _undo() -> None:
             st.session_state.pop(k, None)
         st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
         st.session_state.entry_ver = st.session_state.get("entry_ver", 0) + 1
-        st.toast(f"되돌렸습니다: {label}", icon=":material/undo:")
     st.rerun()
 
 
@@ -176,6 +162,5 @@ if check_password():
     sidebar(local)
     if local:
         st.warning("구글 시트가 연결되지 않아 임시 저장 중입니다. 앱이 재시작되면 데이터가 지워질 수 있습니다.")
-    undo_bar()
     keep_choices()
     pg.run()
