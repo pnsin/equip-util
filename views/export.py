@@ -4,7 +4,7 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from core import calc, db, itube, rules
+from core import calc, db, itube, perf_export, rules
 from views.common import period_picker
 from ui_style import empty_state, page_header, section_bar
 from core.terms import w
@@ -131,3 +131,47 @@ def render_report() -> None:
     data = itube.make_report(label, summary, tot, monthly, by_purpose, by_type, in_period, target, annual)
     st.download_button(w("가동률 분석 보고서 내려받기"), data=data, mime=XLSX, type="primary", icon=":material/download:",
                        file_name=w(f"장비가동률_분석_{label.replace(' ', '')}.xlsx"), width="stretch")
+
+
+# ── 실적 내려받기 (예전 입력시트 양식) ──────────────────────────
+
+LABELS = ["시험", "제조", "분석", "교육", "지원"]
+
+
+def _download_body(key: str) -> None:
+    """기간을 고르면 그 기간 실적을 예전 입력시트 양식에 채워 내려받습니다."""
+    cfg = db.get_settings()
+    logs = db.load_logs()
+    eq = db.load_equipment()
+    years = sorted({d.year for d in logs["start_date"].dropna()}) if not logs.empty else []
+    s, e, label, _ = period_picker(key, ["월", "분기", "반기", "연", "직접 지정"], "월", years=years)
+    if e < s:
+        s, e = e, s
+    labs = st.pills("구분", LABELS, selection_mode="multi", default=LABELS, key=f"{key}_labs",
+                    help="고른 구분의 실적만 넣습니다.") or LABELS
+    if (e - s).days + 1 > perf_export.MAX_DAYS:
+        st.warning("한 번에 2년까지 내려받을 수 있어요. 기간을 줄여 주세요.", icon=":material/info:")
+        return
+    sel = perf_export.select_logs(logs, s, e, labs)
+    if sel.empty:
+        empty_state("이 기간에는 실적이 없어요", f"{s:%Y-%m-%d} ~ {e:%Y-%m-%d}", icon="🗓️")
+        return
+    data, info = perf_export.make_performance_file(logs, eq, db.load_companies(), s, e,
+                                                   cfg.get("alloc_mode", "spread"), labs)
+    m1, m2, m3 = st.columns(3)
+    m1.metric("실적", f"{info['count']:,}건")
+    m2.metric("사용시간", f"{info['hours']:,.0f} h")
+    m3.metric("장비", f"{sel['equip_id'].nunique():,}대")
+    st.download_button("엑셀로 내려받기", data=data, file_name=perf_export.file_name(s, e), mime=XLSX,
+                       type="primary", width="stretch", icon=":material/download:", key=f"{key}_btn")
+    st.caption("예전 입력시트 양식 그대로: 가동데이터 · 구분별 일간 시간(세부장비는 주장비에 합산) · 장비목록")
+
+
+@st.dialog("실적 내려받기", width="large")
+def download_dialog() -> None:
+    _download_body("dl")
+
+
+def render_download() -> None:
+    page_header("실적 내려받기", "실적")
+    _download_body("dlpage")
