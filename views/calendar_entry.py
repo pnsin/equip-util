@@ -422,6 +422,7 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 .st-key-calwrap [data-testid="stHorizontalBlock"]:has(.st-key-ep_panel) {flex-wrap: nowrap !important;}
 .st-key-calwrap [data-testid="stColumn"]:not(:has(.st-key-ep_panel)) {min-width: 0 !important;}
 .st-key-calgrid [data-testid="stColumn"], .st-key-calgrid div[class*="st-key-cell_"] {min-width: 0 !important;}
+.st-key-ep_list:not(:has(button)) {display: none !important;}
 </style>"""
 
 
@@ -1221,8 +1222,6 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             st.button("", icon=":material/close:", key="ep_close", help="닫기", on_click=_close_panel)
         # 그날 실적 목록 (누르면 아래 칸에서 고침)
         with st.container(key="ep_list", gap="small"):
-            if rows.empty:
-                st.markdown("<div class='ep-empty'>아직 실적이 없어요</div>", unsafe_allow_html=True)
             for r in rows.sort_values("id").to_dict("records"):
                 rid = int(r["id"])
                 c = PURPOSE_CAT.get(db.to_str(r["purpose"]), "지원")
@@ -1254,14 +1253,6 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
 
         form = st.container(key="ep_form")
         with form:
-            if cur is not None:
-                cc = PURPOSE_CAT.get(db.to_str(cur["purpose"]), "지원")
-                bg, fg = CATS[cc]
-                tag = f"<span style='background:{bg};color:{fg}'>{cc}</span>"
-            else:
-                tag = ""
-            st.markdown(f"<div class='ep-t'>{'실적 고치기' if cur is not None else '새 실적 입력'}{tag}</div>",
-                        unsafe_allow_html=True)
             v_eq = st.selectbox("장비", eq_opts, index=ix(eq_opts, label_of.get(cur["equip_id"]) if cur is not None else None),
                                 placeholder="장비 이름을 입력해 찾기", key=f"ep_eq_{k}")
             c1, c2 = st.columns(2, gap="small")
