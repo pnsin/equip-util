@@ -80,3 +80,13 @@ def test_chargers_under_same_parent_share_8h():
     d = calc.expand_daily(logs, "spread", {82: (8.0, 6), 83: (8.0, 6)})
     assert d["hours"].sum() == pytest.approx(8)
     assert d.loc[d["equip_id"] == 82, "hours"].sum() == pytest.approx(4)
+
+
+def test_shared_chamber_busy_across_chargers():
+    from views.calendar_entry import _busy_chambers
+    chans = pd.DataFrame({"id": [24, 26, 1], "center": ["MV", "MV", "제조검증"],
+                          "chamber": ["chamber2", "chamber2", "chamber2"]})
+    logs = pd.DataFrame([dict(id=9, chambers="24", company="KBST", start_date=pd.Timestamp("2026-11-01"),
+                              end_date=pd.Timestamp("2026-11-30"))])
+    busy = _busy_chambers(logs, D(2026, 11, 10), D(2026, 11, 12), set(), chans)
+    assert busy == {24: "KBST", 26: "KBST"}  # 같은 건물 같은 챔버만, 다른 건물 chamber2 는 아님
