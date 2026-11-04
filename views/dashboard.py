@@ -15,6 +15,7 @@ ORANGE = T["warn"]
 GRAY = T["bar-off"]
 CFG = CHART_CONFIG
 BASES = {"hours": "사용시간", "fee": "사용료"}
+VIEWS = {"main": "주장비", "sub": "세부장비", "all": "전체"}
 
 
 def _picked(event, idx: int = 0):
@@ -32,13 +33,22 @@ def _picked(event, idx: int = 0):
     return None
 
 
-def _equip_chart(shown: pd.DataFrame, target: float) -> None:
+def _root_names(eq: pd.DataFrame) -> dict[int, str]:
+    """세부장비 → 맨 위 주장비 이름 (주장비 자신은 빈칸)."""
+    name = dict(zip(eq["id"].astype(int), eq["name"]))
+    return {int(i): (name.get(int(r), "") if int(r) != int(i) else "") for i, r in zip(eq["id"], eq["root_id"])}
+
+
+def _equip_chart(shown: pd.DataFrame, target: float, sub: bool = False) -> None:
     colors = [BLUE if (v or 0) >= target else GRAY for v in shown["가동률"]]
-    names = [f"{n} ({c})" if c else n for n, c in zip(shown["장비명"], shown["장비번호"])]
+    if sub:  # 세부장비는 짧은 이름 (소속은 마우스를 올리면)
+        names = list(shown["표시명"])
+    else:
+        names = [f"{n} ({c})" if c else n for n, c in zip(shown["장비명"], shown["장비번호"])]
     fig = go.Figure(go.Bar(
         x=shown["가동률"], y=names, orientation="h", marker_color=colors,
-        customdata=shown[["equip_id", "사용시간", "가용시간"]].values,
-        hovertemplate=w("%{y}<br>가동률 %{x:.1f}%<br>사용 %{customdata[1]:,.0f}h / 가용 %{customdata[2]:,.0f}h"
+        customdata=shown[["equip_id", "사용시간", "가용시간", "소속"]].values,
+        hovertemplate=w("%{y}<br>%{customdata[3]}<br>가동률 %{x:.1f}%<br>사용 %{customdata[1]:,.0f}h / 가용 %{customdata[2]:,.0f}h"
                         "<br>누르면 장비 상세<extra></extra>"),
         text=[f"{v:.1f}%" if pd.notna(v) else "" for v in shown["가동률"]], textposition="outside"))
     if target:
@@ -178,8 +188,22 @@ def render() -> None:
     if summary.empty:
         empty_state("이 기간에 보유한 장비가 없습니다")
         return
-    only_kpi = hc2.toggle(w("가동률 산정 대상만"), value=True, key="dash_only_kpi")
-    sm = summary[summary["KPI"]] if only_kpi else summary
+    view = hc2.segmented_control("보기", list(VIEWS), default="main", format_func=VIEWS.get, key="dash_eq_view",
+                                 label_visibility="collapsed",
+                                 help=w("주장비: 가동률 산정 대상 장비 (세부장비 시간 합산) · "
+                                        "세부장비: 실제로 입력하는 장비 하나하나 · 전체: 모두")) or "main"
+    short_of = dict(zip(eq_all["id"].astype(int), eq_all["short"]))
+    root_of = _root_names(eq_all)
+    summary = summary.assign(
+        표시명=[short_of.get(int(i), n) for i, n in zip(summary["equip_id"], summary["장비명"])],
+        소속=[root_of.get(int(i), "") for i in summary["equip_id"]])
+    if view == "main":
+        sm = summary[summary["KPI"]]
+    elif view == "sub":
+        leaf = set(eq_all.loc[eq_all["leaf"], "id"].astype(int))  # 실제로 입력하는 맨 아래 장비만
+        sm = summary[~summary["최상위"] & summary["equip_id"].astype(int).isin(leaf)]
+    else:
+        sm = summary
     sm = sm.sort_values("가동률", ascending=True, na_position="first")
     used_sm = sm[sm["사용시간"] > 0]
     shown = used_sm.tail(top_n) if len(used_sm) > top_n else used_sm
@@ -196,7 +220,7 @@ def render() -> None:
         if shown.empty:
             empty_state("이 기간에 사용 기록이 있는 장비가 없습니다")
         else:
-            _equip_chart(shown, target)
+            _equip_chart(shown, target, sub=view != "main")
         notes = []
         if len(used_sm) > top_n:
             notes.append(f"사용한 장비 {len(used_sm)}대 중 상위 {top_n}대 ('설정'에서 바꿀 수 있음)")
@@ -205,13 +229,13 @@ def render() -> None:
         if notes:
             st.caption(" · ".join(notes))
     with tab_heat:
-        _heatmap(daily, eq[eq["in_kpi"]] if only_kpi else eq, e_eff, annual, cutoff, target)
+        _heatmap(daily, eq[eq["id"].isin(sm["equip_id"])], e_eff, annual, cutoff, target, short_of if view == "sub" else None)
     with tab_table:
         table = sm.sort_values("가동률", ascending=False)
         ev = st.dataframe(
             table, hide_index=True, width="stretch", on_select="rerun", selection_mode="single-row",
             key="dash_equip_tbl",
-            column_order=["장비명", "장비번호", "센터", "용도", "구분", "담당자", "가동률", "사용시간", "가용시간",
+            column_order=["장비명", "장비번호"] + (["소속"] if view != "main" else []) + ["센터", "용도", "구분", "담당자", "가동률", "사용시간", "가용시간",
                           "사용료", "건수", "최근사용일", "KPI"],
             column_config={
                 "가동률": st.column_config.ProgressColumn(w("가동률(%)"), min_value=0, max_value=100, format="%.1f%%"),
@@ -267,12 +291,15 @@ def render() -> None:
                 st.plotly_chart(fig, width="stretch", config=CFG, key=f"dash_top_{by}")
 
 
-def _heatmap(daily: pd.DataFrame, eq: pd.DataFrame, end: dt.date, annual: float, cutoff, target: float) -> None:
+def _heatmap(daily: pd.DataFrame, eq: pd.DataFrame, end: dt.date, annual: float, cutoff, target: float,
+             short_of: dict | None = None) -> None:
     mat = calc.monthly_matrix(daily, eq, end, 12, annual, cutoff, db.load_equipment())
     if mat.empty:
         empty_state("표시할 장비가 없습니다")
         return
     names = dict(zip(eq["id"], eq["name"] + eq["code"].map(lambda c: f" ({c})" if c else "")))
+    if short_of:
+        names = {i: short_of.get(int(i), n) for i, n in names.items()}
     mat = mat.loc[[i for i in mat.index if i in names]]
     mat = mat.assign(_avg=mat.mean(axis=1)).sort_values("_avg", ascending=True).drop(columns="_avg")
     z = mat.values
