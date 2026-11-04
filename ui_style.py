@@ -283,6 +283,18 @@ _CSS = """
   .login-foot svg { width: 13px; height: 13px; }
   .login-err { font-size: .85rem; color: var(--ng); background: var(--ng-bg); border-radius: 12px;
         padding: .5rem .8rem; margin: .1rem 0 .3rem 0; text-align: center; }
+  /* 견적서 (2026-11-04) */
+  .q-tile { background: var(--panel); border-radius: 14px; box-shadow: var(--card-shadow); padding: .8rem 1rem; margin-bottom: .6rem; }
+  .q-tile b { display: block; font-size: 1.6rem; line-height: 1.2; }
+  .q-tile span { font-size: .85rem; color: var(--muted); }
+  .q-inline { display: inline-block; min-width: 9rem; margin-right: .6rem; }
+  .q-sub { font-weight: 700; font-size: 1.05rem; margin: .1rem 0 .4rem 0; }
+  .q-total { background: var(--panel); border-radius: 14px; box-shadow: var(--card-shadow); padding: .9rem 1.1rem; margin-bottom: .7rem; }
+  .q-tr { display: flex; justify-content: space-between; font-size: .85rem; color: var(--muted); padding: .18rem 0; }
+  .q-tr b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .q-big { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); margin-top: .5rem; padding-top: .6rem; }
+  .q-big span { font-size: .85rem; color: var(--muted); }
+  .q-big b { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 </style>
 """.replace("__VARS__", _VARS)
 

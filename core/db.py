@@ -65,6 +65,19 @@ TABLES = {
         ("id", "ID"), ("equip_id", "장비ID"), ("center", "건물"), ("unit", "장비명"), ("cycler", "싸이클러"),
         ("chamber", "챔버"), ("channels", "채널 no."), ("ch_count", "채널수"), ("order", "순서"),
     ]),
+    # 2026-11-04 견적서: 장비 단가 (시간당). 장비ID 가 비어 있으면 장비 목록에 없는 시험·기타 항목 (클린룸, 시험 종류별 단가 등)
+    "rates": ("장비단가", [
+        ("id", "ID"), ("equip_id", "장비ID"), ("name", "견적서 장비명"), ("spec", "용량"), ("unit", "단위"),
+        ("price_req", "의뢰 단가"), ("price_self", "직접 단가"), ("note", "비고"), ("order", "순서"),
+    ]),
+    # 발급한 견적서 (발급대장 한 줄 = 한 행). data = 견적서 내용 전체(JSON) — 다시 열거나 PDF 를 다시 만들 때 씀
+    "quotes": ("견적서", [
+        ("id", "ID"), ("seq", "No."), ("no", "견적번호"), ("issued_on", "발급일자"), ("company", "업체명"),
+        ("equip_text", "기기명"), ("model", "모델명"), ("requester", "의뢰자"), ("region", "광역/도"),
+        ("amount", "계(VAT별도)"), ("amount_vat", "계(부가세 포함)"), ("status", "진행여부"), ("writer", "발행자"),
+        ("note", "비고"), ("form", "양식"), ("title", "제목"), ("data", "내용"), ("created_at", "작성일시"),
+        ("updated_at", "수정일시"),
+    ]),
     # 지운 행을 보관했다가 '관리 › 휴지통 · 기록'에서 되살림 (data = 원래 행, JSON)
     "trash": ("휴지통", [
         ("id", "ID"), ("deleted_at", "지운 시각"), ("deleted_by", "지운 사람"), ("table", "종류"),
@@ -90,6 +103,7 @@ DEFAULT_SETTINGS = {
     "idle_days": 90,          # 이 날수 넘게 안 쓴 장비를 저활용·유휴 후보로
     "chart_top": 25,          # 장비별 그래프에 보여 줄 최대 대수
     "default_period": "월",   # 대시보드를 열 때 기간 단위
+    "quote_next_seq": 145,    # 앱에 저장된 올해 견적서가 없을 때 쓸 다음 견적 번호 (2026 엑셀 대장이 144번까지)
 }
 
 CHUNK = 40000  # 구글 시트 셀 한도(50,000자)보다 작게 나눠 저장
@@ -427,6 +441,9 @@ def refresh_data() -> None:
 
 def clear_caches() -> None:
     _snapshot.clear()
+    for f in ("load_rates", "load_quotes"):  # 아래(견적서)에 정의
+        if f in globals():
+            globals()[f].clear()
     load_trash.clear()
     load_history.clear()
     load_equipment.clear()
@@ -448,7 +465,7 @@ def _new_ids(n: int) -> list[str]:
 # 마지막 작업을 거꾸로 적용합니다. 지운 행은 '휴지통' 탭에 원본째 보관해 나중에도 되살릴 수 있습니다.
 
 TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정",
-               "channels": "챔버 구성"}
+               "channels": "챔버 구성", "rates": "장비 단가", "quotes": "견적서"}
 UNDO_KEEP = 30
 
 
@@ -554,6 +571,8 @@ def _usage_summary(r: dict) -> str:
 def _master_summary(t: str, r: dict) -> str:
     if t == "channels":
         return f"{to_str(r.get('unit'))} {to_str(r.get('chamber'))}".strip() or f"ID {to_str(r.get('id'))}"
+    if t == "quotes":
+        return f"{to_str(r.get('no'))} {to_str(r.get('company'))}".strip() or f"ID {to_str(r.get('id'))}"
     return to_str(r.get("name")) or f"ID {to_str(r.get('id'))}"
 
 
@@ -1419,12 +1438,14 @@ def backup_bytes() -> bytes:
         store.read("staff").to_excel(xw, sheet_name="staff", index=False)
         store.read("usage").to_excel(xw, sheet_name="usage_log", index=False)
         st_df.to_excel(xw, sheet_name="settings", index=False)
+        store.read("rates").to_excel(xw, sheet_name="rates", index=False)
+        store.read("quotes").to_excel(xw, sheet_name="quotes", index=False)
     return bio.getvalue()
 
 
 def restore_bytes(data: bytes) -> dict:
     with undo_group("백업 복원"):
-        for t in ("equipment", "usage", "staff", "companies", "settings"):
+        for t in ("equipment", "usage", "staff", "companies", "settings", "rates", "quotes"):
             _step(("rewrite", t, _raw(t).values.tolist()), "백업 복원")
         res = _restore_bytes(data)
     log("복원", "전체", f"장비 {res['equipment']}대, 실적 {res['usage_log']}건")
@@ -1442,6 +1463,9 @@ def _restore_bytes(data: bytes) -> dict:
         store.rewrite("staff", sheets["staff"].reindex(columns=cols("staff")).fillna("").values.tolist())
     if "companies" in sheets:  # 업체 탭이 생기기 전 백업에는 없음
         store.rewrite("companies", sheets["companies"].reindex(columns=cols("companies")).fillna("").values.tolist())
+    for t in ("rates", "quotes"):  # 견적서 기능(2026-11-04) 전 백업에는 없음
+        if t in sheets:
+            store.rewrite(t, sheets[t].reindex(columns=cols(t)).fillna("").values.tolist())
     if "settings" in sheets:
         keep = {k: v for k, v in _settings_raw().items() if k.startswith("template_b64")}
         st_df = sheets["settings"].reindex(columns=["key", "value"]).fillna("")
@@ -1449,3 +1473,95 @@ def _restore_bytes(data: bytes) -> dict:
         store.rewrite("settings", rows + [[k, v] for k, v in keep.items()])
     clear_caches()
     return {"equipment": len(eq), "usage_log": len(lg)}
+
+
+# ── 견적서 · 장비 단가 ──────────────────────────────────────────
+
+RATE_TEXT = ("name", "spec", "unit", "note")
+
+
+@st.cache_data(ttl=120)
+def load_rates() -> pd.DataFrame:
+    """장비 단가. 장비ID 가 있으면 장비 목록의 장비, 없으면 시험·기타 항목."""
+    df = get_store().read("rates")
+    for c in ("id", "equip_id", "price_req", "price_self", "order"):
+        df[c] = pd.to_numeric(df[c].astype(str).str.replace(",", ""), errors="coerce")
+    df = df.dropna(subset=["id"])
+    df["id"] = df["id"].astype("int64")
+    for c in RATE_TEXT:
+        df[c] = df[c].map(to_str)
+    df["unit"] = df["unit"].replace("", "hr")
+    df["order"] = df["order"].fillna(df["id"])
+    return df.sort_values(["order", "id"]).reset_index(drop=True)
+
+
+def save_rates(rows: list[dict]) -> None:
+    """장비 단가 표 전체 저장 (값이 하나도 없는 장비 줄은 저장하지 않음). 예전 모습은 되돌리기로."""
+    old_ids = set(pd.to_numeric(get_store().read("rates")["id"], errors="coerce").dropna().astype(int))
+    next_id = (max(old_ids) if old_ids else 0) + 1
+    out = []
+    for i, r in enumerate(rows, start=1):
+        rec = {c: to_str(r.get(c)) for c in RATE_TEXT}
+        eid = to_num(r.get("equip_id"))
+        rec["equip_id"] = int(eid) if eid is not None else ""
+        for c in ("price_req", "price_self"):
+            v = to_num(r.get(c))
+            rec[c] = (int(v) if float(v).is_integer() else v) if v is not None else ""
+        if rec["equip_id"] == "" and not rec["name"]:
+            continue
+        if rec["equip_id"] != "" and rec["price_req"] == "" and rec["price_self"] == "" and not rec["note"] \
+                and not rec["spec"] and not r.get("_named"):
+            continue
+        rid = to_num(r.get("id"))
+        if rid is not None and int(rid) in old_ids:
+            rec["id"] = int(rid)
+        else:
+            rec["id"] = next_id
+            next_id += 1
+        rec["order"] = i
+        out.append(rec)
+    _save_master("rates", out)
+    load_rates.clear()
+
+
+@st.cache_data(ttl=120)
+def load_quotes() -> pd.DataFrame:
+    df = get_store().read("quotes")
+    df["id"] = df["id"].map(to_str)
+    df = df[df["id"] != ""]
+    for c in ("amount", "amount_vat"):
+        df[c] = pd.to_numeric(df[c].astype(str).str.replace(",", ""), errors="coerce")
+    df["issued_on"] = pd.to_datetime(df["issued_on"], errors="coerce")
+    return df.sort_values(["issued_on", "created_at"], ascending=False).reset_index(drop=True)
+
+
+def quote_seqs(year: int) -> list[str]:
+    df = load_quotes()
+    df = df[df["issued_on"].dt.year == year]
+    return [to_str(s) for s in df["seq"]]
+
+
+def save_quote(rec: dict) -> str:
+    """견적서 한 건 저장 (id 가 있으면 고치기, 없으면 새로). 저장한 id 를 돌려줍니다."""
+    store = get_store()
+    rec = dict(rec)
+    now = _now()
+    rid = to_str(rec.get("id"))
+    have = store.read("quotes")
+    have_ids = {to_str(x) for x in have["id"]}
+    rec["updated_at"] = now
+    if rid and rid in have_ids:
+        old = have[have["id"].map(to_str) == rid].iloc[0].astype(str).tolist()
+        rec["created_at"] = to_str(have.loc[have["id"].map(to_str) == rid, "created_at"].iloc[0]) or now
+        store.update_rows("quotes", {rid: _rows("quotes", [rec])[0]})
+        _step(("put", "quotes", {rid: old}), f"견적서 {rec.get('no', '')} 고치기")
+        log("수정", "견적서", f"{rec.get('no', '')} {rec.get('company', '')}")
+    else:
+        rid = _new_ids(1)[0]
+        rec["id"] = rid
+        rec["created_at"] = now
+        store.append("quotes", _rows("quotes", [rec]))
+        _step(("delete", "quotes", [rid]), f"견적서 {rec.get('no', '')} 발급")
+        log("발급", "견적서", f"{rec.get('no', '')} {rec.get('company', '')}")
+    load_quotes.clear()
+    return rid

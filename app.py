@@ -11,18 +11,19 @@ import importlib  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
 
-from core import calc, chargers, db, itube, perf_export, period, rules, seed  # noqa: E402
+from core import calc, chargers, db, itube, perf_export, period, quote_doc, quotes, rules, seed  # noqa: E402
 from views import (calendar_entry, charger_board, coming_soon, companies, common, dashboard, entry, equip_detail,  # noqa: E402
                    equipment, export,
-                   input_page,
+                   input_page, quote,
                    records, settings, staff, trash)
 from core.terms import w  # noqa: E402
 
 # 새 코드가 배포된 직후 Streamlit Cloud가 일부 파일만 새로 읽고 나머지는 옛 버전을 쓰는 일이 있어
 # (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
-for _m in (ui_style, seed, db, calc, period, chargers, rules, itube, perf_export, common, calendar_entry, charger_board,
-           coming_soon, entry, input_page, companies, dashboard,
+for _m in (ui_style, seed, db, calc, period, chargers, rules, itube, perf_export, quote_doc, quotes, common,
+           calendar_entry, charger_board,
+           coming_soon, entry, input_page, quote, companies, dashboard,
            equip_detail,
            equipment, export, records, settings, staff, trash):
     _mt = os.path.getmtime(_m.__file__)
@@ -102,6 +103,9 @@ PAGES = {
         st.Page(records.render, title="수수료 입력", url_path="records"),
         st.Page(export.render_download, title="실적 내려받기", url_path="download"),
     ],
+    "견적": [
+        st.Page(quote.render_new, title="견적서 작성", url_path="quote"),
+    ],
     "장비 정보": [
         st.Page(coming_soon.render_maint, title="유지보수", url_path="maintenance"),
         st.Page(coming_soon.render_info, title="장비 정보", url_path="equip-info"),
@@ -109,6 +113,7 @@ PAGES = {
     ],
     "기준 정보": [
         st.Page(equipment.render, title="장비", url_path="equipment"),
+        st.Page(quote.render_rates, title="장비 단가", url_path="rates"),
         st.Page(companies.render, title="업체", url_path="companies"),
         st.Page(staff.render, title="담당자", url_path="staff"),
     ],
