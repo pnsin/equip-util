@@ -1527,7 +1527,8 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 skip_ids = set(series["id"].astype(int)) | ({int(edit_id)} if edit_id else set())
                 busy = _busy_chambers(logs, v_ps, v_pe, skip_ids, chans)
                 ch_ids = [int(i) for i in mine["id"]]
-                ch_name = dict(zip(mine["id"].astype(int), mine["chamber"]))
+                ch_name = {int(i): c or f"{u} ch {n}".strip()  # 챔버 없는 충방전기는 장비명 · 채널로
+                           for i, c, u, n in zip(mine["id"], mine["chamber"], mine["unit"], mine["channels"])}
                 ch_cyc = dict(zip(mine["id"].astype(int), mine["cycler"]))
                 st.markdown("<div class='ep-chlab'>챔버</div>", unsafe_allow_html=True)
                 v_ch = st.pills("챔버", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",

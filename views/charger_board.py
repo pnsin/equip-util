@@ -33,6 +33,7 @@ CSS = """<style>
 .cb-t td.u {font-weight: 700; color: var(--ink);}
 .cb-t td.c {color: var(--muted);}
 .cb-t td.m {color: #97A1AE;}
+.cb-dash {color: #97A1AE;}
 .cb-t td.co {font-weight: 700; color: var(--ink);}
 .cb-t td.tl {position: relative; width: 48%; padding: 0;}
 .cb-t tr.grp td {border-top: 1px solid #E8ECF1;}
@@ -52,6 +53,9 @@ CSS = """<style>
 .cb-foot i {display: inline-block; width: 11px; height: 11px; border-radius: 4px; margin-right: 5px; vertical-align: -1px;}
 @media (max-width: 900px) {.cb-kpis {grid-template-columns: repeat(2, minmax(0, 1fr));}}
 </style>"""
+
+
+DASH = "<span class='cb-dash'>—</span>"
 
 
 def _book_new() -> None:
@@ -160,7 +164,7 @@ def render() -> None:
             who = (f"<td class='co'>{html.escape(b['company'])}</td>" if b else "<td class='m'>—</td>")
             when = chargers.span_text(b["start"], b["end"], today) + ("" if r["now"] else " 예약") if b else ""
             rows.append(f"<tr class='{'grp' if new_u and rows else ''}'><td class='u'>{u}</td><td class='c'>{c}</td>"
-                        f"<td>{html.escape(r['chamber'])}</td><td class='m'>{html.escape(r['channels'])}</td>{who}"
+                        f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{html.escape(r['channels'])}</td>{who}"
                         f"<td class='m'>{html.escape(when)}</td>"
                         f"<td class='tl'><div class='cb-tl'>{grid}{now_line}{bars}</div></td></tr>")
         rows.append(f"<tr class='cb-sum'><td colspan='3'>{html.escape(center)} 합계</td><td>{total} ch</td>"
