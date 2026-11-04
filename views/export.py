@@ -1,10 +1,11 @@
 import base64
 import datetime as dt
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
-from core import calc, db, itube, perf_export, rules
+from core import calc, db, itube, rules, seed
 from views.common import period_picker
 from ui_style import empty_state, page_header, section_bar
 from core.terms import w
@@ -13,9 +14,43 @@ UTIL_PCT = w("가동률(%)")
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
+TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "assets" / "itube_template.xlsx"
+
+
+def itube_template(cfg: dict) -> bytes | None:
+    """설정에서 올린 공식 양식, 없으면 앱에 들어 있는 i-Tube 양식(equip_log_template)."""
+    if cfg.get("template_b64"):
+        return base64.b64decode(cfg["template_b64"])
+    return TEMPLATE_PATH.read_bytes() if TEMPLATE_PATH.exists() else None
+
+
+def itube_selection(logs: pd.DataFrame, s: dt.date, e: dt.date, *, start_only: bool = True,
+                    types: list[str] | None = None, labels: list[str] | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """i-Tube 양식에 넣을 실적과, ITUBE번호가 없어 뺀 실적.
+
+    start_only: 사용시작일이 기간 안에 있는 실적만 (아니면 기간과 겹치는 실적 모두).
+    세부장비 실적은 ITUBE번호가 있는 상위 장비 이름으로 올립니다.
+    """
+    if logs.empty:
+        return logs, logs
+    if start_only:
+        sel = logs[(logs["start_date"] >= pd.Timestamp(s)) & (logs["start_date"] <= pd.Timestamp(e))]
+    else:
+        sel = logs[(logs["start_date"] <= pd.Timestamp(e)) & (logs["end_date"] >= pd.Timestamp(s))]
+    if types:
+        sel = sel[sel["usage_type"].isin(types)]
+    if labels:
+        sel = sel[sel["purpose"].map(seed.purpose_label).isin(labels)]
+    sel = sel.sort_values(["start_date", "equip_name", "id"]).copy()
+    no_code = sel[sel["itube_code"] == ""]
+    sel = sel[sel["itube_code"] != ""].copy()
+    sel["equip_name"], sel["equip_code"], sel["equip_kind"] = sel["itube_name"], sel["itube_code"], sel["itube_kind"]
+    return sel, no_code
+
+
 def _itube_filename(cfg: dict, s: dt.date, e: dt.date) -> str:
     months = f"{s.month:02d}" if (s.year, s.month) == (e.year, e.month) else f"{s.month:02d}~{e.month:02d}"
-    name = f"equip_log_template_{cfg.get('org_name', '')}_'{s:%y}.{months}월 장비실적"
+    name = f"equip_log_template_{cfg.get('org_name', '')}_{s:%y}.{months}월 장비실적"
     if cfg.get("org_suffix"):
         name += f"_{cfg['org_suffix']}"
     return name + ".xlsx"
@@ -39,18 +74,7 @@ def render_itube() -> None:
     c1, c2 = st.columns(2)
     basis = c1.radio("포함 기준", ["사용시작일이 기간 안에 있는 실적", "기간과 겹치는 실적 모두"], horizontal=False)
     types = c2.multiselect("활용유형", sorted(t for t in logs["usage_type"].unique() if t), placeholder="전체")
-    if basis.startswith("사용시작일"):
-        sel = logs[(logs["start_date"] >= pd.Timestamp(s)) & (logs["start_date"] <= pd.Timestamp(e))]
-    else:
-        sel = logs[(logs["start_date"] <= pd.Timestamp(e)) & (logs["end_date"] >= pd.Timestamp(s))]
-    if types:
-        sel = sel[sel["usage_type"].isin(types)]
-    sel = sel.sort_values(["start_date", "equip_name", "id"]).copy()
-    # 세부장비 실적은 ITUBE번호가 있는 상위 장비 이름으로 올림. 번호가 없는 장비(미등록) 실적은 뺌
-    no_code = sel[sel["itube_code"] == ""]
-    sel = sel[sel["itube_code"] != ""].copy()
-    sel["equip_name"], sel["equip_code"], sel["equip_kind"] = sel["itube_name"], sel["itube_code"], sel["itube_kind"]
-
+    sel, no_code = itube_selection(logs, s, e, start_only=basis.startswith("사용시작일"), types=types)
     m1, m2, m3 = st.columns(3)
     m1.metric("건수", f"{len(sel):,}")
     m2.metric("사용시간", f"{sel['hours'].sum():,.0f} h")
@@ -74,13 +98,11 @@ def render_itube() -> None:
         st.success("i-Tube 업로드 규칙 통과", icon=":material/verified:")
 
     fname = st.text_input("파일 이름", value=_itube_filename(cfg, s, e))
-    template = base64.b64decode(cfg["template_b64"]) if cfg.get("template_b64") else None
+    template = itube_template(cfg)
     if records:
         data = itube.make_itube_file(records, [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], template)
         st.download_button("i-Tube 장비일지 내려받기", data=data, file_name=fname, mime=XLSX,
                            type="primary", width="stretch", icon=":material/download:")
-        if template:
-            st.caption("등록된 공식 양식에 채워 넣습니다.")
         with st.expander("미리보기"):
             st.dataframe(sel[["purpose", "usage_type", "company", "equip_name", "equip_code", "start_date",
                               "end_date", "hours", "fee"]].rename(columns={
@@ -133,13 +155,13 @@ def render_report() -> None:
                        file_name=w(f"장비가동률_분석_{label.replace(' ', '')}.xlsx"), width="stretch")
 
 
-# ── 실적 내려받기 (예전 입력시트 양식) ──────────────────────────
+# ── 실적 내려받기 (i-Tube 업로드 양식 equip_log_template) ──────────────
 
 LABELS = ["시험", "제조", "분석", "교육", "지원"]
 
 
 def _download_body(key: str) -> None:
-    """기간을 고르면 그 기간 실적을 예전 입력시트 양식에 채워 내려받습니다."""
+    """기간을 고르면 그 기간 실적을 i-Tube 장비일지 양식에 채워 내려받습니다."""
     cfg = db.get_settings()
     logs = db.load_logs()
     eq = db.load_equipment()
@@ -149,22 +171,25 @@ def _download_body(key: str) -> None:
         s, e = e, s
     labs = st.pills("구분", LABELS, selection_mode="multi", default=LABELS, key=f"{key}_labs",
                     help="고른 구분의 실적만 넣습니다.") or LABELS
-    if (e - s).days + 1 > perf_export.MAX_DAYS:
-        st.warning("한 번에 2년까지 내려받을 수 있어요. 기간을 줄여 주세요.", icon=":material/info:")
-        return
-    sel = perf_export.select_logs(logs, s, e, labs)
-    if sel.empty:
+    sel, no_code = itube_selection(logs, s, e, start_only=True, labels=labs)
+    if sel.empty and no_code.empty:
         empty_state("이 기간에는 실적이 없어요", f"{s:%Y-%m-%d} ~ {e:%Y-%m-%d}", icon="🗓️")
         return
-    data, info = perf_export.make_performance_file(logs, eq, db.load_companies(), s, e,
-                                                   cfg.get("alloc_mode", "spread"), labs)
     m1, m2, m3 = st.columns(3)
-    m1.metric("실적", f"{info['count']:,}건")
-    m2.metric("사용시간", f"{info['hours']:,.0f} h")
-    m3.metric("장비", f"{sel['equip_id'].nunique():,}대")
-    st.download_button("엑셀로 내려받기", data=data, file_name=perf_export.file_name(s, e), mime=XLSX,
+    m1.metric("실적", f"{len(sel):,}건")
+    m2.metric("사용시간", f"{sel['hours'].sum():,.0f} h")
+    m3.metric("장비", f"{sel['equip_code'].nunique():,}대")
+    if not no_code.empty:
+        names = ", ".join(sorted(set(no_code["equip_name"])))
+        st.caption(f"ITUBE번호가 없는 장비 실적 {len(no_code)}건은 빠져요: {names}")
+    if len(sel) > 1000:
+        st.warning("i-Tube는 한 번에 1000건까지 올릴 수 있어요. 기간을 나눠 주세요.", icon=":material/info:")
+    if sel.empty:
+        return
+    data = itube.make_itube_file(sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c],
+                                 itube_template(cfg))
+    st.download_button("엑셀로 내려받기", data=data, file_name=_itube_filename(cfg, s, e), mime=XLSX,
                        type="primary", width="stretch", icon=":material/download:", key=f"{key}_btn")
-    st.caption("예전 입력시트 양식 그대로: 가동데이터 · 구분별 일간 시간(세부장비는 주장비에 합산) · 장비목록")
 
 
 @st.dialog("실적 내려받기", width="large")
