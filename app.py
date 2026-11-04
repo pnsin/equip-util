@@ -39,18 +39,22 @@ def check_password() -> bool:
         pw = ""
     if not pw or st.session_state.get("authed"):
         return True
+    failed = bool(st.session_state.get("login_failed"))
     _, mid, _ = st.columns([1, 1.25, 1])
     with mid:
-        st.markdown('<div style="height:7vh"></div>', unsafe_allow_html=True)
+        ui_style.login_bg()
+        st.markdown('<div class="login-gap"></div>', unsafe_allow_html=True)
         with st.container(key="login_card"):
-            ui_style.login_head()
+            ui_style.login_head(failed)
             with st.form("login", border=False, enter_to_submit=True):
-                value = st.text_input("비밀번호", type="password", placeholder="비밀번호",
+                value = st.text_input("비밀번호", type="password", placeholder="비밀번호", icon=":material/lock:",
                                       label_visibility="collapsed")
-                if st.session_state.get("login_failed"):
-                    st.markdown('<div class="login-err">비밀번호가 맞지 않습니다. 다시 입력해 주세요.</div>',
+                if failed:
+                    st.markdown('<div class="login-err">비밀번호가 맞지 않아요. 다시 입력해 주세요.</div>',
                                 unsafe_allow_html=True)
-                sent = st.form_submit_button("접속하기", type="primary", width="stretch")
+                sent = st.form_submit_button("접속하기", type="primary", width="stretch",
+                                             icon=":material/arrow_forward:", icon_position="right")
+            ui_style.login_foot()
     if sent:
         if value and hmac.compare_digest(value.encode(), pw.encode()):
             st.session_state.authed = True
