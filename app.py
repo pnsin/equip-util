@@ -14,7 +14,7 @@ import sys  # noqa: E402
 from core import calc, chargers, db, itube, perf_export, period, quote_doc, quotes, rules, seed  # noqa: E402
 from views import (calendar_entry, charger_board, coming_soon, companies, common, dashboard, entry, equip_detail,  # noqa: E402
                    equipment, export,
-                   input_page, quote,
+                   input_page, maintenance, quote,
                    records, settings, staff, trash)
 from core.terms import w  # noqa: E402
 
@@ -23,7 +23,7 @@ from core.terms import w  # noqa: E402
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
 for _m in (ui_style, seed, db, calc, period, chargers, rules, itube, perf_export, quote_doc, quotes, common,
            calendar_entry, charger_board,
-           coming_soon, entry, input_page, quote, companies, dashboard,
+           coming_soon, entry, input_page, maintenance, quote, companies, dashboard,
            equip_detail,
            equipment, export, records, settings, staff, trash):
     _mt = os.path.getmtime(_m.__file__)
@@ -107,7 +107,7 @@ PAGES = {
         st.Page(quote.render_new, title="견적서 작성", url_path="quote"),
     ],
     "장비 정보": [
-        st.Page(coming_soon.render_maint, title="유지보수", url_path="maintenance"),
+        st.Page(maintenance.render, title="유지보수", url_path="maintenance"),
         st.Page(coming_soon.render_info, title="장비 정보", url_path="equip-info"),
         st.Page(coming_soon.render_cs, title="CS활동", url_path="cs"),
     ],

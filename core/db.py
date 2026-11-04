@@ -78,6 +78,11 @@ TABLES = {
         ("note", "비고"), ("form", "양식"), ("title", "제목"), ("data", "내용"), ("created_at", "작성일시"),
         ("updated_at", "수정일시"),
     ]),
+    # 2026-11-04 장비 정보 › 유지보수: 언제 · 누가 · 어떤 장비에 · 어떤 유지보수를 했는지 (단순 기록)
+    "maint": ("유지보수", [
+        ("id", "ID"), ("date", "날짜"), ("equip_id", "장비ID"), ("equip_ref", "장비명(참고)"),
+        ("kind", "종류"), ("content", "내용"), ("staff", "담당자"), ("note", "비고"),
+    ]),
     # 지운 행을 보관했다가 '관리 › 휴지통 · 기록'에서 되살림 (data = 원래 행, JSON)
     "trash": ("휴지통", [
         ("id", "ID"), ("deleted_at", "지운 시각"), ("deleted_by", "지운 사람"), ("table", "종류"),
@@ -416,7 +421,7 @@ def storage_label() -> str:
 
 
 # 화면에서 늘 쓰는 탭은 한 번에 읽어 2분 동안 기억합니다 (휴지통·수정기록은 그 화면에서만 따로 읽음)
-SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings", "channels")
+SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings", "channels", "maint")
 
 
 @st.cache_data(ttl=120, show_spinner=False)
@@ -465,7 +470,7 @@ def _new_ids(n: int) -> list[str]:
 # 마지막 작업을 거꾸로 적용합니다. 지운 행은 '휴지통' 탭에 원본째 보관해 나중에도 되살릴 수 있습니다.
 
 TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정",
-               "channels": "챔버 구성", "rates": "장비 단가", "quotes": "견적서"}
+               "channels": "챔버 구성", "rates": "장비 단가", "quotes": "견적서", "maint": "유지보수"}
 UNDO_KEEP = 30
 
 
@@ -569,6 +574,9 @@ def _usage_summary(r: dict) -> str:
 
 
 def _master_summary(t: str, r: dict) -> str:
+    if t == "maint":
+        return " ".join(x for x in (to_str(r.get("date")), to_str(r.get("equip_ref")), to_str(r.get("content"))) if x) \
+            or f"ID {to_str(r.get('id'))}"
     if t == "channels":
         return f"{to_str(r.get('unit'))} {to_str(r.get('chamber'))}".strip() or f"ID {to_str(r.get('id'))}"
     if t == "quotes":
@@ -1228,6 +1236,55 @@ def _count_channels(text: str) -> int | str:
     return total
 
 
+# ── 유지보수 ────────────────────────────────────────────────────
+
+MAINT_KINDS = ["점검", "수리", "교정", "부품 교체", "청소", "기타"]
+MAINT_TEXT = ("kind", "content", "staff", "note")
+
+
+def load_maint() -> pd.DataFrame:
+    """유지보수 기록 (최근 날짜부터). date 는 날짜, equip_id 는 숫자(없으면 비움)."""
+    df = _tab("maint")
+    df["id"] = pd.to_numeric(df["id"], errors="coerce")
+    df = df.dropna(subset=["id"])
+    df["id"] = df["id"].astype("int64")
+    df["date"] = df["date"].map(to_date)
+    df["equip_id"] = pd.to_numeric(df["equip_id"], errors="coerce").astype("Int64")
+    for c in MAINT_TEXT + ("equip_ref",):
+        df[c] = df[c].map(to_str)
+    df["_o"] = df["date"].map(lambda d: d.toordinal() if d else 10 ** 7)  # 날짜 없는 줄은 맨 위
+    return df.sort_values(["_o", "id"], ascending=False).drop(columns="_o").reset_index(drop=True)
+
+
+def save_maint(edited: pd.DataFrame) -> int:
+    """화면 표 전체를 저장합니다. 장비도 내용도 없는 빈 줄은 버립니다. 저장한 줄 수를 돌려줍니다."""
+    store = get_store()
+    old_ids = set(pd.to_numeric(store.read("maint")["id"], errors="coerce").dropna().astype(int))
+    next_id = (max(old_ids) if old_ids else 0) + 1
+    names = dict(zip(load_equipment()["id"].astype(int), load_equipment()["name"]))
+    out = []
+    for r in edited.to_dict("records"):
+        rec = {c: to_str(r.get(c)) for c in MAINT_TEXT}
+        eid = to_num(r.get("equip_id"))
+        rec["equip_id"] = int(eid) if eid is not None else ""
+        rec["equip_ref"] = names.get(int(eid), "") if eid is not None else to_str(r.get("equip_ref"))
+        d = to_date(r.get("date"))
+        rec["date"] = d
+        if not (rec["equip_id"] != "" or rec["equip_ref"] or rec["content"] or rec["kind"]):
+            continue
+        rid = to_num(r.get("id"))
+        if rid is not None and int(rid) in old_ids:
+            rec["id"] = int(rid)
+        else:
+            rec["id"] = next_id
+            next_id += 1
+        out.append(rec)
+    out.sort(key=lambda x: int(x["id"]))
+    _save_master("maint", out)
+    refresh_data()
+    return len(out)
+
+
 # ── 사용실적 ────────────────────────────────────────────────────
 
 def _usage_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -1437,6 +1494,7 @@ def backup_bytes() -> bytes:
         store.read("companies").to_excel(xw, sheet_name="companies", index=False)
         store.read("staff").to_excel(xw, sheet_name="staff", index=False)
         store.read("usage").to_excel(xw, sheet_name="usage_log", index=False)
+        store.read("maint").to_excel(xw, sheet_name="maint", index=False)
         st_df.to_excel(xw, sheet_name="settings", index=False)
         store.read("rates").to_excel(xw, sheet_name="rates", index=False)
         store.read("quotes").to_excel(xw, sheet_name="quotes", index=False)
@@ -1445,7 +1503,7 @@ def backup_bytes() -> bytes:
 
 def restore_bytes(data: bytes) -> dict:
     with undo_group("백업 복원"):
-        for t in ("equipment", "usage", "staff", "companies", "settings", "rates", "quotes"):
+        for t in ("equipment", "usage", "staff", "companies", "settings", "rates", "quotes", "maint"):
             _step(("rewrite", t, _raw(t).values.tolist()), "백업 복원")
         res = _restore_bytes(data)
     log("복원", "전체", f"장비 {res['equipment']}대, 실적 {res['usage_log']}건")
@@ -1466,6 +1524,8 @@ def _restore_bytes(data: bytes) -> dict:
     for t in ("rates", "quotes"):  # 견적서 기능(2026-11-04) 전 백업에는 없음
         if t in sheets:
             store.rewrite(t, sheets[t].reindex(columns=cols(t)).fillna("").values.tolist())
+    if "maint" in sheets:  # 유지보수 탭이 생기기 전 백업에는 없음
+        store.rewrite("maint", sheets["maint"].reindex(columns=cols("maint")).fillna("").values.tolist())
     if "settings" in sheets:
         keep = {k: v for k, v in _settings_raw().items() if k.startswith("template_b64")}
         st_df = sheets["settings"].reindex(columns=["key", "value"]).fillna("")

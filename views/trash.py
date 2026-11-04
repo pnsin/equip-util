@@ -6,7 +6,7 @@ from core import db
 from ui_style import empty_state, page_header
 
 KIND = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "channels": "챔버 구성",
-        "rates": "장비 단가", "quotes": "견적서"}
+        "rates": "장비 단가", "quotes": "견적서", "maint": "유지보수"}
 
 
 def render() -> None:
