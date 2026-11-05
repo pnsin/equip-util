@@ -137,6 +137,14 @@ def go_equipment(equip_id: int) -> None:
         st.switch_page(PAGES["equip"])
 
 
+def go_master_equipment(name: str) -> None:
+    """'기준 정보 › 장비' 표를 이 장비 이름으로 찾아 둔 채 엽니다."""
+    st.session_state.equip_q = name
+    _leave()
+    if "equipment" in PAGES:
+        st.switch_page(PAGES["equipment"])
+
+
 def go_records(company: str | None = None, equip_label: str | None = None, start=None, end=None) -> None:
     st.session_state.records_prefilter = {"company": company, "equip": equip_label, "start": start, "end": end}
     _leave()

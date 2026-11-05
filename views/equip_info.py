@@ -70,7 +70,7 @@ def _icon_key(text: str) -> str:
 
 def _illust(key: str, size: int = 78) -> str:
     bg, body = ICONS[key]
-    return (f"<div class='ii' style='background:{bg}'><svg viewBox='0 0 64 64' width='{size}' height='{size}'>"
+    return (f"<div class='ii' style='background:{bg};box-shadow:0 0 0 60px {bg}'><svg viewBox='0 0 64 64' width='{size}' height='{size}'>"
             f"{body}</svg></div>")
 
 
@@ -89,9 +89,10 @@ CSS = """<style>
   box-shadow: var(--card-shadow); transition: transform .15s ease, box-shadow .15s ease;}
 [class*="st-key-iccard_"]:hover .ic {transform: translateY(-3px); box-shadow: 0 10px 24px rgba(17,28,46,.10);
   border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
-.ic .ph {height: 128px; display: flex; align-items: center; justify-content: center; overflow: hidden;}
-.ic .ph img {width: 100%; height: 100%; object-fit: cover;}
-.ii {width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;}
+.ic {margin-bottom: .45rem;}
+.ic .icph {height: 128px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;}
+.ic .icph img {width: 100%; height: 100%; object-fit: cover;}
+.ii {position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;}
 .ic .bd {padding: .7rem .85rem .8rem;}
 .ic .nm {font-weight: 700; font-size: .95rem; line-height: 1.3; color: var(--ink); display: -webkit-box;
   -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.5em;}
@@ -112,6 +113,7 @@ CSS = """<style>
 .bigph {border-radius: 14px; overflow: hidden; background: var(--panel2); aspect-ratio: 4 / 3;
   display: flex; align-items: center; justify-content: center;}
 .bigph img {width: 100%; height: 100%; object-fit: contain; background: #F6F7F9;}
+.bigph {position: relative;}
 .bigph .ii svg {width: 120px; height: 120px;}
 .phcap {font-size: .75rem; color: var(--muted); margin-top: .3rem; text-align: center;}
 [class*="st-key-phth_"] {position: relative;}
@@ -122,6 +124,8 @@ CSS = """<style>
 .th img {width: 100%; height: 100%; object-fit: cover; display: block;}
 .st-key-info_up section {padding: .4rem .6rem; border-radius: 12px; border: 1.5px dashed var(--line2); background: var(--deep);}
 .st-key-info_up section button {font-size: .8rem;}
+.st-key-info_up [data-testid="stFileUploaderDropzoneInstructions"] {display: none;}
+.st-key-info_up label p {font-size: .78rem; color: var(--muted);}
 .boxh {display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; margin: .1rem 0 .45rem;}
 .boxh b {font-size: 1rem; font-weight: 700; color: var(--ink);}
 .boxh small {font-size: .74rem; color: var(--dim);}
@@ -140,9 +144,9 @@ a.doc:hover .t b {color: var(--accent);}
 .doc .go {font-size: .72rem; color: var(--muted); background: var(--panel2); padding: .15rem .6rem; border-radius: 999px;}
 .doc.nolink .go {display: none;}
 .nodoc {font-size: .82rem; color: var(--dim); padding: .5rem 0 .2rem;}
-.st-key-info_caution textarea {background: #FFFBEF !important; border-color: #F3E3B5 !important; line-height: 1.6;}
-.st-key-info_contact textarea {line-height: 1.6;}
-@media (max-width: 640px) {.ic .ph {height: 104px;}}
+[class*="st-key-info_caution_"] textarea {background: #FFFBEF !important; border-color: #F3E3B5 !important; line-height: 1.6;}
+[class*="st-key-info_contact_"] textarea {line-height: 1.6;}
+@media (max-width: 640px) {.ic .icph {height: 104px;}}
 </style>"""
 
 
@@ -259,7 +263,7 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
             who = " · ".join(x for x in (_short_loc(r.location), r.manager) if x)
             code = (f"<div class='cd'>{e(r.code)}</div>" if r.code else "<div class='cd no'>ITUBE번호 없음</div>")
             with col, st.container(key=f"iccard_{eid}"):
-                st.markdown(f"<div class='ic'><div class='ph'>{ph}</div><div class='bd'><div class='nm' title='{e(r.name)}'>"
+                st.markdown(f"<div class='ic'><div class='icph'>{ph}</div><div class='bd'><div class='nm' title='{e(r.name)}'>"
                             f"{e(r.name)}</div>{code}<div class='wh'>{e(who) or '&nbsp;'}</div><div class='bs'>{bs}</div>"
                             "</div></div>", unsafe_allow_html=True)
                 st.button("열기", key=f"icgo_{eid}", on_click=_open, args=(eid,))
@@ -331,9 +335,9 @@ def _photos(eid: int, name: str, icon: str, info: dict) -> None:
 
     ver = st.session_state.get("info_up_ver", 0)
     with st.container(key="info_up"):
-        ups = st.file_uploader("사진 올리기 · 끌어다 놓기 · Ctrl+V", type=["png", "jpg", "jpeg", "webp", "gif", "bmp"],
-                               accept_multiple_files=True, key=f"info_up_{eid}_{ver}", label_visibility="collapsed")
-    st.components.v1.html(PASTE_JS, height=0)
+        ups = st.file_uploader("사진 올리기 · 여기로 끌어다 놓기 · Ctrl+V 붙여넣기", type=["png", "jpg", "jpeg", "webp", "gif", "bmp"],
+                               accept_multiple_files=True, key=f"info_up_{eid}_{ver}")
+    st.html(PASTE_JS, unsafe_allow_javascript=True)
     if ups:
         new = []
         for f in ups:
@@ -414,20 +418,20 @@ def _docs(eid: int, name: str, info: dict) -> None:
         st.rerun()
 
 
-def _save_note(eid: int, name: str) -> None:
-    db.save_info_note(eid, st.session_state.get("info_caution", ""), st.session_state.get("info_contact", ""))
+def _save_note(eid: int) -> None:
+    ss = st.session_state
+    db.save_info_note(eid, ss.get(f"info_caution_{eid}", ""), ss.get(f"info_contact_{eid}", ""))
 
 
-def _notes(eid: int, name: str, info: dict, key: str, title: str, hint: str, place: str) -> None:
+def _notes(eid: int, info: dict, key: str, title: str, hint: str, place: str) -> None:
     nt = info["equip_notes"]
     row = nt[nt["id"] == str(eid)]
-    cur = {"caution": row.iloc[0]["caution"], "contact": row.iloc[0]["contact"]} if not row.empty else {}
-    if st.session_state.get("info_note_eid") != eid:  # 다른 장비를 열면 그 장비 메모로
-        st.session_state.info_caution = cur.get("caution", "")
-        st.session_state.info_contact = cur.get("contact", "")
+    k = f"info_{key}_{eid}"
+    if k not in st.session_state:
+        st.session_state[k] = row.iloc[0][key] if not row.empty else ""
     st.markdown(f"<div class='boxh'><b>{title}</b><small>{hint}</small></div>", unsafe_allow_html=True)
-    st.text_area(title, key=f"info_{key}", label_visibility="collapsed", placeholder=place, height=110,
-                 on_change=_save_note, args=(eid, name))
+    st.text_area(title, key=k, label_visibility="collapsed", placeholder=place, height=110,
+                 on_change=_save_note, args=(eid,))
 
 
 def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
@@ -481,13 +485,12 @@ def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
     c1, c2 = st.columns([1.05, 1], gap="medium")
     with c1, st.container(border=True):
         _specs(eid, r["name"], info)
-        _notes(eid, r["name"], info, "caution", "사용 시 주의", "다 쓰고 칸 밖을 누르면 저장돼요",
+        _notes(eid, info, "caution", "사용 시 주의", "다 쓰고 칸 밖을 누르면 저장돼요",
                "예) 사용 후 블레이드 세척 필수 (NMP)\n진공 펌프 오일 3개월마다 확인")
     with c2, st.container(border=True):
         _docs(eid, r["name"], info)
-        _notes(eid, r["name"], info, "contact", "A/S 연락처", "제조사 · 구매처 담당자",
+        _notes(eid, info, "contact", "A/S 연락처", "제조사 · 구매처 담당자",
                "예) OO기계 서비스팀 홍길동 과장 031-000-0000")
-    st.session_state.info_note_eid = eid
 
 
 def render() -> None:
