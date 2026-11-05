@@ -48,6 +48,10 @@ CSS = """<style>
   display: flex; align-items: center; overflow: hidden; white-space: nowrap; border-left: 4px solid var(--fg);
   background: var(--bg); color: var(--fg); z-index: 1;}
 .cb-bar.soon {border: 1.5px dashed #E8B04B; background: #FFF8EA; color: #B5650B;}
+.cb-mini {display: inline-block; width: 34px; height: 6px; border-radius: 3px; background: #E6F6EE; margin: 0 5px 1px 8px;
+  vertical-align: middle; overflow: hidden;}
+.cb-mini i {display: block; height: 100%; background: #E35D78; border-radius: 3px;}
+.cb-n {font-size: .7rem; font-weight: 700; color: #B8435C;}
 .cb-free {position: absolute; top: 8px; left: 6px; font-size: .72rem; font-weight: 700; color: #1E8E5A;}
 .cb-sum td {background: #F7F9FC; font-weight: 700; color: var(--muted);}
 .cb-foot {display: flex; flex-wrap: wrap; gap: 14px; font-size: .74rem; color: var(--muted); margin-top: 8px;}
@@ -81,7 +85,7 @@ def _edit(b: dict) -> None:
                                  "label": b["company"]}
 
 
-def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool) -> str:
+def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool, lane: int = 0) -> str:
     span = (w1 - w0).days + 1
     a, z = max(b["start"], w0), min(b["end"], w1)
     if z < a:
@@ -92,7 +96,7 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool) -> str:
     text = " · ".join(x for x in (b["company"], b["overview"], b["ch_part"] and f"ch {b['ch_part']}") if x)
     tip = f"{b['company']} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b["staff"] else "")
     return (f"<div class='cb-bar{' soon' if soon else ''}' title='{html.escape(tip)}' "
-            f"style='left:{left:.2f}%;width:{width:.2f}%;--bg:{bg};--fg:{fg}'>{html.escape(text)}</div>")
+            f"style='left:{left:.2f}%;width:{width:.2f}%;top:{5 + lane * 26}px;--bg:{bg};--fg:{fg}'>{html.escape(text)}</div>")
 
 
 def render() -> None:
@@ -128,7 +132,7 @@ def render() -> None:
     else:
         g = stt if center == "전체" else stt[stt["center"] == center]
         total = int(g["ch_count"].sum())
-        used = int(sum(int(n) for n, b in zip(g["ch_count"], g["now"]) if b))
+        used = int(g["used"].sum())
         free_ch = [c for c, b in zip(g["chamber"], g["now"]) if not b]
         ending = sum(1 for b in g["now"] if b and b["end"] <= today + dt.timedelta(days=7))
         waiting = sum(1 for n, b in zip(g["now"], g["next"]) if not n and b)
@@ -163,17 +167,25 @@ def render() -> None:
             u = html.escape(r["unit"]) if new_u else ""
             c = html.escape(r["cycler"]) if (new_u or r["cycler"] != prev_c) else ""
             prev_u, prev_c = r["unit"], r["cycler"]
-            bars = ""
-            for bb in (all_bk.get(int(r["id"]), pd.DataFrame()).to_dict("records")):
-                bars += _bar(bb, w0, w1, soon=bb["start"] > today)
+            bars, lanes = "", []  # 기간이 겹치는 예약(채널 일부씩)은 줄을 나눠 그림
+            for bb in sorted(all_bk.get(int(r["id"]), pd.DataFrame()).to_dict("records"), key=lambda x: x["start"]):
+                ln = next((j for j, e in enumerate(lanes) if e < bb["start"]), len(lanes))
+                lanes[ln:ln + 1] = [bb["end"]]
+                bars += _bar(bb, w0, w1, soon=bb["start"] > today, lane=ln)
             if not bars:
                 bars = "<div class='cb-free'>비어 있음</div>"
-            who = (f"<td class='co'>{html.escape(b['company'])}</td>" if b else "<td class='m'>—</td>")
+            h = 31 + 26 * max(len(lanes) - 1, 0)
+            cos = list(dict.fromkeys(x["company"] for x in r["nows"])) or ([b["company"]] if b else [])
+            who = (f"<td class='co'>{html.escape(cos[0])}" + (f" <span class='m'>외 {len(cos) - 1}</span>" if len(cos) > 1 else "")
+                   + "</td>" if cos else "<td class='m'>—</td>")
+            n_all = int(r["ch_count"]) or len(chargers.chamber_chs(r["channels"], 0))
+            mini = (f"<span class='cb-mini' title='오늘 {r['used']}/{n_all}ch 사용'><i style='width:{r['used'] / n_all * 100:.0f}%'></i></span>"
+                    f"<span class='cb-n'>{r['used']}/{n_all}</span>") if r["used"] and n_all and r["used"] < n_all else ""
             when = chargers.span_text(b["start"], b["end"], today) + ("" if r["now"] else " 예약") if b else ""
             rows.append(f"<tr class='{'grp' if new_u and rows else ''}'><td class='u'>{u}</td><td class='c'>{c}</td>"
-                        f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{html.escape(r['channels'])}</td>{who}"
+                        f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{html.escape(r['channels'])}{mini}</td>{who}"
                         f"<td class='m'>{html.escape(when)}</td>"
-                        f"<td class='tl'><div class='cb-tl'>{grid}{now_line}{bars}</div></td></tr>")
+                        f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
         rows.append(f"<tr class='cb-sum'><td colspan='3'>{html.escape(db.CENTER_SHORT.get(center, center))} 합계</td><td>{total} ch</td>"
                     f"<td colspan='3'>사용 중 {used} · 비어 있음 {total - used}</td></tr>")
         st.markdown(

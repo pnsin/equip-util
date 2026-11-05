@@ -85,8 +85,19 @@ def test_chargers_under_same_parent_share_8h():
 def test_shared_chamber_busy_across_chargers():
     from views.calendar_entry import _busy_chambers
     chans = pd.DataFrame({"id": [24, 26, 1], "center": ["MV", "MV", "제조검증"],
-                          "chamber": ["chamber2", "chamber2", "chamber2"]})
+                          "chamber": ["chamber2", "chamber2", "chamber2"],
+                          "channels": ["1-4", "1-2", "1-4"], "ch_count": [4, 2, 4]})
     logs = pd.DataFrame([dict(id=9, chambers="24", company="KBST", start_date=pd.Timestamp("2026-11-01"),
-                              end_date=pd.Timestamp("2026-11-30"))])
+                              end_date=pd.Timestamp("2026-11-30"), ch_part="1")])
     busy = _busy_chambers(logs, D(2026, 11, 10), D(2026, 11, 12), set(), chans)
-    assert busy == {24: "KBST", 26: "KBST"}  # 같은 건물 같은 챔버만, 다른 건물 chamber2 는 아님
+    # 고른 충방전기는 그 채널만, 같은 건물 같은 챔버의 다른 충방전기는 전체, 다른 건물 chamber2 는 아님
+    assert busy == {24: {1: "KBST"}, 26: {1: "KBST", 2: "KBST"}}
+
+
+def test_channel_parts():
+    from core import chargers
+    assert chargers.nums("1~4, 7") == [1, 2, 3, 4, 7]
+    assert chargers.fmt([1, 2, 3, 4, 7]) == "1-4,7"
+    assert chargers.part_of("12:1-2|13:5", 13) == "5" and chargers.part_of("12:1-2", 13) == ""
+    assert chargers.part_of("1-2", 13) == "1-2"
+    assert chargers.used_of("", [1, 2, 3]) == {1, 2, 3} and chargers.used_of("2", [1, 2, 3]) == {2}

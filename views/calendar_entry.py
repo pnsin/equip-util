@@ -8,7 +8,7 @@ import html
 import pandas as pd
 import streamlit as st
 
-from core import db, rules, seed
+from core import chargers as chg, db, rules, seed
 from core import period as per
 from core.calc import expand_daily, kr_holidays
 from ui_style import T, page_header
@@ -440,6 +440,16 @@ div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button[aria-checked=
 .ep-sum span {font-size: .74rem; color: var(--muted);}
 /* 충방전기 챔버 고르기 */
 .ep-chlab {font-size: .875rem; color: var(--ink); margin: 8px 0 2px; line-height: 1.4;}
+div[class*="st-key-ep_cbox_"] {margin-top: 4px;}
+div[class*="st-key-ep_cbox_"] .ep-chlab {margin: 0; font-size: .8rem; color: var(--muted);}
+div[class*="st-key-ep_cbox_"] button {min-height: 0 !important; padding: 0 4px !important;}
+div[class*="st-key-ep_cbox_"] button p {font-size: .76rem !important;}
+div[class*="st-key-ep_cn_"] [data-testid="stButtonGroup"] {gap: 4px;}
+div[class*="st-key-ep_cn_"] [data-testid="stButtonGroup"] button {min-width: 34px; min-height: 26px !important;
+  padding: 0 6px !important; border-radius: 8px !important; justify-content: center;}
+div[class*="st-key-ep_cn_"] [data-testid="stButtonGroup"] button p {font-size: .74rem !important;}
+div[class*="st-key-ep_cn_"] button[aria-pressed="true"] {background: #2563C9 !important; border-color: #2563C9 !important;}
+div[class*="st-key-ep_cn_"] button[aria-pressed="true"] p {color: #fff !important; font-weight: 700;}
 div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] {flex-wrap: wrap; gap: 5px;}
 div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button {border-radius: 10px !important; min-height: 30px !important;
   padding: 0 10px !important;}
@@ -1313,29 +1323,39 @@ def _set_end(key: str, start: dt.date, days: int) -> None:
 
 
 def _busy_chambers(logs: pd.DataFrame, s: dt.date, e: dt.date, skip: set,
-                   chans: pd.DataFrame | None = None) -> dict[int, str]:
-    """s~e 에 다른 실적이 쓰는 챔버 → 업체명.
+                   chans: pd.DataFrame | None = None) -> dict[int, dict[int, str]]:
+    """s~e 에 다른 실적이 쓰는 챔버 → {채널 번호: 업체명}.
 
     같은 건물의 같은 챔버(예: MV chamber2)를 충방전기 여러 대가 같이 쓰므로, 다른 충방전기 예약이라도
-    챔버 이름이 같으면 쓰는 중으로 봅니다.
+    챔버 이름이 같으면 그 챔버 채널 전체를 쓰는 중으로 봅니다.
     """
-    out: dict[int, str] = {}
+    out: dict[int, dict[int, str]] = {}
     if logs.empty or "chambers" not in logs:
         return out
     same: dict[int, list[int]] = {}
+    chs_of: dict[int, list[int]] = {}
     if chans is not None and not chans.empty:
         key = {int(i): (c, ch) for i, c, ch in zip(chans["id"], chans["center"], chans["chamber"]) if ch}
         groups: dict[tuple, list[int]] = {}
         for i, k in key.items():
             groups.setdefault(k, []).append(i)
         same = {i: groups[k] for i, k in key.items()}
+        chs_of = {int(i): chg.chamber_chs(c, n) for i, c, n in zip(chans["id"], chans["channels"], chans["ch_count"])}
     hit = logs[(logs["chambers"].map(db.to_str) != "") & (logs["start_date"] <= pd.Timestamp(e))
                & (logs["end_date"] >= pd.Timestamp(s)) & ~logs["id"].isin(skip)]
-    for c, comp_ in zip(hit["chambers"], hit["company"]):
+    for c, part, comp_ in zip(hit["chambers"], hit.get("ch_part", [""] * len(hit)), hit["company"]):
+        who = db.to_str(comp_) or "내부"
         for i in db.chamber_ids(c):
             for j in same.get(i, [i]):
-                out.setdefault(j, db.to_str(comp_) or "내부")
+                chs = chs_of.get(j, [])
+                use = chg.used_of(chg.part_of(part, i), chs) if j == i else set(chs)
+                for n in use:
+                    out.setdefault(j, {}).setdefault(n, who)
     return out
+
+
+def _all_chs(key: str, opts: list, on: bool) -> None:
+    st.session_state[key] = list(opts) if on else []
 
 
 def _close_panel() -> None:
@@ -1522,20 +1542,26 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             else:
                 v_s = num_input(c1, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 1, 1, 0)
             # 충방전기: 챔버 고르기 (그 기간에 이미 쓰는 챔버는 업체명이 붙음)
-            v_ch, v_part, busy = [], "", {}
+            v_ch, v_part, busy, picked, all_chs = [], "", {}, {}, {}
             mine = chans[chans["equip_id"] == v_eid] if v_eid is not None and not chans.empty else chans.iloc[0:0]
             if not mine.empty:
                 skip_ids = set(series["id"].astype(int)) | ({int(edit_id)} if edit_id else set())
-                busy = _busy_chambers(logs, v_ps, v_pe, skip_ids, chans)
+                used = _busy_chambers(logs, v_ps, v_pe, skip_ids, chans)
                 ch_ids = [int(i) for i in mine["id"]]
-                # 충방전기 중심: 채널을 먼저, 챔버는 뒤에 작게 (챔버는 충방전기를 쓰면 같이 쓰는 것)
-                ch_name = {int(i): " · ".join(x for x in (f"ch {n}" if n else "", c) if x) or u
+                all_chs = {int(i): chg.chamber_chs(c, n) for i, c, n in zip(mine["id"], mine["channels"], mine["ch_count"])}
+                # 챔버 채널이 모두 다른 실적에 잡혀 있으면 '쓰는 중' (업체명), 일부만이면 'n/m 사용'
+                busy = {i: next(iter(used[i].values())) for i in ch_ids
+                        if i in used and all_chs[i] and set(all_chs[i]) <= set(used[i])}
+                part_busy = {i: f"{len(set(used[i]) & set(all_chs[i]))}/{len(all_chs[i])}ch 사용 중"
+                             for i in ch_ids if i in used and i not in busy}
+                ch_name = {int(i): " · ".join(x for x in (c, f"ch {n}" if n else "") if x) or u
                            for i, c, u, n in zip(mine["id"], mine["chamber"], mine["unit"], mine["channels"])}
                 ch_cyc = dict(zip(mine["id"].astype(int), mine["cycler"]))
-                st.markdown("<div class='ep-chlab'>채널</div>", unsafe_allow_html=True)
-                v_ch = st.pills("채널", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",
+                st.markdown("<div class='ep-chlab'>챔버</div>", unsafe_allow_html=True)
+                v_ch = st.pills("챔버", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",
                                 default=[i for i in db.chamber_ids(cur.get("chambers")) if i in ch_ids] if cur is not None else None,
-                                format_func=lambda i: (ch_name.get(i) or f"#{i}") + (f" · {busy[i]}" if i in busy else ""),
+                                format_func=lambda i: (ch_name.get(i) or f"#{i}") + (
+                                    f" · {busy[i]}" if i in busy else f" · {part_busy[i]}" if i in part_busy else ""),
                                 label_visibility="collapsed",
                                 help="cycler: " + ", ".join(dict.fromkeys(c for c in ch_cyc.values() if c))) or []
                 pill_css = "".join(
@@ -1544,9 +1570,32 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                     for n, i in enumerate(ch_ids, start=1) if i in busy and i not in v_ch)
                 if pill_css:
                     st.markdown(f"<style>{pill_css}</style>", unsafe_allow_html=True)
-                v_part = st.text_input("채널 일부", db.to_str(cur.get("ch_part")) if cur is not None else "",
-                                       placeholder="그중 일부 채널만 쓰면 (예: 1-8)", key=f"ep_part_{k}",
-                                       label_visibility="collapsed")
+                # 고른 챔버마다 채널을 마우스로 (그 챔버에 있는 채널만, 다른 실적이 쓰는 채널은 빠짐)
+                picked: dict[int, list[int]] = {}
+                for i in v_ch:
+                    chs = all_chs.get(i, [])
+                    free = [n for n in chs if n not in used.get(i, {})]
+                    if not chs:
+                        continue
+                    was = chg.part_of(cur.get("ch_part"), i) if cur is not None else ""
+                    pk = f"ep_cn_{k}_{i}"
+                    if pk not in st.session_state:
+                        st.session_state[pk] = [n for n in (chg.nums(was) or free) if n in free]
+                    elif any(n not in free for n in st.session_state[pk] or []):
+                        st.session_state[pk] = [n for n in st.session_state[pk] if n in free]
+                    with st.container(key=f"ep_cbox_{k}_{i}", horizontal=True, gap="small", vertical_alignment="center"):
+                        st.markdown(f"<div class='ep-chlab'>{html.escape(mine.set_index('id')['chamber'].get(i, '') or ch_name.get(i, ''))} 채널 "
+                                    f"<b>{len(st.session_state[pk])}</b>/{len(chs)}</div>", unsafe_allow_html=True)
+                        st.space("stretch")
+                        st.button("전체", key=f"ep_cna_{k}_{i}", type="tertiary", on_click=_all_chs, args=(pk, free, True))
+                        st.button("비우기", key=f"ep_cnz_{k}_{i}", type="tertiary", on_click=_all_chs, args=(pk, free, False))
+                    picked[i] = st.pills(f"채널 {i}", free, selection_mode="multi", key=pk,
+                                         label_visibility="collapsed") or []
+                part = {i: chg.fmt(p) for i, p in picked.items() if set(p) != set(all_chs.get(i, []))}
+                if len(v_ch) == 1:
+                    v_part = part.get(v_ch[0], "")
+                else:
+                    v_part = "|".join(f"{i}:{p}" for i, p in part.items())
             # 사용료는 시험이 끝난 뒤 따로 매기므로 입력 카드에서는 받지 않음 (고칠 때는 기존 값 그대로 둠)
             v_f = db.to_num(cur["fee"], 0) if cur is not None else 0
             v_ov = st.text_input("지원개요", ov, placeholder="예: 전극 코팅", key=f"ep_ov_{k}")
@@ -1576,7 +1625,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             errors = []
             if v_mode == "기간" and not chunks:
                 errors.append("기간에 시간을 넣을 날이 없어요. 종료일이나 '주말·공휴일 빼기'를 확인하세요.")
-            if not mine.empty and not v_ch:
+            if not mine.empty and (not v_ch or any(not picked.get(i) for i in v_ch if all_chs.get(i))):
                 errors.append("채널을 고르세요.")
             clash = [f"{ch_name.get(i, i)}({busy[i]})" for i in v_ch if i in busy] if not mine.empty else []
             if clash:
