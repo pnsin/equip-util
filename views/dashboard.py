@@ -1,4 +1,9 @@
+"""대시보드 — 01 가동률 · 02 장비 수수료 · 03 유지보수 실적 (2026-11-05 사용자 시안).
+
+세 구역 모두 같은 모양: 큰 숫자 3칸 → 한 줄 요약 → 월별 막대 → 아래 작은 칸 2~3개.
+"""
 import datetime as dt
+import html
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -6,314 +11,401 @@ import streamlit as st
 
 from core import calc, db
 from core.terms import w
-from ui_style import CHART_CONFIG, T, chart_layout, empty_state, goal_bar, nice_step, page_header, section_bar
-from views.common import go_equipment, go_records, period_picker
+from ui_style import CHART_CONFIG, T, chart_layout, empty_state, page_header
+from views.common import go_records
 
-BLUE = T["accent-hi"]
-BAR = T["accent"]
-ORANGE = T["warn"]
-GRAY = T["bar-off"]
 CFG = CHART_CONFIG
-BASES = {"hours": "사용시간", "fee": "사용료"}
-VIEWS = {"main": "주장비", "sub": "세부장비", "all": "전체"}
+E = html.escape
+SHORT_OF = {v: k for k, v in db.CENTER_SHORT.items()}  # 센터 전체 이름 → 문백·제조검증·MV
+CENTER_ORDER = ["문백", "제조검증", "MV"]
+
+# 구역 색: (진한 색, 연한 막대, 바탕)
+BLUE = ("#2563C9", "#C9D8F2", "#EEF3FC")
+TEAL = ("#1F9D8B", "#BFE5DE", "#E8F6F3")
+PURPLE = ("#7E5BC2", "#DCD2EE", "#F3EFFA")
+GOAL = "#D9822B"
+
+CSS = """<style>
+[class*="st-key-dsec_"] {background: #fff; border-radius: 22px; box-shadow: 0 2px 12px rgba(30,45,80,.06);
+  padding: 24px 28px 22px; margin-bottom: 10px; gap: .55rem;}
+.dh {display: flex; align-items: center; gap: 14px; margin-bottom: 10px;}
+.dh .ic {width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  font-size: 21px; font-weight: 700;}
+.dh .no {font-size: 12px; font-weight: 700; letter-spacing: .08em; line-height: 1.1;}
+.dh .tt {font-size: 21px; font-weight: 700; color: #1F2A3D; line-height: 1.3;}
+.dh .per {margin-left: auto; font-size: 12px; color: #6B7686; background: #F3F5F8; padding: 5px 12px; border-radius: 99px;}
+.dst {border: 1px solid #E8EBF0; border-radius: 16px; padding: 14px 18px; height: 100%; min-height: 118px;}
+.dst.big {border: 0; background: #26324A;}
+.dst .sl {font-size: 13px; color: #6B7686; font-weight: 600;}
+.dst.big .sl {color: #B8C2D3;}
+.dst .sv {font-size: 2.05rem; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 6px; color: #1F2A3D;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.dst.big .sv {color: #fff;}
+.dst .sv small {font-size: 1rem; margin-left: 3px; font-weight: 600;}
+.dst .sv.name {font-size: 1.55rem; padding: 4px 0 3px;}
+.dch {font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; display: inline-block;}
+.dch.g {color: #2E9E6B; background: #E4F5EC;} .dch.r {color: #D25B5B; background: #FBE9E9;}
+.dch.n {color: #6B7686; background: #F3F5F8;}
+.dst.big .dch {background: rgba(255,255,255,.14); color: #DDE4EF;}
+.dst.big .dch.g {color: #9FE3C1;} .dst.big .dch.r {color: #F5B4B4;}
+.dlead {border-radius: 12px; padding: 11px 16px; font-size: 14px; line-height: 1.6; color: #1F2A3D; margin-top: 12px;}
+.dct {font-size: 13px; font-weight: 700; color: #1F2A3D; margin: 14px 0 -6px;}
+.dq {display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px; margin: -10px 8px 4px;}
+.dq div {border-top: 1.5px solid #DCE1E8; text-align: center; font-size: 12px; color: #6B7686; padding-top: 6px;}
+.dq b {color: #1F2A3D; margin-left: 4px;}
+.dbox {border: 1px solid #E8EBF0; border-radius: 16px; padding: 14px 18px; height: 100%;}
+.dbox .bh {margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #1F2A3D; display: flex;
+  justify-content: space-between;}
+.dml {display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 62px; gap: 10px; align-items: center;
+  font-size: 12.5px; margin: 6px 0; color: #1F2A3D;}
+.dml span {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.dml b {text-align: right;}
+.dtb {height: 8px; background: #F0F2F6; border-radius: 99px; position: relative;}
+.dtb i {position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px;}
+.dpills {display: flex; gap: 8px; flex-wrap: wrap;}
+.dpills span {font-size: 13px; padding: 6px 12px; border-radius: 12px; background: #F5F2FB; color: #1F2A3D;}
+.dpills b {margin-left: 5px;}
+.drec {display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 7px 0;
+  border-bottom: 1px dashed #E8EBF0; color: #1F2A3D;}
+.drec:last-child {border: 0;}
+.drec > span:first-child {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.drec .tag {font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 6px; font-weight: 600;
+  background: #F3EFFA; color: #7E5BC2;}
+.dnone {font-size: 13px; color: #9AA3B0; padding: 4px 0;}
+</style>"""
 
 
-def _picked(event, idx: int = 0):
-    """그래프에서 누른 막대의 customdata[idx]."""
+# ── 작은 그림 조각 ────────────────────────────────────────────
+
+def _head(no: int, title: str, color: tuple, icon: str, period: str) -> None:
+    st.markdown(f'<div class="dh"><div class="ic" style="background:{color[2]};color:{color[0]}">{icon}</div>'
+                f'<div><div class="no" style="color:{color[0]}">{no:02d}</div><div class="tt">{E(title)}</div></div>'
+                f'<div class="per">{E(period)}</div></div>', unsafe_allow_html=True)
+
+
+def _chip(text: str, kind: str = "g") -> str:
+    return f'<span class="dch {kind}">{E(text)}</span>' if text else ""
+
+
+def _delta(v: float | None, unit: str, what: str, fmt: str = "{:+,.0f}", up_good: bool = True) -> str:
+    """'▲ 5.1%p 지난달보다' 같은 비교 알약."""
+    if v is None or pd.isna(v):
+        return ""
+    if abs(v) < 1e-9:
+        c = what[-1]
+        josa = "과" if "가" <= c <= "힣" and (ord(c) - 0xAC00) % 28 else "와"
+        return _chip(f"{what}{josa} 같아요", "n")
+    good = (v > 0) == up_good
+    arrow = "▲" if v > 0 else "▼"
+    return _chip(f"{arrow} {fmt.format(abs(v)).lstrip('+')}{unit} {what}보다", "g" if good else "r")
+
+
+def _stats(tiles: list[tuple[str, str, str, str, bool]]) -> None:
+    """tiles: (제목, 값, 단위, 비교 알약 html, 남색 칸?) × 3."""
+    cols = st.columns(3)
+    for col, (label, val, unit, chip, big) in zip(cols, tiles):
+        name = " name" if not unit and not val.replace(",", "").replace(".", "").isdigit() else ""
+        col.markdown(f'<div class="dst{" big" if big else ""}"><div class="sl">{E(label)}</div>'
+                     f'<div class="sv{name}" title="{E(val)}">{E(val)}<small>{E(unit)}</small></div>{chip}</div>',
+                     unsafe_allow_html=True)
+
+
+def _lead(text_html: str, color: tuple) -> None:
+    st.markdown(f'<div class="dlead" style="background:{color[2]}">{text_html}</div>', unsafe_allow_html=True)
+
+
+def _bars(values: list, labels: list[str], cur: int | None, color: tuple, fmt, key: str,
+          target: float | None = None, top: float | None = None, hover: str = "", custom=None):
+    """월별 막대. cur 번째 막대만 진하게, 아직 오지 않은 달은 빈 막대. 선택 이벤트를 돌려줌."""
+    real = [v for v in values if v is not None and pd.notna(v)]
+    top = top or max(real + [target or 0, 1e-9]) * 1.22
+    ys = [(v if v is not None and pd.notna(v) else 0) for v in values]
+    colors = [color[0] if i == cur else (color[1] if values[i] is not None else "#E3E7EE") for i in range(len(values))]
+    texts = [fmt(v) if v is not None and pd.notna(v) and (v > 0 or i <= (cur if cur is not None else 99)) else ""
+             for i, v in enumerate(values)]
+    fig = go.Figure(go.Bar(
+        x=labels, y=ys, marker=dict(color=colors, cornerradius=6), text=texts, textposition="outside",
+        textfont=dict(size=12, color=["#1F2A3D" if i == cur else T["muted"] for i in range(len(values))]),
+        customdata=custom if custom is not None else labels, hovertemplate=hover or "%{x}<extra></extra>",
+        cliponaxis=False))
+    if target:
+        fig.add_hline(y=target, line_dash="dash", line_color=GOAL, line_width=1.5,
+                      annotation_text=f"목표 {target:.0f}%", annotation_position="top right",
+                      annotation_font=dict(color=GOAL, size=12))
+    fig.update_layout(bargap=0.42, clickmode="event+select",
+                      yaxis=dict(visible=False, range=[0, top], fixedrange=True),
+                      xaxis=dict(type="category", showgrid=False, fixedrange=True,
+                                 tickfont=dict(size=12, color=T["muted"])))
+    chart_layout(fig, 230, legend=False).update_layout(margin=dict(l=8, r=8, t=26, b=8))
+    return st.plotly_chart(fig, width="stretch", config=CFG, key=key,
+                           **({"on_select": "rerun", "selection_mode": "points"} if custom is not None else {}))
+
+
+def _mini_list(rows: list[tuple[str, float, str]], color: str, top: float | None = None) -> str:
+    """이름 · 가는 막대 · 값 줄들. rows: (이름, 막대값, 표시 글)."""
+    if not rows:
+        return '<div class="dnone">기록 없음</div>'
+    top = top or max([v for _, v, _ in rows] + [1e-9])
+    return "".join(f'<div class="dml"><span title="{E(n)}">{E(n)}</span><div class="dtb"><i style="width:'
+                   f'{max(0.0, min(v / top, 1)) * 100:.1f}%;background:{color}"></i></div><b>{E(t)}</b></div>'
+                   for n, v, t in rows)
+
+
+def _box(col, title: str, body: str, right: str = "", right_color: str = "") -> None:
+    r = f'<span style="color:{right_color}">{E(right)}</span>' if right else ""
+    col.markdown(f'<div class="dbox"><div class="bh"><span>{E(title)}</span>{r}</div>{body}</div>', unsafe_allow_html=True)
+
+
+def _man(won: float) -> str:
+    """원 → '1억 2,350' / '1,840' (만원 단위, 단위 글자는 따로)."""
+    m = round(won / 10000)
+    if m >= 10000:
+        return f"{m // 10000}억 {m % 10000:,}" if m % 10000 else f"{m // 10000}억"
+    return f"{m:,}"
+
+
+def _pick(event):
     try:
         pts = event.selection.points if event else []
     except AttributeError:
         pts = (event or {}).get("selection", {}).get("points", [])
     for p in pts:
-        cd = p.get("customdata")
-        if isinstance(cd, dict):  # 여러 값이면 {"0": .., "1": ..} 모양으로 옴
-            cd = [cd[k] for k in sorted(cd, key=lambda x: int(x) if str(x).isdigit() else 0)]
-        if cd is not None:
-            return cd[idx] if isinstance(cd, (list, tuple)) else cd
+        if p.get("customdata") is not None:
+            return p["customdata"]
     return None
 
 
-def _root_names(eq: pd.DataFrame) -> dict[int, str]:
-    """세부장비 → 맨 위 주장비 이름 (주장비 자신은 빈칸)."""
-    name = dict(zip(eq["id"].astype(int), eq["name"]))
-    return {int(i): (name.get(int(r), "") if int(r) != int(i) else "") for i, r in zip(eq["id"], eq["root_id"])}
+# ── 필터 ─────────────────────────────────────────────────────
 
-
-def _equip_chart(shown: pd.DataFrame, target: float, sub: bool = False) -> None:
-    colors = [BLUE if (v or 0) >= target else GRAY for v in shown["가동률"]]
-    if sub:  # 세부장비는 짧은 이름 (소속은 마우스를 올리면)
-        names = list(shown["표시명"])
-    else:
-        names = [f"{n} ({c})" if c else n for n, c in zip(shown["장비명"], shown["장비번호"])]
-    fig = go.Figure(go.Bar(
-        x=shown["가동률"], y=names, orientation="h", marker_color=colors,
-        customdata=shown[["equip_id", "사용시간", "가용시간", "소속"]].values,
-        hovertemplate=w("%{y}<br>%{customdata[3]}<br>가동률 %{x:.1f}%<br>사용 %{customdata[1]:,.0f}h / 가용 %{customdata[2]:,.0f}h"
-                        "<br>누르면 장비별 가동률<extra></extra>"),
-        text=[f"{v:.1f}%" if pd.notna(v) else "" for v in shown["가동률"]], textposition="outside"))
-    if target:
-        fig.add_vline(x=target, line_dash="dot", line_color=ORANGE,
-                      annotation_text=f"목표 {target:.0f}%", annotation_position="top",
-                      annotation_font_color=ORANGE)
-    fig.update_layout(xaxis=dict(title=w("가동률(%)")), clickmode="event+select")
-    chart_layout(fig, max(320, 26 * len(shown) + 80), legend=False).update_layout(margin_t=34, bargap=0.35)
-    ev = st.plotly_chart(fig, width="stretch", config=CFG, on_select="rerun", selection_mode="points",
-                         key="dash_equip_chart")
-    eid = _picked(ev)
-    if eid is not None:
-        go_equipment(int(eid))
-
-
-def _filters(eq: pd.DataFrame) -> pd.DataFrame:
-    """센터·용도·구분으로 장비를 좁힙니다 (대시보드 전체에 적용)."""
-    opts = {c: sorted(v for v in eq[c].unique() if v) for c in ("location", "use", "kind")}
-    c1, c2, c3 = st.columns([2, 1.2, 1.2])
-    loc = c1.multiselect("센터", opts["location"], placeholder="전체 센터", key="dash_loc")
-    use = c2.multiselect("장비용도", opts["use"], placeholder="전체 용도", key="dash_use")
-    kind = c3.multiselect("장비구분", opts["kind"], placeholder="주장비·부장비 모두", key="dash_kind_eq")
+def _filters(eq: pd.DataFrame, centers: dict[int, str], years: list[int]) -> tuple[pd.DataFrame, int]:
+    uses = sorted(v for v in eq["use"].unique() if v)
+    c0, c1, c2, c3 = st.columns([2.2, 1.4, 1.4, 1], vertical_alignment="bottom")
+    with c0:
+        page_header("대시보드", "현황")
+    loc = c1.multiselect("센터", CENTER_ORDER, placeholder="전체 센터", key="dash_loc", label_visibility="collapsed")
+    use = c2.multiselect("장비용도", uses, placeholder="전체 용도", key="dash_use", label_visibility="collapsed")
+    year = c3.selectbox("연도", years, index=len(years) - 1, key="dash_year", format_func=lambda y: f"{y}년",
+                        label_visibility="collapsed")
     out = eq
     if loc:
-        out = out[out["location"].isin(loc)]
+        out = out[[centers.get(int(i), "") in loc for i in out["id"]]]
     if use:
         out = out[out["use"].isin(use)]
-    if kind:
-        out = out[out["kind"].isin(kind)]
-    return out
+    return out, int(year)
 
+
+# ── 화면 ─────────────────────────────────────────────────────
 
 def render() -> None:
-    page_header("대시보드", "현황")
+    st.markdown(CSS, unsafe_allow_html=True)
     cfg = db.get_settings()
     logs_all = db.load_logs()
     eq_all = db.load_equipment()
     annual = float(cfg.get("annual_hours") or 2000)
     target = float(cfg.get("target_util") or 0)
-    years = sorted({d.year for d in logs_all["start_date"].dropna()}) if not logs_all.empty else []
+    today = dt.date.today()
+    years = sorted({d.year for d in logs_all["start_date"].dropna()} | {today.year}) if not logs_all.empty else [today.year]
+    centers = {i: SHORT_OF.get(c, "") for i, c in db.equip_centers(eq_all).items()}
 
-    def _toggle():
-        st.toggle("진행 중 기간은 오늘까지로 계산", value=True, key="dash_to_today",
-                  help="끄면 아직 끝나지 않은 기간도 전체 기간의 가용시간으로 나눕니다.")
-
-    default_kind = cfg.get("default_period") if cfg.get("default_period") in calc.PERIOD_KINDS else "월"
-    top_n = int(cfg.get("chart_top") or 25)
-    s, e, label, kind = period_picker("dash", calc.PERIOD_KINDS, default_kind, years=years, extra=_toggle)
-    to_today = st.session_state.get("dash_to_today", True)
-    cutoff = dt.date.today() if to_today else None
-    eq = _filters(eq_all)
+    eq, year = _filters(eq_all, centers, years)
     logs = logs_all[logs_all["equip_id"].isin(eq["id"])] if len(eq) < len(eq_all) else logs_all
-
     if logs_all.empty:
         empty_state("아직 사용실적이 없습니다", "'실적 입력'에서 입력하거나 '가져오기 · 백업'에서 기존 엑셀을 가져오세요.", "◷")
 
+    this_year = year == today.year
+    cutoff = today if this_year else None
+    ys, ye = dt.date(year, 1, 1), dt.date(year, 12, 31)
+    ye_eff = calc.effective_end(ys, ye, cutoff) if this_year else ye
+    cm = today.month if this_year else 12               # '이번 달'
+    cq = (cm - 1) // 3 + 1                              # '이번 분기'
+    period = f"{year}년 · {today:%m/%d} 기준" if this_year else f"{year}년"
+    months = [f"{m}월" for m in range(1, 13)]
+
     daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"), db.charger_caps())
-    e_eff = calc.effective_end(s, e, cutoff)
-    summary = calc.equipment_summary(daily, eq, s, e_eff, annual)
-    tot = calc.totals(summary)
+    ref = dt.date(year, 12, 31)
+    tr_m = calc.trend(daily, eq, "월", ref, 12, annual, cutoff, eq_all)
+    tr_q = calc.trend(daily, eq, "분기", ref, 4, annual, cutoff, eq_all)
+    m_of = {r["시작"].month: r for r in tr_m.to_dict("records")} if not tr_m.empty else {}
+    q_of = {(r["시작"].month - 1) // 3 + 1: r for r in tr_q.to_dict("records")} if not tr_q.empty else {}
 
-    # ── 핵심 지표 ─────────────────────────────────────────
-    hc1, hc2 = st.columns([3, 1.3], vertical_alignment="bottom")
-    cmp_mode = hc2.segmented_control("비교 기준", ["직전", "전년"], default="직전", key="dash_cmp",
-                                     format_func=lambda v: "직전 기간" if v == "직전" else "전년 같은 기간",
-                                     label_visibility="collapsed") or "직전"
-    ps, pe, plabel = calc.compare_period(kind, s, e, e_eff, cmp_mode)
-    prev = calc.totals(calc.equipment_summary(daily, eq, ps, pe, annual))
-    win = calc.window(daily, s, e_eff)
-    companies = logs[logs["id"].isin(win["log_id"].unique()) & (logs["company"] != "")]["company"].nunique()
-    with hc1:
-        section_bar(label, sub=(f"{e_eff:%m/%d}까지 집계 · " if e_eff < e else "") + f"비교: {plabel}", first=True)
-    m = st.columns(5)
-    m[0].metric(w("가동률"), f"{tot['util']:.1f}%", f"{tot['util'] - prev['util']:+.1f}%p",
-                help=w(f"가동률 산정 대상 장비의 사용시간 합 ÷ 가용시간 합. 아래 숫자는 {plabel}과의 차이입니다."))
-    m[1].metric("사용시간", f"{tot['used']:,.0f} h", f"{tot['used'] - prev['used']:+,.0f} h")
-    m[2].metric("사용료", f"{tot['fee'] / 10000:,.0f} 만원", f"{(tot['fee'] - prev['fee']) / 10000:+,.0f} 만원")
-    m[3].metric("지원 업체", f"{companies:,} 곳", help="이 기간에 장비를 쓴 업체 수")
-    m[4].metric("미사용 장비", f"{tot['idle_count']} / {tot['equip_count']} 대",
-                help=w("이 기간에 사용 기록이 하나도 없는 가동률 산정 대상 장비 수. 목록은 아래 '장비별' 표에 있습니다."))
-    if target and tot["avail"]:
-        need = max(0.0, target / 100 * tot["avail"] - tot["used"])
-        ratio = tot["util"] / target
-        goal_bar(ratio, w(f"목표 가동률 <b>{target:.0f}%</b> 대비 <b>{ratio * 100:.0f}%</b> 달성"),
-                 f"목표까지 <b>{need:,.0f} h</b> 더 필요" if need > 0 else "<b>목표 달성</b>")
+    def summ(s, e):
+        return calc.equipment_summary(daily, eq, s, e, annual, eq_all)
 
-    # ── 추이 ─────────────────────────────────────────────
-    section_bar("기간별 추이", sub=f"최근 {calc.TREND_COUNT.get(kind, 12)}개 {kind}")
-    tr = calc.trend(daily, eq, kind, s, calc.TREND_COUNT.get(kind, 12), annual, cutoff)
-    if not tr.empty:
-        fig = go.Figure()
-        fig.add_bar(x=tr["기간"], y=tr["사용시간"], name="사용시간(h)", marker_color=BAR, opacity=0.9,
-                    hovertemplate="%{x}<br>사용시간 %{y:,.0f} h<extra></extra>")
-        fig.add_scatter(x=tr["기간"], y=tr["가동률"], name=w("가동률(%)"), yaxis="y2", mode="lines+markers",
-                        line=dict(color=ORANGE, width=2.5), hovertemplate=w("%{x}<br>가동률 %{y:.1f}%<extra></extra>"))
+    year_sum = summ(ys, ye_eff)
+    y_tot = calc.totals(year_sum)
+    py_tot = calc.totals(summ(calc.shift_year(ys, -1), calc.shift_year(ye_eff, -1)))
+
+    # 이번 달 · 이번 분기와 그 직전 (진행 중이면 같은 만큼만 잘라 비교)
+    def cur_and_prev(kind: str, ref_day: dt.date):
+        s, e, _ = calc.period_bounds(kind, ref_day)
+        e_eff = calc.effective_end(s, e, cutoff)
+        ps, pe, _ = calc.compare_period(kind, s, e, e_eff, "직전")
+        return calc.totals(summ(s, e_eff)), calc.totals(summ(ps, pe))
+
+    m_ref = dt.date(year, cm, 1)
+    m_tot, pm_tot = cur_and_prev("월", m_ref)
+    q_tot, pq_tot = cur_and_prev("분기", m_ref)
+
+    _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
+                  year_sum, centers)
+    _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, year_sum, logs, ys, ye_eff, today,
+                 centers)
+    _maint_section(year, cm, period, months, eq, eq_all, len(eq) < len(eq_all), today)
+
+
+def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
+                  year_sum, centers) -> None:
+    with st.container(key="dsec_util"):
+        _head(1, w("가동률"), BLUE, "%", period)
+        _stats([
+            (f"이번 달 · {cm}월", f"{m_tot['util']:.1f}", "%",
+             _delta(m_tot["util"] - pm_tot["util"], "%p", "지난달", "{:.1f}") if pm_tot["avail"] else "", False),
+            (f"이번 분기 · {cq}분기", f"{q_tot['util']:.1f}", "%",
+             _delta(q_tot["util"] - pq_tot["util"], "%p", f"{cq - 1 if cq > 1 else 4}분기", "{:.1f}")
+             if pq_tot["avail"] else "", False),
+            (f"올해 누적 · {year}년", f"{y_tot['util']:.1f}", "%",
+             _delta(y_tot["util"] - py_tot["util"], "%p", "작년", "{:.1f}") if py_tot["avail"] else "", True),
+        ])
+        # 한 줄 요약
+        done = {m: r["가동률"] for m, r in m_of.items() if pd.notna(r["가동률"])}
+        parts = [w(f"올해 가동률은 <b>{y_tot['util']:.1f}%</b>")]
         if target:
-            fig.add_scatter(x=tr["기간"], y=[target] * len(tr), name=f"목표 {target:.0f}%", yaxis="y2",
-                            mode="lines", line=dict(color=ORANGE, width=1, dash="dot"), hoverinfo="skip")
-        top = max([target] + [v for v in tr["가동률"] if pd.notna(v)] + [10]) * 1.15
-        step = nice_step(top)
-        fig.update_layout(xaxis=dict(type="category"),
-                          yaxis=dict(title="사용시간(h)", rangemode="tozero"),
-                          yaxis2=dict(title=w("가동률(%)"), overlaying="y", side="right", range=[0, top],
-                                      tickmode="linear", tick0=0, dtick=step, ticksuffix="%",
-                                      showgrid=False, tickfont=dict(color=T["muted"]),
-                                      title_font=dict(color=T["muted"], size=12)))
-        st.plotly_chart(chart_layout(fig, 340), width="stretch", config=CFG)
-
-    # ── 센터·용도별 ───────────────────────────────────────
-    section_bar(w("센터 · 용도별 가동률"), sub="산정 대상 장비 기준")
-    c1, c2 = st.columns(2)
-    for col, by in ((c1, "센터"), (c2, "용도")):
-        g = calc.group_util(summary, by)
-        with col:
-            st.markdown(f"**{by}별**")
-            if g.empty:
-                st.caption("데이터 없음")
-                continue
-            g = g.iloc[::-1]
-            fig = go.Figure(go.Bar(
-                x=g["가동률"], y=g[by], orientation="h",
-                marker_color=[BLUE if (v or 0) >= target else GRAY for v in g["가동률"]],
-                customdata=g[["사용시간", "가용시간", "대수"]].values,
-                text=[f"{v:.1f}%" if pd.notna(v) else "" for v in g["가동률"]], textposition="outside",
-                hovertemplate=w("%{y}<br>가동률 %{x:.1f}% · %{customdata[2]}대<br>"
-                                "사용 %{customdata[0]:,.0f}h / 가용 %{customdata[1]:,.0f}h<extra></extra>")))
-            if target:
-                fig.add_vline(x=target, line_dash="dot", line_color=ORANGE)
-            fig.update_layout(xaxis=dict(title=w("가동률(%)")))
-            chart_layout(fig, max(180, 40 * len(g) + 70), legend=False).update_layout(bargap=0.4)
-            st.plotly_chart(fig, width="stretch", config=CFG, key=f"dash_grp_{by}")
-
-    # ── 장비별 ───────────────────────────────────────────
-    hc1, hc2 = st.columns([3, 1.4], vertical_alignment="bottom")
-    with hc1:
-        section_bar(w("장비별 가동률"), sub="막대를 누르면 장비별 가동률")
-    if summary.empty:
-        empty_state("이 기간에 보유한 장비가 없습니다")
-        return
-    view = hc2.segmented_control("보기", list(VIEWS), default="main", format_func=VIEWS.get, key="dash_eq_view",
-                                 label_visibility="collapsed",
-                                 help=w("주장비: 가동률 산정 대상 장비 (세부장비 시간 합산) · "
-                                        "세부장비: 실제로 입력하는 장비 하나하나 · 전체: 모두")) or "main"
-    short_of = dict(zip(eq_all["id"].astype(int), eq_all["short"]))
-    root_of = _root_names(eq_all)
-    summary = summary.assign(
-        표시명=[short_of.get(int(i), n) for i, n in zip(summary["equip_id"], summary["장비명"])],
-        소속=[root_of.get(int(i), "") for i in summary["equip_id"]])
-    if view == "main":
-        sm = summary[summary["KPI"]]
-    elif view == "sub":
-        leaf = set(eq_all.loc[eq_all["leaf"], "id"].astype(int))  # 실제로 입력하는 맨 아래 장비만
-        sm = summary[~summary["최상위"] & summary["equip_id"].astype(int).isin(leaf)]
-    else:
-        sm = summary
-    sm = sm.sort_values("가동률", ascending=True, na_position="first")
-    used_sm = sm[sm["사용시간"] > 0]
-    shown = used_sm.tail(top_n) if len(used_sm) > top_n else used_sm
-    n_zero = len(sm) - len(used_sm)
-    # 마지막 사용일 (공동장비 정보 입력 시스템의 '저활용·유휴 장비' 관리 참고)
-    past = logs[logs["start_date"] <= pd.Timestamp(dt.date.today())] if not logs.empty else logs
-    last_used = past.groupby("equip_id")["end_date"].max() if not past.empty else pd.Series(dtype="datetime64[ns]")
-    sm = sm.assign(최근사용일=sm["equip_id"].map(last_used).dt.date if not last_used.empty else None)
-    idle_days = int(cfg.get("idle_days") or 90)
-    cut = dt.date.today() - dt.timedelta(days=idle_days)
-    idle = sm[[(d is None or pd.isna(d) or d < cut) for d in sm["최근사용일"]]]
-    tab_chart, tab_heat, tab_table = st.tabs(["그래프", "월별 색칠표", "표"])
-    with tab_chart:
-        if shown.empty:
-            empty_state("이 기간에 사용 기록이 있는 장비가 없습니다")
+            parts[0] += f"로 목표 {target:.0f}%의 <b>{y_tot['util'] / target * 100:.0f}%</b>를 채웠어요."
         else:
-            _equip_chart(shown, target, sub=view != "main")
-        notes = []
-        if len(used_sm) > top_n:
-            notes.append(f"사용한 장비 {len(used_sm)}대 중 상위 {top_n}대 ('설정'에서 바꿀 수 있음)")
-        if n_zero:
-            notes.append(f"사용 기록이 없는 {n_zero}대는 '표' 탭에서 볼 수 있습니다")
-        if notes:
-            st.caption(" · ".join(notes))
-    with tab_heat:
-        _heatmap(daily, eq[eq["id"].isin(sm["equip_id"])], e_eff, annual, cutoff, target, short_of if view == "sub" else None)
-    with tab_table:
-        table = sm.sort_values("가동률", ascending=False)
-        ev = st.dataframe(
-            table, hide_index=True, width="stretch", on_select="rerun", selection_mode="single-row",
-            key="dash_equip_tbl",
-            column_order=["장비명", "장비번호"] + (["소속"] if view != "main" else []) + ["센터", "용도", "구분", "담당자", "가동률", "사용시간", "가용시간",
-                          "사용료", "건수", "최근사용일", "KPI"],
-            column_config={
-                "가동률": st.column_config.ProgressColumn(w("가동률(%)"), min_value=0, max_value=100, format="%.1f%%"),
-                "사용시간": st.column_config.NumberColumn("사용시간(h)", format="%.1f"),
-                "가용시간": st.column_config.NumberColumn("가용시간(h)", format="%.1f"),
-                "사용료": st.column_config.NumberColumn("사용료(원)", format="%d"),
-                "KPI": st.column_config.CheckboxColumn("산정대상"),
-                "최근사용일": st.column_config.DateColumn(format="YYYY-MM-DD"),
-            },
-        )
-        rows = ev.selection.rows if ev else []
-        if rows:
-            go_equipment(int(table.iloc[rows[0]]["equip_id"]))
-        st.caption("행을 누르면 장비별 가동률로 갑니다. 표 오른쪽 위 버튼으로 CSV를 내려받을 수 있습니다.")
-    if not idle.empty:
-        with st.expander(f"{idle_days}일 넘게 사용 기록이 없는 장비 {len(idle)}대 (저활용·유휴 후보)",
-                         icon=":material/warning:"):
-            st.caption(w("국가연구시설장비 표준지침은 장비를 활용·저활용·유휴·불용으로 나눠 관리합니다. "
-                         "실제로 쓰지 않는 장비라면 '기준 정보 › 장비'에서 불용일을 넣거나 가동률 산정에서 빼는 것을 검토하세요."))
-            st.dataframe(idle[["장비명", "장비번호", "센터", "담당자", "최근사용일"]].sort_values("최근사용일", na_position="first"),
-                         hide_index=True, width="stretch",
-                         column_config={"최근사용일": st.column_config.DateColumn(format="YYYY-MM-DD")})
-
-    # ── 사용 구성 ─────────────────────────────────────────
-    hc1, hc2 = st.columns([3, 1.3], vertical_alignment="bottom")
-    base = hc2.segmented_control("기준", list(BASES), format_func=BASES.get, default="hours", key="dash_base",
-                                 label_visibility="collapsed") or "hours"
-    col_name = BASES[base]
-    unit = "h" if base == "hours" else "원"
-    with hc1:
-        section_bar("사용 구성", sub=f"{col_name} 기준 · 업체 막대를 누르면 그 업체 실적")
-    c1, c2, c3 = st.columns(3)
-    for col, by, title in ((c1, "purpose", "사용목적별"), (c2, "usage_type", "활용유형별"), (c3, "company", "업체별 상위 10")):
-        b = calc.breakdown(daily, logs, s, e_eff, by)
-        b = b.sort_values(col_name, ascending=False).head(10) if not b.empty else b
-        with col:
-            st.markdown(f"**{title}**")
-            if b.empty or b[col_name].sum() <= 0:
-                st.caption("데이터 없음")
-                continue
-            b = b.iloc[::-1]
-            fig = go.Figure(go.Bar(x=b[col_name], y=b[by], orientation="h", marker_color=BAR, customdata=b[by],
-                                   hovertemplate=f"%{{y}}<br>%{{x:,.0f}} {unit}<extra></extra>"))
-            fig.update_layout(xaxis=dict(title=f"{col_name}({unit})"), clickmode="event+select")
-            chart_layout(fig, max(160, 34 * len(b) + 70), legend=False).update_layout(bargap=0.45)
-            if by == "company":
-                ev = st.plotly_chart(fig, width="stretch", config=CFG, on_select="rerun", selection_mode="points",
-                                     key="dash_comp_chart")
-                name = _picked(ev)
-                if name and name != "(미입력)":
-                    go_records(company=name, start=s, end=e_eff)
+            parts[0] += "예요."
+        if len(done) >= 2 and any(v > 0 for v in done.values()):
+            best = max(done, key=done.get)
+            rank = sorted(done.values(), reverse=True).index(done.get(cm, -1)) + 1 if cm in done else 0
+            if best == cm:
+                parts.append(f"{cm}월이 올해 가장 높은 달이에요.")
+            elif rank == 2:
+                parts.append(f"{cm}월이 올해 두 번째로 높은 달이에요.")
             else:
-                st.plotly_chart(fig, width="stretch", config=CFG, key=f"dash_top_{by}")
+                parts.append(f"올해 가장 높은 달은 <b>{best}월({done[best]:.1f}%)</b>이에요.")
+        if target and y_tot["avail"]:
+            need = target / 100 * y_tot["avail"] - y_tot["used"]
+            if need > 0:
+                parts.append(f"목표를 채우려면 지금까지 기준으로 <b>{need:,.0f}시간</b>을 더 써야 해요.")
+        _lead(" ".join(parts), BLUE)
+
+        st.markdown(f'<div class="dct">{E(w("월별 가동률"))}</div>', unsafe_allow_html=True)
+        vals = [m_of[m]["가동률"] if m in m_of else None for m in range(1, 13)]
+        top = max([v for v in vals if v is not None and pd.notna(v)] + [target, 10]) * 1.25
+        _bars(vals, [f"{m}월" for m in range(1, 13)], cm - 1, BLUE, lambda v: f"{v:.1f}%", "dash_util_m",
+              target=target or None, top=top, hover=w("%{x} 가동률 %{y:.1f}%<extra></extra>"))
+        st.markdown('<div class="dq">' + "".join(
+            f'<div>{q}분기<b>{q_of[q]["가동률"]:.1f}%</b></div>' if q in q_of and pd.notna(q_of[q]["가동률"])
+            else f'<div>{q}분기<b style="color:#C2C8D0">–</b></div>' for q in range(1, 5)) + '</div>',
+            unsafe_allow_html=True)
+
+        # 센터별 주장비 (올해 누적, 산정 대상 장비 = 세부장비 시간 합산)
+        st.markdown('<div class="dct" style="margin-bottom:2px">센터별 주장비 · 올해 누적</div>', unsafe_allow_html=True)
+        k = year_sum[year_sum["KPI"]].copy() if not year_sum.empty else year_sum
+        if k.empty:
+            st.markdown('<div class="dnone">산정 대상 장비가 없어요</div>', unsafe_allow_html=True)
+            return
+        k["c"] = [centers.get(int(i), "") or "기타" for i in k["equip_id"]]
+        groups = [c for c in CENTER_ORDER if c in set(k["c"])] + sorted(set(k["c"]) - set(CENTER_ORDER))
+        cols = st.columns(min(3, len(groups)) or 1)
+        for i, c in enumerate(groups):
+            g = k[k["c"] == c].sort_values("가동률", ascending=False, na_position="last")
+            used, avail = g["사용시간"].sum(), g["가용시간"].sum()
+            rows = [(n, v if pd.notna(v) else 0, f"{v:.0f}%" if pd.notna(v) else "–")
+                    for n, v in zip(g["장비명"], g["가동률"])]
+            _box(cols[i % len(cols)], c, _mini_list(rows, BLUE[0], 100),
+                 f"{used / avail * 100:.0f}%" if avail else "–", BLUE[0])
 
 
-def _heatmap(daily: pd.DataFrame, eq: pd.DataFrame, end: dt.date, annual: float, cutoff, target: float,
-             short_of: dict | None = None) -> None:
-    mat = calc.monthly_matrix(daily, eq, end, 12, annual, cutoff, db.load_equipment())
-    if mat.empty:
-        empty_state("표시할 장비가 없습니다")
-        return
-    names = dict(zip(eq["id"], eq["name"] + eq["code"].map(lambda c: f" ({c})" if c else "")))
-    if short_of:
-        names = {i: short_of.get(int(i), n) for i, n in names.items()}
-    mat = mat.loc[[i for i in mat.index if i in names]]
-    mat = mat.assign(_avg=mat.mean(axis=1)).sort_values("_avg", ascending=True).drop(columns="_avg")
-    z = mat.values
-    top = max(target * 1.5 if target else 0, 40)
-    fig = go.Figure(go.Heatmap(
-        z=z, x=list(mat.columns), y=[names[i] for i in mat.index], customdata=[[i] * z.shape[1] for i in mat.index],
-        colorscale=[[0, "#F4F6FA"], [0.02, "#DCE6F5"], [0.5, "#7FA6E0"], [1, T["accent"]]], zmin=0, zmax=top,
-        xgap=2, ygap=2, colorbar=dict(title=dict(text="%", side="top"), thickness=10, len=0.6),
-        hovertemplate=w("%{y}<br>%{x} · 가동률 %{z:.1f}%<extra></extra>")))
-    fig.update_layout(xaxis=dict(side="top", showgrid=False, type="category"), yaxis=dict(showgrid=False))
-    chart_layout(fig, max(320, 22 * len(mat) + 90), legend=False)
-    ev = st.plotly_chart(fig, width="stretch", config=CFG, on_select="rerun", selection_mode="points",
-                         key="dash_heat")
-    eid = _picked(ev)
-    if eid is not None:
-        go_equipment(int(eid))
-    st.caption(w("최근 12개월 장비별 가동률입니다. 흐린 칸일수록 덜 쓴 달입니다. 칸을 누르면 장비별 가동률로 갑니다."))
+def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, year_sum, logs, ys, ye_eff,
+                 today, centers) -> None:
+    with st.container(key="dsec_fee"):
+        _head(2, "장비 수수료", TEAL, "₩", period)
+        past = logs[(logs["start_date"] >= pd.Timestamp(ys)) & (logs["start_date"] <= pd.Timestamp(ye_eff))] \
+            if not logs.empty else logs
+        missing = past[(past["company"] != "") & (pd.to_numeric(past["fee"], errors="coerce").fillna(0) <= 0)] \
+            if not past.empty else past
+        _stats([
+            (f"이번 달 · {cm}월", _man(m_tot["fee"]), "만원",
+             _delta((m_tot["fee"] - pm_tot["fee"]) / 10000, "만원", "지난달"), False),
+            (f"올해 누적 · {year}년", _man(y_tot["fee"]), "만원",
+             _delta((y_tot["fee"] / py_tot["fee"] - 1) * 100, "%", "작년") if py_tot["fee"] else "", True),
+            ("수수료 안 넣은 실적", f"{len(missing):,}", "건",
+             _chip("수수료 입력에서 넣을 수 있어요", "r") if len(missing) else _chip("모두 넣었어요", "g"), False),
+        ])
+        fees = {m: r["사용료"] for m, r in m_of.items()}
+        done = {m: v for m, v in fees.items() if m <= cm}
+        if done and sum(done.values()) > 0:
+            best = max(done, key=done.get)
+            _lead(f"올해 한 달 평균 <b>{_man(sum(done.values()) / len(done))}만원</b>이 들어왔어요. "
+                  f"{best}월이 <b>{_man(done[best])}만원</b>으로 가장 많았어요.", TEAL)
+        else:
+            _lead("올해는 아직 입력된 수수료가 없어요.", TEAL)
+
+        st.markdown('<div class="dct">월별 수수료 (만원) · 막대를 누르면 그 달 실적</div>', unsafe_allow_html=True)
+        vals = [fees[m] / 10000 if m in fees else None for m in range(1, 13)]
+        ev = _bars(vals, months, cm - 1, TEAL, lambda v: f"{v:,.0f}", "dash_fee_m",
+                   hover="%{x} 수수료 %{y:,.0f}만원<extra></extra>", custom=list(range(1, 13)))
+        m = _pick(ev)
+        if m is not None:
+            s, e, _ = calc.period_bounds("월", dt.date(year, int(m), 1))
+            go_records(start=s, end=min(e, today) if s <= today else e)
+
+        top = year_sum[year_sum["최상위"]] if not year_sum.empty else year_sum
+        c1, c2 = st.columns(2)
+        if top.empty or top["사용료"].sum() <= 0:
+            _box(c1, "센터별 · 올해", '<div class="dnone">기록 없음</div>')
+            _box(c2, "수수료 많은 장비 · 올해", '<div class="dnone">기록 없음</div>')
+            return
+        by_c = top.assign(c=[centers.get(int(i), "") or "기타" for i in top["equip_id"]]).groupby("c")["사용료"].sum()
+        by_c = by_c[by_c > 0].sort_values(ascending=False)
+        _box(c1, "센터별 · 올해", _mini_list([(c, v, f"{_man(v)}만") for c, v in by_c.items()], TEAL[0]))
+        best = top[top["사용료"] > 0].sort_values("사용료", ascending=False).head(5)
+        _box(c2, "수수료 많은 장비 · 올해",
+             _mini_list([(n, v, f"{_man(v)}만") for n, v in zip(best["장비명"], best["사용료"])], TEAL[0]))
+
+
+def _maint_section(year, cm, period, months, eq, eq_all, filtered: bool, today) -> None:
+    with st.container(key="dsec_maint"):
+        _head(3, "유지보수 실적", PURPLE, "⚙", period)
+        df = db.load_maint()
+        df = df[df["date"].map(lambda d: bool(d) and d.year == year)] if not df.empty else df
+        if filtered and not df.empty:
+            df = df[df["equip_id"].isin(set(eq["id"].astype(int)))]
+        name = dict(zip(eq_all["id"].astype(int), eq_all["name"]))
+        root = dict(zip(eq_all["id"].astype(int), eq_all["root_id"]))
+        df = df.assign(m=[d.month for d in df["date"]],
+                       eqn=[name.get(int(root.get(int(i), i)), r) if pd.notna(i) else r
+                            for i, r in zip(df["equip_id"], df["equip_ref"])]) if not df.empty else df.assign(m=[], eqn=[])
+        by_m = df.groupby("m").size().to_dict() if not df.empty else {}
+        n_cur, n_prev = by_m.get(cm, 0), by_m.get(cm - 1, 0) if cm > 1 else None
+        top_eq = df[df["eqn"] != ""]["eqn"].value_counts() if not df.empty else pd.Series(dtype=int)
+        _stats([
+            (f"이번 달 · {cm}월", f"{n_cur}", "건",
+             _delta(n_cur - n_prev, "건", "지난달", up_good=False) if n_prev is not None else "", False),
+            (f"올해 누적 · {year}년", f"{len(df)}", "건", "", True),
+            ("가장 많은 장비", top_eq.index[0] if len(top_eq) else "–", "",
+             _chip(f"올해 {top_eq.iloc[0]}건", "n") if len(top_eq) else "", False),
+        ])
+        kinds = df[df["kind"] != ""]["kind"].value_counts() if not df.empty else pd.Series(dtype=int)
+        if len(df):
+            _lead(f"올해 유지보수 <b>{len(df)}건</b>" + (f" 중 <b>{E(kinds.index[0])} {kinds.iloc[0]}건</b>이 가장 많아요."
+                                                     if len(kinds) else "을 기록했어요."), PURPLE)
+        else:
+            _lead("올해는 아직 유지보수 기록이 없어요.", PURPLE)
+
+        st.markdown('<div class="dct">월별 유지보수 건수</div>', unsafe_allow_html=True)
+        last = cm if year == today.year else 12
+        vals = [by_m.get(m, 0) if m <= last else None for m in range(1, 13)]
+        _bars(vals, months, cm - 1, PURPLE, lambda v: f"{v:.0f}건", "dash_maint_m",
+              top=max([v or 0 for v in vals] + [3]) * 1.3, hover="%{x} 유지보수 %{y}건<extra></extra>")
+
+        c1, c2 = st.columns(2)
+        order = [k for k in db.MAINT_KINDS if k in kinds.index] + [k for k in kinds.index if k not in db.MAINT_KINDS]
+        pills = "".join(f"<span>{E(k)}<b>{kinds[k]}</b></span>" for k in order)
+        _box(c1, "종류별 · 올해", f'<div class="dpills">{pills}</div>' if pills else '<div class="dnone">기록 없음</div>')
+        recent = df.head(4) if not df.empty else df
+        rec = "".join(
+            f'<div class="drec"><span>{f"<span class=tag>{E(r.kind)}</span>" if r.kind else ""}'
+            f'{E(r.eqn)}{" · " + E(r.content) if r.content else ""}</span>'
+            f'<span style="color:#6B7686;flex:none">{r.date:%m/%d}</span></div>' for r in recent.itertuples())
+        _box(c2, "최근 기록", rec or '<div class="dnone">기록 없음</div>')
