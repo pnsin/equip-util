@@ -74,12 +74,15 @@ def rate_devices(eq: pd.DataFrame) -> pd.DataFrame:
 
 def rate_table(eq: pd.DataFrame, rates: pd.DataFrame, chargers: set | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """(장비 줄, 시험·기타 항목 줄). 장비 줄은 장비 목록 순서, 단가가 없는 장비도 빈 칸으로 보여 줌."""
-    dev = rate_devices(eq)
     by_eq = {}
     for r in rates.to_dict("records"):
         e = _n(r.get("equip_id"))
         if e is not None and int(e) not in by_eq:
             by_eq[int(e)] = r
+    dev = rate_devices(eq)
+    if not eq.empty:  # 장비 목록에서 단가를 넣은 장비는 묶음 장비라도 포함 (장비 목록 순서 그대로)
+        keep = set(dev["id"].astype(int)) | {i for i, r in by_eq.items() if not is_missing(r)}
+        dev = eq[eq["id"].astype(int).isin(keep)]
     rows = []
     for d in dev.to_dict("records"):
         r = by_eq.get(int(d["id"]), {})

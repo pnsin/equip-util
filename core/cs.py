@@ -41,6 +41,9 @@ def load() -> pd.DataFrame:
     df["date"] = pd.to_datetime(df["date"].map(db.to_date), errors="coerce")
     df["follow_up"] = pd.to_datetime(df["follow_up"].map(db.to_date), errors="coerce")
     df["equip_list"] = df["equip_ids"].map(_ids)
+    names = dict(zip(db.load_equipment()["id"].astype(int), db.load_equipment()["name"]))
+    df["equip_ref"] = [", ".join(names[i] for i in ids if i in names) or ref
+                       for ids, ref in zip(df["equip_list"], df["equip_ref"])]  # 장비 이름을 바꿔도 바로 반영
     df["status"] = df["status"].where(df["status"].isin(STATUSES), "접수")
     return df.sort_values(["date", "created_at"], ascending=False, na_position="last").reset_index(drop=True)
 
