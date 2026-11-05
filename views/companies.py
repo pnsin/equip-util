@@ -3,7 +3,7 @@ import streamlit as st
 
 from core import db, seed
 from ui_style import page_header
-from views.common import (excel_box, confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
+from views.common import (excel_box, merge_edits, pin_table, unpin, confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
                           with_delete_column)
 
 COLS = {
@@ -19,6 +19,7 @@ def render() -> None:
         st.toast(msg, icon=":material/check_circle:")
     comp = db.load_companies()
     view = comp[list(COLS)].rename(columns=COLS)
+    view, newer = pin_table("company_editor_", view)
 
     def _apply_xl(m):
         errors = db.check_companies(m)
@@ -54,12 +55,15 @@ def render() -> None:
     edited, deleted = split_deleted(edited, "업체명")
     ok = confirm_delete(deleted, "company_editor_del", "곳")
     if st.button("변경 내용 저장", type="primary", disabled=not ok, icon=":material/save:"):
+        if newer is not None:  # 그사이 다른 분이 저장함 → 내가 바꾼 줄만 얹기
+            edited = merge_edits(view, edited, newer)
         raw = edited.rename(columns={v: k for k, v in COLS.items()})
         errors = db.check_companies(raw)
         for e in errors:
             st.error(e)
         if not errors:
             db.save_companies(raw)
+            unpin("company_editor_")
             st.session_state.company_saved = "업체 목록을 저장했습니다." + (f" ({len(deleted)}곳 삭제)" if deleted else "")
             st.session_state.pop(f"company_editor_{q}", None)
             st.session_state.pop("company_editor_del", None)

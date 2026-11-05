@@ -12,7 +12,7 @@ import streamlit as st
 from core import db, seed
 from core.terms import w
 from ui_style import page_header
-from views.common import (center_pick, excel_box, confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
+from views.common import (center_pick, excel_box, merge_edits, pin_table, unpin, confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
                           with_delete_column)
 
 KPI_COL = w("가동률 산정")
@@ -95,6 +95,7 @@ def render() -> None:
     only_top = c3.toggle("장비만", key="equip_only_top", help="세부장비를 접고 장비만 봅니다.")
     all_cols = c4.toggle("모든 열", key="equip_all_cols", help="제조사·구매처·자산번호·도입일 같은 열까지 봅니다.")
 
+    view, newer = pin_table("equip_editor_", view)
     mask = pd.Series(True, index=view.index)
     if q:
         hay = view[["장비명(한글)", "ITUBE번호", "관리자", "자산번호", "주장비(종)", "모델명"]].astype(str).agg(" ".join, axis=1)
@@ -102,10 +103,10 @@ def render() -> None:
     if pick:
         mask &= view["대분류"].isin(pick)
     if only_top:
-        mask &= eq["depth"] == 0
+        mask &= view[TREE] == "■"
     if center:
         cen = db.equip_centers(eq)
-        mask &= eq["id"].astype(int).map(cen).eq(center)
+        mask &= pd.to_numeric(view["id"], errors="coerce").map(cen).eq(center)
     filtered = bool(q or pick or only_top or center)
 
     kinds = list(dict.fromkeys(seed.EQUIP_KINDS_ALL + [k for k in eq["kind"] if k]))
@@ -145,6 +146,9 @@ def render() -> None:
     edited, deleted = split_deleted(edited, "장비명(한글)")
     ok = confirm_delete(deleted, "equip_editor_del", "대")
     if st.button("변경 내용 저장", type="primary", disabled=not ok, icon=":material/save:"):
+        if newer is not None:  # 그사이 다른 분이 저장함 → 내가 바꾼 줄만 얹기
+            edited = merge_edits(view, edited, newer)
+        unpin("equip_editor_")
         id_of = {v: k for k, v in label_of.items()}
         out = edited.drop(columns=[TREE]).rename(columns={v: k for k, v in COLS.items()})
         out["parent_id"] = [id_of.get(p) if isinstance(p, str) and p else None for p in edited[PARENT].replace(NO_PARENT, "")]
