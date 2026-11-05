@@ -100,7 +100,8 @@ _VARS = ":root { " + " ".join(f"--{k}: {v};" for k, v in TOKENS.items()) + " }"
 _CSS = """
 <style>
   __VARS__
-  .block-container { padding-top: 3.6rem; padding-bottom: 4rem; max-width: 1400px; }
+  .block-container { padding-top: 3.6rem; padding-bottom: 4rem; max-width: 1600px; margin-left: 0; }
+  [data-testid="stMainBlockContainer"] { padding-left: 2.5rem !important; padding-right: 2.5rem !important; margin-left: 0 !important; align-self: flex-start; }
   [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "IBM Plex Sans KR", "Noto Sans KR", "Malgun Gothic", sans-serif; }
   [data-testid="stAppViewContainer"] { background: var(--bg); }
   footer { visibility: hidden; }
