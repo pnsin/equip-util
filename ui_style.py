@@ -301,7 +301,6 @@ _CSS = """
 
 def apply_style():
     st.markdown(_CSS, unsafe_allow_html=True)
-    _preload_editors()
 
 
 # 표 칸·숫자 칸을 처음 누를 때 Streamlit 화면은 편집기 조각(js 파일)을 그제야 내려받습니다.
@@ -347,6 +346,11 @@ _PRELOAD_JS = """
 })();
 </script>
 """
+
+
+def preload_editors():
+    """접속한 뒤 왼쪽 메뉴 안에서만 부름 (접속 화면에 빈 메뉴 칸이 생기지 않게)."""
+    _preload_editors()
 
 
 def _preload_editors():

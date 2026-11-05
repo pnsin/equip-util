@@ -143,6 +143,7 @@ ALIASES = [
 
 
 def sidebar(local: bool) -> None:
+    ui_style.preload_editors()
     with st.sidebar:
         ui_style.sidebar_brand()
         for group, pages in PAGES.items():
