@@ -60,6 +60,8 @@ TABLES = {
         ("chambers", "챔버ID"), ("ch_part", "채널(일부)"),
         # 몇 달짜리 기간 실적은 i-Tube 규칙(같은 해 · 2개월 이내) 때문에 달마다 한 줄씩 나눠 저장하고 같은 묶음ID로 이음
         ("series", "묶음ID"),
+        # 2026-11-05 수수료를 나눠·늦게 받을 때 받은 내역 (JSON: [{"date","amount","memo"}]). 사용료 = 합계
+        ("fee_log", "수수료 받은 내역"),
     ]),
     # 충방전기 챔버 구성 (건물 › 장비명 › 싸이클러 › 챔버 › 채널). 예전 '충방전기 장비사용 현황표' 엑셀과 같은 모양
     "channels": ("챔버구성", [
@@ -1509,7 +1511,7 @@ def _clean_log(rec: dict) -> dict:
     if "brn" in out:
         out["brn"] = digits(out["brn"])
     for k in ("purpose", "usage_type", "company", "dept", "industry", "item", "sub_item", "product",
-              "disclose", "detail", "include_holidays", "purpose_detail", "etc", "created_by", "chambers", "ch_part", "series"):
+              "disclose", "detail", "include_holidays", "purpose_detail", "etc", "created_by", "chambers", "ch_part", "series", "fee_log"):
         if k in out:
             out[k] = to_str(out[k])
     return out
