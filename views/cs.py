@@ -109,6 +109,15 @@ def _stats(df: pd.DataFrame) -> None:
         + "</div>", unsafe_allow_html=True)
 
 
+PARTS = ["제조파트", "시험파트"]
+
+
+def _part(use: str) -> str:
+    """장비용도로 파트 구분 (모르는 장비는 "" = 두 파트 모두에 보임)."""
+    u = str(use or "").strip()
+    return "제조파트" if u in ("생산", "제조") else "시험파트" if u in ("시험", "분석", "계측") else ""
+
+
 def _open(rid: str) -> None:
     st.session_state.cs_open = rid
     st.session_state.pop("cs_delask", None)
@@ -251,7 +260,8 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
 
 # ── 입력 카드 ────────────────────────────────────────────────
 
-def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], staff: list[str]) -> None:
+def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], staff: list[str],
+           part_of: dict) -> None:
     rid = st.session_state.get("cs_open")
     cur = None
     if rid != "new":
@@ -271,6 +281,8 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
             st.space("stretch")
             st.button("", icon=":material/close:", key="cs_close", help="닫기", on_click=_close)
         v_date = st.date_input("활동일", value=d0, format="YYYY-MM-DD", key=f"cs_d_{k}")
+        part0 = pre.get("kind") if pre.get("kind") in PARTS else None
+        v_part = st.segmented_control("파트", PARTS, default=part0, key=f"cs_p_{k}")
         v_title = st.text_input("제목", pre.get("title", ""), placeholder="예: 충방전기 장기 시험 일정 문의", key=f"cs_t_{k}")
         comp0 = pre.get("company") or None
         opts = companies + ([comp0] if comp0 and comp0 not in companies else [])
@@ -285,10 +297,12 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
         v_staff = c2.selectbox("TP담당자", sopts, index=sopts.index(staff0) if staff0 in sopts else None,
                                placeholder="선택", key=f"cs_s_{k}")
         eq0 = [label_of[i] for i in (pre.get("equip_list") or []) if i in label_of]
-        v_eq = st.multiselect("관련 장비", list(id_of), default=eq0, placeholder="여러 대 골라도 돼요", key=f"cs_e_{k}")
+        eq_opts = [n for n, i in id_of.items() if not v_part or part_of.get(i) in (v_part, "")]
+        eq_opts += [n for n in eq0 if n not in eq_opts]
+        v_eq = st.multiselect("관련 장비", eq_opts, default=eq0, placeholder="여러 대 골라도 돼요", key=f"cs_e_{k}")
         v_content = st.text_area("내용", pre.get("content", ""), height=90, key=f"cs_m_{k}")
 
-        rec = {"date": v_date, "title": v_title, "company": v_comp or "", "contact": v_contact,
+        rec = {"date": v_date, "kind": v_part or "", "title": v_title, "company": v_comp or "", "contact": v_contact,
                "staff": v_staff or "", "equip_ids": [id_of[x] for x in v_eq], "content": v_content}
         if st.session_state.get("cs_delask"):
             st.markdown('<div class="cs-ask">이 활동을 삭제할까요? 휴지통에서 다시 살릴 수 있어요.</div>',
@@ -332,6 +346,7 @@ def render() -> None:
     eq = db.load_equipment()
     label_of = dict(zip(eq["id"].astype(int), eq["label"]))
     id_of = {v: k for k, v in label_of.items()}
+    part_of = dict(zip(eq["id"].astype(int), (_part(u) for u in eq.get("use", pd.Series([""] * len(eq))))))
     companies = list(db.load_companies()["name"])
     staff = db.staff_names()
     added = st.session_state.pop("company_added", None)
@@ -361,6 +376,6 @@ def render() -> None:
             with left:
                 _cards(view, label_of)
             with right:
-                _panel(df, label_of, id_of, companies, staff)
+                _panel(df, label_of, id_of, companies, staff, part_of)
         else:
             _cards(view, label_of)
