@@ -17,7 +17,7 @@ import os
 import streamlit as st
 from core.terms import w
 
-SYSTEM_TITLE = w("장비 가동률 관리 시스템")
+SYSTEM_TITLE = "장비 관리 시스템"
 TEAM_NAME = "배터리산업팀"
 
 # ------------------------------------------------------------------ 테마 (색 토큰)

@@ -317,12 +317,12 @@ def test_performance_file_fills_old_sheet_layout(store):
                                                    today=D(2026, 11, 4))
     assert info["count"] == 2 and info["hours"] == 25  # 7/30~8/2 40h 중 8월 몫 20h + 5h
     wb = load_workbook(_io.BytesIO(data))
-    assert wb.sheetnames == ["가동데이터(2026)", "ooo_전체", "ooo_시험", "ooo_제조", "장비목록"]
+    assert wb.sheetnames == ["가동데이터(2026)", "가동률_전체", "가동률_시험", "가동률_제조", "장비목록"]
     ws = wb["가동데이터(2026)"]
     assert ws["A4"].value == "접수번호" and ws["P5"].value == "장비명" and ws["S5"].value.date() == D(2026, 8, 1)
     row = {ws.cell(8 + 1, c).value for c in range(1, 19)} | {ws.cell(10, c).value for c in range(1, 19)}
     assert "연구팀" in row and "제조" in row and "믹서(양극)" in row
-    allsh = wb["ooo_전체"]
+    allsh = wb["가동률_전체"]
     names = [allsh.cell(r, 2).value for r in range(8, 12)]
     assert names[0] == "시스템" and allsh.cell(8, 5).value == 25  # 세부장비 시간이 주장비에 더해짐
     assert allsh.cell(8, 6).value == 15  # 8/1: 세부 10 + 주장비 5

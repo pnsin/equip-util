@@ -1354,7 +1354,7 @@ def charger_ids(eq: pd.DataFrame | None = None, ch: pd.DataFrame | None = None) 
 
 
 def charger_caps() -> dict[int, tuple[float, int]]:
-    """ooo 계산용: 충방전기 장비 ID → (하루 최대 시간, 묶음 = 맨 위 주장비 ID).
+    """가동률 계산용: 충방전기 장비 ID → (하루 최대 시간, 묶음 = 맨 위 주장비 ID).
 
     같은 주장비 아래 충방전기 여러 대가 같은 날 돌아도 주장비 합계가 하루 최대 시간을 넘지 않게 묶어서 셉니다.
     """

@@ -85,7 +85,7 @@ def render_data() -> None:
         st.session_state.backup_file = db.backup_bytes()
     if st.session_state.get("backup_file"):
         st.download_button("전체 데이터 백업 내려받기", data=st.session_state.backup_file, mime=XLSX, icon=":material/download:",
-                           file_name=w(f"가동률관리_백업_{dt.date.today():%Y%m%d}.xlsx"), type="primary")
+                           file_name=(f"장비관리_백업_{dt.date.today():%Y%m%d}.xlsx"), type="primary")
     with st.expander("백업 파일로 복원 (현재 데이터를 모두 덮어씀)"):
         bk = st.file_uploader("백업 파일", type=["xlsx"], key="restore_file")
         ok = st.checkbox("현재 데이터가 모두 지워지고 백업 내용으로 바뀌는 것을 확인했습니다.")
