@@ -1451,7 +1451,18 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                                              label_visibility="collapsed") or "전체"
                 if g != "전체":
                     keep = short_of.get(cur["equip_id"]) if cur is not None else None
-                    eq_opts = [short_of[i] for i in pickable if cat_of.get(i) == g]
+                    in_g = [i for i in pickable if cat_of.get(i) == g]
+                    if g == CHARGER_GROUP and not chans.empty:  # 충방전기: 센터를 누르면 그 센터 충방전기만
+                        cen_of = {int(e): db.CENTER_SHORT.get(c, c) for e, c in zip(chans["equip_id"], chans["center"])
+                                  if pd.notna(e) and c}
+                        cens = [c for c in db.CENTERS if c in cen_of.values()]
+                        cur_cen = cen_of.get(int(cur["equip_id"])) if cur is not None else None
+                        if len(cens) > 1:
+                            cen = st.pills("센터", cens, default=cur_cen if cur_cen in cens else None,
+                                           key=f"ep_cen_{k}", label_visibility="collapsed")
+                            if cen:
+                                in_g = [i for i in in_g if cen_of.get(i) == cen]
+                    eq_opts = [short_of[i] for i in in_g]
                     if keep and keep not in eq_opts:
                         eq_opts.append(keep)
             v_eq = st.selectbox("장비", eq_opts, index=ix(eq_opts, short_of.get(cur["equip_id"]) if cur is not None else None),
@@ -1517,11 +1528,12 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 skip_ids = set(series["id"].astype(int)) | ({int(edit_id)} if edit_id else set())
                 busy = _busy_chambers(logs, v_ps, v_pe, skip_ids, chans)
                 ch_ids = [int(i) for i in mine["id"]]
-                ch_name = {int(i): c or f"{u} ch {n}".strip()  # 챔버 없는 충방전기는 장비명 · 채널로
+                # 충방전기 중심: 채널을 먼저, 챔버는 뒤에 작게 (챔버는 충방전기를 쓰면 같이 쓰는 것)
+                ch_name = {int(i): " · ".join(x for x in (f"ch {n}" if n else "", c) if x) or u
                            for i, c, u, n in zip(mine["id"], mine["chamber"], mine["unit"], mine["channels"])}
                 ch_cyc = dict(zip(mine["id"].astype(int), mine["cycler"]))
-                st.markdown("<div class='ep-chlab'>챔버</div>", unsafe_allow_html=True)
-                v_ch = st.pills("챔버", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",
+                st.markdown("<div class='ep-chlab'>채널</div>", unsafe_allow_html=True)
+                v_ch = st.pills("채널", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",
                                 default=[i for i in db.chamber_ids(cur.get("chambers")) if i in ch_ids] if cur is not None else None,
                                 format_func=lambda i: (ch_name.get(i) or f"#{i}") + (f" · {busy[i]}" if i in busy else ""),
                                 label_visibility="collapsed",
@@ -1533,7 +1545,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 if pill_css:
                     st.markdown(f"<style>{pill_css}</style>", unsafe_allow_html=True)
                 v_part = st.text_input("채널 일부", db.to_str(cur.get("ch_part")) if cur is not None else "",
-                                       placeholder="챔버 일부 채널만 쓰면 (예: 1-8)", key=f"ep_part_{k}",
+                                       placeholder="그중 일부 채널만 쓰면 (예: 1-8)", key=f"ep_part_{k}",
                                        label_visibility="collapsed")
             # 사용료는 시험이 끝난 뒤 따로 매기므로 입력 카드에서는 받지 않음 (고칠 때는 기존 값 그대로 둠)
             v_f = db.to_num(cur["fee"], 0) if cur is not None else 0
@@ -1565,10 +1577,10 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             if v_mode == "기간" and not chunks:
                 errors.append("기간에 시간을 넣을 날이 없어요. 종료일이나 '주말·공휴일 빼기'를 확인하세요.")
             if not mine.empty and not v_ch:
-                errors.append("챔버를 고르세요.")
+                errors.append("채널을 고르세요.")
             clash = [f"{ch_name.get(i, i)}({busy[i]})" for i in v_ch if i in busy] if not mine.empty else []
             if clash:
-                errors.append("그 기간에 이미 쓰는 챔버예요: " + ", ".join(clash))
+                errors.append("그 기간에 이미 쓰는 채널이에요: " + ", ".join(clash))
             if not v_eq:
                 errors.append("장비를 고르세요.")
             if not v_staff:
