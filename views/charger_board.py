@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from core import chargers, db
+from ui_style import page_header
 from views.calendar_entry import CATS, CHARGER_GROUP, PURPOSE_CAT
 
 CSS = """<style>
@@ -60,7 +61,7 @@ DASH = "<span class='cb-dash'>—</span>"
 
 def _book_new() -> None:
     """'충방전기 예약': 달력 화면에서 오늘 입력 카드를 '시험(충방전기)' 장비로 엶."""
-    st.session_state.in_view = "달력"
+    st.session_state.cb_go_input = True
     st.session_state.cal_open = True
     st.session_state.cal_lane = CHARGER_GROUP
     st.session_state.pop("cal_pick", None)
@@ -71,7 +72,7 @@ def _book_new() -> None:
 def _edit(b: dict) -> None:
     """현황판에서 고른 예약을 달력 입력 카드로 열어 고침 (기간·챔버·업체 등)."""
     d = b["start"]
-    st.session_state.in_view = "달력"
+    st.session_state.cb_go_input = True
     st.session_state.cal_open = True
     st.session_state.pop("cal_lane", None)
     st.session_state.cal_day = d
@@ -95,6 +96,10 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool) -> str:
 
 
 def render() -> None:
+    from views import common
+    if st.session_state.pop("cb_go_input", False) and "input" in common.PAGES:
+        st.switch_page(common.PAGES["input"])  # 예약·고치기는 실적 입력 달력 카드에서
+    page_header("충방전기 현황", "현황")
     st.markdown(CSS, unsafe_allow_html=True)
     ch = db.load_channels()
     logs = db.load_logs()

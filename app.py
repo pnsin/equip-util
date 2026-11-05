@@ -100,6 +100,7 @@ PAGES = {
     "현황": [
         st.Page(dashboard.render, title="대시보드", url_path="home", default=True),
         st.Page(equip_detail.render, title="장비별 가동률", url_path="equip"),
+        st.Page(charger_board.render, title="충방전기 현황", url_path="chargers"),
     ],
     "실적": [
         st.Page(input_page.render, title="실적 입력", url_path="input"),
