@@ -197,19 +197,13 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
             kids_of.setdefault(int(r.parent_id), []).append(r.name)
 
     center = common.center_pick("info_center")
-    c1, c2, c3 = st.columns([3, 1.1, 1], vertical_alignment="center")
+    c1, c2 = st.columns([3, 1.1], vertical_alignment="center")
     with c1:
         q = search_box("info_q", "장비명 · ITUBE번호 · 모델명 · 사양으로 찾기")
     with c2:
         view = st.segmented_control("보기", ["카드", "목록"], default="카드", key="info_view",
                                     label_visibility="collapsed") or "카드"
-    all_lv = c3.toggle("세부장비까지", key="info_all", help="장비 아래의 세부장비도 카드로 봅니다.")
-    groups = [g for g in dict.fromkeys(eq["group"]) if g]
-    pick = st.pills("대분류", groups, selection_mode="multi", key="info_groups", label_visibility="collapsed")
-
-    df = eq if all_lv else eq[eq["depth"] == 0]
-    if pick:
-        df = df[df["group"].isin(pick)]
+    df = eq[eq["depth"] == 0]  # 세부장비는 장비 한 대 화면에서 봄
     if center:
         cen = db.equip_centers(eq)
         df = df[df["id"].astype(int).map(cen).eq(center)]
@@ -221,7 +215,7 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
                + " " + df["id"].map(lambda i: " ".join(kids_of.get(int(i), []))))
         df = df[hay.str.contains(q, case=False, regex=False)]
     if df.empty:
-        empty_state("찾는 장비가 없어요", "검색어나 대분류 선택을 바꿔 보세요.")
+        empty_state("찾는 장비가 없어요", "검색어나 센터 선택을 바꿔 보세요.")
         return
 
     if view == "목록":
