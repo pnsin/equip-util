@@ -1182,6 +1182,28 @@ def check_companies(edited: pd.DataFrame) -> list[str]:
     return errors
 
 
+def sync_company_contact(name: str, contact: str, phone: str) -> None:
+    """견적서에 적은 업체 담당자·전화번호를 업체 정보에도 반영 (없는 업체면 새로 추가)."""
+    name, phone = to_str(name), to_str(phone)
+    contact = to_str(contact).removesuffix("님").strip()
+    if not name:
+        return
+    df = load_companies()
+    hit = df["name"] == name
+    if not hit.any():
+        new = {c: "" for c in COMPANY_TEXT} | {"id": None, "name": name, "contact": contact, "phone": phone}
+        save_companies(pd.concat([df, pd.DataFrame([new])], ignore_index=True))
+        return
+    i = df.index[hit][0]
+    changed = False
+    for col, v in (("contact", contact), ("phone", phone)):
+        if v and df.at[i, col] != v:
+            df.at[i, col] = v
+            changed = True
+    if changed:
+        save_companies(df)
+
+
 def save_companies(edited: pd.DataFrame) -> None:
     store = get_store()
     current = store.read("companies")
