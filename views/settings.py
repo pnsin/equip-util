@@ -1,4 +1,3 @@
-import base64
 import datetime as dt
 
 import streamlit as st
@@ -14,60 +13,45 @@ def render() -> None:
     page_header("설정", "관리")
     msg = st.session_state.pop("settings_saved", None)
     if msg:
-        st.success(msg, icon=":material/check_circle:")
         st.toast(msg, icon=":material/check_circle:")
     cfg = db.get_settings()
 
     st.subheader("기본 정보")
     with st.form("basic"):
-        c1, c2, c3 = st.columns(3)
-        org = c1.text_input("기관·팀명 (파일 이름에 사용)", value=cfg.get("org_name", ""))
-        suffix = c2.text_input("파일 이름 끝 문구", value=cfg.get("org_suffix", ""))
-        dept = c3.text_input("내부부서명 기본값", value=cfg.get("dept_default", ""))
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
+        dept = c1.text_input("부서명", value=cfg.get("dept_default", ""))
+        team = c2.text_input("팀명", value=cfg.get("team_name") or _team_from(cfg))
+        c1, c2 = st.columns(2)
         annual = c1.number_input("연간 기준 가용시간 (h)", min_value=1, step=100, value=int(cfg.get("annual_hours") or 2000),
                                  help="장비별로 다르면 '기준 정보 › 장비'에서 장비마다 따로 지정할 수 있습니다.")
         target = c2.number_input(w("목표 가동률 (%)"), min_value=0.0, max_value=100.0, step=5.0,
                                  value=float(cfg.get("target_util") or 0))
-        modes = {"spread": "사용기간에 고르게 나눔 (권장)", "start": "사용시작일에 전부 반영"}
-        mode = c3.selectbox("기간별 집계 방식", list(modes), format_func=modes.get,
-                            index=list(modes).index(cfg.get("alloc_mode", "spread")),
-                            help="예: 7/25~8/10 실적 20시간을 7월·8월에 일수만큼 나눌지, 7월에 모두 넣을지")
         st.markdown("**대시보드 보기**")
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
         kinds = ["주", "월", "분기", "반기", "연"]
         dkind = c1.selectbox("처음 열 때 기간 단위", kinds, index=kinds.index(cfg.get("default_period", "월"))
                              if cfg.get("default_period") in kinds else 1)
-        idle = c2.number_input("저활용·유휴 후보 기준 (일)", min_value=7, max_value=730, step=10,
-                               value=int(cfg.get("idle_days") or 90),
-                               help="이 날수 넘게 사용 기록이 없는 장비를 대시보드에서 따로 보여 줍니다.")
-        top_n = c3.number_input("장비별 그래프 최대 대수", min_value=5, max_value=100, step=5,
+        top_n = c2.number_input("장비별 그래프 최대 대수", min_value=5, max_value=100, step=5,
                                 value=int(cfg.get("chart_top") or 25))
         if st.form_submit_button("설정 저장", type="primary", icon=":material/save:"):
-            db.save_settings(org_name=org.strip(), org_suffix=suffix.strip(), dept_default=dept.strip(),
-                             annual_hours=annual, target_util=target, alloc_mode=mode,
-                             default_period=dkind, idle_days=int(idle), chart_top=int(top_n))
+            dept, team = dept.strip(), team.strip()
+            db.save_settings(org_name=" ".join(x for x in (dept, team) if x), org_suffix="",
+                             dept_default=dept, team_name=team, annual_hours=annual, target_util=target,
+                             alloc_mode="spread", default_period=dkind, chart_top=int(top_n))
             st.session_state.settings_saved = "설정을 저장했습니다."
             st.rerun()
 
-    st.subheader("i-Tube 공식 빈 양식")
-    if cfg.get("template_b64"):
-        st.success("공식 양식 등록됨", icon=":material/check_circle:")
-        if st.button("등록된 양식 지우기"):
-            db.save_settings(template_b64="")
-            st.rerun()
-    tpl = st.file_uploader("i-Tube에서 받은 빈 양식 (.xlsx)", type=["xlsx"], key="tpl_file")
-    if tpl is not None and st.button("이 파일을 양식으로 등록"):
-        db.save_settings(template_b64=base64.b64encode(tpl.getvalue()).decode())
-        st.session_state.settings_saved = "공식 양식을 등록했습니다."
-        st.rerun()
+
+def _team_from(cfg: dict) -> str:
+    """예전 '기관·팀명'에서 부서명을 뺀 나머지를 팀명으로."""
+    org, dept = cfg.get("org_name", ""), cfg.get("dept_default", "")
+    return org[len(dept):].strip() if dept and org.startswith(dept) else org
 
 
 def render_data() -> None:
     page_header("가져오기 · 백업", "관리")
     msg = st.session_state.pop("settings_saved", None)
     if msg:
-        st.success(msg, icon=":material/check_circle:")
         st.toast(msg, icon=":material/check_circle:")
     st.subheader("기존 엑셀 실적 가져오기")
     up = st.file_uploader("i-Tube 장비일지 파일", type=["xlsx"], key="import_file",

@@ -13,7 +13,7 @@ def render() -> None:
     page_header("휴지통 · 기록", "관리")
     msg = st.session_state.pop("trash_saved", None)
     if msg:
-        st.success(msg, icon=":material/check_circle:")
+        st.toast(msg, icon=":material/check_circle:")
     tab_trash, tab_hist = st.tabs(["휴지통", "수정 기록"])
 
     with tab_trash:
@@ -24,8 +24,9 @@ def render() -> None:
             c1, c2 = st.columns([1, 2])
             kinds = c1.multiselect("종류", list(KIND.values()), placeholder="전체", key="trash_kind")
             q = c2.text_input("검색", placeholder="장비·업체·이름으로 찾기", key="trash_q", icon=":material/search:")
+            all_on = st.checkbox("전체 선택", key="trash_all", on_change=lambda: st.session_state.pop("trash_editor", None))
             view = pd.DataFrame({
-                "선택": False, "종류": tr["table"].map(KIND).fillna(tr["table"]), "내용": tr["summary"],
+                "선택": all_on, "종류": tr["table"].map(KIND).fillna(tr["table"]), "내용": tr["summary"],
                 "지운 사람": tr["deleted_by"], "지운 시각": tr["deleted_at"], "id": tr["id"],
             })
             if kinds:
@@ -39,20 +40,28 @@ def render() -> None:
                                "내용": st.column_config.TextColumn(width="large"),
                                "지운 시각": st.column_config.DatetimeColumn(format="YYYY-MM-DD HH:mm")})
             picked = list(edited.loc[edited["선택"].fillna(False).astype(bool), "id"])
-            c1, c2, _ = st.columns([1.2, 1.2, 3])
-            if c1.button(f"되살리기 ({len(picked)})", type="primary", icon=":material/restore_from_trash:",
+            c1, c2, _, c4 = st.columns([1.2, 1.2, 1.4, 1.2])
+            if c1.button(f"데이터 복구 ({len(picked)})", type="primary", icon=":material/restore_from_trash:",
                          disabled=not picked, width="stretch"):
                 res = db.restore_trash(picked)
                 st.session_state.trash_saved = (f"{res['restored']}건을 되살렸습니다."
                                                 + (f" 이미 있는 실적 {res['skipped']}건은 건너뛰었습니다." if res["skipped"] else ""))
                 st.session_state.pop("trash_editor", None)
                 st.rerun()
-            with c2.popover("영구 삭제", icon=":material/delete_forever:", disabled=not picked, width="stretch"):
+            with c2.popover(f"영구 삭제 ({len(picked)})", icon=":material/delete_forever:", disabled=not picked, width="stretch"):
                 st.markdown(f"고른 {len(picked)}건을 휴지통에서도 지웁니다. 다시 되살릴 수 없습니다.")
                 if st.button("영구 삭제", type="primary", key="purge_go"):
                     n = db.purge_trash(picked)
                     st.session_state.trash_saved = f"{n}건을 영구 삭제했습니다."
                     st.session_state.pop("trash_editor", None)
+                    st.rerun()
+            with c4.popover("휴지통 비우기", icon=":material/delete_sweep:", width="stretch"):
+                st.markdown(f"휴지통의 {len(tr)}건을 모두 지웁니다. 다시 되살릴 수 없습니다.")
+                if st.button("모두 비우기", type="primary", key="purge_all"):
+                    n = db.purge_trash(list(tr["id"]))
+                    st.session_state.trash_saved = f"{n}건을 영구 삭제했습니다."
+                    st.session_state.pop("trash_editor", None)
+                    st.session_state.pop("trash_all", None)
                     st.rerun()
 
     with tab_hist:
