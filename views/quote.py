@@ -184,6 +184,16 @@ def _next_no(day: dt.date) -> str:
     return quote_doc.make_no(day, n)
 
 
+# 장비사용료 할인 기준 (고르면 할인율이 들어가고, 숫자는 직접 고칠 수 있음)
+DISC_RULES = {
+    "제조": {"max": 20, "help": "제조장비 최대 20%",
+             "opts": {"지역기업 10%": 10, "회원사 5%": 5, "장기사용 5%": 5}},
+    "시험": {"max": 30, "help": "시험평가장비 최대 30% · 지역기업·회원사는 제조장비 할인율을 더해요",
+             "opts": {"장기 100~300h 10%": 10, "장기 301~500h 15%": 15, "장기 501h↑ 20%": 20,
+                      "지역기업 10%": 10, "회원사 5%": 5}},
+}
+
+
 def _blank(form: str = "제조", writer: str = "") -> dict:
     today = dt.date.today()
     staff = _staff_map()
@@ -391,6 +401,16 @@ def render_new() -> None:
             st.rerun()
         d["lines"] = new_lines
         l1, l2 = DISC_LABELS[form]
+        rules = DISC_RULES[form]
+        picked = st.pills("할인 기준", list(rules["opts"]), selection_mode="multi", key=f"q_dpick_{ver}",
+                          default=d.get("disc_pick") or [], help=rules["help"])
+        if picked != (d.get("disc_pick") or []):
+            d["disc_pick"] = picked
+            long_ = [rules["opts"][p] for p in picked if p.startswith("장기")]
+            rest = [rules["opts"][p] for p in picked if not p.startswith("장기")]
+            d["disc1"] = min(rules["max"], sum(rest) + (max(long_) if long_ else 0)) or None
+            _bump(d)
+            st.rerun()
         c1, c2, _ = st.columns([1, 1, 1.4])
         d["disc1"] = c1.number_input(f"{l1} (%)", min_value=0.0, max_value=100.0, step=1.0, format="%g",
                                      value=float(db.to_num(d.get("disc1"), 0) or 0), key=f"q_d1_{ver}") or None

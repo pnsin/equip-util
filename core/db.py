@@ -452,7 +452,11 @@ def _snapshot() -> dict[str, pd.DataFrame]:
 
 
 def _tab(t: str) -> pd.DataFrame:
-    return _snapshot()[t].copy()
+    df = _snapshot()[t].copy()
+    for c in cols(t) if t in TABLES else ():  # 시트에 아직 없는 새 열은 빈 칸으로 (앱 재시작 전)
+        if c not in df.columns:
+            df[c] = ""
+    return df
 
 
 def refresh_data() -> None:
