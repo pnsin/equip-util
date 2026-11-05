@@ -72,7 +72,7 @@ def rate_devices(eq: pd.DataFrame) -> pd.DataFrame:
     return eq[keep]
 
 
-def rate_table(eq: pd.DataFrame, rates: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+def rate_table(eq: pd.DataFrame, rates: pd.DataFrame, chargers: set | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """(장비 줄, 시험·기타 항목 줄). 장비 줄은 장비 목록 순서, 단가가 없는 장비도 빈 칸으로 보여 줌."""
     dev = rate_devices(eq)
     by_eq = {}
@@ -87,8 +87,8 @@ def rate_table(eq: pd.DataFrame, rates: pd.DataFrame) -> tuple[pd.DataFrame, pd.
             "id": _n(r.get("id")), "equip_id": int(d["id"]), "group": _s(d.get("group")),
             "equip": _s(d.get("short")) or _s(d.get("name")),
             "name": _s(r.get("name")) or _s(d.get("name")), "spec": _s(r.get("spec")),
-            "unit": _s(r.get("unit")) or "hr", "price_req": _n(r.get("price_req")),
-            "price_self": _n(r.get("price_self")), "note": _s(r.get("note")),
+            "unit": _s(r.get("unit")) or ("ch" if int(d["id"]) in (chargers or ()) else "hr"),
+            "price_req": _n(r.get("price_req")), "price_self": _n(r.get("price_self")), "note": _s(r.get("note")),
             "_named": bool(_s(r.get("name"))) and _s(r.get("name")) != _s(d.get("name")),
         })
     devices = pd.DataFrame(rows, columns=["id", "equip_id", "group", "equip", "name", "spec", "unit", "price_req",
@@ -139,7 +139,7 @@ def option_price(opt: dict, mode: str):
 # ── 견적 줄 편집 ────────────────────────────────────────────────
 
 LINE_KEYS = ("key", "pick", "mode", "name", "spec", "note", "count", "qty", "unit", "price", "difficulty",
-             "amount", "manual")
+             "amount", "manual", "ch")
 
 
 def new_line(form: str) -> dict:
@@ -190,6 +190,8 @@ def apply_line_edits(form: str, prev: list[dict], edited: list[dict], options: d
                     ln["spec"] = opt["spec"] if form == "제조" else (ln.get("spec") or "")
                 if opt.get("unit") and form == "제조":
                     ln["unit"] = opt["unit"]
+            if _s(opt.get("unit")) == "ch" and _n(ln.get("ch")) is None:
+                ln["ch"] = 1  # ch당 단가 → 채널 수를 넣게
             price = option_price(opt, _s(ln.get("mode")))
             if price is not None:
                 ln["price"] = price

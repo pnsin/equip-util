@@ -60,18 +60,26 @@ def _won(v) -> str:
 # 장비 단가
 # ══════════════════════════════════════════════════════════════
 
+def _rk(r: dict) -> str:
+    """표 줄 고정 키: 장비 줄은 e+장비ID, 시험·기타 항목은 x+단가ID."""
+    e = quotes._n(r.get("equip_id"))
+    return f"e{int(e)}" if e is not None and r.get("kind") == "장비" else f"x{quotes._s(r.get('id'))}"
+
+
 def render_rates() -> None:
+    """2026-11-05: 장비 줄 + 시험·기타 항목을 한 표로 (장비 목록처럼). 충방전기는 ch당 단가."""
     page_header("장비 단가", "기준 정보")
     msg = st.session_state.pop("rates_saved", None)
     if msg:
         st.toast(msg, icon=":material/check_circle:")
     eq = db.load_equipment()
-    devices, extras = quotes.rate_table(eq, db.load_rates())
+    devices, extras = quotes.rate_table(eq, db.load_rates(), db.charger_ids(eq))
     ver = st.session_state.get("rates_ver", 0)
     ss = st.session_state
-    # 고친 내용은 저장 전까지 여기 모아 둠 (대분류를 바꿔 봐도 고친 값이 남게)
-    if ss.get("rate_work_ver") != ver:
-        ss.rate_work = {int(r["equip_id"]): r for r in _records(devices)}
+    if ss.get("rate_work_ver") != ver:  # 고친 내용은 저장 전까지 여기 (보기를 바꿔도 남게)
+        rows = [r | {"kind": "장비"} for r in _records(devices)] + \
+               [r | {"kind": "항목", "group": "", "equip": ""} for r in _records(extras)]
+        ss.rate_work = {_rk(r): r for r in rows}
         ss.rate_work_ver = ver
     work: dict = ss.rate_work
     rows = list(work.values())
@@ -81,22 +89,24 @@ def render_rates() -> None:
         st.markdown(f'<div class="q-tile q-inline"><b style="color:var(--ok)">{filled}</b><span>단가 있음</span></div>'
                     f'<div class="q-tile q-inline"><b style="color:var(--warn)">{len(rows) - filled}</b>'
                     f'<span>비어 있음</span></div>', unsafe_allow_html=True)
-    xl = pd.DataFrame(rows, columns=list(devices.columns)).assign(id=lambda d: d["equip_id"])
+    dev_rows = [r for r in rows if r["kind"] == "장비"]
+    xl = pd.DataFrame(dev_rows, columns=list(devices.columns)).assign(id=lambda d: d["equip_id"])
 
     def _apply_xl(m):
         for r in m.to_dict("records"):
             rid = db.to_num(r.get("id"))
-            if rid is not None and int(rid) in work:
-                work[int(rid)].update({c: r.get(c) for c in ("name", "spec", "unit", "price_req", "price_self", "note")})
-        _save_rates(eq, work, _records(extras))
+            if rid is not None and f"e{int(rid)}" in work:
+                work[f"e{int(rid)}"].update({c: r.get(c) for c in RATE_COLS})
+        _save_rates(eq, list(work.values()))
         return []
 
     with st.container(horizontal=True, vertical_alignment="center"):
         excel_box("rate_xl", xl, RATE_XL, "장비단가", _apply_xl)
         only_missing = st.toggle("비어 있는 것만", key="rate_missing")
-    key = f"rate_dev_{ver}_{only_missing}"
+    key = f"rate_tbl_{ver}_{only_missing}"
     if ss.get("rate_base_key") != key:  # 표 원본은 이 보기에서 처음 그릴 때 한 번만 만듦
-        view = pd.DataFrame(rows, columns=list(devices.columns))
+        view = pd.DataFrame(rows, columns=["rk", "kind", "id", "equip_id", "group", "equip"] + RATE_COLS)
+        view["rk"] = [_rk(r) for r in rows]
         view["확인"] = ["비어 있음" if quotes.is_missing(r) else "" for r in rows]
         if only_missing:
             view = view[view["확인"] != ""]
@@ -104,65 +114,61 @@ def render_rates() -> None:
             view[c] = pd.to_numeric(view[c], errors="coerce")
         ss.rate_base, ss.rate_base_key = view.reset_index(drop=True), key
     base = ss.rate_base
-    ed_dev = st.data_editor(
-        base, key=key, hide_index=True, width="stretch", height=min(700, 38 + 35 * (len(base) + 1)),
-        num_rows="fixed",
+    ed = st.data_editor(
+        base, key=key, hide_index=True, width="stretch", height=min(760, 38 + 35 * (len(base) + 2)),
+        num_rows="dynamic",
         column_order=["group", "equip", "name", "spec", "unit", "price_req", "price_self", "note", "확인"],
         disabled=["group", "equip", "확인"],
         column_config={
             "group": st.column_config.TextColumn("대분류", width="small"),
-            "equip": st.column_config.TextColumn("장비", width="medium"),
-            "name": st.column_config.TextColumn("견적서 장비명", width="medium",
-                                                help="견적서에 찍히는 이름. 견적서에서 장비를 고르면 이 이름이 들어가요."),
+            "equip": st.column_config.TextColumn("장비", width="medium",
+                                                 help="비어 있는 줄은 장비 목록에 없는 시험·기타 항목 (맨 아래에 줄을 더해 넣어요)"),
+            "name": st.column_config.TextColumn("견적서 이름", width="medium",
+                                                help="견적서에 찍히는 장비명·항목명. 견적서에서 고르면 이 이름이 들어가요."),
             "spec": st.column_config.TextColumn("용량", width="small", help="견적서 '용량' 칸 기본값 (예: 50Ah)"),
-            "unit": st.column_config.SelectboxColumn("단위", options=UNITS, width="small"),
+            "unit": st.column_config.SelectboxColumn("단위", options=UNITS, width="small", default="hr",
+                                                     help="충방전기는 ch → 단가는 채널 1개 · 1시간 단가, 견적서에서 채널 수를 넣으면 곱해져요."),
             "price_req": st.column_config.NumberColumn("의뢰 단가", format=NUM, min_value=0,
-                                                       help="우리가 운전할 때 시간당 단가"),
+                                                       help="우리가 운전할 때 시간당 단가 (ch 단위면 ch당)"),
             "price_self": st.column_config.NumberColumn("직접 단가", format=NUM, min_value=0,
-                                                        help="업체가 직접 쓸 때 시간당 단가"),
+                                                        help="업체가 직접 쓸 때 시간당 단가 (ch 단위면 ch당)"),
             "note": st.column_config.TextColumn("비고", width="medium"),
             "확인": st.column_config.TextColumn("", width="small"),
         })
-    for r in _records(ed_dev):
-        cur = work.get(int(r["equip_id"]))
+    shown = set(base["rk"])
+    for r in _records(ed):
+        cur = work.get(quotes._s(r.get("rk")))
         if cur is not None:
-            cur.update({c: r.get(c) for c in ("name", "spec", "unit", "price_req", "price_self", "note")})
-
-    st.markdown('<div class="q-sub" style="margin-top:1rem">시험 · 기타 항목</div>', unsafe_allow_html=True)
-    ed_ex = st.data_editor(
-        extras, key=f"rate_ex_{ver}", hide_index=True, width="stretch", num_rows="dynamic",
-        height=min(560, 38 + 35 * (len(extras) + 2)),
-        column_order=["name", "spec", "unit", "price_req", "note"],
-        column_config={
-            "name": st.column_config.TextColumn("항목", width="large", required=True,
-                                                help="장비 목록에 없는 것 (예: 클린룸, 항온항습기 · 고온시험)"),
-            "spec": st.column_config.TextColumn("용량", width="small"),
-            "unit": st.column_config.SelectboxColumn("단위", options=UNITS, width="small", default="hr"),
-            "price_req": st.column_config.NumberColumn("단가", format=NUM, min_value=0, help="시간당 단가"),
-            "note": st.column_config.TextColumn("비고", width="large"),
-        })
+            cur.update({c: r.get(c) for c in RATE_COLS})
     if st.button("단가 저장", type="primary", icon=":material/save:"):
-        _save_rates(eq, work, _records(ed_ex))
+        kept = {quotes._s(r.get("rk")) for r in _records(ed)}
+        out = [r for k, r in work.items() if k not in shown or k in kept]  # 표에서 지운 줄은 빼고
+        out += [{c: r.get(c) for c in RATE_COLS} | {"kind": "항목", "id": None, "equip_id": None}
+                for r in _records(ed) if not quotes._s(r.get("rk")) and quotes._s(r.get("name"))]
+        _save_rates(eq, out)
         ss.rates_saved = "단가를 저장했어요."
         st.rerun()
 
 
+RATE_COLS = ["name", "spec", "unit", "price_req", "price_self", "note"]
 RATE_XL = {"group": "대분류", "equip": "장비(참고)", "name": "견적서 장비명", "spec": "용량", "unit": "단위",
            "price_req": "의뢰 단가", "price_self": "직접 단가", "note": "비고"}
 
 
-def _save_rates(eq: pd.DataFrame, work: dict, extras: list[dict]) -> None:
+def _save_rates(eq: pd.DataFrame, rows: list[dict]) -> None:
     name_of = dict(zip(eq["id"].astype(int), eq["name"]))
     out = []
-    for eid, r in work.items():
-        r = dict(r, equip_id=eid)
-        dname = name_of.get(eid, "")
-        r["_named"] = quotes._s(r.get("name")) not in ("", dname)
-        if not r["_named"]:
-            r["name"] = dname
+    for r in rows:
+        r = dict(r)
+        if r.get("kind") == "장비":
+            dname = name_of.get(int(r["equip_id"]), "")
+            r["_named"] = quotes._s(r.get("name")) not in ("", dname)
+            if not r["_named"]:
+                r["name"] = dname
+        elif not quotes._s(r.get("name")):
+            continue
         out.append(r)
-    ex_rows = [dict(r, price_self=r.get("price_self")) for r in extras if quotes._s(r.get("name"))]
-    db.save_rates(out + ex_rows)
+    db.save_rates(out)
     st.session_state.rates_ver = st.session_state.get("rates_ver", 0) + 1
     st.session_state.pop("rate_base_key", None)
 
@@ -271,9 +277,11 @@ def _line_columns(form: str, options: list[str]) -> tuple[list[str], dict]:
     price = st.column_config.NumberColumn("단가", format=NUM, min_value=0, help="시간당 단가")
     mode = st.column_config.SelectboxColumn("이용", options=list(quotes.MODES), width="small",
                                             help="의뢰 = 우리가 운전 · 직접 = 업체가 직접 사용")
+    ch = st.column_config.NumberColumn("채널", min_value=0, step=1, width="small", format="%d",
+                                       help="충방전기처럼 ch당 단가일 때 쓰는 채널 수. 금액 = 단가 × 채널 수. 비우면 1")
     if form == "시험":
-        order = ["pick", "mode", "spec", "name", "count", "qty", "price", "difficulty", "amount", "manual"]
-        cfg = {"pick": pick, "mode": mode,
+        order = ["pick", "mode", "spec", "name", "count", "qty", "ch", "price", "difficulty", "amount", "manual"]
+        cfg = {"pick": pick, "mode": mode, "ch": ch,
                "spec": st.column_config.TextColumn("품명", width="medium"),
                "name": st.column_config.TextColumn("장비명/시험명", width="medium"),
                "count": st.column_config.NumberColumn("수량", min_value=0, width="small"),
@@ -282,8 +290,8 @@ def _line_columns(form: str, options: list[str]) -> tuple[list[str], dict]:
                "difficulty": st.column_config.NumberColumn("난이도", min_value=0, step=0.1, width="small", format="%.1f"),
                "amount": amount, "manual": manual}
     else:
-        order = ["pick", "mode", "name", "spec", "note", "qty", "unit", "price", "amount", "manual"]
-        cfg = {"pick": pick, "mode": mode,
+        order = ["pick", "mode", "name", "spec", "note", "qty", "unit", "ch", "price", "amount", "manual"]
+        cfg = {"pick": pick, "mode": mode, "ch": ch,
                "name": st.column_config.TextColumn("장비명", width="medium"),
                "spec": st.column_config.TextColumn("용량", width="small"),
                "note": st.column_config.TextColumn("비고", width="medium"),
@@ -316,7 +324,7 @@ def render_new() -> None:
     d = _draft()
     ver = st.session_state.get("q_ver", 0)
     eq = db.load_equipment()
-    devices, extras = quotes.rate_table(eq, db.load_rates())
+    devices, extras = quotes.rate_table(eq, db.load_rates(), db.charger_ids(eq))
     options = quotes.pick_options(devices, extras)
     comp = db.load_companies()
     companies = {r["name"]: r for r in comp.to_dict("records")}
