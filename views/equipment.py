@@ -18,6 +18,7 @@ from views.common import (center_pick, excel_box, merge_edits, pin_table, unpin,
 
 KPI_COL = w("가동률 산정")
 TREE = "　"          # 구조 표시 칸 (읽기 전용)
+OPEN = "펼침"         # 세부장비가 있는 장비: 체크하면 세부장비를 펼침 (처음엔 모두 접힘)
 PARENT = "소속 장비"  # 상위 장비 (고르면 세부장비가 됨)
 NO_PARENT = "—"       # 소속 없음 (독립 장비)
 
@@ -29,13 +30,10 @@ COLS = {
     "system": "시스템 구성", "annual_hours": "연간기준시간", "acquired_on": "도입일", "retired_on": "불용일",
     "in_kpi": KPI_COL, "note": "비고",
 }
-BASIC = [TREE, "장비명(한글)", "대분류", "주장비(종)", PARENT, "ITUBE번호", "장비구분", "대수", "관리자", "장비위치",
+BASIC = [OPEN, TREE, "장비명(한글)", "대분류", "주장비(종)", PARENT, "ITUBE번호", "장비구분", "대수", "관리자", "장비위치",
          "장비용도"]
 # 2026-11-05 장비 단가를 장비 목록에 합침: '단가' 를 켜면 이 열들이 보이고, 저장하면 단가 탭에 같이 저장
 RATE = {"name": "견적서 이름", "spec": "견적 용량", "unit": "단위", "price_req": "의뢰 단가", "price_self": "직접 단가"}
-PRICE_COLS = [TREE, "장비명(한글)", "ITUBE번호"] + list(RATE.values())
-ALL = ([TREE, "장비명(한글)", "대분류", "주장비(종)", PARENT]
-       + [c for c in COLS.values() if c not in ("id", "대분류", "주장비(종)", "장비명(한글)", "불용일")])
 
 CSS = """<style>
 .eq-sum {display:flex; flex-wrap:wrap; gap:.5rem; margin:-.2rem 0 1rem;}
@@ -102,34 +100,45 @@ def render() -> None:
     with st.container(horizontal=True, vertical_alignment="center"):
         center = center_pick("equip_center")
         excel_box("equip_xl", eq, xl_heads, "장비", _apply_xl)
-    c1, c2, c3, c4 = st.columns([3, 1, 1, 1], vertical_alignment="center")
-    with c1:
-        q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호")
-    only_top = c3.toggle("장비만", key="equip_only_top", help="세부장비를 접고 장비만 봅니다.")
-    price = c2.toggle("단가", key="equip_price", help="견적서에 쓰는 단위·단가를 봅니다. 충방전기는 ch당 단가.")
-    all_cols = c4.toggle("모든 열", key="equip_all_cols", help="제조사·구매처·자산번호·도입일 같은 열까지 봅니다.")
+    q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호")
 
+    # 접기·펼치기: 처음엔 맨 위 장비만, '펼침'을 체크하면 그 아래 세부장비가 보임 (검색 중엔 모두 보임)
+    opened: set = st.session_state.setdefault("equip_open", set())
+    par = {int(i): (int(p) if pd.notna(p) else None) for i, p in zip(eq["id"], eq["parent_id"])}
+    has_kids = {p for p in par.values() if p is not None}
+    view.insert(0, OPEN, [(int(i) in opened) if int(i) in has_kids else None for i in eq["id"]])
     view, newer = pin_table("equip_editor_", view)
+    view[OPEN] = [(int(i) in opened) if pd.notna(i) and int(i) in has_kids else None for i in view["id"]]
+
+    def _visible(i) -> bool:
+        p = par.get(int(i)) if pd.notna(i) else None
+        while p is not None:
+            if p not in opened:
+                return False
+            p = par.get(p)
+        return True
     mask = pd.Series(True, index=view.index)
     if q:
         hay = view[["장비명(한글)", "ITUBE번호", "관리자", "자산번호", "주장비(종)", "모델명"]].astype(str).agg(" ".join, axis=1)
         mask &= hay.str.contains(q, case=False, regex=False)
-    if only_top:
-        mask &= view[TREE] == "■"
+    if not q:
+        mask &= view["id"].map(_visible)
     if center:
         cen = db.equip_centers(eq)
         mask &= pd.to_numeric(view["id"], errors="coerce").map(cen).eq(center)
-    filtered = bool(q or only_top or center)
+    filtered = True
+    ekey = f"equip_editor_{q}_{hash(frozenset(opened))}"
 
     kinds = list(dict.fromkeys(seed.EQUIP_KINDS_ALL + [k for k in eq["kind"] if k]))
     cats = list(dict.fromkeys(["단독장비", "시스템장비", "시스템시설", "단독장비(복수구매)"] + [c for c in eq["category"] if c]))
     uses = list(dict.fromkeys(list(seed.PURPOSES) + ["제조"] + [u for u in eq["use"] if u]))
     edited, shown = filtered_editor(
         with_delete_column(view), mask if filtered else None,
-        key=f"equip_editor_{q}_{only_top}", num_rows="dynamic", hide_index=True, width="stretch",
+        key=ekey, num_rows="dynamic", on_change=_toggle, args=(ekey, view[mask]["id"].tolist()), hide_index=True, width="stretch",
         height=min(680, 38 + 35 * (int(mask.sum()) + 2)),
-        column_order=(PRICE_COLS if price else ALL if all_cols else BASIC) + ["삭제"],
+        column_order=BASIC + list(RATE.values()) + ["삭제"],
         column_config=delete_config() | {
+            OPEN: st.column_config.CheckboxColumn(OPEN, width=58, help="체크하면 세부장비가 펼쳐져요."),
             TREE: st.column_config.TextColumn(TREE, width=36, disabled=True),
             "장비명(한글)": st.column_config.TextColumn(required=True, width=260),
             PARENT: st.column_config.SelectboxColumn(
@@ -157,9 +166,8 @@ def render() -> None:
             RATE["price_self"]: st.column_config.NumberColumn(format="localized", min_value=0, help="업체가 직접 쓸 때 시간당"),
         },
     )
-    if price:
-        _extras(rates)
-    st.caption((f"{shown}개 표시 · " if filtered else "") + "셀을 끌어 선택하고 Ctrl+C / Ctrl+V 로 엑셀처럼 복사할 수 있어요. "
+    _extras(rates)
+    st.caption("셀을 끌어 선택하고 Ctrl+C / Ctrl+V 로 엑셀처럼 복사할 수 있어요. "
                "머리글을 누르면 정렬됩니다.")
 
     edited, deleted = split_deleted(edited, "장비명(한글)")
@@ -170,7 +178,7 @@ def render() -> None:
         unpin("equip_editor_")
         id_of = {v: k for k, v in label_of.items()}
         rate_rows = edited[["id"] + list(RATE.values())].rename(columns={v: k for k, v in RATE.items()})
-        out = edited.drop(columns=[TREE] + list(RATE.values())).rename(columns={v: k for k, v in COLS.items()})
+        out = edited.drop(columns=[OPEN, TREE] + list(RATE.values())).rename(columns={v: k for k, v in COLS.items()})
         out["parent_id"] = [id_of.get(p) if isinstance(p, str) and p else None for p in edited[PARENT].replace(NO_PARENT, "")]
         out = out.drop(columns=[PARENT])
         errors = db.save_equipment(out)
@@ -182,6 +190,16 @@ def render() -> None:
             for k in [k for k in st.session_state if str(k).startswith("equip_editor_")]:
                 st.session_state.pop(k, None)
             st.rerun()
+
+
+def _toggle(key: str, ids: list) -> None:
+    """'펼침' 칸을 누르면 그 장비를 펼치거나 접음 (다른 칸 수정은 그대로 둠)."""
+    ss = st.session_state
+    rows = (ss.get(key) or {}).get("edited_rows", {})
+    for pos, ch in list(rows.items()):
+        if OPEN in ch and int(pos) < len(ids) and pd.notna(ids[int(pos)]):
+            ss.equip_open ^= {int(ids[int(pos)])}
+            ch.pop(OPEN, None)
 
 
 def _save_prices(rows: pd.DataFrame, rates: pd.DataFrame, eq: pd.DataFrame) -> None:

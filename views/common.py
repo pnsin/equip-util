@@ -215,7 +215,7 @@ def filtered_editor(view, mask, **kwargs):
     view = view.copy()
     view[POS] = range(len(view))
     order = kwargs.pop("column_order", None)
-    shown = view if mask is None else view[mask]
+    shown = view if mask is None else view[mask].reset_index(drop=True)
     edited = st.data_editor(shown, column_order=order, **kwargs)
     full = edited if mask is None else pd.concat([view[~mask], edited])
     full = full.sort_values(POS, na_position="last", kind="stable").drop(columns=[POS])
