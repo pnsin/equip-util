@@ -416,7 +416,7 @@ def render_new() -> None:
             _bump(d)
             st.rerun()
         d["lines"] = new_lines
-        l1, l2 = DISC_LABELS[form]
+        l1 = DISC_LABELS[form][0]
         rules = DISC_RULES[form]
         picked = st.pills("할인 기준", list(rules["opts"]), selection_mode="multi", key=f"q_dpick_{ver}",
                           default=d.get("disc_pick") or [], help=rules["help"])
@@ -427,12 +427,11 @@ def render_new() -> None:
             d["disc1"] = min(rules["max"], sum(rest) + (max(long_) if long_ else 0)) or None
             _bump(d)
             st.rerun()
-        c1, c2, _ = st.columns([1, 1, 1.4])
+        c1, _ = st.columns([1, 2.4])
         d["disc1"] = c1.number_input(f"{l1} (%)", min_value=0.0, max_value=100.0, step=1.0, format="%g",
                                      value=float(db.to_num(d.get("disc1"), 0) or 0), key=f"q_d1_{ver}") or None
         if form == "제조":
-            d["disc2"] = c2.number_input(f"{l2} (%)", min_value=0.0, max_value=100.0, step=1.0, format="%g",
-                                         value=float(db.to_num(d.get("disc2"), 0) or 0), key=f"q_d2_{ver}") or None
+            d["disc2"] = None  # 전 공정 할인은 쓰지 않음 (2026-11-05)
 
     # 2. 재료비 / 기술료
     with st.container(border=True, key="q_extra_box"):
