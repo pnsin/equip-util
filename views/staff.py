@@ -3,7 +3,7 @@ import streamlit as st
 
 from core import db
 from ui_style import page_header
-from views.common import confirm_delete, delete_config, split_deleted, with_delete_column
+from views.common import excel_box, confirm_delete, delete_config, split_deleted, with_delete_column
 
 COLS = {
     "id": "id", "dept": "부서", "team": "팀", "name": "이름", "title": "직급", "phone": "내선번호",
@@ -17,7 +17,16 @@ def render() -> None:
     msg = st.session_state.pop("staff_saved", None)
     if msg:
         st.toast(msg, icon=":material/check_circle:")
-    view = db.load_staff()[list(COLS)].rename(columns=COLS)
+    staff = db.load_staff()
+
+    def _apply_xl(m):
+        errors = db.check_staff(m)
+        if not errors:
+            db.save_staff(m)
+        return errors
+
+    excel_box("staff_xl", staff, {k: v for k, v in COLS.items() if k != "id"}, "담당자", _apply_xl)
+    view = staff[list(COLS)].rename(columns=COLS)
     # 빈 목록이면 열 형식을 알 수 없어 편집기가 오류를 내므로 형식을 고정
     view = view.astype({c: "string" for c in TEXT} | {"id": "Int64"})
     edited = st.data_editor(

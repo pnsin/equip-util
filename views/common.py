@@ -105,6 +105,40 @@ def center_pick(key: str) -> str | None:
     return None if c in (None, "전체") else c
 
 
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def excel_box(key: str, df, heads: dict, sheet: str, apply) -> None:
+    """엑셀로 내려받기 → 고쳐서 올리기. apply(합친 목록) 은 오류 목록을 돌려줌."""
+    from core import sheet_io
+    with st.popover("엑셀로 한번에 고치기", icon=":material/table_view:"):
+        st.download_button("1. 지금 목록 내려받기", sheet_io.to_xlsx(df, heads, sheet), mime=XLSX,
+                           file_name=f"{sheet}_목록_{dt.date.today():%y%m%d}.xlsx", icon=":material/download:",
+                           key=f"{key}_dl", width="stretch")
+        st.caption("맨 앞 ID는 고치지 마세요. 새 줄은 ID를 비워 두면 추가돼요. 파일에서 뺀 줄은 지워지지 않아요.")
+        up = st.file_uploader("2. 고친 엑셀 올리기", type=["xlsx"], key=f"{key}_up")
+        if up is None:
+            return
+        try:
+            merged, n_add, n_upd, notes = sheet_io.merge(df, up.getvalue(), heads)
+        except Exception as e:  # 다른 양식
+            st.error(f"파일을 읽지 못했어요: {e}")
+            return
+        for n in notes:
+            st.caption(n)
+        if not (n_add or n_upd):
+            st.caption("바뀐 내용이 없어요.")
+            return
+        if st.button(f"3. 반영하기 (수정 {n_upd} · 추가 {n_add})", type="primary", key=f"{key}_go", width="stretch"):
+            errors = apply(merged)
+            for e in errors or []:
+                st.error(e)
+            if not errors:
+                st.session_state.pop(f"{key}_up", None)
+                st.toast(f"엑셀 내용을 반영했어요 (수정 {n_upd} · 추가 {n_add})", icon=":material/check_circle:")
+                st.rerun()
+
+
 def search_box(key: str, placeholder: str) -> str:
     return st.text_input("검색", placeholder=placeholder, key=key, label_visibility="collapsed",
                          icon=":material/search:")

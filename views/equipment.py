@@ -12,7 +12,7 @@ import streamlit as st
 from core import db, seed
 from core.terms import w
 from ui_style import page_header
-from views.common import (center_pick, confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
+from views.common import (center_pick, excel_box, confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
                           with_delete_column)
 
 KPI_COL = w("가동률 산정")
@@ -77,7 +77,16 @@ def render() -> None:
     view["도입일"] = view["도입일"].dt.date
     view["불용일"] = view["불용일"].dt.date
 
-    center = center_pick("equip_center")
+    xl_heads = {"parent_id": "소속 장비 ID"} | {k: v for k, v in COLS.items()
+                                               if k not in ("id", "retired_on", "in_kpi")}
+
+    def _apply_xl(m):
+        bad = [e for e in db.save_equipment(m)]
+        return bad
+
+    with st.container(horizontal=True, vertical_alignment="center"):
+        center = center_pick("equip_center")
+        excel_box("equip_xl", eq, xl_heads, "장비", _apply_xl)
     c1, c3, c4 = st.columns([3, 1, 1], vertical_alignment="center")
     with c1:
         q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호")

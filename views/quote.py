@@ -17,6 +17,7 @@ import streamlit as st
 from core import db, quote_doc, quotes
 from core.quote_doc import DISC_LABELS, EXTRA_TITLE, FORMS, MAX_EXTRAS, MAX_LINES, UNITS
 from ui_style import page_header
+from views.common import excel_box
 
 STATUSES = ["예상견적", "시험의뢰", "기진행", "재견적"]
 NUM = "localized"
@@ -81,7 +82,18 @@ def render_rates() -> None:
                     f'<div class="q-tile q-inline"><b style="color:var(--warn)">{len(rows) - filled}</b>'
                     f'<span>비어 있음</span></div>', unsafe_allow_html=True)
     groups = [g for g in dict.fromkeys(r["group"] for r in rows) if g]
+    xl = pd.DataFrame(rows, columns=list(devices.columns)).assign(id=lambda d: d["equip_id"])
+
+    def _apply_xl(m):
+        for r in m.to_dict("records"):
+            rid = db.to_num(r.get("id"))
+            if rid is not None and int(rid) in work:
+                work[int(rid)].update({c: r.get(c) for c in ("name", "spec", "unit", "price_req", "price_self", "note")})
+        _save_rates(eq, work, _records(extras))
+        return []
+
     with st.container(horizontal=True, vertical_alignment="center"):
+        excel_box("rate_xl", xl, RATE_XL, "장비단가", _apply_xl)
         pick = st.pills("대분류", groups, selection_mode="multi", key="rate_groups", label_visibility="collapsed")
         only_missing = st.toggle("비어 있는 것만", key="rate_missing")
     key = f"rate_dev_{ver}_{'|'.join(pick or [])}_{only_missing}"
@@ -134,21 +146,29 @@ def render_rates() -> None:
             "note": st.column_config.TextColumn("비고", width="large"),
         })
     if st.button("단가 저장", type="primary", icon=":material/save:"):
-        name_of = dict(zip(eq["id"].astype(int), eq["name"]))
-        out = []
-        for eid, r in work.items():
-            r = dict(r, equip_id=eid)
-            dname = name_of.get(eid, "")
-            r["_named"] = quotes._s(r.get("name")) not in ("", dname)
-            if not r["_named"]:
-                r["name"] = dname
-            out.append(r)
-        ex_rows = [dict(r, price_self=r.get("price_self")) for r in _records(ed_ex) if quotes._s(r.get("name"))]
-        db.save_rates(out + ex_rows)
+        _save_rates(eq, work, _records(ed_ex))
         ss.rates_saved = "단가를 저장했어요."
-        ss.rates_ver = ver + 1
-        ss.pop("rate_base_key", None)
         st.rerun()
+
+
+RATE_XL = {"group": "대분류", "equip": "장비(참고)", "name": "견적서 장비명", "spec": "용량", "unit": "단위",
+           "price_req": "의뢰 단가", "price_self": "직접 단가", "note": "비고"}
+
+
+def _save_rates(eq: pd.DataFrame, work: dict, extras: list[dict]) -> None:
+    name_of = dict(zip(eq["id"].astype(int), eq["name"]))
+    out = []
+    for eid, r in work.items():
+        r = dict(r, equip_id=eid)
+        dname = name_of.get(eid, "")
+        r["_named"] = quotes._s(r.get("name")) not in ("", dname)
+        if not r["_named"]:
+            r["name"] = dname
+        out.append(r)
+    ex_rows = [dict(r, price_self=r.get("price_self")) for r in extras if quotes._s(r.get("name"))]
+    db.save_rates(out + ex_rows)
+    st.session_state.rates_ver = st.session_state.get("rates_ver", 0) + 1
+    st.session_state.pop("rate_base_key", None)
 
 
 # ══════════════════════════════════════════════════════════════
