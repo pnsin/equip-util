@@ -99,25 +99,25 @@ def keep_choices() -> None:
 PAGES = {
     "현황": [
         st.Page(dashboard.render, title="대시보드", url_path="home", default=True),
-        st.Page(equip_detail.render, title="장비 상세", url_path="equip"),
+        st.Page(equip_detail.render, title="장비별 가동률", url_path="equip"),
     ],
     "실적": [
         st.Page(input_page.render, title="실적 입력", url_path="input"),
         st.Page(records.render, title="수수료 입력", url_path="records"),
-        st.Page(export.render_download, title="실적 내려받기", url_path="download"),
+        st.Page(export.render_download, title="i-Tube 제출 파일", url_path="download"),
     ],
-    "견적": [
-        st.Page(quote.render_new, title="견적서 작성", url_path="quote"),
-    ],
-    "장비 정보": [
-        st.Page(maintenance.render, title="유지보수", url_path="maintenance"),
+    "장비": [
         st.Page(equip_info.render, title="장비 정보", url_path="equip-info"),
+        st.Page(maintenance.render, title="유지보수", url_path="maintenance"),
+    ],
+    "업체": [
         st.Page(cs_view.render, title="CS활동", url_path="cs"),
+        st.Page(quote.render_new, title="견적서 작성", url_path="quote"),
+        st.Page(companies.render, title="업체 목록", url_path="companies"),
     ],
     "기준 정보": [
-        st.Page(equipment.render, title="장비", url_path="equipment"),
+        st.Page(equipment.render, title="장비 목록", url_path="equipment"),
         st.Page(quote.render_rates, title="장비 단가", url_path="rates"),
-        st.Page(companies.render, title="업체", url_path="companies"),
         st.Page(staff.render, title="담당자", url_path="staff"),
     ],
     "관리": [
@@ -127,7 +127,7 @@ PAGES = {
     ],
 }
 common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1], "input": PAGES["실적"][0],
-                     "equipment": PAGES["기준 정보"][0], "equip_info": PAGES["장비 정보"][1]})
+                     "equipment": PAGES["기준 정보"][0], "equip_info": PAGES["장비"][0]})
 
 # 예전 주소(/dashboard, /calendar …)로 들어와도 "Page not found" 없이 해당 화면이 열리게 하는 숨은 주소
 ALIASES = [

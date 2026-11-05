@@ -92,7 +92,7 @@ def render() -> None:
     .sb-h, .sb-s {text-align: right; color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums;}
     @media (max-width: 640px) {.sb-r {grid-template-columns: minmax(110px, 1.4fr) 1fr 56px; } .sb-h, .sb-s {display: none;}}
     </style>""", unsafe_allow_html=True)
-    page_header("장비 상세", "현황")
+    page_header("장비별 가동률", "현황")
     cfg = db.get_settings()
     eq = db.load_equipment()
     logs_all = db.load_logs()

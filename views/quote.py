@@ -316,7 +316,7 @@ def _totals_html(form: str, t: dict, d: dict) -> str:
 
 
 def render_new() -> None:
-    page_header("견적서 작성", "견적")
+    page_header("견적서 작성", "업체")
     d = _draft()
     ver = st.session_state.get("q_ver", 0)
     eq = db.load_equipment()
