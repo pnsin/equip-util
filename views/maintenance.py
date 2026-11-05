@@ -12,8 +12,7 @@ import streamlit as st
 
 from core import db
 from ui_style import page_header
-from views.common import (confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
-                          with_delete_column)
+from views.common import filtered_editor, search_box
 
 COLS = {"id": "id", "date": "날짜", "equip": "장비", "kind": "종류", "content": "내용", "staff": "담당자",
         "note": "비고"}
@@ -87,11 +86,11 @@ def render() -> None:
     staff = db.staff_names(include=list(df["staff"]))
     equip_opts = list(label_of.values()) + sorted({v for v in view["장비"].dropna() if v and v not in id_of})
     edited, shown = filtered_editor(
-        with_delete_column(view), mask if filtered else None,
+        view, mask if filtered else None,
         key=f"maint_editor_{q}_{pick}", num_rows="dynamic", hide_index=True, width="stretch",
         height=min(700, 38 + 35 * (int(mask.sum()) + 2)),
-        column_order=SHOW + ["삭제"],
-        column_config=delete_config() | {
+        column_order=SHOW,
+        column_config={
             "날짜": st.column_config.DateColumn(format="YYYY-MM-DD", default=dt.date.today(), width=110),
             "장비": st.column_config.SelectboxColumn(options=equip_opts, width="medium",
                                                    help="장비 목록에서 고릅니다. 세부장비는 '세부장비 · 소속 장비'로 보여요."),
@@ -102,12 +101,10 @@ def render() -> None:
         },
     )
     st.caption((f"{shown}건 표시 · " if filtered else "")
-               + "맨 아래 빈 줄에 적으면 새 기록이 돼요. 끌어 선택해 Ctrl+C / Ctrl+V, 머리글을 누르면 정렬됩니다.")
+               + "맨 아래 빈 줄에 적으면 새 기록이 돼요. 줄 왼쪽을 눌러 고른 뒤 Delete 키로 지울 수 있어요.")
 
-    edited, deleted = split_deleted(edited, "내용")
     n_del = len(view) - len(edited.dropna(subset=["id"]))
-    ok = confirm_delete(deleted, "maint_editor_del", "건")
-    if st.button("변경 내용 저장", type="primary", disabled=not ok, icon=":material/save:"):
+    if st.button("변경 내용 저장", type="primary", icon=":material/save:"):
         out = edited.rename(columns={v: k for k, v in COLS.items()})
         out["equip_id"] = [id_of.get(e) if isinstance(e, str) else None for e in out["equip"]]
         out["equip_ref"] = out["equip"]
