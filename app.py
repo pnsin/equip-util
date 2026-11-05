@@ -5,7 +5,7 @@ import streamlit as st
 import ui_style  # noqa: E402
 
 st.set_page_config(page_title=ui_style.SYSTEM_TITLE, page_icon=ui_style.favicon(), layout="wide",
-                   initial_sidebar_state="auto")
+                   initial_sidebar_state="expanded")
 
 import importlib  # noqa: E402
 import os  # noqa: E402
@@ -37,6 +37,7 @@ ui_style.apply_style()
 
 
 def check_password() -> bool:
+    ui_style.preload_editors()
     try:
         pw = str(st.secrets.get("app_password", "") or "")
     except Exception:
@@ -143,7 +144,6 @@ ALIASES = [
 
 
 def sidebar(local: bool) -> None:
-    ui_style.preload_editors()
     with st.sidebar:
         ui_style.sidebar_brand()
         for group, pages in PAGES.items():

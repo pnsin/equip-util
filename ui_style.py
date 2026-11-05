@@ -100,8 +100,11 @@ _VARS = ":root { " + " ".join(f"--{k}: {v};" for k, v in TOKENS.items()) + " }"
 _CSS = """
 <style>
   __VARS__
-  .block-container { padding-top: 3.6rem; padding-bottom: 4rem; max-width: 1600px; margin-left: 0; }
-  .stApp:not(:has(.login-bg)) [data-testid="stMainBlockContainer"] { padding-left: 2.5rem !important; padding-right: 2.5rem !important; margin-left: 0 !important; align-self: flex-start; }
+  .block-container { padding-top: 3.6rem; padding-bottom: 4rem; max-width: 1600px; }
+  .stApp:not(:has(.login-bg)) [data-testid="stMainBlockContainer"] { padding-left: 2.5rem !important; padding-right: 2.5rem !important; }
+  /* 접속 화면: 왼쪽 메뉴 칸은 숨김 (메뉴는 접속 전에도 만들어 둬야 접속 뒤 늘 펼쳐진 채로 시작함) */
+  .stApp:has(.login-bg) [data-testid="stSidebar"], .stApp:has(.login-bg) [data-testid="stExpandSidebarButton"],
+  .stApp:has(.login-bg) [data-testid="stSidebarCollapsedControl"] { display: none !important; }
   [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "IBM Plex Sans KR", "Noto Sans KR", "Malgun Gothic", sans-serif; }
   [data-testid="stAppViewContainer"] { background: var(--bg); }
   footer { visibility: hidden; }
@@ -350,7 +353,7 @@ _PRELOAD_JS = """
 
 
 def preload_editors():
-    """접속한 뒤 왼쪽 메뉴 안에서만 부름 (접속 화면에 빈 메뉴 칸이 생기지 않게)."""
+    """접속 화면에서도 부름: 메뉴 칸이 처음부터 있어야 접속 뒤 메뉴가 접힌 채로 시작하지 않음 (접속 화면에선 CSS로 숨김)."""
     _preload_editors()
 
 
