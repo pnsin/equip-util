@@ -433,17 +433,66 @@ def _notes(eid: int, info: dict, key: str, title: str, hint: str, place: str) ->
                  on_change=_save_note, args=(eid,))
 
 
+def _family(root: int, eq: pd.DataFrame) -> list[tuple[int, int]]:
+    """root 아래 세부장비를 목록 순서대로 (id, 깊이)."""
+    kids: dict[int, list[int]] = {}
+    for i, p in zip(eq["id"].astype(int), eq["parent_id"]):
+        if pd.notna(p):
+            kids.setdefault(int(p), []).append(i)
+    out: list[tuple[int, int]] = []
+
+    def walk(i: int, d: int) -> None:
+        for k in kids.get(i, []):
+            out.append((k, d))
+            walk(k, d + 1)
+    walk(root, 1)
+    return out
+
+
+def _root(eid: int, eq: pd.DataFrame) -> int:
+    par = dict(zip(eq["id"].astype(int), eq["parent_id"]))
+    seen = set()
+    while pd.notna(par.get(eid)) and eid not in seen:
+        seen.add(eid)
+        eid = int(par[eid])
+    return eid
+
+
 def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
+    if st.button("모든 장비", icon=":material/arrow_back:", type="tertiary", key="info_back"):
+        _open(None)
+        st.rerun()
+    fam = _family(eid, eq)
+    if not fam:
+        _unit(eid, eq, info)
+        return
+    # 세부장비가 많아도 짧게: 왼쪽은 이름 목록(검색), 오른쪽은 고른 하나만
+    name_of = dict(zip(eq["id"].astype(int), eq["name"]))
+    key = f"info_unit_{eid}"
+    cur = st.session_state.get(key, eid)
+    nav, body = st.columns([1, 3.3], gap="medium")
+    with nav, st.container(border=True, key="info_nav"):
+        q = st.text_input("세부장비 찾기", key=f"info_unit_q_{eid}", placeholder=f"세부장비 {len(fam)}개에서 찾기",
+                          label_visibility="collapsed", icon=":material/search:")
+        depth = dict(fam)
+        ids = [i for i, _ in fam if not q or q.lower() in name_of.get(i, "").lower()]
+        if cur != eid and cur not in ids:
+            ids = [cur] + ids
+        with st.container(height=min(620, 60 + 36 * (len(ids) + 1)), border=False):
+            sel = st.radio("세부장비", [eid] + ids, key=key, label_visibility="collapsed",
+                           format_func=lambda i: "■ 주장비 전체" if i == eid
+                           else "\u3000" * (depth.get(i, 1) - 1) + name_of.get(i, str(i)))
+    with body:
+        _unit(sel, eq, info, in_list=True)
+
+
+def _unit(eid: int, eq: pd.DataFrame, info: dict, in_list: bool = False) -> None:
     r = eq[eq["id"] == eid].iloc[0]
     label_of = dict(zip(eq["id"].astype(int), eq["name"]))
     kids = eq[eq["parent_id"] == eid]
     up = int(r["parent_id"]) if pd.notna(r["parent_id"]) else None
     icon = _icon_key(r["name"] + " " + " ".join(kids["name"]))
     e = html.escape
-
-    if st.button("모든 장비", icon=":material/arrow_back:", type="tertiary", key="info_back"):
-        _open(None)
-        st.rerun()
 
     with st.container(border=True):
         left, right = st.columns([1, 1.65], gap="large")
@@ -466,17 +515,18 @@ def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
                         unsafe_allow_html=True)
             if r["system"]:
                 st.caption(f"시스템 구성 · {r['system']}")
-            if not kids.empty:
+            if not kids.empty and not in_list:
                 st.pills("세부장비", list(kids["id"].astype(int)), format_func=lambda i: label_of.get(i, str(i)),
                          key=f"info_kids_{eid}", on_change=lambda: _open(st.session_state.get(f"info_kids_{eid}")),
                          help="누르면 그 세부장비 정보가 열려요.")
-            b = st.columns([1, 1, 1] if up is not None else [1, 1, 1.2])
+            show_up = up is not None and not in_list
+            b = st.columns([1, 1, 1] if show_up else [1, 1, 1.2])
             if b[0].button(w("가동률 보기"), icon=":material/monitoring:", width="stretch", key="info_to_detail"):
                 common.go_equipment(eid)
             if b[1].button("기본 정보 고치기", icon=":material/edit:", width="stretch", key="info_to_master",
                            help="'기준 정보 › 장비' 표에서 이 장비를 찾아 엽니다."):
                 common.go_master_equipment(r["name"])
-            if up is not None and b[2].button("소속 장비로", icon=":material/arrow_upward:", width="stretch",
+            if show_up and b[2].button("소속 장비로", icon=":material/arrow_upward:", width="stretch",
                                               key="info_to_up"):
                 _open(up)
                 st.rerun()
@@ -508,6 +558,11 @@ def render() -> None:
     except ValueError:
         sel = None
     if sel is not None and sel in set(eq["id"].astype(int)):
+        top = _root(sel, eq)
+        if top != sel:  # 세부장비로 바로 들어오면 주장비 화면에서 그 줄을 골라 둠
+            st.session_state[f"info_unit_{top}"] = sel
+            _open(top)
+            sel = top
         _detail(sel, eq, info)
     else:
         _gallery(eq, info)
