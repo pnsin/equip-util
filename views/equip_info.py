@@ -196,6 +196,7 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
         if pd.notna(r.parent_id):
             kids_of.setdefault(int(r.parent_id), []).append(r.name)
 
+    center = common.center_pick("info_center")
     c1, c2, c3 = st.columns([3, 1.1, 1], vertical_alignment="center")
     with c1:
         q = search_box("info_q", "장비명 · ITUBE번호 · 모델명 · 사양으로 찾기")
@@ -209,6 +210,9 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
     df = eq if all_lv else eq[eq["depth"] == 0]
     if pick:
         df = df[df["group"].isin(pick)]
+    if center:
+        cen = db.equip_centers(eq)
+        df = df[df["id"].astype(int).map(cen).eq(center)]
     if q:
         spec_txt = (info["equip_specs"].assign(t=lambda d: d["item"] + " " + d["value"])
                     .groupby("equip_id")["t"].agg(" ".join) if not info["equip_specs"].empty else pd.Series(dtype=str))

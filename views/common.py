@@ -97,6 +97,14 @@ def confirm_delete(names: list[str], key: str, unit: str = "개") -> bool:
 POS = "_pos"
 
 
+def center_pick(key: str) -> str | None:
+    """전체 / 센터 셋 중 고르기. 전체면 None."""
+    from core import db
+    c = st.segmented_control("센터", ["전체"] + db.CENTERS, default="전체", key=key,
+                             label_visibility="collapsed")
+    return None if c in (None, "전체") else c
+
+
 def search_box(key: str, placeholder: str) -> str:
     return st.text_input("검색", placeholder=placeholder, key=key, label_visibility="collapsed",
                          icon=":material/search:")
