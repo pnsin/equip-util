@@ -147,6 +147,7 @@ def stats(df: pd.DataFrame, today: dt.date | None = None) -> dict:
     open_ = df[df["status"] != "완료"]
     return {
         "month": len(month),
+        "year": int((df["date"].dt.year == today.year).sum()),
         "open": len(open_),
         "follow": int(((open_["follow_up"] >= wk_s) & (open_["follow_up"] <= wk_e)).sum()),
         "overdue": int((open_["follow_up"] < pd.Timestamp(today)).sum()),
@@ -157,9 +158,9 @@ def stats(df: pd.DataFrame, today: dt.date | None = None) -> dict:
 def to_excel(df: pd.DataFrame) -> bytes:
     import io
     view = pd.DataFrame({
-        "활동일": df["date"].dt.date, "유형": df["kind"], "제목": df["title"], "업체": df["company"],
+        "활동일": df["date"].dt.date, "제목": df["title"], "업체": df["company"],
         "업체 담당자": df["contact"], "TP담당자": df["staff"], "관련 장비": df["equip_ref"],
-        "내용": df["content"], "조치·결과": df["action"], "상태": df["status"], "후속 일정": df["follow_up"].dt.date,
+        "내용": df["content"],
     })
     bio = io.BytesIO()
     with pd.ExcelWriter(bio, engine="openpyxl") as xw:

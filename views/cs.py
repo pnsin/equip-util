@@ -55,8 +55,6 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
 .cs-tag {display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; margin-right: 7px;
   vertical-align: 1px;}
 .cs-eq {display: inline-block; font-size: .72rem; padding: 0 8px; border-radius: 6px; background: #F3F5F8; color: #5A6474; margin-left: 5px;}
-.cs-fu {color: var(--accent); font-weight: 600;} .cs-fu.late {color: #D45087;}
-.cs-st {font-size: .76rem; font-weight: 700; padding: 4px 11px; border-radius: 999px; flex: none;}
 .cs-who {width: 58px; text-align: right; font-size: .78rem; color: var(--muted); flex: none; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;}
 .st-key-cs_more button {border: none; background: transparent; color: var(--accent); font-weight: 700;}
@@ -102,21 +100,10 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
 </style>"""
 
 
-def _kind_style(k: str) -> str:
-    fg, bg = cs.KIND_COLOR.get(k, ("#5A6474", "#F3F5F8"))
-    return f"color:{fg};background:{bg}"
-
-
-def _status_style(s: str) -> str:
-    fg, bg = cs.STATUS_COLOR.get(s, ("#5A6474", "#F3F5F8"))
-    return f"color:{fg};background:{bg}"
-
-
 def _stats(df: pd.DataFrame) -> None:
     s = cs.stats(df)
-    late = f"<em>지난 일정 {s['overdue']}</em>" if s["overdue"] else ""
-    tiles = [(s["month"], "이번 달 활동", "var(--ink)", ""), (s["open"], "진행 중", "#B5650B", ""),
-             (s["follow"], "이번 주 후속 일정", "var(--accent)", late), (s["companies"], "이번 달 만난 업체", "var(--ink)", "")]
+    tiles = [(s["month"], "이번 달 활동", "var(--ink)", ""), (s["year"], "올해 활동", "var(--accent)", ""),
+             (s["companies"], "이번 달 만난 업체", "var(--ink)", "")]
     st.markdown('<div class="cs-stats">' + "".join(
         f'<div class="cs-stat"><b style="color:{c}">{n}</b><span>{E(t)}</span>{x}</div>' for n, t, c, x in tiles)
         + "</div>", unsafe_allow_html=True)
@@ -142,16 +129,10 @@ def _new(prefill: dict | None = None) -> None:
         st.session_state.pop("cs_prefill", None)
 
 
-def _filter(df: pd.DataFrame, kind: str, status: str, q: str, label_of: dict) -> pd.DataFrame:
-    if kind and kind != "전체":
-        df = df[df["kind"] == kind]
-    if status == "진행 중":
-        df = df[df["status"] != "완료"]
-    elif status == "완료":
-        df = df[df["status"] == "완료"]
+def _filter(df: pd.DataFrame, q: str, label_of: dict) -> pd.DataFrame:
     if q:
         hay = (df["title"] + " " + df["company"] + " " + df["contact"] + " " + df["staff"] + " " + df["content"]
-               + " " + df["action"] + " " + df["equip_list"].map(lambda ids: " ".join(label_of.get(i, "") for i in ids)))
+               + " " + df["equip_list"].map(lambda ids: " ".join(label_of.get(i, "") for i in ids)))
         df = df[hay.str.contains(q, case=False, regex=False)]
     return df
 
@@ -159,22 +140,15 @@ def _filter(df: pd.DataFrame, kind: str, status: str, q: str, label_of: dict) ->
 def _card(r: dict, label_of: dict, sel: bool) -> None:
     d = r["date"]
     day = f"<b>{d:%d}</b>{d.month}월" if pd.notna(d) else "<b>-</b>"
-    fg, _ = cs.KIND_COLOR.get(r["kind"], ("#8A97A8", ""))
+    fg = "#5B8DEF"
     meta = [E(x) for x in (r["company"], r["contact"]) if x]
-    fu = r["follow_up"]
-    if pd.notna(fu) and r["status"] != "완료":
-        late = fu.date() < dt.date.today()
-        meta.append(f'<span class="cs-fu{" late" if late else ""}">후속 {fu:%m/%d}</span>')
-    elif r["action"]:
-        meta.append(E(r["action"][:40]))
     eqs = "".join(f'<span class="cs-eq">{E(label_of[i])}</span>' for i in r["equip_list"][:3] if i in label_of)
     with st.container(key=f"cs_card_{r['id']}"):
         st.markdown(
             f'<div class="cs-c{" cs-sel" if sel else ""}" style="--kc:{fg}"><div class="cs-d">{day}</div><div class="cs-b">'
-            f'<div class="cs-t"><span class="cs-tag" style="{_kind_style(r["kind"])}">{E(r["kind"])}</span>'
+            f'<div class="cs-t">'
             f'{E(r["title"] or r["content"][:40] or "(제목 없음)")}</div>'
             f'<div class="cs-m">{" · ".join(meta) or "&nbsp;"}{eqs}</div></div>'
-            f'<span class="cs-st" style="{_status_style(r["status"])}">{E(r["status"])}</span>'
             f'<div class="cs-who">{E(r["staff"])}</div></div>', unsafe_allow_html=True)
         st.button("열기", key=f"cs_open_{r['id']}", on_click=_open, args=(r["id"],))
 
@@ -185,10 +159,6 @@ def _cards(view: pd.DataFrame, label_of: dict) -> None:
         return
     limit = st.session_state.get("cs_limit", PAGE)
     cur = st.session_state.get("cs_open")
-    # 카드 왼쪽 색 막대 (유형별)
-    st.markdown("<style>" + "".join(
-        f'.st-key-cs_card_{r["id"]} {{--kc:{cs.KIND_COLOR.get(r["kind"], ("#8A97A8",))[0]};}}'
-        for r in view.head(limit).to_dict("records")) + "</style>", unsafe_allow_html=True)
     with st.container(key="cs_list"):
         for r in view.head(limit).to_dict("records"):
             _card(r, label_of, r["id"] == cur)
@@ -199,21 +169,20 @@ def _cards(view: pd.DataFrame, label_of: dict) -> None:
 
 # ── 표 보기 (엑셀처럼) ─────────────────────────────────────────
 
-TCOLS = {"date": "활동일", "kind": "유형", "title": "제목", "company": "업체", "contact": "업체 담당자", "staff": "TP담당자",
-         "equip": "관련 장비", "content": "내용", "action": "조치·결과", "status": "상태", "follow_up": "후속 일정"}
+TCOLS = {"date": "활동일", "title": "제목", "company": "업체", "contact": "업체 담당자", "staff": "TP담당자",
+         "equip": "관련 장비", "content": "내용"}
 
 
 def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], staff: list[str]) -> None:
     t = pd.DataFrame({
-        "삭제": False, "활동일": view["date"].dt.date, "유형": view["kind"], "제목": view["title"],
+        "삭제": False, "활동일": view["date"].dt.date, "제목": view["title"],
         "업체": view["company"], "업체 담당자": view["contact"], "TP담당자": view["staff"],
         "관련 장비": view["equip_list"].map(lambda ids: [label_of[i] for i in ids if i in label_of]),
-        "내용": view["content"], "조치·결과": view["action"], "상태": view["status"],
-        "후속 일정": view["follow_up"].dt.date,
+        "내용": view["content"],
     })
     t.insert(0, "_id", list(view["id"].astype(str)))
     t = t.reset_index(drop=True)
-    t = t.astype({c: "string" for c in ("제목", "업체 담당자", "내용", "조치·결과")})
+    t = t.astype({c: "string" for c in ("제목", "업체 담당자", "내용")})
     comp_opts = companies + sorted({c for c in view["company"] if c and c not in companies})
     staff_opts = staff + sorted({s for s in view["staff"] if s and s not in staff})
     edited = st.data_editor(
@@ -222,23 +191,19 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
         column_config={
             "삭제": st.column_config.CheckboxColumn(width="small", default=False, help="지울 행에 체크한 뒤 저장"),
             "활동일": st.column_config.DateColumn(format="YYYY-MM-DD", required=True, default=dt.date.today()),
-            "유형": st.column_config.SelectboxColumn(options=cs.KINDS, required=True, default=cs.KINDS[0]),
             "제목": st.column_config.TextColumn(width="medium"),
             "업체": st.column_config.SelectboxColumn(options=comp_opts, width="medium"),
             "TP담당자": st.column_config.SelectboxColumn(options=staff_opts),
             "관련 장비": st.column_config.MultiselectColumn(options=list(id_of), width="medium"),
             "내용": st.column_config.TextColumn(width="large"),
-            "조치·결과": st.column_config.TextColumn(width="medium"),
-            "상태": st.column_config.SelectboxColumn(options=cs.STATUSES, required=True, default="접수", width="small"),
-            "후속 일정": st.column_config.DateColumn(format="YYYY-MM-DD"),
         },
     )
 
     def rec(row) -> dict:
-        return {"date": row["활동일"], "kind": row["유형"], "title": row["제목"], "company": row["업체"],
+        return {"date": row["활동일"], "title": row["제목"], "company": row["업체"],
                 "contact": row["업체 담당자"], "staff": row["TP담당자"],
                 "equip_ids": [id_of[x] for x in (row["관련 장비"] or []) if x in id_of],
-                "content": row["내용"], "action": row["조치·결과"], "status": row["상태"], "follow_up": row["후속 일정"]}
+                "content": row["내용"]}
 
     def same(a, b) -> bool:
         def norm(v):
@@ -306,8 +271,6 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
             st.space("stretch")
             st.button("", icon=":material/close:", key="cs_close", help="닫기", on_click=_close)
         v_date = st.date_input("활동일", value=d0, format="YYYY-MM-DD", key=f"cs_d_{k}")
-        kind0 = pre.get("kind") if pre.get("kind") in cs.KINDS else cs.KINDS[0]
-        v_kind = st.segmented_control("유형", cs.KINDS, default=kind0, key=f"cs_k_{k}") or kind0
         v_title = st.text_input("제목", pre.get("title", ""), placeholder="예: 충방전기 장기 시험 일정 문의", key=f"cs_t_{k}")
         comp0 = pre.get("company") or None
         opts = companies + ([comp0] if comp0 and comp0 not in companies else [])
@@ -324,17 +287,9 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
         eq0 = [label_of[i] for i in (pre.get("equip_list") or []) if i in label_of]
         v_eq = st.multiselect("관련 장비", list(id_of), default=eq0, placeholder="여러 대 골라도 돼요", key=f"cs_e_{k}")
         v_content = st.text_area("내용", pre.get("content", ""), height=90, key=f"cs_m_{k}")
-        v_action = st.text_area("조치 · 결과", pre.get("action", ""), height=68, key=f"cs_a_{k}")
-        st0 = pre.get("status") if pre.get("status") in cs.STATUSES else "접수"
-        v_status = st.segmented_control("상태", cs.STATUSES, default=st0, key=f"cs_st_{k}") or st0
-        fu0 = pre.get("follow_up")
-        fu0 = fu0.date() if isinstance(fu0, pd.Timestamp) and pd.notna(fu0) else None
-        v_fu = st.date_input("후속 일정", value=fu0, format="YYYY-MM-DD", key=f"cs_f_{k}",
-                             help="다시 연락하거나 결과를 알려 줄 날 (없으면 비워 두기)")
 
-        rec = {"date": v_date, "kind": v_kind, "title": v_title, "company": v_comp or "", "contact": v_contact,
-               "staff": v_staff or "", "equip_ids": [id_of[x] for x in v_eq], "content": v_content,
-               "action": v_action, "status": v_status, "follow_up": v_fu}
+        rec = {"date": v_date, "title": v_title, "company": v_comp or "", "contact": v_contact,
+               "staff": v_staff or "", "equip_ids": [id_of[x] for x in v_eq], "content": v_content}
         if st.session_state.get("cs_delask"):
             st.markdown('<div class="cs-ask">이 활동을 삭제할까요? 휴지통에서 다시 살릴 수 있어요.</div>',
                         unsafe_allow_html=True)
@@ -350,7 +305,7 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
                              key="cs_save", width="stretch")
             if cur is not None:
                 st.button("", icon=":material/content_copy:", key="cs_copy", help="이 내용으로 새 활동 만들기 (오늘 날짜)",
-                          on_click=_new, args=({**cur, "date": dt.date.today(), "status": "접수", "follow_up": None},))
+                          on_click=_new, args=({**cur, "date": dt.date.today()},))
                 st.button("", icon=":material/delete:", key="cs_del", help="삭제",
                           on_click=lambda: st.session_state.update(cs_delask=True))
         if save:
@@ -385,15 +340,11 @@ def render() -> None:
 
     _stats(df)
     with st.container(key="cs_tools", horizontal=True, vertical_alignment="center"):
-        kind = st.segmented_control("유형", ["전체"] + cs.KINDS, default="전체", key="cs_kind",
-                                    label_visibility="collapsed") or "전체"
-        status = st.segmented_control("상태", ["진행 중", "완료"], key="cs_status", label_visibility="collapsed",
-                                      help="한 번 더 누르면 모두 보기") or "전체"
         q = st.text_input("검색", placeholder="업체·장비·내용으로 찾기", key="cs_q", label_visibility="collapsed",
                           icon=":material/search:")
         mode = st.segmented_control("보기", ["카드", "표"], default="카드", key="cs_mode",
                                     label_visibility="collapsed") or "카드"
-        view = _filter(df, kind, status, q.strip(), label_of)
+        view = _filter(df, q.strip(), label_of)
         st.download_button("", cs.to_excel(view), file_name=f"CS활동_{dt.date.today():%y%m%d}.xlsx",
                            icon=":material/download:", key="cs_xlsx", help="보이는 목록을 엑셀로 내려받기",
                            disabled=view.empty)
