@@ -72,6 +72,29 @@ def load() -> pd.DataFrame:
                           ascending=False).reset_index(drop=True)
 
 
+def _nm(v) -> str:
+    return re.sub(r"\(주\)|㈜|주식회사|\(유\)|\s", "", str(v))
+
+
+def add_companies(new: pd.DataFrame) -> int:
+    """매출장에 처음 보는 업체가 있으면 업체 목록에 추가 (사업자번호 → 이름 순으로 같은 업체인지 봄)."""
+    comp = db.load_companies()
+    brns = {re.sub(r"\D", "", str(b)) for b in comp["brn"]} - {""}
+    names = {_nm(n) for n in comp["name"]}
+    add = []
+    for r in new.drop_duplicates("company").to_dict("records"):
+        b = re.sub(r"\D", "", str(r["brn"]))
+        if not r["company"] or (b and b in brns) or _nm(r["company"]) in names:
+            continue
+        add.append({c: "" for c in db.COMPANY_TEXT} | {"id": None, "name": r["company"], "brn": r["brn"],
+                                                        "note": "재무팀 매출장에서 추가"})
+        brns.add(b)
+        names.add(_nm(r["company"]))
+    if add:
+        db.save_companies(pd.concat([comp, pd.DataFrame(add)], ignore_index=True))
+    return len(add)
+
+
 def merge(new: pd.DataFrame) -> tuple[int, int, int]:
     """올린 줄을 저장된 매출장에 합침 → (새로 넣음, 입금 고침, 이미 있음)."""
     cur = db.get_store().read("fee_ledger")

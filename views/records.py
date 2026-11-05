@@ -106,8 +106,11 @@ def _ledger() -> None:
         up = st.file_uploader("매출장", type=["xlsx"], key="fl_up", label_visibility="collapsed")
         if up is not None and st.button("반영", type="primary", key="fl_go"):
             try:
-                add, upd, same = fl.merge(fl.read_file(up.getvalue()))
-                st.toast(f"새로 {add}건 · 입금 고침 {upd}건 · 이미 있음 {same}건", icon=":material/check_circle:")
+                new = fl.read_file(up.getvalue())
+                add, upd, same = fl.merge(new)
+                n_comp = fl.add_companies(new)
+                st.toast(f"새로 {add}건 · 입금 고침 {upd}건 · 이미 있음 {same}건"
+                         + (f" · 새 업체 {n_comp}곳" if n_comp else ""), icon=":material/check_circle:")
             except ValueError as e:
                 st.warning(str(e))
     df = fl.load()
