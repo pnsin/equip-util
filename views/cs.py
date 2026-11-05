@@ -211,12 +211,13 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
         "내용": view["content"], "조치·결과": view["action"], "상태": view["status"],
         "후속 일정": view["follow_up"].dt.date,
     })
-    t.index = view["id"].astype(str)
+    t.insert(0, "_id", list(view["id"].astype(str)))
+    t = t.reset_index(drop=True)
     t = t.astype({c: "string" for c in ("제목", "업체 담당자", "내용", "조치·결과")})
     comp_opts = companies + sorted({c for c in view["company"] if c and c not in companies})
     staff_opts = staff + sorted({s for s in view["staff"] if s and s not in staff})
     edited = st.data_editor(
-        t, key="cs_editor", num_rows="dynamic", hide_index=True, width="stretch",
+        t, key="cs_editor", num_rows="dynamic", hide_index=True, width="stretch", column_order=[c for c in t.columns if c != "_id"],
         height=min(640, 40 + 35 * (len(t) + 2)),
         column_config={
             "삭제": st.column_config.CheckboxColumn(width="small", default=False, help="지울 행에 체크한 뒤 저장"),
@@ -240,15 +241,29 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
                 "content": row["내용"], "action": row["조치·결과"], "status": row["상태"], "follow_up": row["후속 일정"]}
 
     def same(a, b) -> bool:
-        return all(str(a[c]) == str(b[c]) for c in t.columns if c != "삭제")
+        def norm(v):
+            if isinstance(v, (list, tuple)) or hasattr(v, "tolist"):
+                return ",".join(map(str, list(v)))
+            return db.to_str(v)
+        return all(norm(a[c]) == norm(b[c]) for c in t.columns if c not in ("삭제", "_id"))
 
-    known = set(t.index)
-    dels = [i for i in edited.index if i in known and bool(edited.loc[i, "삭제"])]
-    ups = {i: rec(edited.loc[i]) for i in edited.index if i in known and i not in dels and not same(edited.loc[i], t.loc[i])}
-    adds = [rec(edited.loc[i]) for i in edited.index if i not in known and not bool(edited.loc[i, "삭제"])
-            and any(db.to_str(edited.loc[i, c]) for c in ("제목", "내용", "업체"))]
-    gone = [i for i in known if i not in set(edited.index)]  # 행 머리에서 지운 행
-    dels += gone
+    orig = t.set_index("_id")
+    known = set(orig.index)
+    dels, ups, adds, kept = [], {}, [], set()
+    for row in edited.to_dict("records"):  # 새 행은 _id 가 비어 있음
+        rid = db.to_str(row.get("_id")) or None
+        rid = rid if rid in known else None
+        if rid:
+            kept.add(rid)
+        if bool(row.get("삭제")):
+            if rid:
+                dels.append(rid)
+        elif rid:
+            if not same(row, orig.loc[rid]):
+                ups[rid] = rec(row)
+        elif any(db.to_str(row.get(c)) for c in ("제목", "내용", "업체")):
+            adds.append(rec(row))
+    dels += [i for i in known if i not in kept]  # 행 머리에서 지운 행
     n = len(ups) + len(adds) + len(dels)
     c1, c2 = st.columns([1, 3], vertical_alignment="center")
     if c1.button("변경 내용 저장", type="primary", icon=":material/save:", disabled=not n, width="stretch", key="cs_tsave"):
@@ -372,8 +387,8 @@ def render() -> None:
     with st.container(key="cs_tools", horizontal=True, vertical_alignment="center"):
         kind = st.segmented_control("유형", ["전체"] + cs.KINDS, default="전체", key="cs_kind",
                                     label_visibility="collapsed") or "전체"
-        status = st.segmented_control("상태", ["전체", "진행 중", "완료"], default="전체", key="cs_status",
-                                      label_visibility="collapsed") or "전체"
+        status = st.segmented_control("상태", ["진행 중", "완료"], key="cs_status", label_visibility="collapsed",
+                                      help="한 번 더 누르면 모두 보기") or "전체"
         q = st.text_input("검색", placeholder="업체·장비·내용으로 찾기", key="cs_q", label_visibility="collapsed",
                           icon=":material/search:")
         mode = st.segmented_control("보기", ["카드", "표"], default="카드", key="cs_mode",

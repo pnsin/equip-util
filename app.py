@@ -16,15 +16,17 @@ from views import (calendar_entry, charger_board, coming_soon, companies, common
                    equip_info, equipment, export,
                    input_page, maintenance, quote,
                    records, settings, staff, trash)
+from core import cs as cs_core  # noqa: E402
+from views import cs as cs_view  # noqa: E402
 from core.terms import w  # noqa: E402
 
 # 새 코드가 배포된 직후 Streamlit Cloud가 일부 파일만 새로 읽고 나머지는 옛 버전을 쓰는 일이 있어
 # (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
-for _m in (ui_style, seed, db, photos, calc, period, chargers, rules, itube, perf_export, quote_doc, quotes, common,
+for _m in (ui_style, seed, db, photos, calc, period, chargers, rules, itube, perf_export, quote_doc, quotes, cs_core, common,
            calendar_entry, charger_board,
            coming_soon, entry, input_page, maintenance, quote, companies, dashboard,
-           equip_detail, equip_info,
+           equip_detail, equip_info, cs_view,
            equipment, export, records, settings, staff, trash):
     _mt = os.path.getmtime(_m.__file__)
     if getattr(_m, "_src_mtime", None) != _mt:
@@ -74,6 +76,7 @@ def _undo() -> None:
             st.session_state.pop(k, None)
         st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
         st.session_state.entry_ver = st.session_state.get("entry_ver", 0) + 1
+        st.session_state.cs_ver = st.session_state.get("cs_ver", 0) + 1
     st.rerun()
 
 
@@ -109,7 +112,7 @@ PAGES = {
     "장비 정보": [
         st.Page(maintenance.render, title="유지보수", url_path="maintenance"),
         st.Page(equip_info.render, title="장비 정보", url_path="equip-info"),
-        st.Page(coming_soon.render_cs, title="CS활동", url_path="cs"),
+        st.Page(cs_view.render, title="CS활동", url_path="cs"),
     ],
     "기준 정보": [
         st.Page(equipment.render, title="장비", url_path="equipment"),

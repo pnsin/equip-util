@@ -445,3 +445,23 @@ def test_photo_shrink_fits_sheet_cell():
     Image.effect_noise((3000, 2000), 90).convert("RGB").save(bio, "PNG")
     thumb, big = photos.shrink(bio.getvalue())
     assert len(thumb) <= photos.THUMB_MAX and len(big) <= photos.PHOTO_MAX
+
+
+def test_cs_activity_crud_undo_and_trash(store):
+    from core import cs
+    ids = cs.insert([{"date": D(2026, 11, 4), "kind": "방문", "title": "라인 견학", "company": "가나다",
+                      "equip_ids": [], "status": "이상한값"}])
+    df = cs.load()
+    assert len(df) == 1 and df.loc[0, "status"] == "접수" and df.loc[0, "kind"] == "방문"
+    assert cs.check({"date": None, "title": ""}) and not cs.check({"date": D(2026, 11, 4), "title": "x"})
+    cs.update({ids[0]: {"status": "완료", "action": "회신"}})
+    assert cs.load().loc[0, "status"] == "완료"
+    db.undo_last()
+    assert cs.load().loc[0, "status"] == "접수"
+    cs.delete(ids)
+    assert cs.load().empty and len(db.load_trash()) == 1
+    db.undo_last()
+    assert len(cs.load()) == 1
+    s = cs.stats(cs.load(), D(2026, 11, 5))
+    assert s["month"] == 1 and s["open"] == 1 and s["companies"] == 1
+    assert cs.to_excel(cs.load())[:2] == b"PK"
