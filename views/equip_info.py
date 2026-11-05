@@ -83,8 +83,9 @@ CSS = """<style>
 :root { --ip1:#EAF1FF; --ip2:#F1ECFF; --ip3:#E7F6EF; --ip4:#FFF2E3; --ip5:#FDEBF1; --ip6:#E6F5FA; }
 /* 카드 목록 */
 [class*="st-key-iccard_"] {position: relative;}
-[class*="st-key-icgo_"] {position: absolute !important; inset: 0; z-index: 3; margin: 0 !important;}
-[class*="st-key-icgo_"] button {width: 100%; height: 100%; opacity: 0; cursor: pointer;}
+[class*="st-key-icgo_"] {position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; z-index: 3; margin: 0 !important;}
+[class*="st-key-icgo_"] div, [class*="st-key-phgo_"] div {width: 100% !important; height: 100% !important;}
+[class*="st-key-icgo_"] button {width: 100% !important; height: 100% !important; opacity: 0; cursor: pointer;}
 .ic {background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden;
   box-shadow: var(--card-shadow); transition: transform .15s ease, box-shadow .15s ease;}
 [class*="st-key-iccard_"]:hover .ic {transform: translateY(-3px); box-shadow: 0 10px 24px rgba(17,28,46,.10);
@@ -117,8 +118,8 @@ CSS = """<style>
 .bigph .ii svg {width: 120px; height: 120px;}
 .phcap {font-size: .75rem; color: var(--muted); margin-top: .3rem; text-align: center;}
 [class*="st-key-phth_"] {position: relative;}
-[class*="st-key-phgo_"] {position: absolute !important; inset: 0; z-index: 3; margin: 0 !important;}
-[class*="st-key-phgo_"] button {width: 100%; height: 100%; opacity: 0; cursor: pointer;}
+[class*="st-key-phgo_"] {position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; z-index: 3; margin: 0 !important;}
+[class*="st-key-phgo_"] button {width: 100% !important; height: 100% !important; opacity: 0; cursor: pointer;}
 .th {aspect-ratio: 4 / 3; border-radius: 9px; overflow: hidden; border: 2px solid transparent; background: var(--panel2);}
 .th.on {border-color: var(--accent);}
 .th img {width: 100%; height: 100%; object-fit: cover; display: block;}
