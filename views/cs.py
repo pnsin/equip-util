@@ -199,14 +199,14 @@ def _cards(view: pd.DataFrame, label_of: dict) -> None:
 
 # ── 표 보기 (엑셀처럼) ─────────────────────────────────────────
 
-TCOLS = {"date": "활동일", "kind": "유형", "title": "제목", "company": "업체", "contact": "업체 담당자", "staff": "우리 담당자",
+TCOLS = {"date": "활동일", "kind": "유형", "title": "제목", "company": "업체", "contact": "업체 담당자", "staff": "TP담당자",
          "equip": "관련 장비", "content": "내용", "action": "조치·결과", "status": "상태", "follow_up": "후속 일정"}
 
 
 def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], staff: list[str]) -> None:
     t = pd.DataFrame({
         "삭제": False, "활동일": view["date"].dt.date, "유형": view["kind"], "제목": view["title"],
-        "업체": view["company"], "업체 담당자": view["contact"], "우리 담당자": view["staff"],
+        "업체": view["company"], "업체 담당자": view["contact"], "TP담당자": view["staff"],
         "관련 장비": view["equip_list"].map(lambda ids: [label_of[i] for i in ids if i in label_of]),
         "내용": view["content"], "조치·결과": view["action"], "상태": view["status"],
         "후속 일정": view["follow_up"].dt.date,
@@ -225,7 +225,7 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
             "유형": st.column_config.SelectboxColumn(options=cs.KINDS, required=True, default=cs.KINDS[0]),
             "제목": st.column_config.TextColumn(width="medium"),
             "업체": st.column_config.SelectboxColumn(options=comp_opts, width="medium"),
-            "우리 담당자": st.column_config.SelectboxColumn(options=staff_opts),
+            "TP담당자": st.column_config.SelectboxColumn(options=staff_opts),
             "관련 장비": st.column_config.MultiselectColumn(options=list(id_of), width="medium"),
             "내용": st.column_config.TextColumn(width="large"),
             "조치·결과": st.column_config.TextColumn(width="medium"),
@@ -236,7 +236,7 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
 
     def rec(row) -> dict:
         return {"date": row["활동일"], "kind": row["유형"], "title": row["제목"], "company": row["업체"],
-                "contact": row["업체 담당자"], "staff": row["우리 담당자"],
+                "contact": row["업체 담당자"], "staff": row["TP담당자"],
                 "equip_ids": [id_of[x] for x in (row["관련 장비"] or []) if x in id_of],
                 "content": row["내용"], "action": row["조치·결과"], "status": row["상태"], "follow_up": row["후속 일정"]}
 
@@ -319,7 +319,7 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
         v_contact = c1.text_input("업체 담당자", pre.get("contact", ""), placeholder="예: 김OO 과장", key=f"cs_ct_{k}")
         staff0 = pre.get("staff") or st.session_state.get("me") or None
         sopts = staff + ([staff0] if staff0 and staff0 not in staff else [])
-        v_staff = c2.selectbox("우리 담당자", sopts, index=sopts.index(staff0) if staff0 in sopts else None,
+        v_staff = c2.selectbox("TP담당자", sopts, index=sopts.index(staff0) if staff0 in sopts else None,
                                placeholder="선택", key=f"cs_s_{k}")
         eq0 = [label_of[i] for i in (pre.get("equip_list") or []) if i in label_of]
         v_eq = st.multiselect("관련 장비", list(id_of), default=eq0, placeholder="여러 대 골라도 돼요", key=f"cs_e_{k}")

@@ -158,7 +158,7 @@ def to_excel(df: pd.DataFrame) -> bytes:
     import io
     view = pd.DataFrame({
         "활동일": df["date"].dt.date, "유형": df["kind"], "제목": df["title"], "업체": df["company"],
-        "업체 담당자": df["contact"], "우리 담당자": df["staff"], "관련 장비": df["equip_ref"],
+        "업체 담당자": df["contact"], "TP담당자": df["staff"], "관련 장비": df["equip_ref"],
         "내용": df["content"], "조치·결과": df["action"], "상태": df["status"], "후속 일정": df["follow_up"].dt.date,
     })
     bio = io.BytesIO()

@@ -638,6 +638,7 @@ CAT_ORDER = list(CATS)
 FIXED_CATS = ["시험", "제조", "분석", "교육", "지원"]
 LANE_CATS = ["시험", "제조", "분석"]  # 칸마다 비어 있어도 보이는 구역
 CHARGER_GROUP = "시험(충방전기)"
+GROUP_LABEL = {"시험": "시험(환경)", CHARGER_GROUP: "시험(충방전)"}  # 입력 카드 구분 버튼에 보이는 이름
 CARD_GROUPS = ["시험", CHARGER_GROUP, "제조", "분석"]  # 입력 카드 장비 구분 (시험 = 충방전기 뺀 시험 장비)
 CAT_KEY = {"시험": "test", "제조": "make", "분석": "anal", "교육": "edu", "지원": "sup", "기타": "etc"}
 PURPOSE_CAT = {"시험": "시험", "생산": "제조", "분석": "분석", "계측": "분석", "교육": "교육", "기타": "지원"}
@@ -1446,6 +1447,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             if len(groups) > 2:  # 시험·제조·분석 중 하나만 골라 목록을 짧게
                 with st.container(key="ep_grp"):
                     g = st.segmented_control("장비 구분", groups, default=want, key=f"ep_grp_{k}_{lane}",
+                                             format_func=lambda c: GROUP_LABEL.get(c, c),
                                              label_visibility="collapsed") or "전체"
                 if g != "전체":
                     keep = short_of.get(cur["equip_id"]) if cur is not None else None
