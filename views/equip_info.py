@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import datetime as dt
 import html
 import re
 
@@ -433,6 +434,67 @@ def _notes(eid: int, info: dict, key: str, title: str, hint: str, place: str) ->
                  on_change=_save_note, args=(eid,))
 
 
+def _history(ids: list[int], eq: pd.DataFrame) -> None:
+    """장비 히스토리: 날짜순 타임라인 (주장비 전체면 세부장비 기록까지 함께). 사진 한 장, 엑셀로 내려받기."""
+    from core import history
+    eid = ids[0]
+    name_of = dict(zip(eq["id"].astype(int), eq["name"]))
+    df = history.load()
+    df = df[df["equip_id"].isin(ids)] if not df.empty else df
+    e = html.escape
+    with st.container(border=True, key=f"hist_{eid}"):
+        h1, h2 = st.columns([3, 1], vertical_alignment="center")
+        h1.markdown(f"<div class='boxh'><b>장비 히스토리</b><small>{len(df)}건 · 최근 기록이 위</small></div>",
+                    unsafe_allow_html=True)
+        if not df.empty:
+            h2.download_button("엑셀", history.to_xlsx(df, name_of), f"장비히스토리_{name_of.get(eid, eid)}.xlsx",
+                               icon=":material/download:", width="stretch", key=f"hist_xl_{eid}")
+        ver = st.session_state.get("hist_ver", 0)
+        with st.expander("기록 추가", icon=":material/add:"):
+            with st.form(f"hist_add_{eid}_{ver}", border=False):
+                c1, c2 = st.columns([1, 2])
+                day = c1.date_input("날짜", value=dt.date.today(), format="YYYY-MM-DD")
+                who = c2.selectbox("장비", ids, format_func=lambda i: name_of.get(i, str(i))) if len(ids) > 1 else eid
+                text = st.text_area("내용", placeholder="예) 히터 온도 이상 → 센서 교체 (OO기계 A/S)", height=90)
+                pic = st.file_uploader("사진 (선택)", type=["png", "jpg", "jpeg", "webp", "bmp"])
+                if st.form_submit_button("저장", type="primary", icon=":material/save:"):
+                    if not text.strip():
+                        st.warning("내용을 적어 주세요.")
+                    else:
+                        thumb = big = ""
+                        if pic is not None:
+                            try:
+                                thumb, big = photos.shrink(pic.getvalue())
+                            except ValueError:
+                                st.warning("사진 파일이 아니라서 빼고 저장했어요.")
+                        history.add(int(who), day, text.strip(), thumb, big)
+                        st.session_state.hist_ver = ver + 1
+                        st.rerun()
+        if df.empty:
+            st.caption("아직 기록이 없어요.")
+            return
+        for r in df.to_dict("records"):
+            rid = int(r["id"])
+            c1, c2, c3 = st.columns([0.9, 4, 0.5], vertical_alignment="top")
+            c1.markdown(f"<b>{r['date'] or ''}</b>", unsafe_allow_html=True)
+            dev = f"<small style='color:var(--accent)'>{e(name_of.get(r['equip_id'], ''))}</small><br>" \
+                if len(ids) > 1 else ""
+            c2.markdown(f"{dev}{e(str(r['content'])).replace(chr(10), '<br>')}"
+                        f"<br><small style='color:var(--muted)'>{e(str(r['created_by'] or ''))}</small>",
+                        unsafe_allow_html=True)
+            if r["thumb"]:
+                c2.markdown(f"<img src='{photos.data_uri(r['photo'] or r['thumb'])}' style='max-width:260px;"
+                            "border-radius:8px'>", unsafe_allow_html=True)
+            with c3.popover("", icon=":material/more_horiz:"):
+                new = st.text_area("내용", value=str(r["content"]), key=f"hist_ed_{rid}")
+                if st.button("고치기", key=f"hist_up_{rid}", type="primary"):
+                    history.update(rid, content=new.strip())
+                    st.rerun()
+                if st.button("지우기", key=f"hist_del_{rid}", icon=":material/delete:"):
+                    history.delete(rid)
+                    st.rerun()
+
+
 def _family(root: int, eq: pd.DataFrame) -> list[tuple[int, int]]:
     """root 아래 세부장비를 목록 순서대로 (id, 깊이)."""
     kids: dict[int, list[int]] = {}
@@ -465,6 +527,7 @@ def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
     fam = _family(eid, eq)
     if not fam:
         _unit(eid, eq, info)
+        _history([eid], eq)
         return
     # 세부장비가 많아도 짧게: 왼쪽은 이름 목록(검색), 오른쪽은 고른 하나만
     name_of = dict(zip(eq["id"].astype(int), eq["name"]))
@@ -484,6 +547,7 @@ def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
                            else "\u3000" * (depth.get(i, 1) - 1) + name_of.get(i, str(i)))
     with body:
         _unit(sel, eq, info, in_list=True)
+        _history([eid] + [i for i, _ in fam] if sel == eid else [sel], eq)
 
 
 def _unit(eid: int, eq: pd.DataFrame, info: dict, in_list: bool = False) -> None:
