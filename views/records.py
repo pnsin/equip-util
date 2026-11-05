@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 
 import pandas as pd
 import streamlit as st
@@ -6,6 +7,7 @@ import streamlit as st
 from core import db, rules, seed
 from core.calc import period_bounds
 from ui_style import empty_state, page_header
+from views.common import pin_table, unpin
 
 # 표 열 이름 → DB 필드
 FIELDS = {
@@ -37,11 +39,59 @@ DEFAULT_COLS = ["장비", "시작일", "종료일", "업체", "사용료", "사�
                 "세부지원내용", "수정자"]
 
 
+def _fee_log(v) -> list[dict]:
+    try:
+        rows = json.loads(db.to_str(v) or "[]")
+        return rows if isinstance(rows, list) else []
+    except ValueError:
+        return []
+
+
+def _payments(df: pd.DataFrame, label_of: dict) -> None:
+    """수수료를 나눠 받거나 늦게 받은 시험: 받은 날 · 금액을 여러 번 적으면 합계가 사용료(수수료)로 들어감."""
+    paid = df[df["company"].fillna("") != ""]
+    if paid.empty:
+        return
+    with st.expander("나눠 받거나 늦게 받은 수수료 적기", icon=":material/payments:"):
+        opts = {int(r["id"]): f"{r['start_date']:%m/%d} {label_of.get(r['equip_id'], '?')} · {r['company']}"
+                + (f" · {r['fee']:,.0f}원" if r["fee"] else "") for r in paid.to_dict("records")}
+        lid = st.selectbox("시험", list(opts), format_func=opts.get, index=None, placeholder="시험 고르기",
+                           key="fee_pick")
+        if lid is None:
+            return
+        row = paid[paid["id"] == lid].iloc[0]
+        rows = _fee_log(row.get("fee_log"))
+        if not rows and row["fee"]:
+            rows = [{"date": "", "amount": int(row["fee"]), "memo": "이전에 넣은 금액"}]
+        base = pd.DataFrame(rows, columns=["date", "amount", "memo"])
+        base["date"] = pd.to_datetime(base["date"], errors="coerce").dt.date
+        base["amount"] = pd.to_numeric(base["amount"], errors="coerce")
+        base["memo"] = base["memo"].astype("string")
+        ed = st.data_editor(base, key=f"fee_rows_{lid}", num_rows="dynamic", hide_index=True, width="stretch",
+                            column_config={
+                                "date": st.column_config.DateColumn("받은 날", format="YYYY-MM-DD",
+                                                                    default=dt.date.today()),
+                                "amount": st.column_config.NumberColumn("금액(원)", min_value=0, step=10000,
+                                                                        format="localized"),
+                                "memo": st.column_config.TextColumn("메모", width="large")})
+        ed = ed[ed["amount"].fillna(0) > 0]
+        total = int(ed["amount"].sum())
+        c1, c2 = st.columns([1, 2], vertical_alignment="center")
+        c2.caption(f"합계 {total:,}원 · 저장하면 이 시험의 수수료가 합계로 바뀌고, 실적 내려받기에 그대로 들어가요.")
+        if c1.button("받은 내역 저장", type="primary", key=f"fee_save_{lid}", width="stretch"):
+            log = [{"date": d.isoformat() if pd.notna(d) and d else "", "amount": int(a), "memo": db.to_str(m)}
+                   for d, a, m in zip(ed["date"], ed["amount"], ed["memo"])]
+            with db.undo_group("수수료 받은 내역 저장"):
+                db.update_logs({lid: {"fee": total, "fee_log": json.dumps(log, ensure_ascii=False)}})
+            st.session_state.records_saved = f"수수료 {total:,}원을 저장했어요."
+            st.session_state.pop(f"fee_rows_{lid}", None)
+            st.rerun()
+
+
 def render() -> None:
     page_header("수수료 입력", "실적")
     saved = st.session_state.pop("records_saved", None)
     if saved:
-        st.success(saved, icon=":material/check_circle:")
         st.toast(saved, icon=":material/check_circle:")
 
     logs = db.load_logs()
@@ -89,6 +139,8 @@ def render() -> None:
         empty_state("조건에 맞는 실적이 없습니다", icon="⌕")
         return
 
+    _payments(df, label_of)
+
     view = df.copy()
     view["equip_label"] = view["equip_id"].map(label_of)
     view["start_date"] = view["start_date"].dt.date
@@ -107,8 +159,10 @@ def render() -> None:
                   on_click=lambda: st.session_state.update(rec_cols=DEFAULT_COLS))
     shown = shown or DEFAULT_COLS
 
+    ed_key = f"records_editor_{abs(hash((str(rng), tuple(sel_eq), comp_q, writer, no_fee))) % 10 ** 8}"
+    view, _ = pin_table(ed_key, view)  # 고치는 중에 다른 분이 저장해도 칸이 엉뚱한 줄로 가지 않게 (저장은 ID로)
     edited = st.data_editor(
-        view, key="records_editor", hide_index=True, width="stretch", height=520,
+        view, key=ed_key, hide_index=True, width="stretch", height=520,
         disabled=["사업자번호", "수정자"],
         column_order=["삭제", "복제"] + list(dict.fromkeys(c for c in DEFAULT_COLS + all_cols if c in shown)),
         column_config={
@@ -178,7 +232,8 @@ def render() -> None:
                 n_up = db.update_logs(updates) if updates else 0
                 n_del = db.delete_logs(to_delete)
             st.session_state.records_saved = f"수정 {n_up}건 · 삭제 {n_del}건 반영했습니다."
-            st.session_state.pop("records_editor", None)
+            st.session_state.pop(ed_key, None)
+            unpin(ed_key)
             st.rerun()
     c2.caption(f"수정 {len(changed)}건 · 삭제 {len(to_delete)}건 저장 대기" if (changed or to_delete) else "")
 
