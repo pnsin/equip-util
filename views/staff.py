@@ -6,17 +6,16 @@ from ui_style import page_header
 from views.common import confirm_delete, delete_config, split_deleted, with_delete_column
 
 COLS = {
-    "id": "id", "dept": "부서", "team": "팀", "name": "이름", "phone": "내선번호",
-    "role": "담당업무", "email": "이메일", "note": "비고",
+    "id": "id", "dept": "부서", "team": "팀", "name": "이름", "title": "직급", "phone": "내선번호",
+    "role": "담당업무", "email": "이메일", "birthday": "생일", "note": "비고",
 }
-TEXT = ("부서", "팀", "이름", "내선번호", "담당업무", "이메일", "비고")
+TEXT = ("부서", "팀", "이름", "직급", "내선번호", "담당업무", "이메일", "생일", "비고")
 
 
 def render() -> None:
     page_header("담당자", "기준 정보")
     msg = st.session_state.pop("staff_saved", None)
     if msg:
-        st.success(msg, icon=":material/check_circle:")
         st.toast(msg, icon=":material/check_circle:")
     view = db.load_staff()[list(COLS)].rename(columns=COLS)
     # 빈 목록이면 열 형식을 알 수 없어 편집기가 오류를 내므로 형식을 고정
@@ -26,7 +25,9 @@ def render() -> None:
         column_order=["삭제"] + [c for c in COLS.values() if c != "id"],
         column_config=delete_config() | {
             "이름": st.column_config.TextColumn(required=True),
+            "직급": st.column_config.TextColumn(help="예: 선임연구원"),
             "내선번호": st.column_config.TextColumn(help="예: 043-270-2410"),
+            "생일": st.column_config.TextColumn(help="예: 03-15"),
             "담당업무": st.column_config.TextColumn(help="예: 팀장, 운영, 시험, 제조"),
             "비고": st.column_config.TextColumn(width="medium"),
         },
