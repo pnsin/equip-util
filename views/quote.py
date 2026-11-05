@@ -530,6 +530,10 @@ def _issue(d: dict, t: dict) -> None:
            "data": json.dumps(data, ensure_ascii=False, default=str)}
     with st.spinner("PDF 만드는 중…"):
         d["id"] = db.save_quote(rec)
+        try:
+            db.sync_company_contact(d["company"], d.get("contact"), d.get("phone"))
+        except Exception:  # 업체 정보 반영이 안 돼도 견적서 발급은 계속
+            pass
         files = {"no": d["no"], "pdfs": []}
         try:
             parts = [("customer", "PDF 받기 (업체용)"), ("internal", "PDF 받기 (내부보관용)")] \
