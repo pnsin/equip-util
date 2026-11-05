@@ -83,6 +83,7 @@ TABLES = {
     "maint": ("유지보수", [
         ("id", "ID"), ("date", "날짜"), ("equip_id", "장비ID"), ("equip_ref", "장비명(참고)"),
         ("kind", "종류"), ("content", "내용"), ("staff", "담당자"), ("note", "비고"),
+        ("cost", "비용(원)"),  # 2026-11-05 추가
     ]),
     # 2026-11-04 CS활동 (업체 대상 문의·방문·기술지원 등). 관련 장비는 장비ID를 쉼표로 이어 저장
     "cs": ("CS활동", [
@@ -1426,6 +1427,7 @@ def load_maint() -> pd.DataFrame:
     df["equip_id"] = pd.to_numeric(df["equip_id"], errors="coerce").astype("Int64")
     for c in MAINT_TEXT + ("equip_ref",):
         df[c] = df[c].map(to_str)
+    df["cost"] = pd.to_numeric(df["cost"].map(lambda v: to_str(v).replace(",", "")), errors="coerce").astype("Int64")
     df["_o"] = df["date"].map(lambda d: d.toordinal() if d else 10 ** 7)  # 날짜 없는 줄은 맨 위
     return df.sort_values(["_o", "id"], ascending=False).drop(columns="_o").reset_index(drop=True)
 
@@ -1444,6 +1446,8 @@ def save_maint(edited: pd.DataFrame) -> int:
         rec["equip_ref"] = names.get(int(eid), "") if eid is not None else to_str(r.get("equip_ref"))
         d = to_date(r.get("date"))
         rec["date"] = d
+        cost = to_num(r.get("cost"))
+        rec["cost"] = int(cost) if cost is not None else ""
         if not (rec["equip_id"] != "" or rec["equip_ref"] or rec["content"] or rec["kind"]):
             continue
         rid = to_num(r.get("id"))
