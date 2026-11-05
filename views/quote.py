@@ -325,7 +325,7 @@ def render_new() -> None:
     # 맨 위: 양식 · 불러오기 · 새로
     with st.container(horizontal=True, vertical_alignment="center", key="q_top"):
         form = st.segmented_control("양식", list(FORMS), default=d["form"], key=f"q_form_{ver}",
-                                    format_func=lambda f: "제조 · 장비사용" if f == "제조" else "시험",
+                                    format_func=lambda f: f,
                                     label_visibility="collapsed") or d["form"]
         saved = db.load_quotes()
         labels = {f"{r['no']} · {r['company']}": r for r in saved.to_dict("records")}
