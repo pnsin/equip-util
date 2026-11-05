@@ -1,30 +1,7 @@
-"""실적 입력: 달력에서 날짜를 눌러 입력합니다. 충방전기는 같은 화면에서 '충방전기'로 바꿔 챔버별 현황을 봅니다.
-내려받기는 왼쪽 메뉴 '실적 내려받기'에서 합니다 (2026-11-04 위쪽 버튼은 중복이라 뺌)."""
-import streamlit as st
-
-from ui_style import page_header
-from views import calendar_entry, charger_board
+"""실적 입력: 달력에서 날짜를 눌러 입력합니다 (충방전기도 달력 카드에서 '시험(충방전)' → 센터 → 충방전기 → 채널).
+충방전기 현황판은 왼쪽 메뉴 '현황 › 충방전기 현황' (2026-11-05 전환 버튼 제거)."""
+from views import calendar_entry
 
 
 def render() -> None:
-    head, mid = st.columns([0.55, 0.45], vertical_alignment="center")
-    with head:
-        page_header("실적 입력", "실적")
-    with mid:  # 메뉴를 늘리지 않고 같은 화면에서 보기만 바꿈 (입력은 달력 카드에서 한 번)
-        st.markdown("""<style>.st-key-in_view_box [data-testid="stButtonGroup"] {background: #E6EAF0; border-radius: 999px;
-  padding: 3px; width: fit-content;}
-.st-key-in_view_box [data-testid="stButtonGroup"] button {border: none !important; border-radius: 999px !important;
-  background: transparent !important; padding: 0 18px !important; min-height: 32px !important;}
-.st-key-in_view_box [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #fff !important;
-  box-shadow: 0 1px 4px rgba(17, 28, 46, .15);}
-.st-key-in_view_box [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: var(--accent) !important;}
-.st-key-in_view_box [data-testid="stButtonGroup"] button p {font-weight: 700;}</style>""", unsafe_allow_html=True)
-        with st.container(key="in_view_box"):
-            st.session_state.setdefault("in_view", "달력")
-            view = st.segmented_control("보기", ["달력", "충방전기"], key="in_view", label_visibility="collapsed",
-                                        format_func={"달력": ":material/calendar_month: 달력",
-                                                     "충방전기": ":material/battery_charging_full: 충방전기"}.get)
-    if view == "충방전기":
-        charger_board.render()
-    else:
-        calendar_entry.render(header=False)
+    calendar_entry.render()
