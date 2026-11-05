@@ -81,7 +81,6 @@ def render_rates() -> None:
         st.markdown(f'<div class="q-tile q-inline"><b style="color:var(--ok)">{filled}</b><span>단가 있음</span></div>'
                     f'<div class="q-tile q-inline"><b style="color:var(--warn)">{len(rows) - filled}</b>'
                     f'<span>비어 있음</span></div>', unsafe_allow_html=True)
-    groups = [g for g in dict.fromkeys(r["group"] for r in rows) if g]
     xl = pd.DataFrame(rows, columns=list(devices.columns)).assign(id=lambda d: d["equip_id"])
 
     def _apply_xl(m):
@@ -94,14 +93,11 @@ def render_rates() -> None:
 
     with st.container(horizontal=True, vertical_alignment="center"):
         excel_box("rate_xl", xl, RATE_XL, "장비단가", _apply_xl)
-        pick = st.pills("대분류", groups, selection_mode="multi", key="rate_groups", label_visibility="collapsed")
         only_missing = st.toggle("비어 있는 것만", key="rate_missing")
-    key = f"rate_dev_{ver}_{'|'.join(pick or [])}_{only_missing}"
+    key = f"rate_dev_{ver}_{only_missing}"
     if ss.get("rate_base_key") != key:  # 표 원본은 이 보기에서 처음 그릴 때 한 번만 만듦
         view = pd.DataFrame(rows, columns=list(devices.columns))
         view["확인"] = ["비어 있음" if quotes.is_missing(r) else "" for r in rows]
-        if pick:
-            view = view[view["group"].isin(pick)]
         if only_missing:
             view = view[view["확인"] != ""]
         for c in ("price_req", "price_self"):
