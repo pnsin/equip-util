@@ -3,7 +3,7 @@ import streamlit as st
 
 from core import db, seed
 from ui_style import page_header
-from views.common import (confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
+from views.common import (excel_box, confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
                           with_delete_column)
 
 COLS = {
@@ -16,12 +16,21 @@ def render() -> None:
     page_header("업체", "기준 정보")
     msg = st.session_state.pop("company_saved", None)
     if msg:
-        st.success(msg, icon=":material/check_circle:")
         st.toast(msg, icon=":material/check_circle:")
     comp = db.load_companies()
     view = comp[list(COLS)].rename(columns=COLS)
 
-    q = search_box("company_q", "업체명·사업자등록번호·업체 담당자로 찾기")
+    def _apply_xl(m):
+        errors = db.check_companies(m)
+        if not errors:
+            db.save_companies(m)
+        return errors
+
+    c1, c2 = st.columns([4, 1.3], vertical_alignment="center")
+    with c1:
+        q = search_box("company_q", "업체명·사업자등록번호·업체 담당자로 찾기")
+    with c2:
+        excel_box("company_xl", comp, {k: v for k, v in COLS.items() if k != "id"}, "업체", _apply_xl)
     mask = None
     if q:
         mask = (view["업체명"].str.contains(q, case=False, regex=False)
