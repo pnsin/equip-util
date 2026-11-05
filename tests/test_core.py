@@ -418,3 +418,30 @@ def test_maint_save_load_and_delete(store):
     db.save_maint(df[df["content"] == "분기 점검"])
     assert list(db.load_maint()["content"]) == ["분기 점검"]
     assert list(store.read("trash")["table"]) == ["maint"]
+
+
+def test_equip_info_rows_save_undo_and_photo_fits(store):
+    db.save_info_rows("equip_specs", 4, [{"item": "용량", "value": "5 L"}, {"item": "전원", "value": "380V"}])
+    db.save_info_rows("equip_specs", 9, [{"item": "해상도", "value": "1 um"}])
+    sp = db.load_info()["equip_specs"]
+    mine = sp[sp["equip_id"] == "4"].to_dict("records")
+    assert [r["item"] for r in mine] == ["용량", "전원"]
+    # 한 줄 고치고 한 줄 지우기 → 다른 장비 줄은 그대로
+    db.save_info_rows("equip_specs", 4, [{"id": mine[1]["id"], "item": "전원", "value": "3상 380V"}])
+    sp = db.load_info()["equip_specs"]
+    assert list(sp.loc[sp["equip_id"] == "4", "value"]) == ["3상 380V"]
+    assert list(sp.loc[sp["equip_id"] == "9", "item"]) == ["해상도"]
+    db.undo_last()
+    sp = db.load_info()["equip_specs"]
+    assert sorted(sp.loc[sp["equip_id"] == "4", "value"]) == ["380V", "5 L"]
+    assert db.save_info_note(4, "세척 필수", "") and not db.save_info_note(4, "세척 필수", "")
+
+
+def test_photo_shrink_fits_sheet_cell():
+    import io
+    from PIL import Image
+    from core import photos
+    bio = io.BytesIO()
+    Image.effect_noise((3000, 2000), 90).convert("RGB").save(bio, "PNG")
+    thumb, big = photos.shrink(bio.getvalue())
+    assert len(thumb) <= photos.THUMB_MAX and len(big) <= photos.PHOTO_MAX

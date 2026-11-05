@@ -11,9 +11,9 @@ import importlib  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
 
-from core import calc, chargers, db, itube, perf_export, period, quote_doc, quotes, rules, seed  # noqa: E402
+from core import calc, chargers, db, photos, itube, perf_export, period, quote_doc, quotes, rules, seed  # noqa: E402
 from views import (calendar_entry, charger_board, coming_soon, companies, common, dashboard, entry, equip_detail,  # noqa: E402
-                   equipment, export,
+                   equip_info, equipment, export,
                    input_page, maintenance, quote,
                    records, settings, staff, trash)
 from core.terms import w  # noqa: E402
@@ -21,10 +21,10 @@ from core.terms import w  # noqa: E402
 # 새 코드가 배포된 직후 Streamlit Cloud가 일부 파일만 새로 읽고 나머지는 옛 버전을 쓰는 일이 있어
 # (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
-for _m in (ui_style, seed, db, calc, period, chargers, rules, itube, perf_export, quote_doc, quotes, common,
+for _m in (ui_style, seed, db, photos, calc, period, chargers, rules, itube, perf_export, quote_doc, quotes, common,
            calendar_entry, charger_board,
            coming_soon, entry, input_page, maintenance, quote, companies, dashboard,
-           equip_detail,
+           equip_detail, equip_info,
            equipment, export, records, settings, staff, trash):
     _mt = os.path.getmtime(_m.__file__)
     if getattr(_m, "_src_mtime", None) != _mt:
@@ -108,7 +108,7 @@ PAGES = {
     ],
     "장비 정보": [
         st.Page(maintenance.render, title="유지보수", url_path="maintenance"),
-        st.Page(coming_soon.render_info, title="장비 정보", url_path="equip-info"),
+        st.Page(equip_info.render, title="장비 정보", url_path="equip-info"),
         st.Page(coming_soon.render_cs, title="CS활동", url_path="cs"),
     ],
     "기준 정보": [
@@ -123,7 +123,8 @@ PAGES = {
         st.Page(trash.render, title="휴지통 · 기록", url_path="trash"),
     ],
 }
-common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1], "input": PAGES["실적"][0]})
+common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1], "input": PAGES["실적"][0],
+                     "equipment": PAGES["기준 정보"][0], "equip_info": PAGES["장비 정보"][1]})
 
 # 예전 주소(/dashboard, /calendar …)로 들어와도 "Page not found" 없이 해당 화면이 열리게 하는 숨은 주소
 ALIASES = [
