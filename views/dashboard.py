@@ -318,50 +318,52 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
 
 def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, year_sum, logs, ys, ye_eff,
                  today, centers) -> None:
+    """2026-11-05: 장비 수수료는 재무팀 매출장(세금일자 · 공급가) 기준. 실적별 수수료는 늦게·안 넣는 경우가 많아서."""
+    from core import fee_ledger
     with st.container(key="dsec_fee"):
         _head(2, "장비 수수료", TEAL, "₩", period)
-        past = logs[(logs["start_date"] >= pd.Timestamp(ys)) & (logs["start_date"] <= pd.Timestamp(ye_eff))] \
-            if not logs.empty else logs
-        missing = past[(past["company"] != "") & (pd.to_numeric(past["fee"], errors="coerce").fillna(0) <= 0)] \
-            if not past.empty else past
+        fl = fee_ledger.load()
+        fl = fl[fl["tax_date"].map(bool)] if not fl.empty else fl
+        yr = fl["tax_date"].map(lambda d: d.year) if not fl.empty else pd.Series(dtype=int)
+        mo = fl["tax_date"].map(lambda d: d.month) if not fl.empty else pd.Series(dtype=int)
+        cur = fl[yr == year] if not fl.empty else fl
+        prev = fl[(yr == year - 1) & (mo <= cm)] if not fl.empty else fl  # 작년 같은 기간
+        fees = cur.groupby(mo[yr == year])["supply"].sum().to_dict() if not cur.empty else {}
+        pm = (year, cm - 1) if cm > 1 else (year - 1, 12)
+        pm_fee = fl[(yr == pm[0]) & (mo == pm[1])]["supply"].sum() if not fl.empty else 0
+        m_fee, y_fee, py_fee = fees.get(cm, 0), sum(fees.values()), prev["supply"].sum() if not prev.empty else 0
+        unpaid = cur["unpaid"].fillna(0) if not cur.empty else pd.Series(dtype=float)
         _stats([
-            (f"이번 달 · {cm}월", _man(m_tot["fee"]), "만원",
-             _delta((m_tot["fee"] - pm_tot["fee"]) / 10000, "만원", "지난달"), False),
-            (f"올해 누적 · {year}년", _man(y_tot["fee"]), "만원",
-             _delta((y_tot["fee"] / py_tot["fee"] - 1) * 100, "%", "작년") if py_tot["fee"] else "", True),
-            ("수수료 안 넣은 실적", f"{len(missing):,}", "건",
-             _chip("수수료 입력에서 넣을 수 있어요", "r") if len(missing) else _chip("모두 넣었어요", "g"), False),
+            (f"이번 달 · {cm}월", _man(m_fee), "만원", _delta((m_fee - pm_fee) / 10000, "만원", "지난달"), False),
+            (f"올해 누적 · {year}년", _man(y_fee), "만원",
+             _delta((y_fee / py_fee - 1) * 100, "%", "작년") if py_fee else "", True),
+            ("미수금 · 올해", _man(unpaid.sum()), "만원",
+             _chip(f"{int((unpaid > 0).sum())}건 남았어요", "r") if unpaid.sum() > 0 else _chip("모두 받았어요", "g"), False),
         ])
-        fees = {m: r["사용료"] for m, r in m_of.items()}
         done = {m: v for m, v in fees.items() if m <= cm}
-        if done and sum(done.values()) > 0:
+        if fl.empty:
+            _lead("수수료 입력 › 재무팀 매출장에서 엑셀을 올리면 여기에 나와요.", TEAL)
+        elif done and sum(done.values()) > 0:
             best = max(done, key=done.get)
-            _lead(f"올해 한 달 평균 <b>{_man(sum(done.values()) / len(done))}만원</b>이 들어왔어요. "
+            _lead(f"올해 한 달 평균 <b>{_man(sum(done.values()) / cm)}만원</b>이 발행됐어요. "
                   f"{best}월이 <b>{_man(done[best])}만원</b>으로 가장 많았어요.", TEAL)
         else:
-            _lead("올해는 아직 입력된 수수료가 없어요.", TEAL)
+            _lead("올해는 아직 발행된 수수료가 없어요.", TEAL)
 
-        st.markdown('<div class="dct">월별 수수료 (만원) · 막대를 누르면 그 달 실적</div>', unsafe_allow_html=True)
-        vals = [fees[m] / 10000 if m in fees else None for m in range(1, 13)]
-        ev = _bars(vals, months, cm - 1, TEAL, lambda v: f"{v:,.0f}", "dash_fee_m",
-                   hover="%{x} 수수료 %{y:,.0f}만원<extra></extra>", custom=list(range(1, 13)))
-        m = _pick(ev)
-        if m is not None:
-            s, e, _ = calc.period_bounds("월", dt.date(year, int(m), 1))
-            go_records(start=s, end=min(e, today) if s <= today else e)
+        st.markdown('<div class="dct">월별 수수료 (만원, 세금일자 · 공급가 기준)</div>', unsafe_allow_html=True)
+        vals = [fees.get(m, 0) / 10000 if m <= cm or m in fees else None for m in range(1, 13)]
+        _bars(vals, months, cm - 1, TEAL, lambda v: f"{v:,.0f}", "dash_fee_m",
+              hover="%{x} 수수료 %{y:,.0f}만원<extra></extra>", custom=list(range(1, 13)))
 
-        top = year_sum[year_sum["최상위"]] if not year_sum.empty else year_sum
         c1, c2 = st.columns(2)
-        if top.empty or top["사용료"].sum() <= 0:
-            _box(c1, "센터별 · 올해", '<div class="dnone">기록 없음</div>')
-            _box(c2, "수수료 많은 장비 · 올해", '<div class="dnone">기록 없음</div>')
+        if cur.empty or cur["supply"].sum() <= 0:
+            _box(c1, "업체별 · 올해", '<div class="dnone">기록 없음</div>')
+            _box(c2, "발행내역별 · 올해", '<div class="dnone">기록 없음</div>')
             return
-        by_c = top.assign(c=[centers.get(int(i), "") or "기타" for i in top["equip_id"]]).groupby("c")["사용료"].sum()
-        by_c = by_c[by_c > 0].sort_values(ascending=False)
-        _box(c1, "센터별 · 올해", _mini_list([(c, v, f"{_man(v)}만") for c, v in by_c.items()], TEAL[0]))
-        best = top[top["사용료"] > 0].sort_values("사용료", ascending=False).head(5)
-        _box(c2, "수수료 많은 장비 · 올해",
-             _mini_list([(n, v, f"{_man(v)}만") for n, v in zip(best["장비명"], best["사용료"])], TEAL[0]))
+        by_c = cur.groupby("company")["supply"].sum().sort_values(ascending=False).head(5)
+        _box(c1, "업체별 · 올해", _mini_list([(c, v, f"{_man(v)}만") for c, v in by_c.items()], TEAL[0]))
+        by_i = cur.groupby("item")["supply"].sum().sort_values(ascending=False).head(5)
+        _box(c2, "발행내역별 · 올해", _mini_list([(c, v, f"{_man(v)}만") for c, v in by_i.items()], TEAL[0]))
 
 
 def _maint_section(year, cm, period, months, eq, eq_all, filtered: bool, today) -> None:
