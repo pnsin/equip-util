@@ -12,7 +12,7 @@ import streamlit as st
 
 from core import db
 from ui_style import page_header
-from views.common import center_pick, filtered_editor, search_box
+from views.common import center_pick, filtered_editor, merge_edits, pin_table, search_box, unpin
 
 COLS = {"id": "id", "date": "날짜", "equip": "장비", "kind": "종류", "content": "내용", "staff": "담당자",
         "cost": "비용(원)", "note": "비고"}
@@ -99,6 +99,7 @@ def render() -> None:
     })
     view = view.astype({c: "string" for c in ("장비", "종류", "내용", "담당자", "비고")})
     view["날짜"] = pd.to_datetime(view["날짜"]).dt.date
+    view, newer = pin_table("maint_editor_", view)
 
     c0, c9 = st.columns([4, 1.2], vertical_alignment="center")
     with c0:
@@ -123,7 +124,7 @@ def render() -> None:
         mask &= view["종류"].isin(pick)
     if center:
         cen = db.equip_centers(eq)
-        mask &= pd.Series([cen.get(int(e)) == center if pd.notna(e) else False for e in df["equip_id"]], index=view.index)
+        mask &= pd.Series([cen.get(id_of.get(e)) == center for e in view["장비"]], index=view.index)
     filtered = bool(q or pick or center)
 
     staff = db.staff_names(include=list(df["staff"]))
@@ -149,6 +150,9 @@ def render() -> None:
 
     n_del = len(view) - len(edited.dropna(subset=["id"]))
     if st.button("변경 내용 저장", type="primary", icon=":material/save:"):
+        if newer is not None:  # 그사이 다른 분이 저장함 → 내가 바꾼 줄만 얹기
+            edited = merge_edits(view, edited, newer)
+        unpin("maint_editor_")
         out = edited.rename(columns={v: k for k, v in COLS.items()})
         out["equip_id"] = [id_of.get(e) if isinstance(e, str) else None for e in out["equip"]]
         out["equip_ref"] = out["equip"]

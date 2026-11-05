@@ -37,3 +37,12 @@ def test_no_id_column():
     pd.DataFrame({"업체명": ["a"]}).to_excel(buf, index=False)
     _, a, u, notes = sheet_io.merge(df, buf.getvalue(), HEADS)
     assert (a, u) == (0, 0) and notes
+
+
+def test_merge_edits_keeps_others_changes():
+    from views.common import merge_edits
+    base = pd.DataFrame({"id": [1, 2, 3], "name": ["a", "b", "c"]})
+    mine = pd.DataFrame({"id": [1, 3, None], "name": ["A", "c", "new"]})   # 1 고침, 2 지움, 새 줄
+    latest = pd.DataFrame({"id": [1, 2, 3, 4], "name": ["a", "b", "c2", "d"]})  # 남이 3 고치고 4 추가
+    out = merge_edits(base, mine, latest)
+    assert list(out["name"]) == ["A", "c2", "d", "new"]

@@ -92,6 +92,68 @@ def confirm_delete(names: list[str], key: str, unit: str = "개") -> bool:
     return True
 
 
+# ── 여러 사람이 같이 쓸 때: 내가 고치기 시작한 표를 붙잡아 두고, 저장할 때 남이 고친 것과 합침 ──────
+
+def _has_edits(v) -> bool:
+    return isinstance(v, dict) and any(v.get(x) for x in ("edited_rows", "added_rows", "deleted_rows"))
+
+
+def pin_table(prefix: str, view: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+    """고치는 중이면 처음 펼친 표를 그대로 돌려줌 (그사이 다른 사람이 저장해도 내 칸이 엉뚱한 줄로 가지 않게).
+
+    돌려주는 값: (화면에 쓸 표, 다른 사람이 바꾼 최신 표 또는 None).
+    """
+    ss = st.session_state
+    pk = f"_pin_{prefix}"
+    busy = any(_has_edits(ss[k]) for k in list(ss.keys()) if str(k).startswith(prefix) and k != pk)
+    if busy and pk in ss:
+        base = ss[pk]
+        same = base.shape == view.shape and base.astype(str).equals(view.astype(str))
+        return base, (None if same else view)
+    ss[pk] = view.copy()
+    return view, None
+
+
+def unpin(prefix: str) -> None:
+    st.session_state.pop(f"_pin_{prefix}", None)
+
+
+def merge_edits(base: pd.DataFrame, edited: pd.DataFrame, latest: pd.DataFrame, key: str = "id") -> pd.DataFrame:
+    """내가 바꾼 줄만 최신 표에 얹습니다 (남이 그사이 고친·추가한 줄은 그대로 둠).
+
+    - base: 내가 고치기 시작할 때 표, edited: 내가 고친 표, latest: 지금 시트의 표
+    - 내가 지운 줄은 최신 표에서도 지우고, 내가 새로 넣은 줄(ID 없음)은 맨 뒤에 붙임
+    """
+    def k(v):
+        n = pd.to_numeric(pd.Series([v]), errors="coerce").iloc[0]
+        return None if pd.isna(n) else int(n)
+
+    def norm(v):
+        if v is None or v is pd.NA or (isinstance(v, float) and pd.isna(v)):
+            return ""
+        if isinstance(v, float) and v.is_integer():
+            v = int(v)
+        return str(v).strip()
+
+    def row_s(r):
+        return {c: norm(r.get(c)) for c in base.columns if c != key}
+
+    b = {k(r[key]): r for r in base.to_dict("records") if k(r[key]) is not None}
+    e_rows = edited.to_dict("records")
+    e = {k(r[key]): r for r in e_rows if k(r[key]) is not None}
+    out, seen = [], set()
+    for r in latest.to_dict("records"):
+        i = k(r[key])
+        if i in b and i not in e:      # 내가 지운 줄
+            continue
+        if i in e and row_s(e[i]) != row_s(b.get(i, {})):  # 내가 고친 줄
+            r = {**r, **e[i]}
+        out.append(r)
+        seen.add(i)
+    out += [r for r in e_rows if k(r[key]) is None]  # 내가 새로 넣은 줄
+    return pd.DataFrame(out, columns=list(edited.columns)).reset_index(drop=True)
+
+
 # ── 검색해도 바로 고칠 수 있는 목록 표 ───────────────────────────
 
 POS = "_pos"

@@ -11,7 +11,7 @@ import streamlit as st
 
 from core import cs, db
 from ui_style import empty_state, page_header
-from views.common import new_company_dialog
+from views.common import new_company_dialog, pin_table, unpin
 
 E = html.escape
 WD = "월화수목금토일"
@@ -192,6 +192,7 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
     t.insert(0, "_id", list(view["id"].astype(str)))
     t = t.reset_index(drop=True)
     t = t.astype({c: "string" for c in ("제목", "업체 담당자", "내용")})
+    t, _ = pin_table("cs_editor", t)  # 고치는 중에 다른 분이 저장해도 내 칸이 엉뚱한 줄로 가지 않게 (저장은 ID로)
     comp_opts = companies + sorted({c for c in view["company"] if c and c not in companies})
     staff_opts = staff + sorted({s for s in view["staff"] if s and s not in staff})
     edited = st.data_editor(
@@ -252,6 +253,7 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
                 cs.update(ups)
                 cs.delete(dels)
             st.session_state.pop("cs_editor", None)
+            unpin("cs_editor")
             st.rerun()
     if n:
         c2.caption(f"추가 {len(adds)} · 수정 {len(ups)} · 삭제 {len(dels)} 저장 대기"
