@@ -90,6 +90,52 @@ def _payments(df: pd.DataFrame, label_of: dict) -> None:
 
 def render() -> None:
     page_header("수수료 입력", "실적")
+    t1, t2 = st.tabs(["실적별 수수료", "재무팀 매출장"])
+    with t2:
+        _ledger()
+    with t1:
+        _by_logs()
+
+
+def _ledger() -> None:
+    """재무팀이 보내 주는 매출장 엑셀을 올리면 우리 팀(차세대전지팀·배터리산업팀) 줄만 담음. 겹치는 줄은 다시 안 넣음."""
+    from core import fee_ledger as fl
+    with st.popover("매출장 엑셀 올리기", icon=":material/upload:"):
+        st.caption("재무팀이 보내 준 파일 그대로 올리세요. 우리 팀 줄만 담고, 이미 있는 줄은 다시 넣지 않아요 "
+                   "(입금 내역이 바뀐 줄만 고쳐요).")
+        up = st.file_uploader("매출장", type=["xlsx"], key="fl_up", label_visibility="collapsed")
+        if up is not None and st.button("반영", type="primary", key="fl_go"):
+            try:
+                add, upd, same = fl.merge(fl.read_file(up.getvalue()))
+                st.toast(f"새로 {add}건 · 입금 고침 {upd}건 · 이미 있음 {same}건", icon=":material/check_circle:")
+            except ValueError as e:
+                st.warning(str(e))
+    df = fl.load()
+    if df.empty:
+        empty_state("아직 올린 매출장이 없어요", "재무팀 매출장 엑셀을 올려 주세요.", icon="⇪")
+        return
+    years = sorted({d.year for d in df["tax_date"] if d}, reverse=True)
+    c1, c2 = st.columns([1, 3])
+    yr = c1.selectbox("연도", ["전체"] + years, key="fl_year")
+    q = c2.text_input("업체·발행내역", placeholder="검색", key="fl_q")
+    if yr != "전체":
+        df = df[df["tax_date"].map(lambda d: bool(d) and d.year == yr)]
+    if q:
+        hay = df["company"].astype(str) + " " + df["item"].astype(str)
+        df = df[hay.str.contains(q, case=False, regex=False)]
+    m1, m2, m3 = st.columns(3)
+    m1.metric("건수", f"{len(df):,}")
+    m2.metric("공급가 합계", f"{df['supply'].sum():,.0f} 원")
+    m3.metric("미수금", f"{df['unpaid'].sum():,.0f} 원")
+    heads = {"tax_date": "세금일자", "company": "업체명", "item": "발행내역", "supply": "공급가", "total": "합계",
+             "paid1_date": "입금일(1차)", "paid1": "입금(1차)", "paid2_date": "입금일(2차)", "paid2": "입금(2차)",
+             "unpaid": "미수금", "staff": "담당자", "team": "팀명"}
+    st.dataframe(df[list(heads)].rename(columns=heads), hide_index=True, width="stretch",
+                 column_config={h: st.column_config.NumberColumn(format="localized")
+                                for h in ("공급가", "합계", "입금(1차)", "입금(2차)", "미수금")})
+
+
+def _by_logs() -> None:
     saved = st.session_state.pop("records_saved", None)
     if saved:
         st.toast(saved, icon=":material/check_circle:")
