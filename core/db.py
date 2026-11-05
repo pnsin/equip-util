@@ -121,6 +121,10 @@ TABLES = {
     "equip_photos": ("장비사진", [("id", "ID"), ("equip_id", "장비ID"), ("title", "설명"), ("order", "순서"),
                                 ("thumb", "작은사진"), ("photo", "사진"), ("created_at", "올린시각"),
                                 ("created_by", "올린사람")]),
+    # 2026-11-05 장비 히스토리 (고장·문제 이력을 타임라인처럼 쌓음). 사진은 장비사진처럼 base64
+    "equip_history": ("장비히스토리", [("id", "ID"), ("equip_id", "장비ID"), ("date", "날짜"), ("content", "내용"),
+                                     ("thumb", "작은사진"), ("photo", "사진"), ("created_at", "작성일시"),
+                                     ("created_by", "작성자")]),
     # 장비마다 한 줄 (id = 장비ID)
     "equip_notes": ("장비메모", [("id", "장비ID"), ("caution", "사용 시 주의"), ("contact", "A/S 연락처"),
                                ("updated_at", "수정일시"), ("updated_by", "수정자")]),
@@ -513,7 +517,8 @@ def _new_ids(n: int) -> list[str]:
 TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정",
                "channels": "챔버 구성", "rates": "장비 단가", "quotes": "견적서", "maint": "유지보수",
                "equip_specs": "장비 사양", "equip_docs": "장비 자료", "equip_photos": "장비 사진",
-               "equip_notes": "장비 메모", "cs": "CS활동", "fee_ledger": "재무팀 매출장"}
+               "equip_notes": "장비 메모", "cs": "CS활동", "fee_ledger": "재무팀 매출장",
+               "equip_history": "장비 히스토리"}
 UNDO_KEEP = 30
 
 
