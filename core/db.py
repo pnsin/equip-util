@@ -95,6 +95,13 @@ TABLES = {
         ("follow_up", "후속 일정"), ("created_by", "작성자"), ("created_at", "작성일시"),
         ("updated_at", "수정일시"), ("updated_by", "수정자"),
     ]),
+    # 2026-11-05 재무팀 매출장 (재단 재무팀이 누적해서 보내 주는 엑셀). key = 같은 줄을 알아보는 고유값 (중복 방지)
+    "fee_ledger": ("재무팀매출장", [
+        ("id", "ID"), ("key", "고유키"), ("tax_date", "세금일자"), ("team", "팀명"), ("staff", "담당자"),
+        ("company", "업체명"), ("brn", "사업자번호"), ("item", "발행내역"), ("supply", "공급가"), ("vat", "부가세"),
+        ("total", "합계"), ("paid1_date", "입금일자(1차)"), ("paid1", "입금금액(1차)"), ("paid2_date", "입금일자(2차)"),
+        ("paid2", "입금금액(2차)"), ("unpaid", "미수금"), ("imported_at", "올린시각"),
+    ]),
     # 지운 행을 보관했다가 '관리 › 휴지통 · 기록'에서 되살림 (data = 원래 행, JSON)
     "trash": ("휴지통", [
         ("id", "ID"), ("deleted_at", "지운 시각"), ("deleted_by", "지운 사람"), ("table", "종류"),
@@ -506,7 +513,7 @@ def _new_ids(n: int) -> list[str]:
 TABLE_NAMES = {"usage": "실적", "equipment": "장비", "companies": "업체", "staff": "담당자", "settings": "설정",
                "channels": "챔버 구성", "rates": "장비 단가", "quotes": "견적서", "maint": "유지보수",
                "equip_specs": "장비 사양", "equip_docs": "장비 자료", "equip_photos": "장비 사진",
-               "equip_notes": "장비 메모", "cs": "CS활동"}
+               "equip_notes": "장비 메모", "cs": "CS활동", "fee_ledger": "재무팀 매출장"}
 UNDO_KEEP = 30
 
 
