@@ -12,7 +12,7 @@ import streamlit as st
 
 from core import db
 from ui_style import page_header
-from views.common import filtered_editor, search_box
+from views.common import center_pick, filtered_editor, search_box
 
 COLS = {"id": "id", "date": "날짜", "equip": "장비", "kind": "종류", "content": "내용", "staff": "담당자",
         "note": "비고"}
@@ -68,6 +68,7 @@ def render() -> None:
     view = view.astype({c: "string" for c in ("장비", "종류", "내용", "담당자", "비고")})
     view["날짜"] = pd.to_datetime(view["날짜"]).dt.date
 
+    center = center_pick("maint_center")
     c1, c2 = st.columns([2.2, 3], vertical_alignment="center")
     with c1:
         q = search_box("maint_q", "장비 · 내용 · 담당자")
@@ -81,7 +82,10 @@ def render() -> None:
         mask &= hay.str.contains(q, case=False, regex=False)
     if pick:
         mask &= view["종류"].isin(pick)
-    filtered = bool(q or pick)
+    if center:
+        cen = db.equip_centers(eq)
+        mask &= pd.Series([cen.get(int(e)) == center if pd.notna(e) else False for e in df["equip_id"]], index=view.index)
+    filtered = bool(q or pick or center)
 
     staff = db.staff_names(include=list(df["staff"]))
     equip_opts = list(label_of.values()) + sorted({v for v in view["장비"].dropna() if v and v not in id_of})

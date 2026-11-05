@@ -107,8 +107,10 @@ def render() -> None:
     with st.container(key="cb_top", horizontal=True, gap="small", vertical_alignment="center"):
         center = None
         if centers:
-            center = st.segmented_control("건물", centers, default=centers[0], key="cb_center",
-                                          label_visibility="collapsed") or centers[0]
+            order = [k for k in db.CENTER_SHORT if k in centers] + [c for c in centers if c not in db.CENTER_SHORT]
+            center = st.segmented_control("건물", ["전체"] + order, default="전체", key="cb_center",
+                                          format_func=lambda c: db.CENTER_SHORT.get(c, c),
+                                          label_visibility="collapsed") or "전체"
         st.space("stretch")
         if centers:
             st.download_button("현황표 엑셀로", chargers.to_excel(stt, today), icon=":material/download:",
@@ -119,7 +121,7 @@ def render() -> None:
     if not centers:
         st.info("챔버 구성이 아직 없어요. 아래 '챔버 구성 고치기'에서 건물 · 장비명 · 싸이클러 · 챔버 · 채널을 넣어 주세요.")
     else:
-        g = stt[stt["center"] == center]
+        g = stt if center == "전체" else stt[stt["center"] == center]
         total = int(g["ch_count"].sum())
         used = int(sum(int(n) for n, b in zip(g["ch_count"], g["now"]) if b))
         free_ch = [c for c, b in zip(g["chamber"], g["now"]) if not b]
@@ -167,7 +169,7 @@ def render() -> None:
                         f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{html.escape(r['channels'])}</td>{who}"
                         f"<td class='m'>{html.escape(when)}</td>"
                         f"<td class='tl'><div class='cb-tl'>{grid}{now_line}{bars}</div></td></tr>")
-        rows.append(f"<tr class='cb-sum'><td colspan='3'>{html.escape(center)} 합계</td><td>{total} ch</td>"
+        rows.append(f"<tr class='cb-sum'><td colspan='3'>{html.escape(db.CENTER_SHORT.get(center, center))} 합계</td><td>{total} ch</td>"
                     f"<td colspan='3'>사용 중 {used} · 비어 있음 {total - used}</td></tr>")
         st.markdown(
             "<div class='cb-box'><table class='cb-t'><tr><th>장비</th><th>싸이클러</th><th>챔버</th><th>채널</th>"

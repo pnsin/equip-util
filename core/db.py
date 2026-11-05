@@ -990,6 +990,36 @@ def load_equipment() -> pd.DataFrame:
     return add_pick_labels(df)
 
 
+CENTERS = ["배터리제조검증지원센터", "MV배터리안전성평가센터", "배터리연구지원센터"]
+CENTER_SHORT = {"제조검증": CENTERS[0], "MV": CENTERS[1], "문백": CENTERS[2]}  # 충방전기 현황표의 건물 이름
+
+
+def center_name(text: str) -> str:
+    """장비위치·건물 이름 → 세 센터 중 하나 (모르면 "")."""
+    t = to_str(text)
+    if "제조검증" in t:
+        return CENTERS[0]
+    if "MV" in t.upper() or "안전성" in t:
+        return CENTERS[1]
+    if "연구지원" in t or "문백" in t:
+        return CENTERS[2]
+    return ""
+
+
+def equip_centers(eq: pd.DataFrame) -> dict[int, str]:
+    """장비 ID → 센터. 세부장비에 위치가 없으면 소속 장비의 센터를 따름."""
+    own = {int(i): center_name(loc) for i, loc in zip(eq["id"], eq["location"])}
+    parent = {int(i): int(p) for i, p in zip(eq["id"], eq["parent_id"]) if pd.notna(p)}
+    out = {}
+    for i in own:
+        c, j, n = own[i], i, 0
+        while not c and j in parent and n < 10:
+            j, n = parent[j], n + 1
+            c = own.get(j, "")
+        out[i] = c
+    return out
+
+
 def _center(loc: str) -> str:
     """'배터리연구지원센터(문백)' → '문백' (괄호 안 지역명, 없으면 그대로)."""
     loc = to_str(loc)

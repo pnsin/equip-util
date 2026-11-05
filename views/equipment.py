@@ -12,7 +12,7 @@ import streamlit as st
 from core import db, seed
 from core.terms import w
 from ui_style import page_header
-from views.common import (confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
+from views.common import (center_pick, confirm_delete, delete_config, filtered_editor, search_box, split_deleted,
                           with_delete_column)
 
 KPI_COL = w("가동률 산정")
@@ -29,9 +29,9 @@ COLS = {
     "in_kpi": KPI_COL, "note": "비고",
 }
 BASIC = [TREE, "장비명(한글)", "대분류", "주장비(종)", PARENT, "ITUBE번호", "장비구분", "대수", "관리자", "장비위치",
-         "장비용도", "불용일"]
+         "장비용도"]
 ALL = ([TREE, "장비명(한글)", "대분류", "주장비(종)", PARENT]
-       + [c for c in COLS.values() if c not in ("id", "대분류", "주장비(종)", "장비명(한글)")])
+       + [c for c in COLS.values() if c not in ("id", "대분류", "주장비(종)", "장비명(한글)", "불용일")])
 
 CSS = """<style>
 .eq-sum {display:flex; flex-wrap:wrap; gap:.5rem; margin:-.2rem 0 1rem;}
@@ -47,16 +47,14 @@ CSS = """<style>
 
 
 def _tree_mark(depth: int) -> str:
-    return "" if depth <= 0 else "　" * (depth - 1) + "└"
+    return "■" if depth <= 0 else "　" * (depth - 1) + "└"
 
 
 def _summary(eq: pd.DataFrame) -> None:
     top = eq[eq["depth"] == 0]
     sub = eq[eq["depth"] > 0]
     unreg = top[top["code"] == ""]
-    retired = eq[eq["retired_on"].notna()]
-    pills = [("a", "장비", len(top)), ("", "세부장비", len(sub)), ("w", "ITUBE번호 없음", len(unreg)),
-             ("m", "불용", len(retired))]
+    pills = [("a", "장비", len(top)), ("", "세부장비", len(sub)), ("w", "ITUBE번호 없음", len(unreg))]
     st.markdown("<div class='eq-sum'>" + "".join(
         f"<div class='p {c}'>{html.escape(t)}<b>{n:,}</b></div>" for c, t, n in pills) + "</div>",
         unsafe_allow_html=True)
@@ -79,7 +77,8 @@ def render() -> None:
     view["도입일"] = view["도입일"].dt.date
     view["불용일"] = view["불용일"].dt.date
 
-    c1, c3, c4, c5 = st.columns([3, 1, 1, 1.1], vertical_alignment="center")
+    center = center_pick("equip_center")
+    c1, c3, c4 = st.columns([3, 1, 1], vertical_alignment="center")
     with c1:
         q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호")
     groups = [g for g in dict.fromkeys(eq["group"]) if g]
@@ -95,10 +94,10 @@ def render() -> None:
         mask &= view["대분류"].isin(pick)
     if only_top:
         mask &= eq["depth"] == 0
-    hide_retired = c5.toggle("불용 숨기기", key="equip_hide_retired")
-    if hide_retired:
-        mask &= view["불용일"].isna()
-    filtered = bool(q or pick or only_top or hide_retired)
+    if center:
+        cen = db.equip_centers(eq)
+        mask &= eq["id"].astype(int).map(cen).eq(center)
+    filtered = bool(q or pick or only_top or center)
 
     kinds = list(dict.fromkeys(seed.EQUIP_KINDS_ALL + [k for k in eq["kind"] if k]))
     cats = list(dict.fromkeys(["단독장비", "시스템장비", "시스템시설", "단독장비(복수구매)"] + [c for c in eq["category"] if c]))
