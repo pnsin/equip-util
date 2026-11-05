@@ -90,8 +90,6 @@ def render() -> None:
     c1, c3, c4 = st.columns([3, 1, 1], vertical_alignment="center")
     with c1:
         q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호")
-    groups = [g for g in dict.fromkeys(eq["group"]) if g]
-    pick = st.pills("대분류", groups, selection_mode="multi", key="equip_groups", label_visibility="collapsed")
     only_top = c3.toggle("장비만", key="equip_only_top", help="세부장비를 접고 장비만 봅니다.")
     all_cols = c4.toggle("모든 열", key="equip_all_cols", help="제조사·구매처·자산번호·도입일 같은 열까지 봅니다.")
 
@@ -100,21 +98,19 @@ def render() -> None:
     if q:
         hay = view[["장비명(한글)", "ITUBE번호", "관리자", "자산번호", "주장비(종)", "모델명"]].astype(str).agg(" ".join, axis=1)
         mask &= hay.str.contains(q, case=False, regex=False)
-    if pick:
-        mask &= view["대분류"].isin(pick)
     if only_top:
         mask &= view[TREE] == "■"
     if center:
         cen = db.equip_centers(eq)
         mask &= pd.to_numeric(view["id"], errors="coerce").map(cen).eq(center)
-    filtered = bool(q or pick or only_top or center)
+    filtered = bool(q or only_top or center)
 
     kinds = list(dict.fromkeys(seed.EQUIP_KINDS_ALL + [k for k in eq["kind"] if k]))
     cats = list(dict.fromkeys(["단독장비", "시스템장비", "시스템시설", "단독장비(복수구매)"] + [c for c in eq["category"] if c]))
     uses = list(dict.fromkeys(list(seed.PURPOSES) + ["제조"] + [u for u in eq["use"] if u]))
     edited, shown = filtered_editor(
         with_delete_column(view), mask if filtered else None,
-        key=f"equip_editor_{q}_{pick}_{only_top}", num_rows="dynamic", hide_index=True, width="stretch",
+        key=f"equip_editor_{q}_{only_top}", num_rows="dynamic", hide_index=True, width="stretch",
         height=min(680, 38 + 35 * (int(mask.sum()) + 2)),
         column_order=(ALL if all_cols else BASIC) + ["삭제"],
         column_config=delete_config() | {
