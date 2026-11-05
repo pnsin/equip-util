@@ -160,7 +160,10 @@ def _staff_map() -> dict[str, dict]:
 
 
 def _last_title(writer: str) -> str:
-    """같은 사람이 지난번 견적서에 쓴 직급 (예: 선임연구원)."""
+    """담당자 목록의 직급, 없으면 같은 사람이 지난번 견적서에 쓴 직급 (예: 선임연구원)."""
+    own = (_staff_map().get(writer) or {}).get("title", "")
+    if own:
+        return own
     qs = db.load_quotes()
     for d in qs.loc[qs["writer"] == writer, "data"]:
         try:
@@ -346,8 +349,8 @@ def render_new() -> None:
                 st.rerun()
             c1, c2, c3 = st.columns([1.2, 1, 1])
             d["title"] = c1.text_input("제목", value=d["title"], key=f"q_title_{ver}", placeholder="예: 전극 장비 사용")
-            d["contact"] = c2.text_input("참조", value=d["contact"], key=f"q_contact_{ver}", placeholder="예: 홍길동 대리님")
-            d["phone"] = c3.text_input("TEL", value=d["phone"], key=f"q_phone_{ver}")
+            d["contact"] = c2.text_input("담당자", value=d["contact"], key=f"q_contact_{ver}", placeholder="예: 홍길동 대리님")
+            d["phone"] = c3.text_input("전화번호", value=d["phone"], key=f"q_phone_{ver}")
             c1, c2, c3 = st.columns([1.2, 1, 1])
             wnames = list(staff)
             w = c1.selectbox("담당", wnames, index=wnames.index(d["writer"]) if d["writer"] in wnames else None,
