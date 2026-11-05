@@ -15,8 +15,8 @@ from ui_style import page_header
 from views.common import center_pick, filtered_editor, search_box
 
 COLS = {"id": "id", "date": "날짜", "equip": "장비", "kind": "종류", "content": "내용", "staff": "담당자",
-        "note": "비고"}
-SHOW = ["날짜", "장비", "종류", "내용", "담당자", "비고"]
+        "cost": "비용(원)", "note": "비고"}
+SHOW = ["날짜", "장비", "종류", "내용", "비용(원)", "담당자", "비고"]
 
 CSS = """<style>
 .mt-sum {display:flex; flex-wrap:wrap; gap:.5rem; margin:-.2rem 0 1rem;}
@@ -35,10 +35,42 @@ def _summary(df: pd.DataFrame) -> None:
     dates = [d for d in df["date"] if d]
     month = sum(1 for d in dates if d.year == today.year and d.month == today.month)
     year = sum(1 for d in dates if d.year == today.year)
-    pills = [("a", "이번 달", month), ("g", "올해", year), ("", "전체", len(df))]
+    cost = int(sum(int(c) for d, c in zip(df["date"], df["cost"]) if d and d.year == today.year and pd.notna(c)))
+    pills = [("a", "이번 달", f"{month:,}"), ("g", "올해", f"{year:,}"), ("", "전체", f"{len(df):,}"),
+             ("", "올해 비용", f"{cost:,}원")]
     st.markdown("<div class='mt-sum'>" + "".join(
-        f"<div class='p {c}'>{html.escape(t)}<b>{n:,}</b></div>" for c, t, n in pills) + "</div>",
+        f"<div class='p {c}'>{html.escape(t)}<b>{n}</b></div>" for c, t, n in pills) + "</div>",
         unsafe_allow_html=True)
+
+
+def _by_equipment(df: pd.DataFrame, eq: pd.DataFrame, center: str | None) -> None:
+    """주장비 아래 세부장비까지 한 줄씩: 마지막 유지보수 · 올해 횟수 · 올해 비용 (빠진 장비가 없게)."""
+    year = dt.date.today().year
+    if center:
+        cen = db.equip_centers(eq)
+        eq = eq[eq["id"].astype(int).map(cen).eq(center)]
+    last, cnt, cost = {}, {}, {}
+    for e, d, c in zip(df["equip_id"], df["date"], df["cost"]):
+        if pd.isna(e):
+            continue
+        e = int(e)
+        if d and (e not in last or d > last[e]):
+            last[e] = d
+        if d and d.year == year:
+            cnt[e] = cnt.get(e, 0) + 1
+            cost[e] = cost.get(e, 0) + (int(c) if pd.notna(c) else 0)
+    ids = eq["id"].astype(int)
+    tbl = pd.DataFrame({
+        "장비": ["■ " + n if d <= 0 else "　" * (d - 1) + "└ " + n for n, d in zip(eq["name"], eq["depth"])],
+        "마지막 유지보수": [last.get(i) for i in ids],
+        f"{year}년 횟수": [cnt.get(i, 0) for i in ids],
+        f"{year}년 비용(원)": [cost.get(i, 0) for i in ids],
+    })
+    none = int(sum(1 for i in ids if i not in last))
+    st.dataframe(tbl, hide_index=True, width="stretch", height=min(700, 38 + 35 * (len(tbl) + 1)),
+                 column_config={"마지막 유지보수": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                                f"{year}년 비용(원)": st.column_config.NumberColumn(format="localized")})
+    st.caption(f"전체 {len(tbl)}대 · 유지보수 기록이 한 번도 없는 장비 {none}대")
 
 
 def _clear_editor() -> None:
@@ -63,12 +95,19 @@ def render() -> None:
         "id": df["id"].astype("Int64"),
         "날짜": df["date"],
         "장비": [label_of.get(int(e), r or "") if pd.notna(e) else (r or "") for e, r in zip(df["equip_id"], df["equip_ref"])],
-        "종류": df["kind"], "내용": df["content"], "담당자": df["staff"], "비고": df["note"],
+        "종류": df["kind"], "내용": df["content"], "비용(원)": df["cost"], "담당자": df["staff"], "비고": df["note"],
     })
     view = view.astype({c: "string" for c in ("장비", "종류", "내용", "담당자", "비고")})
     view["날짜"] = pd.to_datetime(view["날짜"]).dt.date
 
-    center = center_pick("maint_center")
+    c0, c9 = st.columns([4, 1.2], vertical_alignment="center")
+    with c0:
+        center = center_pick("maint_center")
+    mode = c9.segmented_control("보기", ["기록", "장비별"], default="기록", key="maint_mode",
+                                label_visibility="collapsed") or "기록"
+    if mode == "장비별":
+        _by_equipment(df, eq, center)
+        return
     c1, c2 = st.columns([2.2, 3], vertical_alignment="center")
     with c1:
         q = search_box("maint_q", "장비 · 내용 · 담당자")
@@ -100,6 +139,7 @@ def render() -> None:
                                                    help="장비 목록에서 고릅니다. 세부장비는 '세부장비 · 소속 장비'로 보여요."),
             "종류": st.column_config.SelectboxColumn(options=kinds, width="small"),
             "내용": st.column_config.TextColumn(width="medium"),
+            "비용(원)": st.column_config.NumberColumn(min_value=0, step=1000, format="localized", width="small"),
             "담당자": st.column_config.SelectboxColumn(options=staff, width="small"),
             "비고": st.column_config.TextColumn(width="small"),
         },
