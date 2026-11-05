@@ -19,7 +19,7 @@ from ui_style import empty_state, page_header
 from views import common
 from views.common import search_box
 
-GROUP = "장비 정보"
+GROUP = "장비"
 DOC_KINDS = ["설명서", "SOP", "사양서", "교육자료", "점검표", "사진·도면", "기타"]
 DOC_TAG = {"설명서": ("PDF", "pink"), "SOP": ("SOP", "blue"), "사양서": ("사양", "green"), "교육자료": ("교육", "purple"),
            "점검표": ("점검", "orange"), "사진·도면": ("도면", "blue"), "기타": ("자료", "gray")}

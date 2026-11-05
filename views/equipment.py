@@ -62,7 +62,7 @@ def _summary(eq: pd.DataFrame) -> None:
 
 def render() -> None:
     cfg = db.get_settings()
-    page_header("장비", "기준 정보")
+    page_header("장비 목록", "기준 정보")
     st.markdown(CSS, unsafe_allow_html=True)
     msg = st.session_state.pop("equip_saved", None)
     if msg:

@@ -79,7 +79,7 @@ def _clear_editor() -> None:
 
 
 def render() -> None:
-    page_header("유지보수", "장비 정보")
+    page_header("유지보수", "장비")
     st.markdown(CSS, unsafe_allow_html=True)
     msg = st.session_state.pop("maint_saved", None)
     if msg:

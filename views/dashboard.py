@@ -49,7 +49,7 @@ def _equip_chart(shown: pd.DataFrame, target: float, sub: bool = False) -> None:
         x=shown["가동률"], y=names, orientation="h", marker_color=colors,
         customdata=shown[["equip_id", "사용시간", "가용시간", "소속"]].values,
         hovertemplate=w("%{y}<br>%{customdata[3]}<br>가동률 %{x:.1f}%<br>사용 %{customdata[1]:,.0f}h / 가용 %{customdata[2]:,.0f}h"
-                        "<br>누르면 장비 상세<extra></extra>"),
+                        "<br>누르면 장비별 가동률<extra></extra>"),
         text=[f"{v:.1f}%" if pd.notna(v) else "" for v in shown["가동률"]], textposition="outside"))
     if target:
         fig.add_vline(x=target, line_dash="dot", line_color=ORANGE,
@@ -184,7 +184,7 @@ def render() -> None:
     # ── 장비별 ───────────────────────────────────────────
     hc1, hc2 = st.columns([3, 1.4], vertical_alignment="bottom")
     with hc1:
-        section_bar(w("장비별 가동률"), sub="막대를 누르면 장비 상세")
+        section_bar(w("장비별 가동률"), sub="막대를 누르면 장비별 가동률")
     if summary.empty:
         empty_state("이 기간에 보유한 장비가 없습니다")
         return
@@ -249,7 +249,7 @@ def render() -> None:
         rows = ev.selection.rows if ev else []
         if rows:
             go_equipment(int(table.iloc[rows[0]]["equip_id"]))
-        st.caption("행을 누르면 장비 상세로 갑니다. 표 오른쪽 위 버튼으로 CSV를 내려받을 수 있습니다.")
+        st.caption("행을 누르면 장비별 가동률로 갑니다. 표 오른쪽 위 버튼으로 CSV를 내려받을 수 있습니다.")
     if not idle.empty:
         with st.expander(f"{idle_days}일 넘게 사용 기록이 없는 장비 {len(idle)}대 (저활용·유휴 후보)",
                          icon=":material/warning:"):
@@ -316,4 +316,4 @@ def _heatmap(daily: pd.DataFrame, eq: pd.DataFrame, end: dt.date, annual: float,
     eid = _picked(ev)
     if eid is not None:
         go_equipment(int(eid))
-    st.caption(w("최근 12개월 장비별 가동률입니다. 흐린 칸일수록 덜 쓴 달입니다. 칸을 누르면 장비 상세로 갑니다."))
+    st.caption(w("최근 12개월 장비별 가동률입니다. 흐린 칸일수록 덜 쓴 달입니다. 칸을 누르면 장비별 가동률로 갑니다."))

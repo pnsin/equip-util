@@ -344,7 +344,7 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
 
 def render() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
-    page_header("CS활동", "장비 정보")
+    page_header("CS활동", "업체")
     df = cs.load()
     eq = db.load_equipment()
     label_of = dict(zip(eq["id"].astype(int), eq["label"]))
