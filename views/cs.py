@@ -287,7 +287,8 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
         comp0 = pre.get("company") or None
         opts = companies + ([comp0] if comp0 and comp0 not in companies else [])
         v_comp = st.selectbox("업체", opts, index=opts.index(comp0) if comp0 in opts else None,
-                              placeholder="업체 이름을 입력해 찾기", key=f"cs_c_{k}")
+                              placeholder="업체 찾기 (목록에 없으면 그냥 써도 돼요)", accept_new_options=True,
+                              key=f"cs_c_{k}")
         if st.button("새 업체 등록", icon=":material/add:", key="cs_newcomp", type="tertiary"):
             new_company_dialog()
         c1, c2 = st.columns(2)
