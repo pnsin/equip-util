@@ -59,13 +59,29 @@ def has_amount(v) -> bool:
     return str(v).strip() != ""
 
 
+def ch_of(ln: dict) -> float:
+    """쓰는 채널 수 (충방전기처럼 단가가 ch당일 때). 비우면 1."""
+    return num(ln.get("ch"), 1) or 1
+
+
+def ch_price(ln: dict):
+    """견적서에 찍을 단가 = 단가 × 채널 수 (채널이 1이면 그대로)."""
+    p = ln.get("price")
+    return num(p) * ch_of(ln) if ch_of(ln) != 1 and p is not None else p
+
+
+def ch_tag(ln: dict) -> str:
+    c = ch_of(ln)
+    return f"{c:g}ch" if c != 1 else ""
+
+
 def line_auto(form: str, ln: dict) -> float:
-    """시간당 단가로 계산한 금액. 제조 = 사용량 × 단가, 시험 = 수량 × 시험시간 × 단가 × 난이도."""
+    """시간당 단가로 계산한 금액. 제조 = 사용량 × 단가 × 채널, 시험 = 수량 × 시험시간 × 단가 × 채널 × 난이도."""
     if form == "시험":
         cnt = num(ln.get("count"), 1) or 0
         diff = num(ln.get("difficulty"), 1)
-        return cnt * num(ln.get("qty")) * num(ln.get("price")) * diff
-    return num(ln.get("qty")) * num(ln.get("price"))
+        return cnt * num(ln.get("qty")) * num(ln.get("price")) * ch_of(ln) * diff
+    return num(ln.get("qty")) * num(ln.get("price")) * ch_of(ln)
 
 
 def line_amount(form: str, ln: dict) -> float:
@@ -187,6 +203,9 @@ def _fill_mfg(ws, q: dict, d: dt.date, t: dict) -> None:
         amt = round(line_amount("제조", ln))
         for col, k in (("C", "name"), ("D", "spec"), ("E", "note"), ("F", "qty"), ("G", "unit"), ("H", "price")):
             _put(ws, f"{col}{r}", _val(ln.get(k)))
+        if ch_tag(ln):  # ch당 단가 × 채널 수로 찍음
+            _put(ws, f"E{r}", " ".join(x for x in (ch_tag(ln), str(_val(ln.get("note")) or "")) if x))
+            _put(ws, f"H{r}", _val(ch_price(ln)))
         _put(ws, f"I{r}", amt)
         _put(ws, f"J{r}", amt)
     _put(ws, "J30", t["eq"])
@@ -244,8 +263,10 @@ def _fill_test(ws, q: dict, d: dt.date, t: dict) -> None:
             _put(ws, f"G{r2}", None)
             continue
         amt = round(line_amount("시험", ln))
-        vals = {"C": _val(ln.get("spec")), "D": _val(ln.get("name")), "E": _val(ln.get("count")),
-                "F": _val(ln.get("qty")), "G": _val(ln.get("price")), "H": _val(ln.get("difficulty"))}
+        nm = _val(ln.get("name"))
+        vals = {"C": _val(ln.get("spec")), "D": f"{nm or ''} ({ch_tag(ln)})" if ch_tag(ln) else nm,
+                "E": _val(ln.get("count")), "F": _val(ln.get("qty")), "G": _val(ch_price(ln)),
+                "H": _val(ln.get("difficulty"))}
         for col, v in vals.items():
             _put(ws, f"{col}{r}", v)
         for col in "CDEF":
