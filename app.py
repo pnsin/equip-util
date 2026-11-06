@@ -143,13 +143,30 @@ ALIASES = [
 ]
 
 
+# 왼쪽 메뉴 아이콘 · 묶음별 파스텔 색 (2026-11-06 디자인 통일)
+NAV_ICONS = {
+    "대시보드": ":material/space_dashboard:", "장비별 가동률": ":material/speed:", "충방전기 현황": ":material/battery_charging_full:",
+    "실적 입력": ":material/edit_calendar:", "수수료 입력": ":material/payments:", "i-Tube 제출 파일": ":material/upload_file:",
+    "장비 정보": ":material/precision_manufacturing:", "유지보수": ":material/build:",
+    "CS활동": ":material/handshake:", "견적서 작성": ":material/request_quote:", "업체 목록": ":material/apartment:",
+    "장비 목록": ":material/inventory_2:", "담당자": ":material/group:",
+    "설정": ":material/settings:", "가져오기 · 백업": ":material/cloud_sync:", "휴지통 · 기록": ":material/delete:",
+}
+NAV_COLORS = [("#5B6CFF", "#E9EBFF"), ("#E0628F", "#FDE8F0"), ("#17936A", "#DFF5EC"),
+              ("#D9821A", "#FDEFD9"), ("#8B5CF6", "#EFE8FE"), ("#5F6B85", "#ECEFF5")]
+
+
 def sidebar(local: bool) -> None:
     with st.sidebar:
         ui_style.sidebar_brand()
-        for group, pages in PAGES.items():
+        css = []
+        for gi, (group, pages) in enumerate(PAGES.items()):
+            fg, bg = NAV_COLORS[gi % len(NAV_COLORS)]
             ui_style.nav_group(group)
             for p in pages:
-                st.page_link(p, label=p.title)
+                st.page_link(p, label=p.title, icon=NAV_ICONS.get(p.title))
+                css.append(f'[data-testid="stSidebar"] a[href="{p.url_path}"] {{--nc:{fg};--nb:{bg};}}')
+        st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
         st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
         st.divider()
         last = db.last_undo()
