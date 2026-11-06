@@ -71,10 +71,10 @@ THEMES = {
     # D. 말랑한 업무툴 (2026-11-06 전체 디자인 통일): 흰 메뉴 + 라벤더블루 한 색 + 옅은 그림자
     "soft": {
         "bg": "#F7F8FC", "panel": "#FFFFFF", "panel2": "#F3F4FA", "deep": "#FAFBFE",
-        "line": "#E6E9F2", "line2": "#D5DAE6", "ink": "#1E2433", "muted": "#6B7385", "dim": "#A3AAB9",
+        "line": "#E6E9F2", "line2": "#D5DAE6", "ink": "#1E2433", "muted": "#8A94A6", "dim": "#A3AAB9",
         "accent": "#5B6CFF", "accent-hi": "#4B5BEA", "accent-bg": "#EEF0FF",
-        "ok": "#1A9A6C", "ok-bg": "#E6F6EF", "ng": "#E5484D", "ng-bg": "#FDECEC", "warn": "#D98B1E", "warn-bg": "#FEF4E4",
-        "bar-off": "#DDE1EC", "shadow": "0 12px 40px rgba(30,36,51,.10)", "card-shadow": "0 1px 3px rgba(30,36,51,.05)",
+        "ok": "#219653", "ok-bg": "#E8F5E9", "ng": "#EB5757", "ng-bg": "#FCEAEA", "warn": "#F2994A", "warn-bg": "#FDF4E7",
+        "bar-off": "#DDE1EC", "shadow": "0 20px 40px rgba(30,36,51,.08)", "card-shadow": "0 4px 16px rgba(30,36,51,.04)",
         "side": "#FFFFFF", "side-line": "#E6E9F2", "side-ink": "#1E2433", "side-muted": "#6B7385", "side-dim": "#A3AAB9",
         "side-hover": "#F3F4FA", "side-active": "#EEF0FF", "side-active-ink": "#4B5BEA",
         "logo": "logo_light.png", "base": "light",
@@ -120,7 +120,8 @@ _CSS = """
   [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif; }
   [data-testid="stAppViewContainer"] { background: var(--bg); }
   footer { visibility: hidden; }
-  [data-testid="stHeader"] { background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(6px); }
+  [data-testid="stHeader"] { background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(12px); }
+  [data-testid="stSidebar"] { background: color-mix(in srgb, var(--side) 85%, transparent); backdrop-filter: blur(12px); border-right: 1px solid var(--side-line); }
 
   /* ---------- 쪽 머리: 작은 머리글 + 제목 + 표시 + 오른쪽 설명 ---------- */
   .ph { display: flex; align-items: flex-end; justify-content: space-between; gap: .6rem 1.5rem; flex-wrap: wrap;
@@ -147,22 +148,25 @@ _CSS = """
 
   /* ---------- 버튼 (크기는 건드리지 않음: 달력 칸 버튼도 같은 primary를 씀) ---------- */
   .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] {
-        background: var(--accent); border-color: var(--accent); color: #FFFFFF !important; font-weight: 600; }
+        background: var(--accent); border-color: var(--accent); color: #FFFFFF !important; font-weight: 600; transition: all 0.25s ease; }
   .stButton button[kind="primary"] p, .stDownloadButton button[kind="primary"] p, .stFormSubmitButton button[kind="primary"] p { color: #FFFFFF !important; }
   .stButton button[kind="primary"]:hover, .stDownloadButton button[kind="primary"]:hover, .stFormSubmitButton button[kind="primary"]:hover {
-        background: var(--accent-hi); border-color: var(--accent-hi); }
+        background: var(--accent-hi); border-color: var(--accent-hi); transform: translateY(-2px); box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .stButton button[kind="secondary"], .stDownloadButton button[kind="secondary"], .stFormSubmitButton button[kind="secondary"] { transition: all 0.25s ease; }
+  .stButton button[kind="secondary"]:hover, .stDownloadButton button[kind="secondary"]:hover, .stFormSubmitButton button[kind="secondary"]:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(30, 36, 51, 0.05); }
   .stButton button[kind="primary"]:disabled, .stDownloadButton button[kind="primary"]:disabled, .stFormSubmitButton button[kind="primary"]:disabled {
-        background: var(--panel2); border-color: var(--line2); }
+        background: var(--panel2); border-color: var(--line2); transform: none; box-shadow: none; }
   .stButton button[kind="primary"]:disabled p { color: var(--dim) !important; }
 
   /* ---------- 숫자: 같은 폭 ---------- */
   [data-testid="stMetricValue"], [data-testid="stNumberInputContainer"] input, .kpi b { font-variant-numeric: tabular-nums; }
 
-  /* ---------- 지표 카드 ---------- */
-  [data-testid="stMetric"] { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px; padding: .6rem .85rem; box-shadow: var(--card-shadow); }
-  [data-testid="stMetricLabel"] { color: var(--muted); font-size: .85rem; }
-  [data-testid="stMetricValue"] { font-size: 1.45rem; font-weight: 600; color: var(--ink); }
-  [data-testid="stMetricDelta"] { font-size: .85rem; }
+  /* ---------- 지표 카드 (Bento Grid 스타일) ---------- */
+  [data-testid="stMetric"] { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem 1.4rem; box-shadow: var(--card-shadow); transition: all 0.25s ease; }
+  [data-testid="stMetric"]:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+  [data-testid="stMetricLabel"] { color: var(--muted); font-size: .95rem; font-weight: 500; margin-bottom: 0.2rem; }
+  [data-testid="stMetricValue"] { font-size: 1.8rem; font-weight: 700; color: var(--ink); }
+  [data-testid="stMetricDelta"] { font-size: .9rem; margin-top: 0.2rem; }
 
   /* ---------- 테두리 상자 ---------- */
   [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) { border-color: var(--line); }
@@ -172,6 +176,12 @@ _CSS = """
   [data-testid="stExpander"] summary p { font-weight: 600; }
   [data-testid="stCaptionContainer"] { color: var(--muted); }
 
+  [data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: var(--card-shadow); }
+  [data-testid="stDataFrame"] table { width: 100%; border-collapse: collapse; }
+  [data-testid="stDataFrame"] th { background-color: var(--panel2) !important; color: var(--muted) !important; font-weight: 600 !important; font-size: 0.9rem !important; border-bottom: 2px solid var(--line) !important; padding: 12px 16px !important; text-align: center !important; }
+  [data-testid="stDataFrame"] td { padding: 10px 16px !important; border-bottom: 1px solid var(--line) !important; text-align: center !important; color: var(--ink) !important; font-size: 0.95rem !important; }
+  [data-testid="stDataFrame"] tr:hover td { background-color: var(--accent-bg) !important; }
+  
   /* ---------- 빈 화면 안내 ---------- */
   .empty { border: 1px dashed var(--line2); border-radius: 6px; background: var(--panel); padding: 1.6rem 1.4rem; text-align: center; margin: .4rem 0 1rem 0; }
   .empty .ic { font-size: 1.6rem; color: var(--dim); line-height: 1; margin-bottom: .5rem; }
@@ -240,65 +250,43 @@ _CSS = """
   /* ---------- 도움말 팝업 ---------- */
   [data-testid="stTooltipContent"] { font-size: .9rem; line-height: 1.55; max-width: 520px; }
 
-  /* ---------- 접속 화면 (2026-11-04 시안 C "자물쇠 친구") ---------- */
+  /* ---------- 접속 화면 (2026-11-06 모던 SaaS 스타일) ---------- */
   .login-gap { height: 18vh; }
   .stApp:has(.login-bg) [data-testid="stHeader"] { background: transparent; backdrop-filter: none; }
   .login-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none;
-        background: radial-gradient(circle at 1px 1px, #D9E0EE 1.2px, transparent 1.3px) 0 0 / 22px 22px,
-                    linear-gradient(160deg, #EEF3FF, #F6F1FF 55%, #FFF4EE); }
-  .st-key-login_card { position: relative; z-index: 1; max-width: 400px; margin: 0 auto; overflow: visible;
-        background: rgba(255,255,255,.95); border: 1px solid #fff; border-radius: 28px;
-        padding: 0 36px 26px 36px; box-shadow: 0 20px 50px rgba(60,70,120,.12); }
-  .login-mascot { display: block; width: 150px; height: 150px; margin: -80px auto -2px auto;
-        filter: drop-shadow(0 8px 12px rgba(80,100,160,.16)); }
-  .login-mascot .shut, .login-mascot .peek, .login-mascot .sad { display: none; }
-  .st-key-login_card:has(input[type="password"]:focus) .login-mascot .open,
-  .st-key-login_card:has(input[type="password"]:not(:placeholder-shown)) .login-mascot .open { display: none; }
-  .st-key-login_card:has(input[type="password"]:focus) .login-mascot .shut,
-  .st-key-login_card:has(input[type="password"]:not(:placeholder-shown)) .login-mascot .shut { display: inline; }
-  .st-key-login_card:has(input[type="text"]) .login-mascot .open,
-  .st-key-login_card:has(input[type="text"]) .login-mascot .shut { display: none; }
-  .st-key-login_card:has(input[type="text"]) .login-mascot .peek { display: inline; }
-  .login-mascot.failed .smile { display: none; }
-  .login-mascot.failed .sad { display: inline; }
-  .login-mascot.failed .shut, .login-mascot.failed .peek { display: none !important; }
-  .login-mascot.failed .open { display: inline !important; }
+        background: radial-gradient(circle at 50% 0%, #FFFFFF 0%, #F3F4FA 60%, #E6E9F2 100%); }
+  .st-key-login_card { position: relative; z-index: 1; max-width: 420px; margin: 0 auto; overflow: visible;
+        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 24px;
+        padding: 40px 40px 32px 40px; box-shadow: 0 16px 40px rgba(30, 36, 51, 0.08); }
+  .login-logo-center { display: block; width: 180px; margin: 0 auto 32px auto; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.05)); }
   .login-head { text-align: center; }
-  .login-head .t { font-size: 1.4rem; font-weight: 700; color: var(--ink); letter-spacing: -.02em; line-height: 1.3; margin: 0 0 .35rem 0; }
-  .login-head .d { font-size: .85rem; color: #7A8597; margin: 0 0 1.3rem 0; }
+  .login-head .t { font-size: 1.8rem; font-weight: 800; color: var(--ink); letter-spacing: -.03em; line-height: 1.3; margin: 0 0 .5rem 0; }
+  .login-head .d { font-size: 0.95rem; color: #6B7385; margin: 0 0 2rem 0; font-weight: 500; word-break: keep-all; }
   .st-key-login_card [data-testid="stForm"] { border: none; padding: 0; }
-  .st-key-login_card [data-testid="stTextInputRootElement"] { border-radius: 14px; min-height: 3.1rem; background: #F7F9FC;
-        border: 1.5px solid #D9DFEA; transition: box-shadow .15s, border-color .15s; }
-  .st-key-login_card [data-testid="stTextInputRootElement"]:focus-within { border-color: #7FA6E8; background: #fff; box-shadow: 0 0 0 4px #E3ECFB; }
+  .st-key-login_card [data-testid="stTextInputRootElement"] { border-radius: 12px; min-height: 3.4rem; background: #FFFFFF;
+        border: 1px solid #D5DAE6; transition: box-shadow .2s, border-color .2s; }
+  .st-key-login_card [data-testid="stTextInputRootElement"]:focus-within { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px var(--accent-bg); }
   .st-key-login_card [data-testid="stTextInputRootElement"] > div, .st-key-login_card [data-testid="stTextInputRootElement"] input { background: transparent; }
-  .st-key-login_card [data-testid="stTextInputRootElement"] input { font-size: 1rem; }
+  .st-key-login_card [data-testid="stTextInputRootElement"] input { font-size: 1.05rem; }
   .st-key-login_card [data-testid="stTextInputRootElement"] [data-testid="stTextInputIcon"],
-  .st-key-login_card [data-testid="stTextInputRootElement"] span[data-testid="stIconMaterial"] { color: #8A95A8; }
+  .st-key-login_card [data-testid="stTextInputRootElement"] span[data-testid="stIconMaterial"] { color: #8A95A8; font-size: 1.2rem; }
   .st-key-login_card [data-testid="stFormSubmitButton"], .st-key-login_card [data-testid="stFormSubmitButton"] button { width: 100%; }
-  .st-key-login_card [data-testid="stFormSubmitButton"] button { min-height: 3.1rem; border-radius: 14px; border: none;
-        background: linear-gradient(135deg, #24395E, #132036); box-shadow: 0 8px 18px rgba(19,32,54,.25); transition: transform .12s, box-shadow .12s; }
-  .st-key-login_card [data-testid="stFormSubmitButton"] button:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(19,32,54,.32); }
-  .st-key-login_card [data-testid="stFormSubmitButton"] button p { font-size: 1rem; font-weight: 600; }
+  .st-key-login_card [data-testid="stFormSubmitButton"] button { min-height: 3.4rem; border-radius: 12px; border: none;
+        background: var(--accent); box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 30%, transparent); transition: all .2s ease; margin-top: 0.5rem; }
+  .st-key-login_card [data-testid="stFormSubmitButton"] button:hover { transform: translateY(-2px); background: var(--accent-hi); box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .st-key-login_card [data-testid="stFormSubmitButton"] button p { font-size: 1.1rem; font-weight: 700; color: #FFFFFF; }
   .st-key-login_card [data-testid="InputInstructions"] { display: none; }
-  .login-foot { text-align: center; margin-top: 1rem; }
-  .login-foot span { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: #2E8B60;
-        background: #E8F6EF; padding: .25rem .75rem; border-radius: 99px; }
-  .login-logo { position: fixed; left: 40px; top: 30px; width: 170px; z-index: 1000001; pointer-events: none; }
-  .login-bg .lb, .login-bg .ls { position: absolute; transform: translate(-50%, -50%); }
-  .login-bg .lb { animation: login-float 6s ease-in-out infinite; filter: drop-shadow(0 6px 10px rgba(80,100,160,.08)); }
-  .login-bg svg { width: 100%; height: 100%; display: block; }
-  @keyframes login-float { 0%, 100% { transform: translate(-50%, -50%); } 50% { transform: translate(-50%, calc(-50% - 10px)); } }
-  @media (prefers-reduced-motion: reduce) { .login-bg .lb { animation: none; } }
+  .login-foot { text-align: center; margin-top: 1.5rem; }
+  .login-foot span { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: .85rem; color: var(--ok); font-weight: 600;
+        background: var(--ok-bg); padding: .4rem 1rem; border-radius: 99px; }
+  .login-foot svg { width: 14px; height: 14px; }
+  .login-err { font-size: .9rem; color: var(--ng); background: var(--ng-bg); border-radius: 12px; font-weight: 500;
+        padding: .8rem 1rem; margin: .5rem 0 .5rem 0; text-align: center; }
   @media (max-width: 760px) {
-    .login-bg .desk { display: none; }
-    .login-bg .lb { width: 64px !important; height: 64px !important; }
-    .login-bg .lb:nth-child(1) { left: 14% !important; top: 12% !important; }
-    .login-bg .lb:nth-child(2) { left: 86% !important; top: 12% !important; }
-    .login-logo { left: 50%; transform: translateX(-50%); top: 22px; width: 120px; }
+    .st-key-login_card { margin: 0 20px; }
+    .login-logo-center { width: 150px; }
+    .login-head .t { font-size: 1.5rem; }
   }
-  .login-foot svg { width: 13px; height: 13px; }
-  .login-err { font-size: .85rem; color: var(--ng); background: var(--ng-bg); border-radius: 12px;
-        padding: .5rem .8rem; margin: .1rem 0 .3rem 0; text-align: center; }
   /* 견적서 (2026-11-04) */
   .q-tile { background: var(--panel); border-radius: 14px; box-shadow: var(--card-shadow); padding: .8rem 1rem; margin-bottom: .6rem; }
   .q-tile b { display: block; font-size: 1.6rem; line-height: 1.2; }
@@ -549,16 +537,15 @@ def _login_deco() -> str:
 
 
 def login_bg():
-    """접속 화면 배경 (카드 밖에 그려야 카드 위를 덮지 않음)."""
-    uri = _data_uri(os.path.join(_DIR, "assets", "logo_light.png"))
-    logo = f'<img class="login-logo" src="{uri}" alt="로고">' if uri else ""
-    st.markdown(f'<div class="login-bg">{_login_deco()}</div>{logo}', unsafe_allow_html=True)
+    """접속 화면 배경 (모던 SaaS 스타일)."""
+    st.markdown('<div class="login-bg"></div>', unsafe_allow_html=True)
 
 
 def login_head(failed: bool = False):
-    """접속 화면 위쪽: 자물쇠 친구(비밀번호를 치는 동안 눈을 감음) + 제목."""
-    st.markdown(_MASCOT.replace("{cls}", " failed" if failed else "").replace("\n", "")
-                + f'<div class="login-head"><div class="t">{html.escape(SYSTEM_TITLE)}</div>'
+    """접속 화면 위쪽: 로고 + 제목."""
+    uri = _data_uri(os.path.join(_DIR, "assets", "logo_light.png"))
+    logo = f'<img class="login-logo-center" src="{uri}" alt="로고">' if uri else ""
+    st.markdown(f'{logo}<div class="login-head"><div class="t">{html.escape(SYSTEM_TITLE)}</div>'
                 '<div class="d">팀 비밀번호로 들어와 주세요</div></div>', unsafe_allow_html=True)
 
 

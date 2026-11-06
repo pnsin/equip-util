@@ -19,9 +19,10 @@ PAGE = 30
 
 CSS = """<style>
 .cs-stats {display: flex; gap: 12px; flex-wrap: wrap; margin: .2rem 0 1rem;}
-.cs-stat {background: #fff; border-radius: 16px; padding: 12px 18px 11px; min-width: 150px;
-  box-shadow: 0 1px 3px rgba(17, 28, 46, .07);}
-.cs-stat b {display: block; font-size: 1.6rem; font-weight: 800; line-height: 1.15; color: var(--ink);
+.cs-stat {background: #fff; border-radius: 18px; padding: 14px 20px 13px; min-width: 150px;
+  box-shadow: 0 4px 16px rgba(30, 36, 51, .04); border: 1px solid var(--line); transition: all 0.25s ease;}
+.cs-stat:hover {transform: translateY(-2px); box-shadow: 0 12px 24px rgba(30, 36, 51, .08); border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
+.cs-stat b {display: block; font-size: 1.8rem; font-weight: 800; line-height: 1.15; color: var(--ink);
   font-variant-numeric: tabular-nums;}
 .cs-stat span {font-size: .78rem; color: var(--muted);}
 .cs-stat em {font-style: normal; font-size: .72rem; font-weight: 700; color: #D45087; margin-left: 6px;}
@@ -38,8 +39,8 @@ CSS = """<style>
 /* 카드 */
 .st-key-cs_list {gap: 9px !important;}
 div[class*="st-key-cs_card_"] {position: relative; background: #fff; border-radius: 16px; padding: 12px 16px 12px 20px;
-  box-shadow: 0 1px 3px rgba(17, 28, 46, .07); transition: box-shadow .12s, transform .12s;}
-div[class*="st-key-cs_card_"]:hover {box-shadow: 0 6px 18px rgba(17, 28, 46, .10); transform: translateY(-1px);}
+  box-shadow: 0 4px 16px rgba(30, 36, 51, .04); border: 1px solid var(--line); transition: all 0.25s ease;}
+div[class*="st-key-cs_card_"]:hover {box-shadow: 0 12px 24px rgba(30, 36, 51, .08); transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
 div[class*="st-key-cs_card_"]::before {content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px;
   border-radius: 4px; background: var(--kc, #8A97A8);}
 div[class*="st-key-cs_card_"].sel, div[class*="st-key-cs_card_"]:has(.cs-sel) {box-shadow: inset 0 0 0 2px var(--accent), 0 6px 18px rgba(37, 99, 201, .12);}
