@@ -29,7 +29,7 @@ CSS = """<style>
 .st-key-cs_tools [data-testid="stButtonGroup"] button {border-radius: 999px !important; height: 34px; min-height: 0;
   padding: 0 14px; background: #fff; border: 1px solid var(--line) !important;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button p {font-size: .84rem; font-weight: 600; color: #4A5670;}
-.st-key-cs_tools [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #26324A !important; border-color: #26324A !important;}
+.st-key-cs_tools [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #2A3147 !important; border-color: #2A3147 !important;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .st-key-cs_tools .st-key-cs_q {flex: 1 1 200px; min-width: 180px;}
 .st-key-cs_tools .st-key-cs_new button {background: var(--accent); color: #fff; border: none; border-radius: 12px;

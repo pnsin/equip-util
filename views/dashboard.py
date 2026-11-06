@@ -20,7 +20,7 @@ SHORT_OF = {v: k for k, v in db.CENTER_SHORT.items()}  # 센터 전체 이름 �
 CENTER_ORDER = ["문백", "제조검증", "MV"]
 
 # 구역 색: (진한 색, 연한 막대, 바탕)
-BLUE = ("#2563C9", "#C9D8F2", "#EEF3FC")
+BLUE = ("#5B6CFF", "#CDD3FF", "#EEF0FF")
 TEAL = ("#1F9D8B", "#BFE5DE", "#E8F6F3")
 PURPLE = ("#7E5BC2", "#DCD2EE", "#F3EFFA")
 GOAL = "#D9822B"
@@ -32,13 +32,13 @@ CSS = """<style>
 .dh .ic {width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
   font-size: 21px; font-weight: 700;}
 .dh .no {font-size: 12px; font-weight: 700; letter-spacing: .08em; line-height: 1.1;}
-.dh .tt {font-size: 21px; font-weight: 700; color: #1F2A3D; line-height: 1.3;}
+.dh .tt {font-size: 21px; font-weight: 700; color: #1E2433; line-height: 1.3;}
 .dh .per {margin-left: auto; font-size: 12px; color: #6B7686; background: #F3F5F8; padding: 5px 12px; border-radius: 99px;}
 .dst {border: 1px solid #E8EBF0; border-radius: 16px; padding: 14px 18px; height: 100%; min-height: 118px;}
-.dst.big {border: 0; background: #26324A;}
+.dst.big {border: 0; background: #2A3147;}
 .dst .sl {font-size: 13px; color: #6B7686; font-weight: 600;}
 .dst.big .sl {color: #B8C2D3;}
-.dst .sv {font-size: 2.05rem; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 6px; color: #1F2A3D;
+.dst .sv {font-size: 2.05rem; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 6px; color: #1E2433;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .dst.big .sv {color: #fff;}
 .dst .sv small {font-size: 1rem; margin-left: 3px; font-weight: 600;}
@@ -48,25 +48,25 @@ CSS = """<style>
 .dch.n {color: #6B7686; background: #F3F5F8;}
 .dst.big .dch {background: rgba(255,255,255,.14); color: #DDE4EF;}
 .dst.big .dch.g {color: #9FE3C1;} .dst.big .dch.r {color: #F5B4B4;}
-.dlead {border-radius: 12px; padding: 11px 16px; font-size: 14px; line-height: 1.6; color: #1F2A3D; margin-top: 12px;}
-.dct {font-size: 13px; font-weight: 700; color: #1F2A3D; margin: 14px 0 -6px;}
+.dlead {border-radius: 12px; padding: 11px 16px; font-size: 14px; line-height: 1.6; color: #1E2433; margin-top: 12px;}
+.dct {font-size: 13px; font-weight: 700; color: #1E2433; margin: 14px 0 -6px;}
 .dq {display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px; margin: -10px 8px 4px;}
 .dq div {border-top: 1.5px solid #DCE1E8; text-align: center; font-size: 12px; color: #6B7686; padding-top: 6px;}
-.dq b {color: #1F2A3D; margin-left: 4px;}
+.dq b {color: #1E2433; margin-left: 4px;}
 .dbox {border: 1px solid #E8EBF0; border-radius: 16px; padding: 14px 18px; height: 100%;}
-.dbox .bh {margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #1F2A3D; display: flex;
+.dbox .bh {margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #1E2433; display: flex;
   justify-content: space-between;}
 .dml {display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 62px; gap: 10px; align-items: center;
-  font-size: 12.5px; margin: 6px 0; color: #1F2A3D;}
+  font-size: 12.5px; margin: 6px 0; color: #1E2433;}
 .dml span {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .dml b {text-align: right;}
 .dtb {height: 8px; background: #F0F2F6; border-radius: 99px; position: relative;}
 .dtb i {position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px;}
 .dpills {display: flex; gap: 8px; flex-wrap: wrap;}
-.dpills span {font-size: 13px; padding: 6px 12px; border-radius: 12px; background: #F5F2FB; color: #1F2A3D;}
+.dpills span {font-size: 13px; padding: 6px 12px; border-radius: 12px; background: #F5F2FB; color: #1E2433;}
 .dpills b {margin-left: 5px;}
 .drec {display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 7px 0;
-  border-bottom: 1px dashed #E8EBF0; color: #1F2A3D;}
+  border-bottom: 1px dashed #E8EBF0; color: #1E2433;}
 .drec:last-child {border: 0;}
 .drec > span:first-child {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .drec .tag {font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 6px; font-weight: 600;
@@ -125,7 +125,7 @@ def _bars(values: list, labels: list[str], cur: int | None, color: tuple, fmt, k
              for i, v in enumerate(values)]
     fig = go.Figure(go.Bar(
         x=labels, y=ys, marker=dict(color=colors, cornerradius=6), text=texts, textposition="outside",
-        textfont=dict(size=12, color=["#1F2A3D" if i == cur else T["muted"] for i in range(len(values))]),
+        textfont=dict(size=12, color=["#1E2433" if i == cur else T["muted"] for i in range(len(values))]),
         customdata=custom if custom is not None else labels, hovertemplate=hover or "%{x}<extra></extra>",
         cliponaxis=False))
     if target:

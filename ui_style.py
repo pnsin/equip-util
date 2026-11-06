@@ -3,7 +3,7 @@
 앞으로 추가하는 화면도 이 규칙을 기본으로 한다.
 - 색은 아래 TOKENS만 쓴다. 화면 코드에 색 값을 직접 쓰지 말고 CSS 변수 var(--이름)이나 이 파일의 상수를 쓴다.
 - 본문은 밝게, 색은 '뜻'이 있을 때만 (목표 달성·미달, 경고).
-- 글꼴은 IBM Plex Sans KR, 숫자는 같은 폭(tabular) — .streamlit/config.toml 테마와 같은 값.
+- 글꼴은 Pretendard, 숫자는 같은 폭(tabular) — .streamlit/config.toml 테마와 같은 값.
 - 쪽 제목은 page_header, 영역 제목은 section_bar 또는 st.subheader (둘 다 같은 모양).
 - 글자 크기 단계: 0.75 · 0.85 · 0.95 · 1.05 · 1.25 · 1.6rem.
 """
@@ -50,7 +50,7 @@ THEMES = {
     "navy": {
         "bg": "#F2F4F7", "panel": "#FFFFFF", "panel2": "#F3F5F8", "deep": "#F7F8FA",
         "line": "#E1E5EB", "line2": "#C8D0DA", "ink": "#1B2430", "muted": "#5A6474", "dim": "#97A1AE",
-        "accent": "#2563C9", "accent-hi": "#2563C9", "accent-bg": "#E7EEFA",
+        "accent": "#5B6CFF", "accent-hi": "#5B6CFF", "accent-bg": "#EEF0FF",
         "ok": "#1E8E5A", "ok-bg": "#E5F4EC", "ng": "#C9372C", "ng-bg": "#FBE9E7", "warn": "#B5650B", "warn-bg": "#FDF1E2",
         "bar-off": "#C5CDD8", "shadow": "0 12px 40px rgba(17,28,46,.14)", "card-shadow": "0 1px 3px rgba(17,28,46,.08)",
         "side": "#132036", "side-line": "#22324D", "side-ink": "#E4EAF2", "side-muted": "#9DAABD", "side-dim": "#6F7F96",
@@ -68,13 +68,24 @@ THEMES = {
         "side-hover": "#E8E5DF", "side-active": "#E1E8F0", "side-active-ink": "#3F6A99",
         "logo": "logo_light.png", "base": "light",
     },
+    # D. 말랑한 업무툴 (2026-11-06 전체 디자인 통일): 흰 메뉴 + 라벤더블루 한 색 + 옅은 그림자
+    "soft": {
+        "bg": "#F7F8FC", "panel": "#FFFFFF", "panel2": "#F3F4FA", "deep": "#FAFBFE",
+        "line": "#E6E9F2", "line2": "#D5DAE6", "ink": "#1E2433", "muted": "#6B7385", "dim": "#A3AAB9",
+        "accent": "#5B6CFF", "accent-hi": "#4B5BEA", "accent-bg": "#EEF0FF",
+        "ok": "#1A9A6C", "ok-bg": "#E6F6EF", "ng": "#E5484D", "ng-bg": "#FDECEC", "warn": "#D98B1E", "warn-bg": "#FEF4E4",
+        "bar-off": "#DDE1EC", "shadow": "0 12px 40px rgba(30,36,51,.10)", "card-shadow": "0 1px 3px rgba(30,36,51,.05)",
+        "side": "#FFFFFF", "side-line": "#E6E9F2", "side-ink": "#1E2433", "side-muted": "#6B7385", "side-dim": "#A3AAB9",
+        "side-hover": "#F3F4FA", "side-active": "#EEF0FF", "side-active-ink": "#4B5BEA",
+        "logo": "logo_light.png", "base": "light",
+    },
 }
-THEME_NAME = os.environ.get("EQUIP_THEME", "navy")
+THEME_NAME = os.environ.get("EQUIP_THEME", "soft")
 TOKENS = {k: v for k, v in THEMES.get(THEME_NAME, THEMES["dark"]).items() if k not in ("logo", "base")}
 T = TOKENS
 
 # 그래프 색 (plotly)
-CHART_FONT = dict(family="IBM Plex Sans KR, Noto Sans KR, Malgun Gothic, sans-serif", color=T["ink"], size=12)
+CHART_FONT = dict(family="Pretendard Variable, Pretendard, Noto Sans KR, Malgun Gothic, sans-serif", color=T["ink"], size=12)
 CHART_GRID = T["line"]
 SERIES = [T["accent"], T["ok"], T["warn"], "#8E6CC0", "#D45087", "#2A9D8F", T["muted"]]
 
@@ -99,13 +110,14 @@ _VARS = ":root { " + " ".join(f"--{k}: {v};" for k, v in TOKENS.items()) + " }"
 
 _CSS = """
 <style>
+  @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
   __VARS__
   .block-container { padding-top: 3.6rem; padding-bottom: 4rem; max-width: 1600px; }
   .stApp:not(:has(.login-bg)) [data-testid="stMainBlockContainer"] { padding-left: 2.5rem !important; padding-right: 2.5rem !important; }
   /* 접속 화면: 왼쪽 메뉴 칸은 숨김 (메뉴는 접속 전에도 만들어 둬야 접속 뒤 늘 펼쳐진 채로 시작함) */
   .stApp:has(.login-bg) [data-testid="stSidebar"], .stApp:has(.login-bg) [data-testid="stExpandSidebarButton"],
   .stApp:has(.login-bg) [data-testid="stSidebarCollapsedControl"] { display: none !important; }
-  [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "IBM Plex Sans KR", "Noto Sans KR", "Malgun Gothic", sans-serif; }
+  [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif; }
   [data-testid="stAppViewContainer"] { background: var(--bg); }
   footer { visibility: hidden; }
   [data-testid="stHeader"] { background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(6px); }
@@ -299,6 +311,12 @@ _CSS = """
   .q-big { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); margin-top: .5rem; padding-top: .6rem; }
   .q-big span { font-size: .85rem; color: var(--muted); }
   .q-big b { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  /* ---------- 공통 모양 (2026-11-06): 카드 16px · 버튼/입력 10px · 칩 999px · 숫자 고정폭 ---------- */
+  [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-feature-settings: "tnum"; letter-spacing: -.01em; }
+  .stButton button, .stDownloadButton button, .stFormSubmitButton button, [data-baseweb="input"], [data-baseweb="select"] > div,
+  [data-baseweb="textarea"], [data-testid="stDateInput"] > div > div { border-radius: 10px !important; }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) , [data-testid="stExpander"] details,
+  [data-testid="stDataFrame"], [data-testid="stMetric"] { border-radius: 16px; }
 </style>
 """.replace("__VARS__", _VARS)
 
@@ -341,7 +359,7 @@ _PRELOAD_JS = """
       const b = document.createElement('button');
       b.textContent = '앱이 방금 새로 바뀌었어요. 눌러서 새로고침';
       b.style.cssText = 'margin-top:.6rem;padding:.45rem .9rem;border:0;border-radius:8px;'
-        + 'background:#2563C9;color:#fff;font-weight:600;cursor:pointer';
+        + 'background:#5B6CFF;color:#fff;font-weight:600;cursor:pointer';
       b.onclick = () => location.reload();
       el.appendChild(b);
     });
@@ -421,15 +439,15 @@ _MASCOT = """<svg class="login-mascot{cls}" viewBox="0 0 140 140" aria-hidden="t
 <path d="M47 52a23 23 0 0 1 12-17" stroke="#fff" stroke-opacity=".55" stroke-width="3" fill="none" stroke-linecap="round"/>
 <rect x="28" y="58" width="84" height="66" rx="32" fill="url(#lm-body)"/>
 <ellipse cx="50" cy="68" rx="13" ry="5" fill="#fff" opacity=".5" transform="rotate(-18 50 68)"/>
-<g class="open"><ellipse cx="56" cy="86" rx="6" ry="7" fill="#24324F"/><ellipse cx="84" cy="86" rx="6" ry="7" fill="#24324F"/>
+<g class="open"><ellipse cx="56" cy="86" rx="6" ry="7" fill="#1E2433"/><ellipse cx="84" cy="86" rx="6" ry="7" fill="#1E2433"/>
 <circle cx="58.3" cy="83.3" r="2.4" fill="#fff"/><circle cx="86.3" cy="83.3" r="2.4" fill="#fff"/>
 <circle cx="54.5" cy="89" r="1.1" fill="#fff"/><circle cx="82.5" cy="89" r="1.1" fill="#fff"/></g>
-<g class="shut" stroke="#24324F" stroke-width="3.2" fill="none" stroke-linecap="round"><path d="M49 86q7 6 14 0"/><path d="M77 86q7 6 14 0"/></g>
-<g class="peek"><path d="M49 86q7 6 14 0" stroke="#24324F" stroke-width="3.2" fill="none" stroke-linecap="round"/>
-<ellipse cx="84" cy="86" rx="6" ry="7" fill="#24324F"/><circle cx="86.3" cy="83.3" r="2.4" fill="#fff"/></g>
+<g class="shut" stroke="#1E2433" stroke-width="3.2" fill="none" stroke-linecap="round"><path d="M49 86q7 6 14 0"/><path d="M77 86q7 6 14 0"/></g>
+<g class="peek"><path d="M49 86q7 6 14 0" stroke="#1E2433" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+<ellipse cx="84" cy="86" rx="6" ry="7" fill="#1E2433"/><circle cx="86.3" cy="83.3" r="2.4" fill="#fff"/></g>
 <ellipse cx="46" cy="98" rx="7.5" ry="4.5" fill="#FF9FB5" opacity=".55"/><ellipse cx="94" cy="98" rx="7.5" ry="4.5" fill="#FF9FB5" opacity=".55"/>
-<path class="smile" d="M63 96q3.5 4 7 0q3.5 4 7 0" stroke="#24324F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-<g class="sad" stroke="#24324F" stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M64 100q6 -5 12 0"/><path d="M49 77l8 -3"/><path d="M91 77l-8 -3"/></g>
+<path class="smile" d="M63 96q3.5 4 7 0q3.5 4 7 0" stroke="#1E2433" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<g class="sad" stroke="#1E2433" stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M64 100q6 -5 12 0"/><path d="M49 77l8 -3"/><path d="M91 77l-8 -3"/></g>
 <path d="M116 33Q116 40 123 40Q116 40 116 47Q116 40 109 40Q116 40 116 33z" fill="#FFD3C2"/><path d="M24 51Q24 56 29 56Q24 56 24 61Q24 56 19 56Q24 56 24 51z" fill="#B9A6FF"/><path d="M120 100Q120 104 124 104Q120 104 120 108Q120 104 116 104Q120 104 120 100z" fill="#C9B8FF"/></svg>"""
 
 _SHIELD = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
@@ -437,7 +455,7 @@ _SHIELD = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wi
 
 
 
-def _face(x, y, s=1.0, c="#24324F"):
+def _face(x, y, s=1.0, c="#1E2433"):
     return (f'<g transform="translate({x} {y}) scale({s})"><circle cx="-7" cy="0" r="3" fill="{c}"/><circle cx="7" cy="0" r="3" fill="{c}"/>'
             f'<circle cx="-6" cy="-1" r="1" fill="#fff"/><circle cx="8" cy="-1" r="1" fill="#fff"/>'
             f'<ellipse cx="-12" cy="5" rx="3.5" ry="2.2" fill="#FF9FB5" opacity=".6"/><ellipse cx="12" cy="5" rx="3.5" ry="2.2" fill="#FF9FB5" opacity=".6"/>'

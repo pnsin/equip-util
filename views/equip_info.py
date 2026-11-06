@@ -27,8 +27,8 @@ DOC_TAG = {"설명서": ("PDF", "pink"), "SOP": ("SOP", "blue"), "사양서": ("
 
 # ── 장비 친구들: 사진이 없을 때 대신 나오는 그림 (이름으로 고름) ───────────────
 
-_FACE = ('<circle cx="26" cy="{y}" r="2.2" fill="#24324F"/><circle cx="38" cy="{y}" r="2.2" fill="#24324F"/>'
-         '<path d="M29 {m}c2 1.6 4 1.6 6 0" stroke="#24324F" stroke-width="1.9" fill="none" stroke-linecap="round"/>')
+_FACE = ('<circle cx="26" cy="{y}" r="2.2" fill="#1E2433"/><circle cx="38" cy="{y}" r="2.2" fill="#1E2433"/>'
+         '<path d="M29 {m}c2 1.6 4 1.6 6 0" stroke="#1E2433" stroke-width="1.9" fill="none" stroke-linecap="round"/>')
 ICONS = {
     "mix": ("var(--ip1)", '<path d="M14 26h36l-4 22a6 6 0 0 1-6 5H24a6 6 0 0 1-6-5z" fill="#9DB9F5"/>'
                            '<rect x="10" y="22" width="44" height="7" rx="3.5" fill="#7C9FEA"/>'
@@ -48,7 +48,7 @@ ICONS = {
                              '<path d="M22 50V34" stroke="#F09BB8" stroke-width="5" stroke-linecap="round"/>'
                              '<rect x="25" y="6" width="15" height="32" rx="7" fill="#F5B4CA" transform="rotate(-18 32 22)"/>'
                              '<circle cx="45" cy="44" r="7" fill="#F5B4CA"/>'
-                             '<circle cx="29.5" cy="19" r="1.9" fill="#24324F"/><circle cx="36.5" cy="16.8" r="1.9" fill="#24324F"/>'),
+                             '<circle cx="29.5" cy="19" r="1.9" fill="#1E2433"/><circle cx="36.5" cy="16.8" r="1.9" fill="#1E2433"/>'),
     "gear": ("var(--ip6)", '<circle cx="32" cy="32" r="20" fill="#9FD4E6"/>'
                             '<g fill="#7FC2DA"><rect x="28" y="6" width="8" height="10" rx="3"/><rect x="28" y="48" width="8" height="10" rx="3"/>'
                             '<rect x="6" y="28" width="10" height="8" rx="3"/><rect x="48" y="28" width="10" height="8" rx="3"/></g>'
@@ -81,7 +81,7 @@ def _short_loc(loc: str) -> str:
 
 
 CSS = """<style>
-:root { --ip1:#EAF1FF; --ip2:#F1ECFF; --ip3:#E7F6EF; --ip4:#FFF2E3; --ip5:#FDEBF1; --ip6:#E6F5FA; }
+:root { --ip1:#EEF0FF; --ip2:#F1ECFF; --ip3:#E7F6EF; --ip4:#FFF2E3; --ip5:#FDEBF1; --ip6:#E6F5FA; }
 /* 카드 목록 */
 [class*="st-key-iccard_"] {position: relative;}
 [class*="st-key-icgo_"] {position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; z-index: 3; margin: 0 !important;}
@@ -137,7 +137,7 @@ CSS = """<style>
 a.doc:hover .t b {color: var(--accent);}
 .doc .di {flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center;
   justify-content: center; font-size: .66rem; font-weight: 700;}
-.di.pink {background: #FDEBF1; color: #C2416E;} .di.blue {background: #EAF1FF; color: #2563C9;}
+.di.pink {background: #FDEBF1; color: #C2416E;} .di.blue {background: #EEF0FF; color: #5B6CFF;}
 .di.green {background: #E7F6EF; color: #1E8E5A;} .di.purple {background: #F1ECFF; color: #6E4FD0;}
 .di.orange {background: #FFF2E3; color: #B5650B;} .di.gray {background: var(--panel2); color: var(--muted);}
 .doc .t {flex: 1; min-width: 0;} .doc .t b {display: block; font-size: .88rem; font-weight: 600; overflow: hidden;
