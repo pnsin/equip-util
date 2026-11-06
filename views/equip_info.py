@@ -27,32 +27,15 @@ DOC_TAG = {"설명서": ("PDF", "pink"), "SOP": ("SOP", "blue"), "사양서": ("
 
 # ── 장비 친구들: 사진이 없을 때 대신 나오는 그림 (이름으로 고름) ───────────────
 
-_FACE = ('<circle cx="26" cy="{y}" r="2.2" fill="#1E2433"/><circle cx="38" cy="{y}" r="2.2" fill="#1E2433"/>'
-         '<path d="M29 {m}c2 1.6 4 1.6 6 0" stroke="#1E2433" stroke-width="1.9" fill="none" stroke-linecap="round"/>')
+# 2026-11-06 다크 명세서: 귀여운 그림 대신 미니멀한 설비 선 아이콘
+_LN = 'stroke="#94A3B8" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"'
 ICONS = {
-    "mix": ("var(--ip1)", '<path d="M14 26h36l-4 22a6 6 0 0 1-6 5H24a6 6 0 0 1-6-5z" fill="#9DB9F5"/>'
-                           '<rect x="10" y="22" width="44" height="7" rx="3.5" fill="#7C9FEA"/>'
-                           '<path d="M32 8v20" stroke="#5A7BD0" stroke-width="4" stroke-linecap="round"/>'
-            + _FACE.format(y=40, m=44)),
-    "roll": ("var(--ip2)", '<rect x="8" y="32" width="48" height="20" rx="10" fill="#B9A6F2"/>'
-                            '<circle cx="22" cy="22" r="12" fill="#9C86EC"/><circle cx="22" cy="22" r="4" fill="#fff"/>'
-                            '<path d="M36 26h16" stroke="#9C86EC" stroke-width="4" stroke-linecap="round"/>'
-             + _FACE.format(y=41, m=45)),
-    "box": ("var(--ip3)", '<rect x="12" y="10" width="40" height="44" rx="10" fill="#8FD3B4"/>'
-                           '<rect x="18" y="16" width="28" height="16" rx="5" fill="#E7F6EF"/>'
-                           '<circle cx="44" cy="24" r="2.6" fill="#5DBB91"/>' + _FACE.format(y=41, m=45)),
-    "bat": ("var(--ip4)", '<rect x="26" y="6" width="12" height="6" rx="2" fill="#F2B36B"/>'
-                           '<rect x="16" y="11" width="32" height="46" rx="10" fill="#F7C68C"/>'
-                           '<rect x="21" y="36" width="22" height="15" rx="4" fill="#F2A44D"/>' + _FACE.format(y=25, m=29)),
-    "scope": ("var(--ip5)", '<rect x="12" y="50" width="40" height="7" rx="3.5" fill="#F09BB8"/>'
-                             '<path d="M22 50V34" stroke="#F09BB8" stroke-width="5" stroke-linecap="round"/>'
-                             '<rect x="25" y="6" width="15" height="32" rx="7" fill="#F5B4CA" transform="rotate(-18 32 22)"/>'
-                             '<circle cx="45" cy="44" r="7" fill="#F5B4CA"/>'
-                             '<circle cx="29.5" cy="19" r="1.9" fill="#1E2433"/><circle cx="36.5" cy="16.8" r="1.9" fill="#1E2433"/>'),
-    "gear": ("var(--ip6)", '<circle cx="32" cy="32" r="20" fill="#9FD4E6"/>'
-                            '<g fill="#7FC2DA"><rect x="28" y="6" width="8" height="10" rx="3"/><rect x="28" y="48" width="8" height="10" rx="3"/>'
-                            '<rect x="6" y="28" width="10" height="8" rx="3"/><rect x="48" y="28" width="10" height="8" rx="3"/></g>'
-             + _FACE.format(y=31, m=36)),
+    "mix": ("#0F172A", f'<path d="M16 26h32l-4 22a5 5 0 0 1-5 4H25a5 5 0 0 1-5-4z" {_LN}/><path d="M12 26h40M32 10v24" {_LN}/>'),
+    "roll": ("#0F172A", f'<circle cx="22" cy="24" r="10" {_LN}/><circle cx="22" cy="24" r="3" {_LN}/><path d="M10 46h44M32 24h20" {_LN}/>'),
+    "box": ("#0F172A", f'<rect x="14" y="12" width="36" height="40" rx="5" {_LN}/><rect x="20" y="18" width="24" height="14" rx="3" {_LN}/><path d="M24 44h4" {_LN}/>'),
+    "bat": ("#0F172A", f'<rect x="20" y="12" width="24" height="42" rx="5" {_LN}/><path d="M28 8h8M34 24l-6 9h8l-6 9" {_LN}/>'),
+    "scope": ("#0F172A", f'<path d="M16 54h32M24 54V40M28 10l10 4-8 20-10-4z" {_LN}/><circle cx="40" cy="44" r="6" {_LN}/>'),
+    "gear": ("#0F172A", f'<circle cx="32" cy="32" r="8" {_LN}/><path d="M32 10v8M32 46v8M10 32h8M46 32h8M17 17l6 6M41 41l6 6M47 17l-6 6M23 41l-6 6" {_LN}/>'),
 }
 _RULES = [("bat", "충방전|활성화|에이징|사이클러|cycler|셀 평가|평가"),
           ("scope", "분석|검사|측정|현미경|sem|xrd|ct\\b|tga|dsc|bet|입도|점도|저항"),
@@ -81,7 +64,7 @@ def _short_loc(loc: str) -> str:
 
 
 CSS = """<style>
-:root { --ip1:#EEF0FF; --ip2:#F1ECFF; --ip3:#E7F6EF; --ip4:#FFF2E3; --ip5:#FDEBF1; --ip6:#E6F5FA; }
+:root { --ip1:rgba(85,102,230,0.16); --ip2:rgba(123,85,230,0.16); --ip3:rgba(85,230,162,0.16); --ip4:rgba(230,163,85,0.16); --ip5:rgba(230,85,133,0.16); --ip6:rgba(85,194,230,0.16); }
 /* 카드 목록 */
 [class*="st-key-iccard_"] {position: relative;}
 [class*="st-key-icgo_"] {position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; z-index: 3; margin: 0 !important;}
@@ -114,7 +97,7 @@ CSS = """<style>
 .kv b {display: block; font-size: .88rem; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
 .bigph {border-radius: 14px; overflow: hidden; background: var(--panel2); aspect-ratio: 4 / 3;
   display: flex; align-items: center; justify-content: center;}
-.bigph img {width: 100%; height: 100%; object-fit: contain; background: #F6F7F9;}
+.bigph img {width: 100%; height: 100%; object-fit: contain; background: #26334D;}
 .bigph {position: relative;}
 .bigph .ii svg {width: 120px; height: 120px;}
 .phcap {font-size: .75rem; color: var(--muted); margin-top: .3rem; text-align: center;}
@@ -137,16 +120,16 @@ CSS = """<style>
 a.doc:hover .t b {color: var(--accent);}
 .doc .di {flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center;
   justify-content: center; font-size: .66rem; font-weight: 700;}
-.di.pink {background: #FDEBF1; color: #C2416E;} .di.blue {background: #EEF0FF; color: #5B6CFF;}
-.di.green {background: #E7F6EF; color: #1E8E5A;} .di.purple {background: #F1ECFF; color: #6E4FD0;}
-.di.orange {background: #FFF2E3; color: #B5650B;} .di.gray {background: var(--panel2); color: var(--muted);}
+.di.pink {background: rgba(230,85,133,0.16); color: #C2416E;} .di.blue {background: rgba(85,102,230,0.16); color: #5B6CFF;}
+.di.green {background: rgba(85,230,162,0.16); color: #1E8E5A;} .di.purple {background: rgba(123,85,230,0.16); color: #6E4FD0;}
+.di.orange {background: rgba(230,163,85,0.16); color: #B5650B;} .di.gray {background: var(--panel2); color: var(--muted);}
 .doc .t {flex: 1; min-width: 0;} .doc .t b {display: block; font-size: .88rem; font-weight: 600; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap;}
 .doc .t small {display: block; font-size: .72rem; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
 .doc .go {font-size: .72rem; color: var(--muted); background: var(--panel2); padding: .15rem .6rem; border-radius: 999px;}
 .doc.nolink .go {display: none;}
 .nodoc {font-size: .82rem; color: var(--dim); padding: .5rem 0 .2rem;}
-[class*="st-key-info_caution_"] textarea {background: #FFFBEF !important; border-color: #F3E3B5 !important; line-height: 1.6;}
+[class*="st-key-info_caution_"] textarea {background: rgba(230,194,85,0.16) !important; border-color: rgba(230,193,85,0.3) !important; line-height: 1.6;}
 [class*="st-key-info_contact_"] textarea {line-height: 1.6;}
 @media (max-width: 640px) {.ic .icph {height: 104px;}}
 </style>"""

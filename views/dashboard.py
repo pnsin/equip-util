@@ -20,61 +20,61 @@ SHORT_OF = {v: k for k, v in db.CENTER_SHORT.items()}  # 센터 전체 이름 �
 CENTER_ORDER = ["문백", "제조검증", "MV"]
 
 # 구역 색: (진한 색, 연한 막대, 바탕)
-BLUE = ("#5B6CFF", "#CDD3FF", "#EEF0FF")
-TEAL = ("#1F9D8B", "#BFE5DE", "#E8F6F3")
-PURPLE = ("#7E5BC2", "#DCD2EE", "#F3EFFA")
+BLUE = ("#5B6CFF", "rgba(85,102,230,0.16)", "rgba(85,102,230,0.16)")
+TEAL = ("#1F9D8B", "rgba(85,230,204,0.3)", "rgba(85,230,199,0.16)")
+PURPLE = ("#7E5BC2", "rgba(137,85,230,0.3)", "rgba(138,85,230,0.16)")
 GOAL = "#D9822B"
 
 CSS = """<style>
-[class*="st-key-dsec_"] {background: #fff; border-radius: 24px; box-shadow: 0 4px 16px rgba(30,36,51,.04);
-  padding: 24px 28px 22px; margin-bottom: 12px; gap: .55rem; transition: all 0.25s ease; border: 1px solid #E6E9F2;}
-[class*="st-key-dsec_"]:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(30,36,51,.08); border-color: #D5DAE6; }
+[class*="st-key-dsec_"] {background: var(--panel); border-radius: 24px; box-shadow: 0 4px 16px rgba(30,36,51,.04);
+  padding: 24px 28px 22px; margin-bottom: 12px; gap: .55rem; transition: all 0.25s ease; border: 1px solid #26334D;}
+[class*="st-key-dsec_"]:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(30,36,51,.08); border-color: #334155; }
 .dh {display: flex; align-items: center; gap: 14px; margin-bottom: 12px;}
 .dh .ic {width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
   font-size: 21px; font-weight: 700;}
 .dh .no {font-size: 12px; font-weight: 700; letter-spacing: .08em; line-height: 1.1;}
-.dh .tt {font-size: 21px; font-weight: 700; color: #1E2433; line-height: 1.3;}
-.dh .per {margin-left: auto; font-size: 12px; color: #6B7686; background: #F3F5F8; padding: 5px 12px; border-radius: 99px;}
-.dst {border: 1px solid #E6E9F2; border-radius: 20px; padding: 16px 20px; height: 100%; min-height: 118px; transition: all 0.25s ease; background: #FAFBFE;}
-.dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,36,51,.06); border-color: #D5DAE6; background: #FFFFFF;}
+.dh .tt {font-size: 21px; font-weight: 700; color: #F8FAFC; line-height: 1.3;}
+.dh .per {margin-left: auto; font-size: 12px; color: #94A3B8; background: #26334D; padding: 5px 12px; border-radius: 99px;}
+.dst {border: 1px solid #26334D; border-radius: 20px; padding: 16px 20px; height: 100%; min-height: 118px; transition: all 0.25s ease; background: rgba(85,121,230,0.16);}
+.dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,36,51,.06); border-color: #334155; background: var(--panel);}
 .dst.big {border: 0; background: linear-gradient(135deg, #5B6CFF 0%, #9B6CFF 60%, #D27CE0 100%); box-shadow: 0 8px 22px rgba(91,108,255,.28);}
 .dst.big:hover {transform: translateY(-2px); box-shadow: 0 14px 32px rgba(91,108,255,.4);}
-.dst .sl {font-size: 13px; color: #6B7686; font-weight: 600;}
-.dst.big .sl {color: #B8C2D3;}
-.dst .sv {font-size: 2.05rem; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 6px; color: #1E2433;
+.dst .sl {font-size: 13px; color: #94A3B8; font-weight: 600;}
+.dst.big .sl {color: #94A3B8;}
+.dst .sv {font-size: 2.05rem; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 6px; color: #F8FAFC;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .dst.big .sv {color: #fff;}
 .dst .sv small {font-size: 1rem; margin-left: 3px; font-weight: 600;}
 .dst .sv.name {font-size: 1.55rem; padding: 4px 0 3px;}
 .dch {font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; display: inline-block;}
-.dch.g {color: #2E9E6B; background: #E4F5EC;} .dch.r {color: #D25B5B; background: #FBE9E9;}
-.dch.n {color: #6B7686; background: #F3F5F8;}
-.dst.big .dch {background: rgba(255,255,255,.14); color: #DDE4EF;}
-.dst.big .dch.g {color: #9FE3C1;} .dst.big .dch.r {color: #F5B4B4;}
-.dlead {border-radius: 12px; padding: 11px 16px; font-size: 14px; line-height: 1.6; color: #1E2433; margin-top: 12px;}
-.dct {font-size: 13px; font-weight: 700; color: #1E2433; margin: 14px 0 -6px;}
+.dch.g {color: #2E9E6B; background: rgba(85,230,153,0.16);} .dch.r {color: #D25B5B; background: rgba(230,85,85,0.16);}
+.dch.n {color: #94A3B8; background: #26334D;}
+.dst.big .dch {background: rgba(255,255,255,.14); color: #F8FAFC;}
+.dst.big .dch.g {color: #9FE3C1;} .dst.big .dch.r {color: rgba(230,85,85,0.3);}
+.dlead {border-radius: 12px; padding: 11px 16px; font-size: 14px; line-height: 1.6; color: #F8FAFC; margin-top: 12px;}
+.dct {font-size: 13px; font-weight: 700; color: #F8FAFC; margin: 14px 0 -6px;}
 .dq {display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px; margin: -10px 8px 4px;}
-.dq div {border-top: 1.5px solid #DCE1E8; text-align: center; font-size: 12px; color: #6B7686; padding-top: 6px;}
-.dq b {color: #1E2433; margin-left: 4px;}
-.dbox {border: 1px solid #E8EBF0; border-radius: 16px; padding: 14px 18px; height: 100%;}
-.dbox .bh {margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #1E2433; display: flex;
+.dq div {border-top: 1.5px solid #334155; text-align: center; font-size: 12px; color: #94A3B8; padding-top: 6px;}
+.dq b {color: #F8FAFC; margin-left: 4px;}
+.dbox {border: 1px solid #26334D; border-radius: 16px; padding: 14px 18px; height: 100%;}
+.dbox .bh {margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #F8FAFC; display: flex;
   justify-content: space-between;}
 .dml {display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 62px; gap: 10px; align-items: center;
-  font-size: 12.5px; margin: 6px 0; color: #1E2433;}
+  font-size: 12.5px; margin: 6px 0; color: #F8FAFC;}
 .dml span {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .dml b {text-align: right;}
-.dtb {height: 8px; background: #F0F2F6; border-radius: 99px; position: relative;}
+.dtb {height: 8px; background: #26334D; border-radius: 99px; position: relative;}
 .dtb i {position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px;}
 .dpills {display: flex; gap: 8px; flex-wrap: wrap;}
-.dpills span {font-size: 13px; padding: 6px 12px; border-radius: 12px; background: #F5F2FB; color: #1E2433;}
+.dpills span {font-size: 13px; padding: 6px 12px; border-radius: 12px; background: rgba(133,85,230,0.16); color: #F8FAFC;}
 .dpills b {margin-left: 5px;}
 .drec {display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 7px 0;
-  border-bottom: 1px dashed #E8EBF0; color: #1E2433;}
+  border-bottom: 1px dashed #26334D; color: #F8FAFC;}
 .drec:last-child {border: 0;}
 .drec > span:first-child {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .drec .tag {font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 6px; font-weight: 600;
-  background: #F3EFFA; color: #7E5BC2;}
-.dnone {font-size: 13px; color: #9AA3B0; padding: 4px 0;}
+  background: rgba(138,85,230,0.16); color: #7E5BC2;}
+.dnone {font-size: 13px; color: #94A3B8; padding: 4px 0;}
 </style>"""
 
 
@@ -123,12 +123,12 @@ def _bars(values: list, labels: list[str], cur: int | None, color: tuple, fmt, k
     real = [v for v in values if v is not None and pd.notna(v)]
     top = top or max(real + [target or 0, 1e-9]) * 1.22
     ys = [(v if v is not None and pd.notna(v) else 0) for v in values]
-    colors = [color[0] if i == cur else (color[1] if values[i] is not None else "#E3E7EE") for i in range(len(values))]
+    colors = [color[0] if i == cur else (color[1] if values[i] is not None else "#26334D") for i in range(len(values))]
     texts = [fmt(v) if v is not None and pd.notna(v) and (v > 0 or i <= (cur if cur is not None else 99)) else ""
              for i, v in enumerate(values)]
     fig = go.Figure(go.Bar(
         x=labels, y=ys, marker=dict(color=colors, cornerradius=6), text=texts, textposition="outside",
-        textfont=dict(size=12, color=["#1E2433" if i == cur else T["muted"] for i in range(len(values))]),
+        textfont=dict(size=12, color=["#F8FAFC" if i == cur else T["muted"] for i in range(len(values))]),
         customdata=custom if custom is not None else labels, hovertemplate=hover or "%{x}<extra></extra>",
         cliponaxis=False))
     if target:
@@ -298,7 +298,7 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
               target=target or None, top=top, hover=w("%{x} 가동률 %{y:.1f}%<extra></extra>"))
         st.markdown('<div class="dq">' + "".join(
             f'<div>{q}분기<b>{q_of[q]["가동률"]:.1f}%</b></div>' if q in q_of and pd.notna(q_of[q]["가동률"])
-            else f'<div>{q}분기<b style="color:#C2C8D0">–</b></div>' for q in range(1, 5)) + '</div>',
+            else f'<div>{q}분기<b style="color:#334155">–</b></div>' for q in range(1, 5)) + '</div>',
             unsafe_allow_html=True)
 
         # 센터별 주장비 (올해 누적, 산정 대상 장비 = 세부장비 시간 합산)
@@ -412,5 +412,5 @@ def _maint_section(year, cm, period, months, eq, eq_all, filtered: bool, today) 
         rec = "".join(
             f'<div class="drec"><span>{f"<span class=tag>{E(r.kind)}</span>" if r.kind else ""}'
             f'{E(r.eqn)}{" · " + E(r.content) if r.content else ""}</span>'
-            f'<span style="color:#6B7686;flex:none">{r.date:%m/%d}</span></div>' for r in recent.itertuples())
+            f'<span style="color:#94A3B8;flex:none">{r.date:%m/%d}</span></div>' for r in recent.itertuples())
         _box(c2, "최근 기록", rec or '<div class="dnone">기록 없음</div>')
