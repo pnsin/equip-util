@@ -56,7 +56,7 @@ CSS = """<style>
 .st-key-ep_panel {position: sticky !important; top: 4.2rem; max-height: calc(100vh - 5.2rem); overflow-y: auto !important;
   scrollbar-width: thin; animation: epIn .18s ease-out;}
 @keyframes epIn {from {opacity: 0; transform: translateX(10px);} to {opacity: 1; transform: none;}}
-.st-key-ep_panel {background: #fff; border: none; border-radius: 20px; padding: 16px 16px 14px;
+.st-key-ep_panel {background: var(--panel); border: none; border-radius: 20px; padding: 16px 16px 14px;
   box-shadow: 0 2px 4px rgba(30, 50, 90, .04), 0 12px 32px rgba(30, 50, 90, .08); gap: .45rem;}
 .st-key-ep_close {width: auto !important;}
 .st-key-ep_close button {height: 38px; width: 38px; padding: 0; border-radius: 12px; border: none; background: #F4F6FA;}
@@ -102,8 +102,8 @@ div[class*="st-key-ep_row_anal_"] button {--chip-fg: #7C5CE0;}
 .st-key-ep_form textarea {background: transparent !important;}
 .st-key-ep_form [data-baseweb="select"] > div:focus-within, .st-key-ep_form [data-baseweb="input"]:focus-within,
 .st-key-ep_form [data-baseweb="textarea"]:focus-within, .st-key-ep_form [data-testid="stNumberInputContainer"]:focus-within {
-  border-color: var(--accent) !important; background: #fff !important;}
-.st-key-ep_form [data-testid="stNumberInputContainer"] button {background: #fff !important; border-radius: 8px !important; margin: 3px;
+  border-color: var(--accent) !important; background: var(--panel) !important;}
+.st-key-ep_form [data-testid="stNumberInputContainer"] button {background: var(--panel) !important; border-radius: 8px !important; margin: 3px;
   width: 28px; box-shadow: 0 1px 2px rgba(0, 0, 0, .06);}
 .st-key-ep_form [data-testid="stButtonGroup"] button {border-radius: 999px !important; padding: 2px 13px; min-height: 0; height: 32px;
   border: none !important; background: #F4F6FA;}
@@ -220,7 +220,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   z-index: 1000; width: auto !important; max-width: min(760px, calc(100vw - 32px)); flex-wrap: nowrap !important;
   padding: 6px 8px 6px 18px; border-radius: 999px; background: #2A3147; color: #fff;
   box-shadow: 0 12px 30px rgba(15, 30, 60, .30); animation: calPop .18s ease-out;}
-.st-key-cal_delbar {bottom: 84px; background: #fff; border: 1px solid #F3B4B4; box-shadow: 0 12px 30px rgba(180, 40, 40, .18);}
+.st-key-cal_delbar {bottom: 84px; background: var(--panel); border: 1px solid #F3B4B4; box-shadow: 0 12px 30px rgba(180, 40, 40, .18);}
 @keyframes calPop {from {opacity: 0; transform: translate(-50%, 8px);} to {opacity: 1; transform: translate(-50%, 0);}}
 .st-key-cal_selbar [data-testid="stMarkdownContainer"], .st-key-cal_delbar [data-testid="stMarkdownContainer"] {margin-bottom: 0 !important;}
 .st-key-cal_selbar p, .st-key-cal_delbar p {margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .88rem;}
@@ -263,7 +263,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   font-size: .62rem; font-weight: 800; padding: 0 6px; margin-right: 5px; border-radius: 999px; line-height: 1.6;
   background: var(--chip-fg, #8A97A8); color: #fff; vertical-align: 1px;}
 /* 달력 모양: 둥근 흰 칸, 은은한 그림자, 주말은 옅은 색 */
-.st-key-calgrid div[class*="st-key-cell_"] {background: #fff; border: 2px solid transparent !important; border-radius: 18px !important;
+.st-key-calgrid div[class*="st-key-cell_"] {background: var(--panel); border: 2px solid transparent !important; border-radius: 18px !important;
   box-shadow: 0 1px 2px rgba(30, 50, 90, .05), 0 4px 14px rgba(30, 50, 90, .04); transition: box-shadow .15s ease;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 2px 4px rgba(30, 50, 90, .06), 0 10px 24px rgba(30, 50, 90, .10);}
 .st-key-calgrid .cal-wk {text-align: center; font-size: 1.05rem; font-weight: 800; color: #5A6680; padding: 2px 0 4px;}
@@ -291,7 +291,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .cal-mobile-hint {display: block; font-size: .8rem; color: var(--muted); margin: .2rem 0 .4rem;}
 }
 /* ===== v3: 작은 달력 카드 + 작은 입력 카드 ===== */
-.st-key-calcard {background: #fff; border-radius: 22px; padding: 16px 16px 14px;
+.st-key-calcard {background: var(--panel); border-radius: 22px; padding: 16px 16px 14px;
   box-shadow: 0 1px 2px rgba(30, 50, 90, .04), 0 10px 30px rgba(30, 50, 90, .06); gap: .5rem;}
 .st-key-calnav {margin-bottom: .2rem !important;}
 .st-key-calnav .cal-title {font-size: 1.35rem; min-width: 7.5rem;}
@@ -309,7 +309,7 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
 .st-key-calgrid .cal-wk.sat {color: #3D7BE0 !important;} .st-key-calgrid .cal-wk.sun {color: #E0566A !important;}
 .st-key-calgrid div[class*="st-key-cell_"] {min-height: 112px !important; padding: 32px 6px 7px !important; gap: 3px !important;
   background: #FAFBFD; border-radius: 14px !important; box-shadow: none !important; border: 1.5px solid transparent !important;}
-.st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 4px 14px rgba(30, 50, 90, .08) !important; background: #fff;}
+.st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 4px 14px rgba(30, 50, 90, .08) !important; background: var(--panel);}
 .st-key-calgrid .cal-out {min-height: 112px !important; background: transparent !important; border: none !important;
   font-size: .9rem !important; padding: 8px 10px !important; color: #CBD2DE !important;}
 .st-key-calgrid div[class*="st-key-day_"] button {padding: 5px 6px !important; border-radius: 14px !important;}
@@ -387,7 +387,7 @@ div[class*="st-key-num_"] [data-testid="stMarkdownContainer"] {margin-bottom: 0 
 div[class*="st-key-numr_"] {background: #F3F5FA; border-radius: 10px; padding: 3px; flex-wrap: nowrap !important; min-height: 36px;}
 div[class*="st-key-numr_"] [data-testid="stElementContainer"]:has(button) {width: auto !important; flex: none;}
 div[class*="st-key-numr_"] button {min-height: 0 !important; height: 28px; width: 28px; padding: 0 !important; border: none !important;
-  background: #fff !important; border-radius: 8px !important; box-shadow: 0 1px 2px rgba(0, 0, 0, .06);}
+  background: var(--panel) !important; border-radius: 8px !important; box-shadow: 0 1px 2px rgba(0, 0, 0, .06);}
 div[class*="st-key-numr_"] button p {font-size: .9rem !important; color: #5A6680; font-weight: 700;}
 div[class*="st-key-numr_"] [data-baseweb="input"] {background: transparent !important; border: none !important; min-height: 28px !important;}
 div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding: 0 2px !important;}
@@ -424,7 +424,7 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] {background: #F1F4F8; border-radius: 999px; padding: 3px; width: fit-content;}
 div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button {border: none !important; border-radius: 999px !important;
   min-height: 30px !important; padding: 0 20px !important; background: transparent !important; color: var(--muted) !important;}
-div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #fff !important;
+div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: var(--panel) !important;
   color: var(--accent) !important; box-shadow: 0 1px 4px rgba(17, 28, 46, .15);}
 div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button p {font-weight: 700; font-size: .84rem; color: var(--muted) !important;}
 div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: var(--accent) !important;}

@@ -15,18 +15,18 @@ CSS = """<style>
 .st-key-cb_top {align-items: center; margin-bottom: .4rem;}
 .st-key-cb_center [data-testid="stButtonGroup"] {gap: 6px;}
 .st-key-cb_center [data-testid="stButtonGroup"] button {border-radius: 999px !important; border: none !important;
-  background: #fff !important; box-shadow: 0 1px 2px rgba(17, 28, 46, .08); padding: 0 16px !important;}
+  background: var(--panel) !important; box-shadow: 0 1px 2px rgba(17, 28, 46, .08); padding: 0 16px !important;}
 .st-key-cb_center [data-testid="stButtonGroup"] button p {font-weight: 700; color: var(--muted);}
 .st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #2A3147 !important;}
 .st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .cb-kpis {display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px;}
-.cb-k {background: #fff; border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08);
+.cb-k {background: var(--panel); border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08);
   display: flex; gap: 12px; align-items: center;}
 .cb-k i {width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
   font-style: normal; font-size: 19px; flex: none;}
 .cb-k b {display: block; font-size: 1.25rem; color: var(--ink); line-height: 1.25;}
 .cb-k span {font-size: .76rem; color: var(--muted);}
-.cb-box {background: #fff; border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); padding: 6px 0 8px; overflow-x: auto;}
+.cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); padding: 6px 0 8px; overflow-x: auto;}
 .cb-t {border-collapse: collapse; width: 100%; font-size: .8rem; min-width: 860px;}
 .cb-t th {font-size: .72rem; color: #97A1AE; font-weight: 600; text-align: left; padding: 8px 8px; border-bottom: 1px solid #E1E5EB;
   white-space: nowrap;}

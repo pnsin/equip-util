@@ -26,7 +26,7 @@ PURPLE = ("#7E5BC2", "#DCD2EE", "#F3EFFA")
 GOAL = "#D9822B"
 
 CSS = """<style>
-[class*="st-key-dsec_"] {background: #fff; border-radius: 24px; box-shadow: 0 4px 16px rgba(30,36,51,.04);
+[class*="st-key-dsec_"] {background: var(--panel); border-radius: 24px; box-shadow: 0 4px 16px rgba(30,36,51,.04);
   padding: 24px 28px 22px; margin-bottom: 12px; gap: .55rem; transition: all 0.25s ease; border: 1px solid #E6E9F2;}
 [class*="st-key-dsec_"]:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(30,36,51,.08); border-color: #D5DAE6; }
 .dh {display: flex; align-items: center; gap: 14px; margin-bottom: 12px;}
@@ -36,7 +36,7 @@ CSS = """<style>
 .dh .tt {font-size: 21px; font-weight: 700; color: #1E2433; line-height: 1.3;}
 .dh .per {margin-left: auto; font-size: 12px; color: #6B7686; background: #F3F5F8; padding: 5px 12px; border-radius: 99px;}
 .dst {border: 1px solid #E6E9F2; border-radius: 20px; padding: 16px 20px; height: 100%; min-height: 118px; transition: all 0.25s ease; background: #FAFBFE;}
-.dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,36,51,.06); border-color: #D5DAE6; background: #FFFFFF;}
+.dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,36,51,.06); border-color: #D5DAE6; background: var(--panel);}
 .dst.big {border: 0; background: linear-gradient(135deg, #5B6CFF 0%, #9B6CFF 60%, #D27CE0 100%); box-shadow: 0 8px 22px rgba(91,108,255,.28);}
 .dst.big:hover {transform: translateY(-2px); box-shadow: 0 14px 32px rgba(91,108,255,.4);}
 .dst .sl {font-size: 13px; color: #6B7686; font-weight: 600;}

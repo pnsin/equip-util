@@ -19,7 +19,7 @@ PAGE = 30
 
 CSS = """<style>
 .cs-stats {display: flex; gap: 12px; flex-wrap: wrap; margin: .2rem 0 1rem;}
-.cs-stat {background: #fff; border-radius: 18px; padding: 14px 20px 13px; min-width: 150px;
+.cs-stat {background: var(--panel); border-radius: 18px; padding: 14px 20px 13px; min-width: 150px;
   box-shadow: 0 4px 16px rgba(30, 36, 51, .04); border: 1px solid var(--line); transition: all 0.25s ease;}
 .cs-stat:hover {transform: translateY(-2px); box-shadow: 0 12px 24px rgba(30, 36, 51, .08); border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
 .cs-stat b {display: block; font-size: 1.8rem; font-weight: 800; line-height: 1.15; color: var(--ink);
@@ -28,7 +28,7 @@ CSS = """<style>
 .cs-stat em {font-style: normal; font-size: .72rem; font-weight: 700; color: #D45087; margin-left: 6px;}
 .st-key-cs_tools {align-items: center; gap: .5rem; flex-wrap: wrap;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button {border-radius: 999px !important; height: 34px; min-height: 0;
-  padding: 0 14px; background: #fff; border: 1px solid var(--line) !important;}
+  padding: 0 14px; background: var(--panel); border: 1px solid var(--line) !important;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button p {font-size: .84rem; font-weight: 600; color: #4A5670;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #2A3147 !important; border-color: #2A3147 !important;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
@@ -38,7 +38,7 @@ CSS = """<style>
 .st-key-cs_tools .st-key-cs_new button p {color: #fff; font-weight: 700;}
 /* 카드 */
 .st-key-cs_list {gap: 9px !important;}
-div[class*="st-key-cs_card_"] {position: relative; background: #fff; border-radius: 16px; padding: 12px 16px 12px 20px;
+div[class*="st-key-cs_card_"] {position: relative; background: var(--panel); border-radius: 16px; padding: 12px 16px 12px 20px;
   box-shadow: 0 4px 16px rgba(30, 36, 51, .04); border: 1px solid var(--line); transition: all 0.25s ease;}
 div[class*="st-key-cs_card_"]:hover {box-shadow: 0 12px 24px rgba(30, 36, 51, .08); transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
 div[class*="st-key-cs_card_"]::before {content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px;
@@ -62,7 +62,7 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
 /* 입력 카드 */
 .st-key-cs_wrap > [data-testid="stHorizontalBlock"] {align-items: flex-start !important;}
 .st-key-cs_panel {position: sticky !important; top: 4.2rem; max-height: calc(100vh - 5.2rem); overflow-y: auto !important;
-  scrollbar-width: thin; background: #fff; border-radius: 20px; padding: 16px 16px 14px; gap: .55rem;
+  scrollbar-width: thin; background: var(--panel); border-radius: 20px; padding: 16px 16px 14px; gap: .55rem;
   box-shadow: 0 2px 4px rgba(30, 50, 90, .04), 0 12px 32px rgba(30, 50, 90, .08); animation: csIn .18s ease-out;}
 @keyframes csIn {from {opacity: 0; transform: translateX(10px);} to {opacity: 1; transform: none;}}
 @media (max-width: 1300px) {
@@ -83,7 +83,7 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
 .st-key-cs_panel [data-baseweb="input"] > div, .st-key-cs_panel [data-baseweb="input"] input,
 .st-key-cs_panel [data-baseweb="textarea"] > div, .st-key-cs_panel textarea {background: transparent !important;}
 .st-key-cs_panel [data-baseweb="select"] > div:focus-within, .st-key-cs_panel [data-baseweb="input"]:focus-within,
-.st-key-cs_panel [data-baseweb="textarea"]:focus-within {border-color: var(--accent) !important; background: #fff !important;}
+.st-key-cs_panel [data-baseweb="textarea"]:focus-within {border-color: var(--accent) !important; background: var(--panel) !important;}
 .st-key-cs_panel [data-testid="stButtonGroup"] button {border-radius: 999px !important; padding: 2px 12px; min-height: 0; height: 31px;
   border: none !important; background: #F4F6FA;}
 .st-key-cs_panel [data-testid="stButtonGroup"] button p {font-size: .8rem; font-weight: 600; color: #4A5670;}
