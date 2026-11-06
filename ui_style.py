@@ -596,3 +596,21 @@ def chart_layout(fig, height: int, legend: bool = True):
     fig.update_yaxes(gridcolor=CHART_GRID, zerolinecolor=CHART_GRID, linecolor=T["line"], tickfont=dict(color=T["muted"]),
                      title_font=dict(color=T["muted"], size=12))
     return fig
+
+
+# 2026-11-06: 빈 칸에 회색 "None" 글자가 보이지 않게, 모든 표의 빈 칸 표시를 빈칸으로
+def _blank_none(fn):
+    import functools
+
+    @functools.wraps(fn)
+    def wrap(*a, **k):
+        k.setdefault("placeholder", "")
+        return fn(*a, **k)
+    return wrap
+
+
+if not getattr(st.data_editor, "_blank_none", False):
+    for _n in ("data_editor", "dataframe"):
+        _f = _blank_none(getattr(st, _n))
+        _f._blank_none = True
+        setattr(st, _n, _f)
