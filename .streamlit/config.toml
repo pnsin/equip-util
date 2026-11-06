@@ -11,9 +11,9 @@ codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono
 baseRadius = "10px"
 borderColor = "#D5DAE6"
 showWidgetBorder = true
-dataframeBorderColor = "#E6E9F2"
-dataframeHeaderBackgroundColor = "#F7F8FC"
-dataframeHeaderTextColor = "#6B7385"
+dataframeBorderColor = "#CBD3E1"
+dataframeHeaderBackgroundColor = "#E6EBF5"
+dataframeHeaderTextColor = "#1E2433"
 greenColor = "#1A9A6C"
 redColor = "#E5484D"
 orangeColor = "#D98B1E"

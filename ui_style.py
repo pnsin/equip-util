@@ -176,11 +176,14 @@ _CSS = """
   [data-testid="stExpander"] summary p { font-weight: 600; }
   [data-testid="stCaptionContainer"] { color: var(--muted); }
 
-  [data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: var(--card-shadow); }
-  [data-testid="stDataFrame"] table { width: 100%; border-collapse: collapse; }
-  [data-testid="stDataFrame"] th { background-color: var(--panel2) !important; color: var(--muted) !important; font-weight: 600 !important; font-size: 0.9rem !important; border-bottom: 2px solid var(--line) !important; padding: 12px 16px !important; text-align: center !important; }
-  [data-testid="stDataFrame"] td { padding: 10px 16px !important; border-bottom: 1px solid var(--line) !important; text-align: center !important; color: var(--ink) !important; font-size: 0.95rem !important; }
-  [data-testid="stDataFrame"] tr:hover td { background-color: var(--accent-bg) !important; }
+  /* ---------- 표 (DataFrame & DataEditor) 외곽선 및 테두리 시인성 강화 ---------- */
+  [data-testid="stDataFrame"], [data-testid="stDataEditor"] {
+    border: 1px solid #CBD3E1 !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 16px rgba(30, 45, 80, 0.05) !important;
+    background: #FFFFFF !important;
+  }
   
   /* ---------- 빈 화면 안내 ---------- */
   .empty { border: 1px dashed var(--line2); border-radius: 6px; background: var(--panel); padding: 1.6rem 1.4rem; text-align: center; margin: .4rem 0 1rem 0; }
@@ -724,13 +727,34 @@ def chart_layout(fig, height: int, legend: bool = True):
     return fig
 
 
-# 2026-11-06: 빈 칸에 회색 "None" 글자가 보이지 않게, 모든 표의 빈 칸 표시를 빈칸으로
+# 2026-11-06: 모든 표의 빈 칸 None 제거 및 모든 컬럼 기본 가운데 정렬(center) 적용
 def _blank_none(fn):
     import functools
+    import streamlit as st
 
     @functools.wraps(fn)
     def wrap(*a, **k):
         k.setdefault("placeholder", "")
+        try:
+            data = a[0] if a else k.get("data")
+            if hasattr(data, "columns"):
+                cfg = dict(k.get("column_config") or {})
+                for col in data.columns:
+                    if col in cfg:
+                        target = cfg[col]
+                        if target is not None:
+                            if isinstance(target, dict):
+                                target.setdefault("alignment", "center")
+                            else:
+                                if hasattr(target, "_alignment"):
+                                    setattr(target, "_alignment", "center")
+                                if hasattr(target, "alignment"):
+                                    setattr(target, "alignment", "center")
+                    else:
+                        cfg[col] = st.column_config.Column(alignment="center")
+                k["column_config"] = cfg
+        except Exception:
+            pass
         return fn(*a, **k)
     return wrap
 
