@@ -17,7 +17,7 @@ KIND_COLOR = {
     "문의·상담": ("#2E9BD6", "#E6F3FB"), "방문": ("#1E8E5A", "#E5F4EC"), "기술지원": ("#8E6CC0", "#F1ECF8"),
     "요청·불만": ("#D45087", "#FBEAF1"), "교육·견학": ("#E39A2D", "#FDF2E2"),
 }
-STATUS_COLOR = {"접수": ("#B5650B", "#FDF1E2"), "진행 중": ("#2563C9", "#E7EEFA"), "완료": ("#1E8E5A", "#E5F4EC")}
+STATUS_COLOR = {"접수": ("#B5650B", "#FDF1E2"), "진행 중": ("#5B6CFF", "#EEF0FF"), "완료": ("#1E8E5A", "#E5F4EC")}
 FIELDS = ("date", "kind", "title", "company", "contact", "staff", "equip_ids", "content", "action", "status",
           "follow_up")
 

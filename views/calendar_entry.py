@@ -32,7 +32,7 @@ CSS = """<style>
 .st-key-calgrid [data-testid="stHorizontalBlock"] {gap: 0.4rem;}
 /* 달 이동 줄 */
 .st-key-calnav {margin-bottom: .8rem; align-items: center;}
-.st-key-calnav .cal-title {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif; font-size: 1.45rem; font-weight: 800;
+.st-key-calnav .cal-title {font-family: 'Nunito', 'Pretendard Variable', 'Pretendard', sans-serif; font-size: 1.45rem; font-weight: 800;
   color: var(--ink); min-width: 8.5rem; text-align: center;
   line-height: 2.25rem;}
 .st-key-calnav [data-testid="stElementContainer"]:has(.cal-title) {width: auto !important; flex: none;}
@@ -64,7 +64,7 @@ CSS = """<style>
 .st-key-ep_form [data-testid="stWidgetLabel"] {margin-bottom: 0; min-height: 0;}
 .st-key-ep_head {align-items: flex-start !important;}
 .ep-h {line-height: 1.25;}
-.ep-d {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif; font-size: 1.3rem; font-weight: 900; color: var(--ink);}
+.ep-d {font-family: 'Nunito', 'Pretendard Variable', 'Pretendard', sans-serif; font-size: 1.3rem; font-weight: 900; color: var(--ink);}
 .ep-d em {font-style: normal; font-size: .95rem; color: #8592A8; font-weight: 700; margin-left: 4px;}
 .ep-n {display: block; font-size: .85rem; font-weight: 700; color: var(--accent); margin-top: 2px;}
 .st-key-ep_new {width: auto !important;}
@@ -79,11 +79,11 @@ CSS = """<style>
 .st-key-ep_list button:hover {background: #EFF3F9;}
 .st-key-ep_list button div[data-testid="stMarkdownContainer"] {text-align: left; width: 100%;}
 .st-key-ep_list button p {margin: 0; font-size: .8rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6B7790;}
-.st-key-ep_list button p:first-child {font-weight: 700; font-size: .88rem; color: #1F2A3D;}
+.st-key-ep_list button p:first-child {font-weight: 700; font-size: .88rem; color: #1E2433;}
 .st-key-ep_list button > div {justify-content: flex-start !important; width: 100%; min-width: 0;}
 .st-key-ep_list button[data-testid="stBaseButton-primary"] {background: #EAF3FD !important; box-shadow: inset 0 0 0 2px var(--accent);}
 .st-key-ep_list button[data-testid="stBaseButton-primary"] p {color: #6B7790 !important;}
-.st-key-ep_list button[data-testid="stBaseButton-primary"] p:first-child {color: #1F2A3D !important;}
+.st-key-ep_list button[data-testid="stBaseButton-primary"] p:first-child {color: #1E2433 !important;}
 .st-key-ep_panel [data-testid="stMarkdownContainer"]:has(.ep-t, .ep-h, .ep-empty) {margin-bottom: 0 !important;}
 .ep-empty {font-size: .85rem; color: #98A3B8; background: #F7F9FC; border-radius: 12px; padding: 12px; text-align: center;}
 div[class*="st-key-ep_row_test_"] button {--chip-fg: #E35D78;} div[class*="st-key-ep_row_make_"] button {--chip-fg: #1FA971;}
@@ -156,10 +156,10 @@ div[class*="st-key-ep_row_anal_"] button {--chip-fg: #7C5CE0;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover div[class*="st-key-card"] {opacity: 1; visibility: visible;
   transform: none; transition-delay: .35s, .35s, 0s;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {z-index: 40;}
-.cal-card {background: #26324A; border: 1px solid #3A4866; border-radius: 14px;
+.cal-card {background: #2A3147; border: 1px solid #3A4866; border-radius: 14px;
   box-shadow: 0 14px 32px rgba(15, 30, 60, .32); padding: 13px 15px; color: #F3F6FB;}
 .cal-card::after {content: ''; position: absolute; bottom: -7px; left: 26px; width: 12px; height: 12px;
-  background: #26324A; transform: rotate(45deg); border-radius: 2px;}
+  background: #2A3147; transform: rotate(45deg); border-radius: 2px;}
 div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 .cal-card .cc-h {display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
   padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, .14);}
@@ -218,7 +218,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 /* 아래쪽에 떠 있는 작은 도구 막대 (선택·복사 상태) */
 .st-key-cal_selbar, .st-key-cal_delbar {position: fixed !important; left: 50%; bottom: 26px; transform: translateX(-50%);
   z-index: 1000; width: auto !important; max-width: min(760px, calc(100vw - 32px)); flex-wrap: nowrap !important;
-  padding: 6px 8px 6px 18px; border-radius: 999px; background: #26324A; color: #fff;
+  padding: 6px 8px 6px 18px; border-radius: 999px; background: #2A3147; color: #fff;
   box-shadow: 0 12px 30px rgba(15, 30, 60, .30); animation: calPop .18s ease-out;}
 .st-key-cal_delbar {bottom: 84px; background: #fff; border: 1px solid #F3B4B4; box-shadow: 0 12px 30px rgba(180, 40, 40, .18);}
 @keyframes calPop {from {opacity: 0; transform: translate(-50%, 8px);} to {opacity: 1; transform: translate(-50%, 0);}}
@@ -245,7 +245,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 .st-key-calgrid div[class*="st-key-day_"] button > div,
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button > div {width: 100%; min-width: 0; justify-content: flex-start;}
 .st-key-calgrid div[class*="st-key-day_"] button p {font-size: 0.76rem; color: #6B7790;}
-.st-key-calgrid div[class*="st-key-day_"] button strong {font-family: 'Nunito', 'IBM Plex Sans KR', sans-serif;
+.st-key-calgrid div[class*="st-key-day_"] button strong {font-family: 'Nunito', 'Pretendard Variable', 'Pretendard', sans-serif;
   font-size: 1.12rem; font-weight: 800; letter-spacing: -.01em; display: inline-flex; align-items: center;
   justify-content: center; min-width: 1.75em; height: 1.75em; border-radius: 999px; margin-right: 2px;}
 .st-key-calgrid div[class*="st-key-day_"] button:hover strong {background: rgba(45, 143, 213, 0.12);}
@@ -258,7 +258,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button:hover {transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(20, 40, 80, .12); filter: saturate(1.15);}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p {font-size: 0.72rem; line-height: 1.4; color: #6B7790;}
-.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:first-child {font-weight: 700; font-size: .78rem; color: #1F2A3D;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:first-child {font-weight: 700; font-size: .78rem; color: #1E2433;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:first-child::before {content: var(--cat-label, ""); display: inline-block;
   font-size: .62rem; font-weight: 800; padding: 0 6px; margin-right: 5px; border-radius: 999px; line-height: 1.6;
   background: var(--chip-fg, #8A97A8); color: #fff; vertical-align: 1px;}
@@ -433,7 +433,7 @@ div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button[aria-checked=
 .st-key-ep_quick button {min-height: 24px !important; padding: 0 10px !important; border-radius: 999px !important;
   background: #F3F5F8 !important; font-size: .74rem !important;}
 .st-key-ep_quick button p {font-size: .74rem !important; font-weight: 700; color: var(--muted) !important;}
-.st-key-ep_quick button:hover {background: #E7EEFA !important;}
+.st-key-ep_quick button:hover {background: #EEF0FF !important;}
 .st-key-ep_quick button:hover p {color: var(--accent) !important;}
 .ep-sum {background: linear-gradient(135deg, #EEF3FF, #F6F1FF); border-radius: 14px; padding: 9px 13px; margin: 2px 0 4px;}
 .ep-sum b {display: block; color: var(--accent); font-size: .98rem;}
@@ -448,7 +448,7 @@ div[class*="st-key-ep_cn_"] [data-testid="stButtonGroup"] {gap: 4px;}
 div[class*="st-key-ep_cn_"] [data-testid="stButtonGroup"] button {min-width: 34px; min-height: 26px !important;
   padding: 0 6px !important; border-radius: 8px !important; justify-content: center;}
 div[class*="st-key-ep_cn_"] [data-testid="stButtonGroup"] button p {font-size: .74rem !important;}
-div[class*="st-key-ep_cn_"] button[aria-pressed="true"] {background: #2563C9 !important; border-color: #2563C9 !important;}
+div[class*="st-key-ep_cn_"] button[aria-pressed="true"] {background: #5B6CFF !important; border-color: #5B6CFF !important;}
 div[class*="st-key-ep_cn_"] button[aria-pressed="true"] p {color: #fff !important; font-weight: 700;}
 div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] {flex-wrap: wrap; gap: 5px;}
 div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button {border-radius: 10px !important; min-height: 30px !important;

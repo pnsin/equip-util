@@ -17,7 +17,7 @@ CSS = """<style>
 .st-key-cb_center [data-testid="stButtonGroup"] button {border-radius: 999px !important; border: none !important;
   background: #fff !important; box-shadow: 0 1px 2px rgba(17, 28, 46, .08); padding: 0 16px !important;}
 .st-key-cb_center [data-testid="stButtonGroup"] button p {font-weight: 700; color: var(--muted);}
-.st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #26324A !important;}
+.st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #2A3147 !important;}
 .st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .cb-kpis {display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px;}
 .cb-k {background: #fff; border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08);
@@ -139,7 +139,7 @@ def render() -> None:
         pct = f" · {used / total:.0%}" if total else ""
         st.markdown(
             "<div class='cb-kpis'>"
-            f"<div class='cb-k'><i style='background:#E7EEFA'>🔋</i><div><b>{total} ch</b><span>전체 채널</span></div></div>"
+            f"<div class='cb-k'><i style='background:#EEF0FF'>🔋</i><div><b>{total} ch</b><span>전체 채널</span></div></div>"
             f"<div class='cb-k'><i style='background:#FDEEF1'>⚡</i><div><b>{used} ch{pct}</b><span>오늘 사용 중</span></div></div>"
             f"<div class='cb-k'><i style='background:#E6F6EE'>🌱</i><div><b>{total - used} ch</b>"
             f"<span>오늘 비어 있음 · 챔버 {len(free_ch)}개</span></div></div>"
