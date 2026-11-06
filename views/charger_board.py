@@ -17,7 +17,7 @@ CSS = """<style>
 .st-key-cb_center [data-testid="stButtonGroup"] button {border-radius: 999px !important; border: none !important;
   background: var(--panel) !important; box-shadow: 0 1px 2px rgba(17, 28, 46, .08); padding: 0 16px !important;}
 .st-key-cb_center [data-testid="stButtonGroup"] button p {font-weight: 700; color: var(--muted);}
-.st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #2A3147 !important;}
+.st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #334155 !important;}
 .st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .cb-kpis {display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px;}
 .cb-k {background: var(--panel); border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08);
@@ -28,32 +28,32 @@ CSS = """<style>
 .cb-k span {font-size: .76rem; color: var(--muted);}
 .cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); padding: 6px 0 8px; overflow-x: auto;}
 .cb-t {border-collapse: collapse; width: 100%; font-size: .8rem; min-width: 860px;}
-.cb-t th {font-size: .72rem; color: #97A1AE; font-weight: 600; text-align: left; padding: 8px 8px; border-bottom: 1px solid #E1E5EB;
+.cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: left; padding: 8px 8px; border-bottom: 1px solid #26334D;
   white-space: nowrap;}
-.cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #F0F2F5; white-space: nowrap;}
+.cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #26334D; white-space: nowrap;}
 .cb-t td.u {font-weight: 700; color: var(--ink);}
 .cb-t td.c {color: var(--muted);}
-.cb-t td.m {color: #97A1AE;}
-.cb-dash {color: #97A1AE;}
+.cb-t td.m {color: #94A3B8;}
+.cb-dash {color: #94A3B8;}
 .cb-t td.co {font-weight: 700; color: var(--ink);}
 .cb-t td.tl {position: relative; width: 48%; padding: 0;}
-.cb-t tr.grp td {border-top: 1px solid #E8ECF1;}
+.cb-t tr.grp td {border-top: 1px solid #26334D;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
-.cb-mh span {position: absolute; top: 0; font-size: .7rem; color: #97A1AE; font-weight: 600; padding-left: 5px;
-  border-left: 1px solid #E8ECF1;}
-.cb-g {position: absolute; top: 0; bottom: 0; width: 1px; background: #F0F2F5;}
+.cb-mh span {position: absolute; top: 0; font-size: .7rem; color: #94A3B8; font-weight: 600; padding-left: 5px;
+  border-left: 1px solid #26334D;}
+.cb-g {position: absolute; top: 0; bottom: 0; width: 1px; background: #26334D;}
 .cb-now {position: absolute; top: -2px; bottom: -2px; width: 2px; background: #E35D78; border-radius: 2px; z-index: 2;}
 .cb-bar {position: absolute; top: 5px; height: 21px; border-radius: 8px; font-size: .7rem; font-weight: 700; padding: 0 8px;
   display: flex; align-items: center; overflow: hidden; white-space: nowrap; border-left: 4px solid var(--fg);
   background: var(--bg); color: var(--fg); z-index: 1;}
-.cb-bar.soon {border: 1.5px dashed #E8B04B; background: #FFF8EA; color: #B5650B;}
-.cb-mini {display: inline-block; width: 34px; height: 6px; border-radius: 3px; background: #E6F6EE; margin: 0 5px 1px 8px;
+.cb-bar.soon {border: 1.5px dashed #E8B04B; background: rgba(230,182,85,0.16); color: #B5650B;}
+.cb-mini {display: inline-block; width: 34px; height: 6px; border-radius: 3px; background: rgba(85,230,158,0.16); margin: 0 5px 1px 8px;
   vertical-align: middle; overflow: hidden;}
 .cb-mini i {display: block; height: 100%; background: #E35D78; border-radius: 3px;}
 .cb-n {font-size: .7rem; font-weight: 700; color: #B8435C;}
 .cb-free {position: absolute; top: 8px; left: 6px; font-size: .72rem; font-weight: 700; color: #1E8E5A;}
-.cb-sum td {background: #F7F9FC; font-weight: 700; color: var(--muted);}
+.cb-sum td {background: rgba(85,143,230,0.16); font-weight: 700; color: var(--muted);}
 .cb-foot {display: flex; flex-wrap: wrap; gap: 14px; font-size: .74rem; color: var(--muted); margin-top: 8px;}
 .cb-foot i {display: inline-block; width: 11px; height: 11px; border-radius: 4px; margin-right: 5px; vertical-align: -1px;}
 @media (max-width: 900px) {.cb-kpis {grid-template-columns: repeat(2, minmax(0, 1fr));}}
@@ -139,11 +139,11 @@ def render() -> None:
         pct = f" · {used / total:.0%}" if total else ""
         st.markdown(
             "<div class='cb-kpis'>"
-            f"<div class='cb-k'><i style='background:#EEF0FF'>🔋</i><div><b>{total} ch</b><span>전체 채널</span></div></div>"
-            f"<div class='cb-k'><i style='background:#FDEEF1'>⚡</i><div><b>{used} ch{pct}</b><span>오늘 사용 중</span></div></div>"
-            f"<div class='cb-k'><i style='background:#E6F6EE'>🌱</i><div><b>{total - used} ch</b>"
+            f"<div class='cb-k'><i style='background:rgba(85,102,230,0.16)'>🔋</i><div><b>{total} ch</b><span>전체 채널</span></div></div>"
+            f"<div class='cb-k'><i style='background:rgba(230,85,114,0.16)'>⚡</i><div><b>{used} ch{pct}</b><span>오늘 사용 중</span></div></div>"
+            f"<div class='cb-k'><i style='background:rgba(85,230,158,0.16)'>🌱</i><div><b>{total - used} ch</b>"
             f"<span>오늘 비어 있음 · 챔버 {len(free_ch)}개</span></div></div>"
-            f"<div class='cb-k'><i style='background:#FFF8EA'>⏳</i><div><b>{ending}건</b>"
+            f"<div class='cb-k'><i style='background:rgba(230,182,85,0.16)'>⏳</i><div><b>{ending}건</b>"
             f"<span>7일 안에 끝남 · 예약 {waiting}건</span></div></div></div>", unsafe_allow_html=True)
 
         # 타임라인: 지난달 1일 ~ 5개월 뒤
@@ -194,7 +194,7 @@ def render() -> None:
             + "".join(rows) + "</table></div>"
             "<div class='cb-foot'>"
             + "".join(f"<span><i style='background:{CATS[k][1]}'></i>{k}</span>" for k in ("시험", "제조", "분석", "지원"))
-            + "<span><i style='border:1.5px dashed #E8B04B;background:#FFF8EA'></i>아직 시작 전 (예약)</span>"
+            + "<span><i style='border:1.5px dashed #E8B04B;background:rgba(230,182,85,0.16)'></i>아직 시작 전 (예약)</span>"
             "<span style='color:#E35D78'>│ 오늘</span></div>", unsafe_allow_html=True)
 
         mine = bk[bk["chamber_id"].isin(set(g["id"].astype(int)))] if not bk.empty else bk

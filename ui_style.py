@@ -79,6 +79,17 @@ THEMES = {
         "side-hover": "#F3F4FA", "side-active": "#EEF0FF", "side-active-ink": "#4B5BEA",
         "logo": "logo_light.png", "base": "light",
     },
+    # G. 다크 엔터프라이즈 (2026-11-06 사용자 명세서: Stripe/Datadog형)
+    "slate": {
+        "bg": "#0F172A", "panel": "#1E293B", "panel2": "#26334D", "deep": "#090D16",
+        "line": "#334155", "line2": "#475569", "ink": "#F8FAFC", "muted": "#94A3B8", "dim": "#64748B",
+        "accent": "#6366F1", "accent-hi": "#818CF8", "accent-bg": "rgba(99,102,241,.15)",
+        "ok": "#10B981", "ok-bg": "rgba(16,185,129,.15)", "ng": "#F87171", "ng-bg": "rgba(248,113,113,.15)", "warn": "#F59E0B", "warn-bg": "rgba(245,158,11,.15)",
+        "bar-off": "#334155", "shadow": "0 16px 40px rgba(0,0,0,.45)", "card-shadow": "none",
+        "side": "#090D16", "side-line": "#1E293B", "side-ink": "#E2E8F0", "side-muted": "#94A3B8", "side-dim": "#64748B",
+        "side-hover": "#131B2B", "side-active": "#1E293B", "side-active-ink": "#F8FAFC",
+        "logo": "logo_dark.png", "base": "dark",
+    },
     # E. 깔끔형 (2026-11-06 시안): 따뜻한 흰 바탕, 얇은 선, 절제된 색
     "clean": {
         "bg": "#FAF9F7", "panel": "#FFFFFF", "panel2": "#F4F3F0", "deep": "#F7F6F3",
@@ -102,7 +113,7 @@ THEMES = {
         "logo": "logo_dark.png", "base": "dark",
     },
 }
-THEME_NAME = os.environ.get("EQUIP_THEME", "soft")
+THEME_NAME = os.environ.get("EQUIP_THEME", "slate")
 TOKENS = {k: v for k, v in THEMES.get(THEME_NAME, THEMES["dark"]).items() if k not in ("logo", "base")}
 T = TOKENS
 
@@ -135,10 +146,10 @@ _CSS = """
   @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
   __VARS__
   .block-container { padding-top: 3.6rem; padding-bottom: 4rem; max-width: 1600px; }
-  .stApp:not(:has(.login-bg)) [data-testid="stMainBlockContainer"] { padding-left: 2.5rem !important; padding-right: 2.5rem !important; }
+  .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stMainBlockContainer"] { padding-left: 2.5rem !important; padding-right: 2.5rem !important; }
   /* 접속 화면: 왼쪽 메뉴 칸은 숨김 (메뉴는 접속 전에도 만들어 둬야 접속 뒤 늘 펼쳐진 채로 시작함) */
-  .stApp:has(.login-bg) [data-testid="stSidebar"], .stApp:has(.login-bg) [data-testid="stExpandSidebarButton"],
-  .stApp:has(.login-bg) [data-testid="stSidebarCollapsedControl"] { display: none !important; }
+  .stApp:has(.login-bg, .login-preview-bg) [data-testid="stSidebar"], .stApp:has(.login-bg, .login-preview-bg) [data-testid="stExpandSidebarButton"],
+  .stApp:has(.login-bg, .login-preview-bg) [data-testid="stSidebarCollapsedControl"] { display: none !important; }
   [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif; }
   [data-testid="stAppViewContainer"] { background: var(--bg); }
   footer { visibility: hidden; }
@@ -278,7 +289,7 @@ _CSS = """
   /* ---------- 접속 화면 (3번: 대시보드 블러 프리뷰 스타일) ---------- */
   .login-gap { height: 13vh; }
   .stApp:has(.login-preview-bg) [data-testid="stHeader"],
-  .stApp:has(.login-bg) [data-testid="stHeader"] { background: transparent; backdrop-filter: none; }
+  .stApp:has(.login-bg, .login-preview-bg) [data-testid="stHeader"] { background: transparent; backdrop-filter: none; }
   
   .login-preview-bg {
     position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
@@ -404,7 +415,7 @@ _CSS = """
   [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) , [data-testid="stExpander"] details,
   [data-testid="stDataFrame"], [data-testid="stMetric"] { border-radius: 16px; }
   /* ---------- 색감 (2026-11-06): 라벤더→핑크 파스텔 + 그라데이션 포인트 ---------- */
-  .stApp:not(:has(.login-bg)) [data-testid="stAppViewContainer"] {
+  .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stAppViewContainer"] {
         background: radial-gradient(1200px 500px at 85% -10%, #EDEBFF 0%, transparent 60%),
                     radial-gradient(900px 420px at 10% 0%, #FDEFF6 0%, transparent 55%), var(--bg); }
   [data-testid="stHeader"] { background: transparent; backdrop-filter: none; }
@@ -427,7 +438,7 @@ _CSS = """
         background: linear-gradient(180deg, #5B6CFF, #B36BFF); }
   .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] {
         background: linear-gradient(135deg, #5B6CFF 0%, #8B6CFF 100%) !important; border: 0 !important; box-shadow: 0 4px 12px rgba(91,108,255,.25); }
-  .stApp:not(:has(.login-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) {
+  .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) {
         background: #FFFFFF; border-color: #ECEAF8 !important; box-shadow: 0 2px 10px rgba(91,108,255,.06); }
   [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: #FBFAFF !important; }
   [data-testid="stDataFrame"] { box-shadow: 0 1px 6px rgba(91,108,255,.05); }
@@ -462,7 +473,7 @@ _CSS = """
 
 # 깔끔형(clean·clean-dark): 파스텔·그라데이션을 걷어 내고 바탕·선·글자만으로 정리
 _CLEAN_CSS = """<style>
-  .stApp:not(:has(.login-bg)) [data-testid="stAppViewContainer"] { background: var(--bg) !important; }
+  .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stAppViewContainer"] { background: var(--bg) !important; }
   [data-testid="stSidebar"] { background: var(--side) !important; border-right: 1px solid var(--side-line) !important; }
   [data-testid="stSidebar"] .nav-group { color: var(--side-dim) !important; border-top: 0 !important; letter-spacing: .04em; }
   [data-testid="stSidebar"] .brand-card { background: transparent !important; box-shadow: none !important; border: 0 !important; padding: .2rem .3rem !important; }
@@ -477,17 +488,73 @@ _CLEAN_CSS = """<style>
   [data-testid="stHeading"] h3::before, .sec-bar::before { display: none; }
   .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] { background: var(--ink) !important; color: var(--bg) !important; box-shadow: none !important; }
   .stButton button[kind="primary"] p, .stDownloadButton button[kind="primary"] p, .stFormSubmitButton button[kind="primary"] p { color: var(--bg) !important; }
-  .stApp:not(:has(.login-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) { background: var(--panel) !important; border-color: var(--line) !important; box-shadow: none !important; }
+  .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) { background: var(--panel) !important; border-color: var(--line) !important; box-shadow: none !important; }
   [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: var(--panel) !important; }
   .dst.big { background: var(--panel2) !important; box-shadow: none !important; border: 1px solid var(--line) !important; }
   .dst.big * { color: var(--ink) !important; }
 </style>"""
 
 
+# 다크 엔터프라이즈 (사용자 명세서 2026-11-06): 카드 #1E293B · 선 #334155 · 위쪽 색 막대 · 고정폭 숫자
+_SLATE_CSS = """<style>
+  .block-container { max-width: 1600px !important; }
+  .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stMainBlockContainer"] { padding: 2rem 2.5rem 4rem !important; }
+  [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        font-variant-numeric: tabular-nums; }
+  [data-testid="stSidebar"] .brand-ic { background: #6366F1 !important; color: #fff !important; }
+  [data-testid="stSidebar"] .nav-group { color: #64748B !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { color: #CBD5E1 !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] {
+        background: #1E293B !important; box-shadow: inset 3px 0 0 #6366F1 !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] span, [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span { color: #F8FAFC !important; font-weight: 600; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] [data-testid="stIconMaterial"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] [data-testid="stIconMaterial"] { color: #818CF8 !important; }
+  .ph { border-bottom: 1px solid #1E293B !important; } .ph .t { font-size: 24px !important; }
+  .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] { background: #6366F1 !important; color: #fff !important; }
+  .stButton button[kind="primary"] p, .stDownloadButton button[kind="primary"] p, .stFormSubmitButton button[kind="primary"] p { color: #fff !important; }
+  .stButton button[kind="primary"]:hover { background: #4F46E5 !important; }
+  .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) { border-radius: 12px !important; }
+  [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: #0F172A !important; border-color: #334155 !important; }
+  [data-testid="stDataFrame"] { border: 1px solid #334155; border-radius: 12px; overflow: hidden; background: #1E293B; }
+  [data-testid="stAlert"] > div { background: #1E293B !important; border-left: 4px solid #F59E0B; border-radius: 10px; color: #E2E8F0; }
+  [data-testid="stAlert"] p { color: #E2E8F0 !important; }
+  /* 빈 상태: 높이 48px 안쪽의 가로 배너 */
+  .empty { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .7rem; text-align: left; min-height: 0; padding: .7rem 1rem !important;
+        background: #1E293B !important; border: 0 !important; border-left: 4px solid #6366F1 !important; border-radius: 8px !important; }
+  .empty .ic { font-size: 1rem !important; margin: 0 !important; color: #818CF8 !important; }
+  .empty .h { white-space: nowrap; font-size: .92rem !important; margin: 0 !important; color: #F8FAFC !important; }
+  .empty .b { font-size: .85rem !important; color: #94A3B8 !important; }
+  /* 대시보드: 카드 12px · 위쪽 색 막대 · 숫자 크게/단위 작게 · 알약 배지 */
+  [class*="st-key-dsec_"] { background: #1E293B !important; border: 1px solid #334155 !important; border-radius: 12px !important;
+        box-shadow: none !important; transform: none !important; padding: 20px 24px !important; }
+  .st-key-dsec_util { border-top: 4px solid #6366F1 !important; } .st-key-dsec_fee { border-top: 4px solid #10B981 !important; }
+  .st-key-dsec_maint { border-top: 4px solid #8B5CF6 !important; }
+  .dst { background: #0F172A !important; border: 1px solid #334155 !important; border-radius: 12px !important; box-shadow: none !important; }
+  .dst:hover { background: #26334D !important; transform: none !important; }
+  .dst.big { background: #26334D !important; border: 1px solid #475569 !important; }
+  .dst.big * { color: inherit !important; } .dst.big .sl { color: #94A3B8 !important; }
+  .dst .sv, .dst.big .sv { font-size: 30px !important; font-weight: 700; color: #F8FAFC !important; font-variant-numeric: tabular-nums; }
+  .dst .sv small { font-size: 16px !important; font-weight: 500 !important; color: #94A3B8 !important; }
+  .dch { background: rgba(148,163,184,.15) !important; color: #CBD5E1 !important; }
+  .dch.g { background: rgba(16,185,129,.15) !important; color: #34D399 !important; }
+  .dch.r { background: rgba(248,113,113,.15) !important; color: #F87171 !important; }
+  .dh .per { background: #0F172A !important; border: 1px solid #334155; }
+  /* 접속 화면도 같은 다크 톤 */
+  .stApp:has(.login-bg, .login-preview-bg) [data-testid="stAppViewContainer"] { background: #0F172A !important; }
+  .login-blur-overlay { background: radial-gradient(circle at 50% 40%, rgba(30,41,59,.72) 0%, rgba(15,23,42,.94) 100%) !important; }
+  .st-key-login_card { background: rgba(30,41,59,.92) !important; border: 1px solid #334155 !important; box-shadow: 0 24px 60px rgba(0,0,0,.5) !important; }
+  .st-key-login_card [data-testid="stTextInputRootElement"], .st-key-login_card [data-testid="stTextInputRootElement"]:focus-within { background: #0F172A !important; border-color: #334155; }
+  .st-key-login_card input { color: #F8FAFC !important; }
+  .st-key-login_card .stButton button, .st-key-login_card [data-testid="stFormSubmitButton"] button { background: #6366F1 !important; border: 0 !important; }
+  .login-head .s, .login-head p { color: #94A3B8 !important; }
+</style>"""
+
+
 def apply_style():
     st.markdown(_CSS, unsafe_allow_html=True)
-    if THEME_NAME.startswith("clean"):
+    if THEME_NAME.startswith("clean") or THEME_NAME == "slate":
         st.markdown(_CLEAN_CSS, unsafe_allow_html=True)
+    if THEME_NAME == "slate":
+        st.markdown(_SLATE_CSS, unsafe_allow_html=True)
 
 
 # 표 칸·숫자 칸을 처음 누를 때 Streamlit 화면은 편집기 조각(js 파일)을 그제야 내려받습니다.
@@ -733,7 +800,7 @@ def login_bg():
 
 def login_head(failed: bool = False):
     """접속 화면 위쪽: 착시 보정 로고 + 제목."""
-    uri = _data_uri(os.path.join(_DIR, "assets", "logo_light.png"))
+    uri = _data_uri(LOGO_PATH if THEMES.get(THEME_NAME, {}).get("base") == "dark" else os.path.join(_DIR, "assets", "logo_light.png"))
     logo = f'<div class="login-logo-wrap"><img class="login-logo-center" src="{uri}" alt="CBTP 배터리산업팀 로고"></div>' if uri else ""
     st.markdown(f'{logo}<div class="login-head"><div class="t">{html.escape(SYSTEM_TITLE)}</div>'
                 '<div class="d">팀 비밀번호로 들어와 주세요</div></div>', unsafe_allow_html=True)
