@@ -35,7 +35,7 @@ CSS = """<style>
 .dh .tt {font-size: 21px; font-weight: 700; color: #1E2433; line-height: 1.3;}
 .dh .per {margin-left: auto; font-size: 12px; color: #6B7686; background: #F3F5F8; padding: 5px 12px; border-radius: 99px;}
 .dst {border: 1px solid #E8EBF0; border-radius: 16px; padding: 14px 18px; height: 100%; min-height: 118px;}
-.dst.big {border: 0; background: #2A3147;}
+.dst.big {border: 0; background: linear-gradient(135deg, #5B6CFF 0%, #9B6CFF 60%, #D27CE0 100%); box-shadow: 0 8px 22px rgba(91,108,255,.28);}
 .dst .sl {font-size: 13px; color: #6B7686; font-weight: 600;}
 .dst.big .sl {color: #B8C2D3;}
 .dst .sv {font-size: 2.05rem; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 6px; color: #1E2433;

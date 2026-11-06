@@ -317,6 +317,59 @@ _CSS = """
   [data-baseweb="textarea"], [data-testid="stDateInput"] > div > div { border-radius: 10px !important; }
   [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) , [data-testid="stExpander"] details,
   [data-testid="stDataFrame"], [data-testid="stMetric"] { border-radius: 16px; }
+  /* ---------- 색감 (2026-11-06): 라벤더→핑크 파스텔 + 그라데이션 포인트 ---------- */
+  .stApp:not(:has(.login-bg)) [data-testid="stAppViewContainer"] {
+        background: radial-gradient(1200px 500px at 85% -10%, #EDEBFF 0%, transparent 60%),
+                    radial-gradient(900px 420px at 10% 0%, #FDEFF6 0%, transparent 55%), var(--bg); }
+  [data-testid="stHeader"] { background: transparent; backdrop-filter: none; }
+  [data-testid="stSidebar"] { background: linear-gradient(180deg, #F3F1FF 0%, #F8F4FF 55%, #FDF3F8 100%); border-right: 1px solid #E9E5FA; }
+  [data-testid="stSidebar"] .nav-group { color: #8B7FD9; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a { border-radius: 10px; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span::before { background: #B9B1F5; opacity: 1; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover { background: rgba(255,255,255,.7); }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"],
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] { background: #FFFFFF; box-shadow: 0 2px 8px rgba(91,108,255,.14); }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] span::before,
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span::before { background: linear-gradient(135deg, #5B6CFF, #B36BFF); }
+  [data-testid="stSidebar"] .brand { border-bottom-color: #E4DFFA; }
+  .ph { border-bottom: 0; position: relative; }
+  .ph::after { content: ""; position: absolute; left: 0; bottom: 0; width: 56px; height: 4px; border-radius: 99px;
+        background: linear-gradient(90deg, #5B6CFF, #B36BFF, #FF8FB8); }
+  .ph .eb { color: #8B7FD9; }
+  [data-testid="stHeading"] h3, .sec-bar { border-bottom: 0; }
+  [data-testid="stHeading"] h3::before, .sec-bar::before { content: ""; width: 4px; height: 1.05em; border-radius: 99px; flex: none;
+        background: linear-gradient(180deg, #5B6CFF, #B36BFF); }
+  .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] {
+        background: linear-gradient(135deg, #5B6CFF 0%, #8B6CFF 100%) !important; border: 0 !important; box-shadow: 0 4px 12px rgba(91,108,255,.25); }
+  .stApp:not(:has(.login-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) {
+        background: #FFFFFF; border-color: #ECEAF8 !important; box-shadow: 0 2px 10px rgba(91,108,255,.06); }
+  [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: #FBFAFF !important; }
+  [data-testid="stDataFrame"] { box-shadow: 0 1px 6px rgba(91,108,255,.05); }
+  /* 메뉴 아이콘: 묶음 색 둥근 타일 */
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span::before { display: none; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a { padding: .3rem .5rem; gap: .65rem; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a [data-testid="stIconMaterial"] {
+        width: 28px; height: 28px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center;
+        font-size: 17px; color: var(--nc, #5B6CFF) !important; background: var(--nb, #E9EBFF); flex: none; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] [data-testid="stIconMaterial"],
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] [data-testid="stIconMaterial"] {
+        color: #FFFFFF !important; background: var(--nc, #5B6CFF); box-shadow: 0 3px 8px color-mix(in srgb, var(--nc, #5B6CFF) 35%, transparent); }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] span,
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span { color: var(--side-ink); font-weight: 700; }
+  [data-testid="stSidebar"] [data-testid="stElementContainer"]:has([data-testid="stPageLink"]) { margin-bottom: -0.95rem; }
+  /* 로고와 시스템 이름 분리 · 묶음 구분 · 글자 진하게 */
+  [data-testid="stSidebar"] .brand { border-bottom: 0; padding: 0 0 .4rem 0; }
+  [data-testid="stSidebar"] .brand img { width: 128px; margin: .2rem 0 1.1rem .3rem; }
+  [data-testid="stSidebar"] .brand-card { display: flex; align-items: center; gap: .6rem; padding: .65rem .75rem; border-radius: 14px;
+        background: #FFFFFF; box-shadow: 0 2px 10px rgba(91,108,255,.10); border: 1px solid #ECE8FB; }
+  [data-testid="stSidebar"] .brand-ic { width: 30px; height: 30px; border-radius: 10px; flex: none; display: inline-flex;
+        align-items: center; justify-content: center; background: linear-gradient(135deg, #5B6CFF, #B36BFF); color: #fff; }
+  [data-testid="stSidebar"] .brand-ic span { font-family: "Material Symbols Rounded"; font-size: 18px; line-height: 1; }
+  [data-testid="stSidebar"] .brand-title { font-size: 1.02rem; font-weight: 800; color: #1E2433; margin: 0; }
+  [data-testid="stSidebar"] .nav-group { font-size: .72rem; font-weight: 700; letter-spacing: .08em; color: #7D72C9;
+        margin: 1.05rem 0 .45rem 0; padding: .85rem .5rem 0; border-top: 1px dashed #DDD6F6; }
+  [data-testid="stSidebar"] .brand + div .nav-group, [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.brand) + [data-testid="stElementContainer"] .nav-group { border-top: 0; padding-top: .3rem; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { color: #2B3245 !important; font-weight: 500; font-size: .95rem; }
 </style>
 """.replace("__VARS__", _VARS)
 
@@ -424,8 +477,9 @@ def sidebar_brand():
     """왼쪽 메뉴 맨 위: 로고(어두운 바탕용) + 시스템 이름."""
     uri = _data_uri(LOGO_PATH)
     logo = f'<img src="{uri}" alt="로고">' if uri else ""
-    st.markdown(f'<div class="brand">{logo}<p class="brand-title">{html.escape(SYSTEM_TITLE)}</p>'
-                '</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="brand">{logo}<div class="brand-card"><span class="brand-ic">'
+                '<span class="material-symbols-rounded">precision_manufacturing</span></span>'
+                f'<p class="brand-title">{html.escape(SYSTEM_TITLE)}</p></div></div>', unsafe_allow_html=True)
 
 
 def nav_group(name: str):
