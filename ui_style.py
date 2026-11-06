@@ -79,6 +79,28 @@ THEMES = {
         "side-hover": "#F3F4FA", "side-active": "#EEF0FF", "side-active-ink": "#4B5BEA",
         "logo": "logo_light.png", "base": "light",
     },
+    # E. 깔끔형 (2026-11-06 시안): 따뜻한 흰 바탕, 얇은 선, 절제된 색
+    "clean": {
+        "bg": "#FAF9F7", "panel": "#FFFFFF", "panel2": "#F4F3F0", "deep": "#F7F6F3",
+        "line": "#E8E6E1", "line2": "#D9D6CF", "ink": "#1F1E1C", "muted": "#6B6862", "dim": "#A8A49C",
+        "accent": "#4F5BD5", "accent-hi": "#3F4BC4", "accent-bg": "#EEEFFB",
+        "ok": "#2F8F5B", "ok-bg": "#E8F4EC", "ng": "#C9473F", "ng-bg": "#FAEAE8", "warn": "#B7791F", "warn-bg": "#FBF1E0",
+        "bar-off": "#E2DFD9", "shadow": "0 12px 40px rgba(31,30,28,.08)", "card-shadow": "none",
+        "side": "#F4F3F0", "side-line": "#E8E6E1", "side-ink": "#1F1E1C", "side-muted": "#6B6862", "side-dim": "#A8A49C",
+        "side-hover": "#ECEAE5", "side-active": "#E6E4DE", "side-active-ink": "#1F1E1C",
+        "logo": "logo_light.png", "base": "light",
+    },
+    # F. 깔끔형 어두운 모드 (2026-11-06 시안)
+    "clean-dark": {
+        "bg": "#262624", "panel": "#30302E", "panel2": "#2B2B29", "deep": "#232321",
+        "line": "#3D3D3A", "line2": "#4A4A46", "ink": "#F2F1EC", "muted": "#B5B2AA", "dim": "#85827B",
+        "accent": "#8C95FF", "accent-hi": "#A3AAFF", "accent-bg": "#34364F",
+        "ok": "#6FCF97", "ok-bg": "#23382B", "ng": "#F08A80", "ng-bg": "#43292A", "warn": "#E8B25C", "warn-bg": "#3F3322",
+        "bar-off": "#45453F", "shadow": "0 12px 40px rgba(0,0,0,.4)", "card-shadow": "none",
+        "side": "#1F1F1D", "side-line": "#33332F", "side-ink": "#F2F1EC", "side-muted": "#B5B2AA", "side-dim": "#85827B",
+        "side-hover": "#2B2B29", "side-active": "#34342F", "side-active-ink": "#F2F1EC",
+        "logo": "logo_dark.png", "base": "dark",
+    },
 }
 THEME_NAME = os.environ.get("EQUIP_THEME", "soft")
 TOKENS = {k: v for k, v in THEMES.get(THEME_NAME, THEMES["dark"]).items() if k not in ("logo", "base")}
@@ -438,8 +460,34 @@ _CSS = """
 """.replace("__VARS__", _VARS)
 
 
+# 깔끔형(clean·clean-dark): 파스텔·그라데이션을 걷어 내고 바탕·선·글자만으로 정리
+_CLEAN_CSS = """<style>
+  .stApp:not(:has(.login-bg)) [data-testid="stAppViewContainer"] { background: var(--bg) !important; }
+  [data-testid="stSidebar"] { background: var(--side) !important; border-right: 1px solid var(--side-line) !important; }
+  [data-testid="stSidebar"] .nav-group { color: var(--side-dim) !important; border-top: 0 !important; letter-spacing: .04em; }
+  [data-testid="stSidebar"] .brand-card { background: transparent !important; box-shadow: none !important; border: 0 !important; padding: .2rem .3rem !important; }
+  [data-testid="stSidebar"] .brand-ic { background: var(--ink) !important; color: var(--bg) !important; }
+  [data-testid="stSidebar"] .brand-title { color: var(--side-ink) !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { color: var(--side-ink) !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a [data-testid="stIconMaterial"] { background: transparent !important; color: var(--side-muted) !important; width: 22px !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] { background: var(--side-active) !important; box-shadow: none !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] [data-testid="stIconMaterial"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] [data-testid="stIconMaterial"] { color: var(--side-ink) !important; box-shadow: none !important; background: transparent !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover { background: var(--side-hover) !important; }
+  .ph::after { display: none; } .ph .eb { color: var(--muted) !important; }
+  [data-testid="stHeading"] h3::before, .sec-bar::before { display: none; }
+  .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] { background: var(--ink) !important; color: var(--bg) !important; box-shadow: none !important; }
+  .stButton button[kind="primary"] p, .stDownloadButton button[kind="primary"] p, .stFormSubmitButton button[kind="primary"] p { color: var(--bg) !important; }
+  .stApp:not(:has(.login-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) { background: var(--panel) !important; border-color: var(--line) !important; box-shadow: none !important; }
+  [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: var(--panel) !important; }
+  .dst.big { background: var(--panel2) !important; box-shadow: none !important; border: 1px solid var(--line) !important; }
+  .dst.big * { color: var(--ink) !important; }
+</style>"""
+
+
 def apply_style():
     st.markdown(_CSS, unsafe_allow_html=True)
+    if THEME_NAME.startswith("clean"):
+        st.markdown(_CLEAN_CSS, unsafe_allow_html=True)
 
 
 # 표 칸·숫자 칸을 처음 누를 때 Streamlit 화면은 편집기 조각(js 파일)을 그제야 내려받습니다.
