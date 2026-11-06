@@ -250,15 +250,88 @@ _CSS = """
   /* ---------- 도움말 팝업 ---------- */
   [data-testid="stTooltipContent"] { font-size: .9rem; line-height: 1.55; max-width: 520px; }
 
-  /* ---------- 접속 화면 (2026-11-06 모던 SaaS 스타일) ---------- */
-  .login-gap { height: 18vh; }
+  /* ---------- 접속 화면 (3번: 대시보드 블러 프리뷰 스타일) ---------- */
+  .login-gap { height: 13vh; }
+  .stApp:has(.login-preview-bg) [data-testid="stHeader"],
   .stApp:has(.login-bg) [data-testid="stHeader"] { background: transparent; backdrop-filter: none; }
-  .login-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none;
-        background: radial-gradient(circle at 50% 0%, #FFFFFF 0%, #F3F4FA 60%, #E6E9F2 100%); }
-  .st-key-login_card { position: relative; z-index: 1; max-width: 420px; margin: 0 auto; overflow: visible;
-        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 24px;
-        padding: 40px 40px 32px 40px; box-shadow: 0 16px 40px rgba(30, 36, 51, 0.08); }
-  .login-logo-center { display: block; width: 180px; margin: 0 auto 32px auto; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.05)); }
+  
+  .login-preview-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    background: #EFF3F9;
+  }
+  .mock-dash {
+    position: absolute; inset: -20px;
+    padding: 40px 60px;
+    filter: blur(14px) saturate(1.15);
+    opacity: 0.85;
+    transform: scale(1.02);
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .mock-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #FFFFFF; border-radius: 16px; padding: 14px 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+  }
+  .mock-topbar .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: #1E2433; font-size: 15px; }
+  .mock-topbar .brand .dot { width: 12px; height: 12px; border-radius: 50%; background: #5B6CFF; }
+  .mock-topbar .pills { display: flex; gap: 8px; }
+  .mock-topbar .pill { height: 28px; border-radius: 99px; background: #F1F4FA; }
+  .mock-topbar .pill.act { background: #EEF0FF; border: 1px solid #CDD3FF; }
+
+  .mock-kpis {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  }
+  .mock-kpi-card {
+    background: #FFFFFF; border-radius: 20px; padding: 20px 22px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid #E6E9F2;
+  }
+  .mock-kpi-card .lbl { font-size: 13px; color: #6B7385; font-weight: 600; margin-bottom: 6px; }
+  .mock-kpi-card .val { font-size: 28px; font-weight: 800; color: #1E2433; letter-spacing: -0.02em; }
+  .mock-kpi-card .bar { height: 6px; border-radius: 99px; background: #F1F4FA; margin-top: 12px; overflow: hidden; }
+  .mock-kpi-card .bar-in { height: 100%; border-radius: 99px; }
+
+  .mock-grid-bottom {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 16px; flex: 1;
+  }
+  .mock-panel {
+    background: #FFFFFF; border-radius: 22px; padding: 22px 26px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid #E6E9F2;
+  }
+  .mock-panel .title { font-size: 15px; font-weight: 700; color: #1E2433; margin-bottom: 16px; }
+  .mock-chart-bars {
+    display: flex; align-items: flex-end; justify-content: space-between; height: 130px; padding-top: 20px;
+  }
+  .mock-bar-item { width: 6.5%; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, #5B6CFF, #8B97FF); }
+  
+  .login-blur-overlay {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 45%, rgba(247, 249, 253, 0.72) 0%, rgba(233, 238, 248, 0.86) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* 카드 (Center Glass Card) */
+  .st-key-login_card {
+    position: relative; z-index: 10; max-width: 430px; margin: 0 auto; overflow: visible;
+    background: rgba(255, 255, 255, 0.90);
+    backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    border-radius: 28px;
+    padding: 38px 40px 32px 40px;
+    box-shadow: 0 24px 60px rgba(24, 34, 64, 0.12), 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  /* 로고 감싸개 및 착시 보정 (Optical Center Offset) */
+  .login-logo-wrap {
+    display: flex; justify-content: center; align-items: center;
+    margin: 0 0 20px 0;
+  }
+  .login-logo-center {
+    display: block; width: 195px;
+    /* 시각적 무게중심(Optical Center) 보정: 왼쪽 심볼마크와 오른쪽 텍스트의 불균형으로 인한 우측 쏠림을 완벽 상쇄 */
+    transform: translateX(-14px);
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.06));
+  }
   .login-head { text-align: center; }
   .login-head .t { font-size: 1.8rem; font-weight: 800; color: var(--ink); letter-spacing: -.03em; line-height: 1.3; margin: 0 0 .5rem 0; }
   .login-head .d { font-size: 0.95rem; color: #6B7385; margin: 0 0 2rem 0; font-weight: 500; word-break: keep-all; }
@@ -537,21 +610,87 @@ def _login_deco() -> str:
 
 
 def login_bg():
-    """접속 화면 배경 (모던 SaaS 스타일)."""
-    st.markdown('<div class="login-bg"></div>', unsafe_allow_html=True)
+    """접속 화면 배경 (3번: 대시보드 블러 프리뷰 스타일)."""
+    mock_html = """
+    <div class="login-preview-bg">
+      <div class="mock-dash">
+        <div class="mock-topbar">
+          <div class="brand"><span class="dot"></span>충북테크노파크 배터리산업팀 장비관제</div>
+          <div class="pills">
+            <span class="pill act" style="width:76px;"></span>
+            <span class="pill" style="width:96px;"></span>
+            <span class="pill" style="width:84px;"></span>
+            <span class="pill" style="width:72px;"></span>
+          </div>
+        </div>
+        <div class="mock-kpis">
+          <div class="mock-kpi-card">
+            <div class="lbl">전체 평균 가동률</div>
+            <div class="val" style="color:#5B6CFF;">74.8%</div>
+            <div class="bar"><div class="bar-in" style="width:75%;background:#5B6CFF;"></div></div>
+          </div>
+          <div class="mock-kpi-card">
+            <div class="lbl">운영 장비 현황</div>
+            <div class="val" style="color:#219653;">36<span style="font-size:15px;color:#6B7385;font-weight:600;">/38대</span></div>
+            <div class="bar"><div class="bar-in" style="width:95%;background:#219653;"></div></div>
+          </div>
+          <div class="mock-kpi-card">
+            <div class="lbl">당월 누적 가동시간</div>
+            <div class="val" style="color:#7E5BC2;">2,480<span style="font-size:15px;color:#6B7385;font-weight:600;">h</span></div>
+            <div class="bar"><div class="bar-in" style="width:82%;background:#7E5BC2;"></div></div>
+          </div>
+          <div class="mock-kpi-card">
+            <div class="lbl">충방전 시험 채널</div>
+            <div class="val" style="color:#D9822B;">128<span style="font-size:15px;color:#6B7385;font-weight:600;">ch</span></div>
+            <div class="bar"><div class="bar-in" style="width:90%;background:#D9822B;"></div></div>
+          </div>
+        </div>
+        <div class="mock-grid-bottom">
+          <div class="mock-panel">
+            <div class="title">월별 장비 가동률 추이</div>
+            <div class="mock-chart-bars">
+              <div class="mock-bar-item" style="height:48%;"></div>
+              <div class="mock-bar-item" style="height:62%;"></div>
+              <div class="mock-bar-item" style="height:55%;"></div>
+              <div class="mock-bar-item" style="height:72%;"></div>
+              <div class="mock-bar-item" style="height:84%;"></div>
+              <div class="mock-bar-item" style="height:78%;"></div>
+              <div class="mock-bar-item" style="height:90%;"></div>
+              <div class="mock-bar-item" style="height:68%;"></div>
+              <div class="mock-bar-item" style="height:94%;"></div>
+              <div class="mock-bar-item" style="height:82%;"></div>
+              <div class="mock-bar-item" style="height:76%;background:linear-gradient(180deg,#7E5BC2,#B694F8);"></div>
+              <div class="mock-bar-item" style="height:42%;opacity:0.35;"></div>
+            </div>
+          </div>
+          <div class="mock-panel">
+            <div class="title">실시간 장비 가동 상태</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:#475467;padding:6px 0;border-bottom:1px solid #F1F4FA;"><span>초순수 제조장치</span><span style="color:#219653;font-weight:700;">● 가동중</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:#475467;padding:6px 0;border-bottom:1px solid #F1F4FA;"><span>배터리 전극 롤 건조오븐</span><span style="color:#219653;font-weight:700;">● 가동중</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:#475467;padding:6px 0;border-bottom:1px solid #F1F4FA;"><span>중대형 팩 충방전기</span><span style="color:#219653;font-weight:700;">● 가동중</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:#475467;padding:6px 0;"><span>유연이차전지 안전성챔버</span><span style="color:#D9822B;font-weight:700;">▲ 점검중</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="login-blur-overlay"></div>
+    </div>
+    """
+    st.markdown(mock_html, unsafe_allow_html=True)
 
 
 def login_head(failed: bool = False):
-    """접속 화면 위쪽: 로고 + 제목."""
+    """접속 화면 위쪽: 착시 보정 로고 + 제목."""
     uri = _data_uri(os.path.join(_DIR, "assets", "logo_light.png"))
-    logo = f'<img class="login-logo-center" src="{uri}" alt="로고">' if uri else ""
+    logo = f'<div class="login-logo-wrap"><img class="login-logo-center" src="{uri}" alt="CBTP 배터리산업팀 로고"></div>' if uri else ""
     st.markdown(f'{logo}<div class="login-head"><div class="t">{html.escape(SYSTEM_TITLE)}</div>'
                 '<div class="d">팀 비밀번호로 들어와 주세요</div></div>', unsafe_allow_html=True)
 
 
 def login_foot():
-    """접속 화면 아래쪽: 보안 표시 (로고는 화면 왼쪽 위에 크게)."""
-    st.markdown(f'<div class="login-foot"><span>{_SHIELD}보안 연결됨</span></div>', unsafe_allow_html=True)
+    """접속 화면 아래쪽: 보안 표시."""
+    st.markdown(f'<div class="login-foot"><span>{_SHIELD}보안 연결됨 · 충북테크노파크</span></div>', unsafe_allow_html=True)
 
 
 # 그래프 오른쪽 위 버튼: 그림으로 저장(보고서 붙여넣기용)만 남김
