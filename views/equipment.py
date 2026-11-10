@@ -178,7 +178,8 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
             "대분류": st.column_config.TextColumn(width="small"),
             "주장비(종)": st.column_config.TextColumn(width="medium"),
             "ITUBE번호": st.column_config.TextColumn(width="small", help="비우면 i-Tube 제출 파일에서 빠집니다."),
-            "장비구분": st.column_config.SelectboxColumn(options=kinds, width="small"),
+            "장비구분": st.column_config.SelectboxColumn(options=kinds, width="small",
+                                                      help="시험·기타 줄을 장비로 옮기려면 '세부장비' 등으로 바꾸고 소속 장비를 고르세요. 단가는 그대로 따라가요."),
             "구분": st.column_config.SelectboxColumn(options=cats),
             "장비용도": st.column_config.SelectboxColumn(options=uses, width="small"),
             "대수": st.column_config.NumberColumn(min_value=0, step=1, format="%d", width=56),
@@ -199,20 +200,28 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
                                                               help="업체가 직접 쓸 때"),
         })
     if action:
-        id_of = {v: k for k, v in label_of.items()}
-        xo = out["_x"].notna() | (out["장비구분"].eq(XK) & pd.to_numeric(out["id"], errors="coerce").isna())
-        extras, out = out[xo], out[~xo]
-        o = out.drop(columns=[TREE, "_x"] + list(RATE.values())).rename(columns={v: k for k, v in COLS.items()})
-        o["parent_id"] = [id_of.get(p) if isinstance(p, str) and p and p != NO_PARENT else None for p in out[PARENT]]
-        o = o.drop(columns=[PARENT])
-        errors = db.save_equipment(o)
+        errors = _save_table(out, rates, label_of)
         for e in errors:
             st.warning(e)
         if not errors:
-            _save_rates_from(out, rates, extras)
             pick_done("equip_tbl")
             st.session_state.equip_saved = f"{len(gone)}대 삭제했어요." if gone else "저장했어요."
             st.rerun()
+
+
+def _save_table(out: pd.DataFrame, rates: pd.DataFrame, label_of: dict) -> list[str]:
+    """장비 목록 표(장비 + 단가 + 시험·기타 줄)를 저장. 오류 목록을 돌려줌."""
+    id_of = {v: k for k, v in label_of.items()}
+    # 시험·기타 줄은 장비구분이 '시험·기타'인 동안만 단가 항목. 장비구분을 바꾸면 그 줄이 장비로 옮겨짐 (단가 유지)
+    xo = out["장비구분"].eq(XK) & (out["_x"].notna() | pd.to_numeric(out["id"], errors="coerce").isna())
+    extras, out = out[xo], out[~xo]
+    o = out.drop(columns=[TREE, "_x"] + list(RATE.values())).rename(columns={v: k for k, v in COLS.items()})
+    o["parent_id"] = [id_of.get(p) if isinstance(p, str) and p and p != NO_PARENT else None for p in out[PARENT]]
+    o = o.drop(columns=[PARENT])
+    errors = list(db.save_equipment(o))
+    if not errors:
+        _save_rates_from(out, rates, extras)
+    return errors
 
 
 def _apply_excel(merged: pd.DataFrame, rates: pd.DataFrame, extras: pd.DataFrame) -> list[str]:
