@@ -24,7 +24,7 @@ CSS = """<style>
 .cb-k span {display: block; font-size: 1rem; font-weight: 700; color: var(--kc); margin-bottom: 2px;}
 .cb-k b {display: block; font-size: 1.45rem; color: var(--ink); line-height: 1.3;}
 .cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); padding: 6px 0 8px; overflow-x: auto;}
-.cb-t {border-collapse: collapse; width: 100%; font-size: .8rem; min-width: 860px;}
+.cb-t {border-collapse: collapse; width: max-content; min-width: 100%; font-size: .8rem;}
 .cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #52617A;
   white-space: nowrap;}
 .cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #52617A; white-space: nowrap;}
@@ -35,7 +35,8 @@ CSS = """<style>
 .cb-dash {color: #94A3B8;}
 .cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink);} .cb-t td.pd {width: 110px;}
 .cb-t td.co {max-width: 170px; width: 170px; overflow: hidden; text-overflow: ellipsis;}
-.cb-t td.tl {position: relative; width: 44%; padding: 0;}
+.cb-t td.tl {position: relative; padding: 0;}
+.cb-tl, .cb-mh {width: var(--tlw); min-width: var(--tlw);}
 .cb-t tr.grp td {border-top: 1px solid #52617A;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
@@ -246,7 +247,7 @@ def render() -> None:
             months.append(m)
             m = (m + dt.timedelta(days=32)).replace(day=1)
         span = (w1 - w0).days + 1
-        tlw = max(520, int(span / 30.4 * 105))
+        tlw = max(420, int(span / 30.4 * 120))  # 한 달 = 120px, 길면 옆으로 스크롤
         pos = lambda d: (d - w0).days / span * 100  # noqa: E731
         grid = "".join(f"<div class='cb-g' style='left:{pos(x):.2f}%'></div>" for x in months[1:])
         now_line = f"<div class='cb-now' style='left:{pos(today):.2f}%'></div>" if w0 <= today <= w1 else ""
@@ -303,7 +304,7 @@ def render() -> None:
                     f"<td colspan='3'>사용 중 {used} · 비어 있음 {total - used}</td></tr>")
         st.markdown(
             "<style>" + "".join(show_css) + "</style>"
-            f"<div class='cb-box{' all' if all_open else ''}'><table class='cb-t' style='min-width:{480 + tlw}px'><tr><th>장비</th><th>싸이클러</th><th>챔버</th><th>채널</th>"
+            f"<div class='cb-box{' all' if all_open else ''}'><table class='cb-t' style='--tlw:{tlw}px'><tr><th>장비</th><th>싸이클러</th><th>챔버</th><th>채널</th>"
             f"<th>업체</th><th>기간</th><th class='tl'><div class='cb-mh'>{mh}</div></th></tr>"
             + "".join(rows) + "</table></div>"
             "<div class='cb-foot'>"
