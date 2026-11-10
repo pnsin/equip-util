@@ -56,7 +56,7 @@ CSS = """<style>
 .cb-ch summary, label.cb-ch {cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px;}
 label.cb-ch input {display: none;}
 label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
-.cb-t tr.chx {display: none;} .cb-box.all tr.chx {display: table-row;}
+.cb-t tr.chx {visibility: collapse;} .cb-box.all tr.chx {visibility: visible;}
 .cb-t tr.chx td {background: rgba(99,102,241,.05); height: 28px;} .cb-t tr.chx td.n {color: #94A3B8; font-weight: 700; text-align: center;}
 .cb-t tr.chx td:empty {border-bottom-color: transparent;}
 .cb-ch summary::-webkit-details-marker {display: none;}
@@ -279,7 +279,7 @@ def render() -> None:
                         f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
             rows.append(_chan_rows(r, list(all_bk.get(int(r["id"]), pd.DataFrame()).to_dict("records")), w0, w1, today,
                                    grid, now_line, tlw))
-            show_css.append(f"tr.cbr:has(#ck{int(r['id'])}:checked) ~ tr.g{int(r['id'])}{{display:table-row;}}")
+            show_css.append(f"tr.cbr:has(#ck{int(r['id'])}:checked) ~ tr.g{int(r['id'])}{{visibility:visible;}}")
         rows.append(f"<tr class='cb-sum'><td colspan='3'>{html.escape(db.CENTER_SHORT.get(center, center))} 합계</td><td>{total} ch</td>"
                     f"<td colspan='3'>사용 중 {used} · 비어 있음 {total - used}</td></tr>")
         st.markdown(
