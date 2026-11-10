@@ -33,7 +33,8 @@ CSS = """<style>
 .cb-t td.c {color: var(--muted);}
 .cb-t td.m {color: #94A3B8;}
 .cb-dash {color: #94A3B8;}
-.cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink);}
+.cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink); font-size: .8rem;}
+.cb-t td.pd {font-size: .88rem; letter-spacing: .01em;}  /* 숫자는 한글보다 작아 보여서 살짝 키움 */
 .cb-t td.co {overflow: hidden; text-overflow: ellipsis;}
 /* 엑셀 틀 고정처럼: 왼쪽 6칸은 그대로, 오른쪽 타임라인만 옆으로 스크롤 (2026-11-10) */
 .cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: sticky; z-index: 3; background: var(--panel); box-sizing: border-box;}
@@ -47,7 +48,7 @@ CSS = """<style>
 .cb-t th.tl {padding: 8px 0;}
 @media (max-width: 700px) {.cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: static;}}
 .cb-t td.tl {position: relative; padding: 0;}
-.cb-tl, .cb-mh {width: var(--tlw); min-width: var(--tlw);}
+.cb-tl, .cb-mh {width: 100%; min-width: var(--tlw);}  /* 칸 전체를 달 수로 똑같이 나눔 */
 .cb-t tr.grp td {border-top: 1px solid #52617A;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
