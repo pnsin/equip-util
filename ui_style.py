@@ -662,14 +662,45 @@ def _preload_editors():
         st.html(_PRELOAD_JS.replace("__FILES__", repr(list(files)).replace("'", '"')), unsafe_allow_javascript=True)
 
 
+# 쪽 제목 (2026-11-10 A안): 메뉴 묶음 색의 둥근 아이콘 타일 + 색 알약 + 짧은 색 밑줄
+PH_ICONS = {
+    "종합 현황": "space_dashboard", "장비별 가동률": "speed", "충방전기 현황": "battery_charging_full",
+    "장비 일정 등록": "edit_calendar", "기간 실적 입력": "date_range", "수수료 입력": "payments", "i-Tube 제출 파일": "upload_file",
+    "장비 정보": "precision_manufacturing", "유지보수": "build", "CS활동": "handshake", "견적서 작성": "request_quote",
+    "견적서 발급대장": "receipt_long", "업체 목록": "apartment", "장비 목록": "inventory_2", "장비 단가": "sell",
+    "수수료 단가": "sell", "담당자": "group", "설정": "settings", "가져오기 · 백업": "cloud_sync", "휴지통 · 기록": "delete",
+}
+PH_COLORS = {"현황": ("#818CF8", "#A78BFA"), "실적": ("#E58BFF", "#F472B6"), "장비": ("#34D399", "#6CC4FF"),
+             "업체": ("#FFC266", "#FB923C"), "기준 정보": ("#6CC4FF", "#818CF8"), "관리": ("#94A3B8", "#64748B")}
+PH_CSS = """<style>
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0');
+.ph2 {display: flex; align-items: center; gap: 16px; padding: 2px 0 14px; margin-bottom: 18px; position: relative;
+  border-bottom: 1px solid #1E293B;}
+.ph2::after {content: ''; position: absolute; left: 0; bottom: -1px; width: 120px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--c), transparent);}
+.ph2 .ic {width: 52px; height: 52px; flex: none; border-radius: 16px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--c), var(--c2)); box-shadow: 0 8px 20px -6px var(--c);}
+.ph2 .ic span {font-family: 'Material Symbols Rounded'; font-size: 28px; line-height: 1; font-variation-settings: 'FILL' 1;}
+.ph2 .eb2 {display: inline-block; font-size: .72rem; font-weight: 800; color: var(--c); padding: 2px 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--c) 16%, transparent); margin-bottom: 4px;}
+.ph2 .t2 {font-size: 1.65rem; font-weight: 800; color: #fff; letter-spacing: -.01em; line-height: 1.2;}
+.ph2 .chip {font-size: .75rem; font-weight: 600; padding: .12rem .65rem; border-radius: 999px; margin-left: .6rem;
+  background: color-mix(in srgb, var(--c) 16%, transparent); color: var(--c); vertical-align: middle;}
+.ph2 .desc {margin-left: auto; font-size: .85rem; color: var(--muted); max-width: 560px; line-height: 1.5; text-align: right;}
+@media (max-width: 760px) {.ph2 .ic {width: 44px; height: 44px; border-radius: 14px;} .ph2 .t2 {font-size: 1.35rem;}}
+</style>"""
+
+
 def page_header(title: str, eyebrow: str = "", chip: str = "", desc: str = "", accent: str | None = None):
-    """쪽 맨 위 제목 줄: 작은 머리글 + 제목 + 표시, 오른쪽에 한 줄 설명."""
+    """쪽 맨 위 제목 줄: 메뉴 묶음 색 아이콘 타일 + 묶음 알약 + 제목."""
     e = html.escape
-    ac = accent or T["accent-hi"]
+    c, c2 = PH_COLORS.get(eyebrow, (accent or "#818CF8", "#A78BFA"))
+    icon = PH_ICONS.get(title, "description")
     st.markdown(
-        f'<div class="ph" style="--ac:{ac}"><div>{f"<div class=eb>{e(eyebrow)}</div>" if eyebrow else ""}'
-        f'<div class="t">{e(title)}{f"<span class=chip>{e(chip)}</span>" if chip else ""}</div></div>'
-        f'{f"<div class=desc>{e(desc)}</div>" if desc else ""}</div>', unsafe_allow_html=True)
+        PH_CSS + f'<div class="ph2" style="--c:{c};--c2:{c2}"><div class="ic"><span>{icon}</span></div><div>'
+        + (f'<div class="eb2">{e(eyebrow)}</div>' if eyebrow else "")
+        + f'<div class="t2">{e(title)}{f"<span class=chip>{e(chip)}</span>" if chip else ""}</div></div>'
+        + (f'<div class="desc">{e(desc)}</div>' if desc else "") + "</div>", unsafe_allow_html=True)
 
 
 def section_bar(title: str, no: int | None = None, sub: str = "", first: bool = False):

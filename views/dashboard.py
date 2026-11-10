@@ -207,7 +207,7 @@ def render() -> None:
     SHORT.clear()
     SHORT.update(zip(eq_all["id"].astype(int), eq_all["short"]))  # 같은 이름 장비는 'n호기'로
     if logs_all.empty:
-        empty_state("아직 사용실적이 없습니다", "'시험 일정'에서 입력하거나 '가져오기 · 백업'에서 기존 엑셀을 가져오세요.", "◷")
+        empty_state("아직 사용실적이 없습니다", "'장비 일정 등록'에서 입력하거나 '가져오기 · 백업'에서 기존 엑셀을 가져오세요.", "◷")
 
     this_year = year == today.year
     cutoff = today if this_year else None
