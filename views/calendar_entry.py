@@ -114,6 +114,14 @@ div[class*="st-key-ep_row_anal_"] button {--chip-fg: #A99BFF;}
 .st-key-ep_newcomp button {min-height: 0; padding: 0; color: var(--accent);} .st-key-ep_newcomp button p {font-size: .76rem; font-weight: 700;}
 .st-key-ep_btns {margin-top: .5rem;}
 .st-key-ep_btns > div {flex: 1 1 0 !important;}
+div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button {border: 1.5px solid #6366F1 !important; background: rgba(99,102,241,.12) !important; min-width: 64px;}
+div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button p {color: #C7D2FE !important; font-weight: 700 !important;}
+div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #6366F1 !important;}
+div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
+.st-key-ep_top {flex-wrap: wrap; row-gap: 6px;}
+.st-key-ep_tp {flex-wrap: wrap; row-gap: 4px;}
+.st-key-ep_top .st-key-ep_del button {height: 34px !important; padding: 0 10px !important; background: rgba(230,85,95,0.14) !important; border-radius: 10px !important;}
+.st-key-ep_top .st-key-ep_del button p {color: #FF8A8F !important; font-weight: 700;}
 .st-key-ep_asnew button {height: 46px; border-radius: 13px; font-weight: 800;}
 .st-key-ep_save button {height: 46px; border-radius: 13px; font-weight: 800; box-shadow: 0 4px 12px rgba(45, 143, 213, .3); border: none;}
 .st-key-ep_del button {height: 46px; border-radius: 13px; color: #E5484D; background: rgba(230,85,95,0.16); border: none; padding: 0 18px;}
@@ -1468,29 +1476,28 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
         def ix(opts, v):
             return opts.index(v) if v in opts else None
 
-        # 2026-11-10 있는 실적을 열면 맨 위에서 신규 / 수정 / 삭제를 고르고 시작 (신규 = 열어 둔 실적은 그대로 두고 새로 넣음)
-        mode = None
-        if cur is not None:
-            with st.container(horizontal=True, gap="small", key="ep_modes", vertical_alignment="center"):
-                mode = st.segmented_control("할 일", ["신규", "수정"], key=f"ep_act_{k}", label_visibility="collapsed")
-                if st.button("삭제", icon=":material/delete:", key="ep_del"):
-                    if not series.empty:
-                        a_, b_ = per.series_span(series)
-                        st.session_state.cal_delask = {
-                            "kind": "ids", "ids": [int(i) for i in series["id"]],
-                            "text": f"{a_:%m/%d}~{b_:%m/%d} 기간 실적({_cut(short_of.get(cur['equip_id'], ''), 16)})을 삭제할까요?"}
-                    else:
-                        _ask_delete()
-                    st.rerun()
-
         form = st.container(key="ep_form")
         with form:
             is_series = not series.empty
-            v_mode = st.segmented_control("입력 방식", ["하루", "기간"], key=f"ep_mode_{k}",
-                                          default="기간" if is_series else "하루", label_visibility="collapsed",
-                                          format_func=lambda m: {"하루": "단기", "기간": "장기"}[m],
-                                          help="장기: 며칠~몇 달 계속 도는 시험을 한 번에 입력 (달력에는 매일 표시)") or (
-                                              "기간" if is_series else "하루")
+            mode = None
+            with st.container(horizontal=True, gap="small", key="ep_top", vertical_alignment="center"):
+                v_mode = st.segmented_control("입력 방식", ["하루", "기간"], key=f"ep_mode_{k}",
+                                              default="기간" if is_series else "하루", label_visibility="collapsed",
+                                              format_func=lambda m: {"하루": "단기", "기간": "장기"}[m],
+                                              help="장기: 며칠~몇 달 계속 도는 시험을 한 번에 입력 (달력에는 매일 표시)") or (
+                                                  "기간" if is_series else "하루")
+                # 2026-11-10 있는 실적을 열면 신규 / 수정 / 삭제를 고르고 맨 아래 '저장' (신규 = 열어 둔 실적은 그대로 두고 새로 넣음)
+                if cur is not None:
+                    mode = st.segmented_control("할 일", ["신규", "수정"], key=f"ep_act_{k}", label_visibility="collapsed")
+                    if st.button("삭제", icon=":material/delete:", key="ep_del", type="tertiary"):
+                        if is_series:
+                            a_, b_ = per.series_span(series)
+                            st.session_state.cal_delask = {
+                                "kind": "ids", "ids": [int(i) for i in series["id"]],
+                                "text": f"{a_:%m/%d}~{b_:%m/%d} 기간 실적({_cut(short_of.get(cur['equip_id'], ''), 16)})을 삭제할까요?"}
+                        else:
+                            _ask_delete()
+                        st.rerun()
             if len(groups) > 2:  # 시험·제조·분석 중 하나만 골라 목록을 짧게
                 with st.container(key="ep_grp"):
                     g = st.segmented_control("장비 구분", groups, default=want, key=f"ep_grp_{k}_{lane}",
@@ -1526,9 +1533,11 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                                    placeholder="담당자 선택", key=f"ep_staff_{k}")
             if st.button("새 업체 등록", icon=":material/add:", key="ep_newcomp", type="tertiary"):
                 new_company_dialog()
-            v_type = st.segmented_control("활용유형", seed.USAGE_TYPES, key=f"ep_type_{k}",
+            tp = st.container(horizontal=True, gap="medium", key="ep_tp")  # 넓으면 한 줄, 좁으면 두 줄
+            tp1 = tp2 = tp
+            v_type = tp1.segmented_control("활용유형", seed.USAGE_TYPES, key=f"ep_type_{k}",
                                           default=db.to_str(cur["usage_type"]) if cur is not None else "외부")
-            v_purp = st.segmented_control("사용목적", seed.purpose_choices(db.to_str(cur["purpose"]) if cur is not None else ""),
+            v_purp = tp2.segmented_control("사용목적", seed.purpose_choices(db.to_str(cur["purpose"]) if cur is not None else ""),
                                           format_func=seed.purpose_label, key=f"ep_purp_{k}",
                                           default=db.to_str(cur["purpose"]) if cur is not None
                                           else LANE_PURPOSE.get(lane, "생산"))
@@ -1546,28 +1555,23 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                     for lab, days in (("+1주", 7), ("+2주", 14), ("+1달", 30), ("+3달", 91), ("+6달", 182)):
                         st.button(lab, key=f"ep_q{days}_{k}", on_click=_set_end, args=(f"ep_pe_{k}", v_ps, days),
                                   type="tertiary")
-                c1, c2 = st.columns(2, gap="small", vertical_alignment="bottom")
+                c1, c2, c3 = st.columns([1, 1, 1], gap="small", vertical_alignment="bottom")
                 v_pd = num_input(c1, "하루 사용시간(h)", f"ep_pd_{k}", per.per_day_of(series) if is_series else 8, 1, 1, 24)
-                v_skip = c2.toggle("주말·공휴일 빼기", key=f"ep_skip_{k}",
+                v_s = num_input(c2, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 1, 1, 0)
+                v_skip = c3.toggle("주말 빼기", key=f"ep_skip_{k}",
                                    value=not is_series or all(db.to_str(x) == "N" for x in series["include_holidays"]),
-                                   help="켜 두면 평일만 시간에 넣어요.")
+                                   help="켜 두면 주말·공휴일을 빼고 평일만 시간에 넣어요.")
                 chunks = per.split_period(v_ps, v_pe, v_pd, v_skip) if v_pe >= v_ps else []
-                n_days = sum(c["days"] for c in chunks)
                 tot = sum(c["hours"] for c in chunks)
-                split = f" · {len(chunks)}개월로 나눠 저장" if len(chunks) > 1 else ""
-                st.markdown(f"<div class='ep-sum'><b>{n_days}일 · 총 {tot:,}h</b>"
-                            f"<span>달력에 하루 {v_pd:g}h씩 자동으로 들어가요{split}</span></div>", unsafe_allow_html=True)
                 v_h = tot
             else:
                 v_ps = v_pe = day
                 v_skip = False
-            c1, c2 = st.columns(2, gap="small")
             if v_mode == "하루":
+                c1, c2 = st.columns(2, gap="small")
                 v_h = num_input(c1, "사용시간(h)", f"ep_h_{k}",
                                 float(cur["hours"]) if cur is not None and not is_series else 8, 1, 0, 24)
                 v_s = num_input(c2, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 1, 1, 0)
-            else:
-                v_s = num_input(c1, "시료수", f"ep_s_{k}", float(cur["samples"]) if cur is not None else 1, 1, 0)
             # 충방전기: 챔버 고르기 (그 기간에 이미 쓰는 챔버는 업체명이 붙음)
             v_ch, v_part, busy, picked, all_chs = [], "", {}, {}, {}
             mine = chans[chans["equip_id"] == v_eid] if v_eid is not None and not chans.empty else chans.iloc[0:0]
@@ -1634,9 +1638,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             # 사용료는 시험이 끝난 뒤 따로 매기므로 입력 카드에서는 받지 않음 (고칠 때는 기존 값 그대로 둠)
             v_f = db.to_num(cur["fee"], 0) if cur is not None else 0
             v_ov = st.text_input("지원개요", ov, placeholder="예: 전극 코팅", key=f"ep_ov_{k}")
-            with st.expander("지원내용 · 기타", expanded=bool(content or (cur is not None and db.to_str(cur["etc"])))):
-                v_ct = st.text_area("지원내용", content, height=80, placeholder="자세한 내용", key=f"ep_ct_{k}")
-                v_etc = st.text_input("기타", db.to_str(cur["etc"]) if cur is not None else "", key=f"ep_etc_{k}")
+            v_ct, v_etc = content, (db.to_str(cur["etc"]) if cur is not None else "")  # 지원내용·기타 칸은 없앰 (2026-11-10)
 
             pressed = st.button("저장", icon=":material/check:", type="primary", key="ep_save", width="stretch")
         as_new = pressed and (cur is None or mode == "신규")
