@@ -63,6 +63,45 @@ RUNTIME_JS = """
     if (arguments.length >= 5 && y >= -2 && y < 40 && w <= 28 && h <= 28 && inGrid(this.canvas)){ return; }
     return di.apply(this, arguments);
   };
+  // 2026-11-10 표에서 칸을 누르면 그 줄 전체를 옅게 표시 (옆으로 넘겨도 어느 줄인지 보이게)
+  var GRID = '[data-testid="stDataFrame"],[data-testid="stDataFrameGlideDataEditor"]';
+  var RH = 35, sel = null;
+  function place(){
+    if (!sel) return;
+    var w = sel.wrap, sc = w.querySelector('.dvn-scroller'), cv = w.querySelector('canvas');
+    if (!document.body.contains(w) || !sc || !cv){ if (sel.bar) sel.bar.remove(); sel = null; return; }
+    var top = RH + sel.row * RH - sc.scrollTop, h = cv.clientHeight;
+    var b = sel.bar;
+    if (top < RH - 1 || top + RH > h + 1){ b.style.display = 'none'; return; }
+    b.style.display = 'block';
+    b.style.top = (cv.offsetTop + top) + 'px';
+    b.style.left = cv.offsetLeft + 'px';
+    b.style.width = cv.clientWidth + 'px';
+  }
+  document.addEventListener('pointerdown', function(e){
+    var wrap = e.target && e.target.closest && e.target.closest(GRID);
+    var cv = wrap && wrap.querySelector('canvas');
+    if (!wrap){
+      if (sel){ sel.bar.remove(); sel = null; }
+      return;
+    }
+    var y = e.clientY - cv.getBoundingClientRect().top;
+    if (y < RH) return;  // 머리글
+    var sc = wrap.querySelector('.dvn-scroller');
+    var row = Math.floor((y - RH + (sc ? sc.scrollTop : 0)) / RH);
+    if (sel && sel.wrap !== wrap){ sel.bar.remove(); sel = null; }
+    if (!sel){
+      var host = cv.parentElement;
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      var b = document.createElement('div');
+      b.style.cssText = 'position:absolute;pointer-events:none;height:' + RH + 'px;background:rgba(99,102,241,.22);box-shadow:inset 0 0 0 1px rgba(129,140,248,.7);z-index:2;';
+      host.appendChild(b);
+      sel = {wrap: wrap, bar: b};
+    }
+    sel.row = row; place();
+  }, true);
+  document.addEventListener('scroll', place, true);
+  W.addEventListener('resize', place);
   P.fillText = function(t, x, y, mw){
     var r = this.__r;
     if (r && (this.textAlign === 'left' || this.textAlign === 'start' || this.textAlign === 'right') && x >= r[0] - 1 && x <= r[0] + r[2] && inGrid(this.canvas) && this.measureText(t).width <= r[2] - 20){

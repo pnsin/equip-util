@@ -185,12 +185,12 @@ def excel_box(key: str, df, heads: dict, sheet: str, apply, extra_sheet: tuple |
             data = sheet_io.add_sheet(data, *extra_sheet)
         c1, c2 = st.columns(2, gap="small")
         with c1.container(border=True, horizontal_alignment="center", gap="xsmall"):
-            st.html("<div style='text-align:center;font-weight:700'>① 내려받기</div>")
+            st.html("<div style='text-align:center;font-weight:700'>내려받기</div>")
             st.download_button("엑셀 받기", data, mime=XLSX,
                                file_name=f"{sheet}_목록_{dt.date.today():%y%m%d}.xlsx", icon=":material/download:",
                                key=f"{key}_dl", width="stretch")
         with c2.container(border=True, horizontal_alignment="center", gap="xsmall"):
-            st.html("<div style='text-align:center;font-weight:700'>② 올리기</div>")
+            st.html("<div style='text-align:center;font-weight:700'>올리기</div>")
             up = st.file_uploader("고친 엑셀 올리기", type=["xlsx"], key=f"{key}_up", label_visibility="collapsed")
         if up is None:
             return
