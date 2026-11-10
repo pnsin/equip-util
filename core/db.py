@@ -1437,6 +1437,7 @@ def load_channels() -> pd.DataFrame:
     df["order"] = df["order"].fillna(df["id"])
     # 2026-11-10 장비명·건물은 장비 목록에서 (장비 목록을 고치면 여기도 바로 바뀜)
     eq = load_equipment(full=True)
+    df["unit_sheet"] = df["unit"]  # 시트에 적힌 원래 이름 (전압·전류·채널 사양 '(5V, 100A, 16ch)'가 들어 있음)
     if not eq.empty and not df.empty:
         name = dict(zip(eq["id"].astype(int), eq["name"]))
         cen = equip_centers(eq)

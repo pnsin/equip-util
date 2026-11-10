@@ -567,6 +567,16 @@ _SLATE_CSS = """<style>
   .st-key-login_card input { color: #F8FAFC !important; }
   .st-key-login_card .stButton button, .st-key-login_card [data-testid="stFormSubmitButton"] button { background: #6366F1 !important; border: 0 !important; }
   .login-head .s, .login-head p { color: #94A3B8 !important; }
+  /* 2026-11-10 숫자 카드 안 글자는 모두 가운데 (st.metric · 대시보드 카드 · 충방전기 카드) */
+  [data-testid="stMetric"] { text-align: center; align-items: center; }
+  [data-testid="stMetric"] > div, [data-testid="stMetricLabel"], [data-testid="stMetricValue"], [data-testid="stMetricDelta"] {
+    justify-content: center; text-align: center; width: 100%; }
+  [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] > div, [data-testid="stMetricLabel"] p { display: flex; justify-content: center; align-items: center; text-align: center; width: 100%; }
+  [data-testid="stMetricDelta"] { width: auto; margin-left: auto; margin-right: auto; }
+  [data-testid="stMetricValue"] { font-size: clamp(1.3rem, 1.9vw, 1.8rem); }
+  [data-testid="stMetricValue"] > div { white-space: normal; overflow: visible; text-overflow: clip; }
+  .dst { text-align: center; } .dst .sl, .dst .sv, .dst .dd, .dst > div { justify-content: center; text-align: center; }
+  .cb-k { justify-content: center; text-align: left; }
 </style>"""
 
 
