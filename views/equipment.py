@@ -144,10 +144,10 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
             if i in open_ids:
                 return True
         return False
-    q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호")
+    q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호·비고")
     mask = pd.Series(True, index=view.index)
     if q:
-        hay = view[["장비명(한글)", "ITUBE번호", "관리자", "자산번호", "주장비(종)", "모델명"]].fillna("").astype(str).agg(" ".join, axis=1)
+        hay = view[["장비명(한글)", "ITUBE번호", "관리자", "자산번호", "주장비(종)", "모델명", "비고"]].fillna("").astype(str).agg(" ".join, axis=1)
         mask &= hay.str.contains(q, case=False, regex=False)
     elif not sub:
         mask &= pd.Series([_shown(int(i)) for i in eq["id"]] + [True] * (len(view) - n_dev), index=view.index)
