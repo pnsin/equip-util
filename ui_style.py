@@ -398,6 +398,7 @@ _CSS = """
   }
   /* 견적서 (2026-11-04) */
   .q-tile { background: var(--panel); border-radius: 14px; box-shadow: var(--card-shadow); padding: .8rem 1rem; margin-bottom: .6rem; }
+  [data-testid="stElementContainer"]:has([data-testid="stPlotlyChart"]) [data-testid="stElementToolbar"] { display: none !important; }
   .q-tile, .eq-info div, .cs-stat { text-align: center; align-items: center; }
   .q-tile b { display: block; font-size: 1.6rem; line-height: 1.2; }
   .q-tile span { font-size: .85rem; color: var(--muted); }
@@ -844,7 +845,7 @@ def login_foot():
 
 
 # 그래프 오른쪽 위 버튼: 그림으로 저장(보고서 붙여넣기용)만 남김
-CHART_CONFIG = {"displaylogo": False, "toImageButtonOptions": {"format": "png", "scale": 2},
+CHART_CONFIG = {"displayModeBar": False, "displaylogo": False, "toImageButtonOptions": {"format": "png", "scale": 2},
                 "modeBarButtonsToRemove": ["zoom2d", "pan2d", "select2d", "lasso2d", "zoomIn2d", "zoomOut2d",
                                            "autoScale2d", "resetScale2d", "toggleSpikelines",
                                            "hoverClosestCartesian", "hoverCompareCartesian"]}
