@@ -29,7 +29,7 @@ GOAL = "#D9822B"
 CSS = """<style>
 [class*="st-key-dsec_"] {background: var(--panel); border-radius: 24px; box-shadow: 0 4px 16px rgba(30,36,51,.04);
   padding: 24px 28px 22px; margin-bottom: 12px; gap: .55rem; transition: all 0.25s ease; border: 1px solid #26334D;}
-[class*="st-key-dsec_"]:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(30,36,51,.08); border-color: #334155; }
+[class*="st-key-dsec_"]:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(30,36,51,.08); border-color: #64748B; }
 .dh {display: flex; align-items: center; gap: 14px; margin-bottom: 12px;}
 .dh .ic {width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
   font-size: 21px; font-weight: 700;}
@@ -37,7 +37,7 @@ CSS = """<style>
 .dh .tt {font-size: 21px; font-weight: 700; color: #F8FAFC; line-height: 1.3;}
 .dh .per {margin-left: auto; font-size: 12px; color: #94A3B8; background: #26334D; padding: 5px 12px; border-radius: 99px;}
 .dst {border: 1px solid #26334D; border-radius: 20px; padding: 16px 20px; height: 100%; min-height: 134px; transition: all 0.25s ease; background: rgba(85,121,230,0.16);}
-.dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,36,51,.06); border-color: #334155; background: var(--panel);}
+.dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,36,51,.06); border-color: #64748B; background: var(--panel);}
 .dst.big {border: 0; background: linear-gradient(135deg, #5B6CFF 0%, #9B6CFF 60%, #D27CE0 100%); box-shadow: 0 8px 22px rgba(91,108,255,.28);}
 .dst.big:hover {transform: translateY(-2px); box-shadow: 0 14px 32px rgba(91,108,255,.4);}
 .dst .sl {font-size: 13px; color: #94A3B8; font-weight: 600;}
@@ -56,7 +56,7 @@ CSS = """<style>
 .dct {font-size: 15px !important; font-weight: 800; color: #F1F5F9 !important; margin: 16px 0 -4px; padding-left: 9px;
   border-left: 3px solid #6366F1; line-height: 1.2; letter-spacing: -.01em;}
 .dq {display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px; margin: -10px 8px 4px;}
-.dq div {border-top: 1.5px solid #334155; text-align: center; font-size: 12px; color: #94A3B8; padding-top: 6px;}
+.dq div {border-top: 1.5px solid #64748B; text-align: center; font-size: 12px; color: #94A3B8; padding-top: 6px;}
 .dq b {color: #F8FAFC; margin-left: 4px;}
 .dbox {border: 1px solid #26334D; border-radius: 16px; padding: 14px 18px; height: 100%;}
 .dbox .bh {margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #F8FAFC; display: flex;
