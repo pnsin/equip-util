@@ -75,12 +75,12 @@ def render() -> None:
     """기준 정보 › 장비 목록 (2026-11-10 수수료 단가는 따로 메뉴)."""
     eq, cfg = _page("장비 목록")
     _devices(eq, cfg)
+    _extras(db.load_rates(), eq)
 
 
 def render_prices() -> None:
-    """기준 정보 › 수수료 단가: 장비 단가 + 시험·기타 항목 단가."""
-    eq, _ = _page("수수료 단가")
-    _prices(eq, db.load_rates())
+    """예전 주소(/prices, /rates) → 장비 목록과 같은 화면 (2026-11-10 수수료 단가는 장비 목록 표 안으로)."""
+    render()
 
 
 def _devices(eq: pd.DataFrame, cfg: dict) -> None:
@@ -90,6 +90,17 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     view = eq[list(COLS)].rename(columns=COLS)
     view.insert(1, TREE, [_tree_mark(d) for d in eq["depth"]])
     view.insert(2, PARENT, [label_of.get(int(p), NO_PARENT) if pd.notna(p) else NO_PARENT for p in eq["parent_id"]])
+    rates = db.load_rates()
+    rate_of = {int(r["equip_id"]): r for r in rates.to_dict("records") if pd.notna(r["equip_id"])}
+    chg = db.charger_ids(eq)
+    ids = eq["id"].astype(int).tolist()
+    g = lambda i, c: rate_of.get(i, {}).get(c)
+    # 2026-11-10: 수수료 단가도 장비 목록 표 안에 (메뉴 하나로)
+    view[RATE["name"]] = [(lambda n, nm: "" if n == nm else n)(g(i, "name") or "", nm) for i, nm in zip(ids, eq["name"])]
+    view[RATE["spec"]] = [g(i, "spec") or "" for i in ids]
+    view[RATE["unit"]] = [g(i, "unit") or ("ch" if i in chg else "hr") for i in ids]
+    view[RATE["price_req"]] = pd.to_numeric([g(i, "price_req") for i in ids], errors="coerce")
+    view[RATE["price_self"]] = pd.to_numeric([g(i, "price_self") for i in ids], errors="coerce")
     view["도입일"] = view["도입일"].dt.date
     view["불용일"] = view["불용일"].dt.date
 
@@ -117,7 +128,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     action, out, gone = pick_table(
         view, "equip_tbl", mask=mask, name_col="장비명(한글)", add_label="장비 추가",
         height=min(640, 38 + 35 * (int(mask.sum()) + 1)),
-        column_order=BASIC, edit_order=[c for c in BASIC if c != TREE] + ["모델명", "제조사", "구매처", "자산번호",
+        column_order=BASIC + list(RATE.values()), edit_order=BASIC + list(RATE.values()) + ["모델명", "제조사", "구매처", "자산번호",
                                                                           "국가연구시설장비번호", "연간기준시간", "도입일",
                                                                           "불용일", KPI_COL, "비고"],
         column_config={
@@ -141,16 +152,25 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
             "불용일": st.column_config.DateColumn(format="YYYY-MM-DD", help="쓰지 않게 된 날. 지우는 대신 넣으세요."),
             KPI_COL: st.column_config.CheckboxColumn(default=True),
             "비고": st.column_config.TextColumn(width="medium"),
+            RATE["name"]: st.column_config.TextColumn(width="medium", help="견적서에 찍히는 이름. 비우면 장비명."),
+            RATE["spec"]: st.column_config.TextColumn(width="small"),
+            RATE["unit"]: st.column_config.SelectboxColumn(options=UNITS, default="hr", width=64,
+                                                         help="ch = 채널 1개 · 1시간 단가"),
+            RATE["price_req"]: st.column_config.NumberColumn(format="localized", min_value=0, width="small",
+                                                             help="우리가 운전할 때"),
+            RATE["price_self"]: st.column_config.NumberColumn(format="localized", min_value=0, width="small",
+                                                              help="업체가 직접 쓸 때"),
         })
     if action:
         id_of = {v: k for k, v in label_of.items()}
-        o = out.drop(columns=[TREE]).rename(columns={v: k for k, v in COLS.items()})
+        o = out.drop(columns=[TREE] + list(RATE.values())).rename(columns={v: k for k, v in COLS.items()})
         o["parent_id"] = [id_of.get(p) if isinstance(p, str) and p and p != NO_PARENT else None for p in out[PARENT]]
         o = o.drop(columns=[PARENT])
         errors = db.save_equipment(o)
         for e in errors:
             st.warning(e)
         if not errors:
+            _save_rates_from(out, rates)
             pick_done("equip_tbl")
             st.session_state.equip_saved = f"{len(gone)}대 삭제했어요." if gone else "저장했어요."
             st.rerun()
@@ -160,73 +180,48 @@ RATE_HEADS = {"equip_id": "장비ID", "name": "견적서 이름", "spec": "용�
               "price_self": "직접 단가", "note": "비고"}
 
 
-def _prices(eq: pd.DataFrame, rates: pd.DataFrame) -> None:
-    """② 수수료 단가: 장비 단가 + 시험·기타 항목 단가. 장비 목록과 같은 방식 (선택 → 저장 / 삭제, 엑셀로 한번에)."""
+def _save_rates_from(out: pd.DataFrame, rates: pd.DataFrame) -> None:
+    """장비 목록 표의 단가 칸을 단가 탭에 저장. 새 장비는 이름으로 id를 찾고, 지운 장비의 단가는 함께 지움."""
+    eq = db.load_equipment(full=True)
+    id_by_name = dict(zip(eq["name"], eq["id"].astype(int)))
+    known = set(eq["id"].astype(int))
+    old = {int(r["equip_id"]): r for r in rates.to_dict("records") if pd.notna(r["equip_id"])}
+    rows = []
+    for r in out.to_dict("records"):
+        eid = db.to_num(r.get("id")) or id_by_name.get(r.get("장비명(한글)"))
+        if eid is None or int(eid) not in known:
+            continue
+        eid = int(eid)
+        nm = quotes._s(r.get(RATE["name"]))
+        rows.append({"id": (old.get(eid) or {}).get("id"), "equip_id": eid, "name": nm, "_named": bool(nm),
+                     "spec": r.get(RATE["spec"]), "unit": r.get(RATE["unit"]), "price_req": r.get(RATE["price_req"]),
+                     "price_self": r.get(RATE["price_self"]), "note": (old.get(eid) or {}).get("note", "")})
+    seen = {r["equip_id"] for r in rows}
+    rows += [r | {"_named": True} for r in rates.to_dict("records")
+             if pd.notna(r["equip_id"]) and int(r["equip_id"]) in known and int(r["equip_id"]) not in seen]
+    rows += [r | {"equip_id": None} for r in rates.to_dict("records")
+             if pd.isna(r["equip_id"]) and quotes._s(r.get("name"))]
+    db.save_rates(rows)
 
-    def _apply_xl(m):
-        db.save_rates([r | {"_named": True} for r in m.to_dict("records")])
-        return []
 
-    with st.container(horizontal=True, vertical_alignment="center"):
-        st.markdown("<div class='eq-h'>장비 수수료 단가</div>", unsafe_allow_html=True)
-        st.space("stretch")
-        excel_box("rate_xl", rates, RATE_HEADS, "수수료단가", _apply_xl)
-    dev = quotes.rate_devices(eq)
-    rate_of = {int(r["equip_id"]): r for r in rates.to_dict("records") if pd.notna(r["equip_id"])}
-    chg = db.charger_ids(eq)
+def _extras(rates: pd.DataFrame, eq: pd.DataFrame) -> None:
+    """장비 목록에 없는 시험·기타 항목 (클린룸, 고온시험 등) 단가. 처음부터 펼쳐 둠 (2026-11-10)."""
     known = set(eq["id"].astype(int))
     ex = rates[rates["equip_id"].isna() | ~rates["equip_id"].fillna(-1).astype(int).isin(known)]
-    # 2026-11-10: 장비 단가 + 시험·기타 항목을 한 표로 ("장비 수수료 단가"). _k = e장비id / x단가id
-    g = lambda i, c: rate_of.get(int(i), {}).get(c)
-    view = pd.concat([pd.DataFrame({
-        "_k": ["e%d" % int(i) for i in dev["id"]],
-        "항목": dev["name"].values,
-        RATE["name"]: [(lambda n, nm: "" if n == nm else n)(g(i, "name") or "", nm) for i, nm in zip(dev["id"], dev["name"])],
-        RATE["spec"]: [g(i, "spec") or "" for i in dev["id"]],
-        RATE["unit"]: [g(i, "unit") or ("ch" if int(i) in chg else "hr") for i in dev["id"]],
-        RATE["price_req"]: pd.to_numeric([g(i, "price_req") for i in dev["id"]], errors="coerce"),
-        RATE["price_self"]: pd.to_numeric([g(i, "price_self") for i in dev["id"]], errors="coerce"),
-        "비고": [g(i, "note") or "" for i in dev["id"]],
-    }), pd.DataFrame({
-        "_k": ["x%d" % int(db.to_num(r) or 0) for r in ex["id"]],
-        "항목": ex["name"].fillna("").values, RATE["name"]: "", RATE["spec"]: ex["spec"].fillna("").values,
-        RATE["unit"]: ex["unit"].fillna("hr").values,
-        RATE["price_req"]: pd.to_numeric(ex["price_req"], errors="coerce").values,
-        RATE["price_self"]: pd.to_numeric(ex["price_self"], errors="coerce").values,
-        "비고": ex["note"].fillna("").values})], ignore_index=True)
-    price_cfg = {
-        "항목": st.column_config.TextColumn(width=300, help="장비 줄의 이름은 '장비 목록'에서 바꿔요."),
-        RATE["name"]: st.column_config.TextColumn(width="medium", help="견적서에 찍히는 이름. 비우면 항목 이름."),
-        RATE["spec"]: st.column_config.TextColumn(width="small"),
-        RATE["unit"]: st.column_config.SelectboxColumn(options=UNITS, default="hr", width="small",
-                                                     help="ch = 채널 1개 · 1시간 단가"),
-        RATE["price_req"]: st.column_config.NumberColumn(format="localized", min_value=0, width="small",
-                                                         help="우리가 운전할 때"),
-        RATE["price_self"]: st.column_config.NumberColumn(format="localized", min_value=0, width="small",
-                                                          help="업체가 직접 쓸 때"),
-        "비고": st.column_config.TextColumn(width="medium"),
-    }
-    action, out, gone = pick_table(view, "rate_tbl", name_col="항목", add_label="항목 추가",
-                                   column_order=["항목"] + list(RATE.values()) + ["비고"], column_config=price_cfg)
+    ex = ex[["id", "name", "spec", "unit", "price_req", "price_self", "note"]].reset_index(drop=True)
+    st.markdown(f"<div class='eq-h'>시험 · 기타 항목 단가 <span>{len(ex)}</span></div>", unsafe_allow_html=True)
+    action, out, gone = pick_table(
+        ex, "extra_tbl", name_col="name", add_label="항목 추가",
+        column_order=["name", "spec", "unit", "price_req", "note"],
+        column_config={
+            "name": st.column_config.TextColumn("항목", width=300, required=True),
+            "spec": st.column_config.TextColumn("용량", width="small"),
+            "unit": st.column_config.SelectboxColumn("단위", options=UNITS, default="hr", width="small"),
+            "price_req": st.column_config.NumberColumn("단가", format="localized", min_value=0, width="small"),
+            "note": st.column_config.TextColumn("비고", width="large")})
     if action:
-        out = out.copy()
-        out["_k"] = out["_k"].fillna("").astype(str)
-        if action == "delete":  # 장비 줄은 장비는 그대로 두고 단가만 비움
-            keep = set(out["_k"])
-            out = pd.concat([out, view[view["_k"].str.startswith("e") & ~view["_k"].isin(keep)].assign(
-                **{RATE["name"]: "", RATE["spec"]: "", RATE["price_req"]: None, RATE["price_self"]: None, "비고": ""})])
-        back = {v: k for k, v in RATE.items()} | {"비고": "note"}
-        rows = []
-        for r in out.rename(columns=back).to_dict("records"):
-            k = r.pop("_k")
-            if k.startswith("e"):
-                nm = quotes._s(r.get("name"))
-                rows.append(r | {"id": (rate_of.get(int(k[1:])) or {}).get("id"), "equip_id": int(k[1:]),
-                                 "name": nm, "_named": bool(nm)})
-            elif quotes._s(r.get("항목")):
-                rows.append(r | {"id": int(k[1:]) if k[1:].isdigit() and int(k[1:]) else None, "equip_id": None,
-                                 "name": quotes._s(r.get("항목"))})
-        db.save_rates(rows)
-        pick_done("rate_tbl")
-        st.session_state.equip_saved = "지웠어요." if gone else "저장했어요."
+        dev = [r | {"_named": True} for r in rates.to_dict("records") if pd.notna(r["equip_id"]) and int(r["equip_id"]) in known]
+        db.save_rates(dev + [r | {"equip_id": None} for r in out.to_dict("records") if quotes._s(r.get("name"))])
+        pick_done("extra_tbl")
+        st.session_state.equip_saved = f"{len(gone)}개 삭제했어요." if gone else "저장했어요."
         st.rerun()
