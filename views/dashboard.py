@@ -185,7 +185,7 @@ def _filters(years: list[int]) -> tuple[int, int | None]:
     with c0:
         page_header("종합 현황", "현황")
     with c1:
-        s, _, _, kind = period_picker("dash", ["월", "연"], "연", years=years)
+        s, _, _, kind = period_picker("dash", ["월", "연"], "연", years=years, align="right")
     return s.year, (s.month if kind == "월" else None)
 
 

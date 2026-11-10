@@ -9,53 +9,58 @@ from core.calc import period_bounds
 HALF = ["상반기", "하반기"]
 
 
+LAST_ROW = None  # period_picker 가 만든 줄 (뒤에서 같은 줄에 위젯을 더 붙일 때)
+
+
 def period_picker(key: str, kinds: list[str], default_kind: str, completed: bool = False,
-                  years: list[int] | None = None, extra=None) -> tuple[dt.date, dt.date, str, str]:
-    """기간 단위와 기간을 한 줄에서 고르게 하고 (시작일, 종료일, 이름, 단위)를 돌려줍니다.
+                  years: list[int] | None = None, extra=None, align: str = "left") -> tuple[dt.date, dt.date, str, str]:
+    """기간 단위와 기간을 한 줄에 나란히 고르고 (시작일, 종료일, 이름, 단위)를 돌려줍니다.
 
     completed=True 면 기본값이 '직전에 끝난 기간'(예: 11월이면 3분기)입니다.
-    extra 가 있으면 줄 오른쪽 끝 칸에서 extra(칸)을 불러 다른 위젯을 그립니다.
+    align="right" 면 줄을 오른쪽 끝에 붙임 (2026-11-10). 같은 줄에 더 붙이려면 LAST_ROW 를 씀.
     """
+    global LAST_ROW
     today = dt.date.today()
-    row = st.columns([2.6, 1, 1, 0.2, 2.2] if extra else [2.6, 1, 1, 2.4], vertical_alignment="bottom")
-    with row[0]:
+    row = st.container(horizontal=True, horizontal_alignment=align, vertical_alignment="bottom", gap="small",
+                       key=f"{key}_pp")
+    LAST_ROW = row
+    with row:
         kind = st.segmented_control("기간 단위", kinds, default=default_kind, key=f"{key}_kind") or default_kind
-    if extra:
-        with row[4]:
+        if extra:
             extra()
-    ref = today
-    if completed and kind in ("월", "분기", "반기"):
-        ref = period_bounds(kind, today)[0] - dt.timedelta(days=1)
+        ref = today
+        if completed and kind in ("월", "분기", "반기"):
+            ref = period_bounds(kind, today)[0] - dt.timedelta(days=1)
 
-    if kind == "직접 지정":  # 시작일과 종료일을 따로 고름 (기본: 이번 달 1일 ~ 오늘)
-        s = row[1].date_input("시작일", value=today.replace(day=1), format="YYYY-MM-DD", key=f"{key}_from")
-        e = row[2].date_input("종료일", value=today, format="YYYY-MM-DD", key=f"{key}_to")
-        s, e = s or today.replace(day=1), e or today
-        if e < s:
-            s, e = e, s
-        return s, e, f"{s:%Y-%m-%d} ~ {e:%Y-%m-%d}", kind
-    if kind == "주":
-        d = row[1].date_input("기준일", value=today, format="YYYY-MM-DD", key=f"{key}_week",
+        if kind == "직접 지정":  # 시작일과 종료일을 따로 고름 (기본: 이번 달 1일 ~ 오늘)
+            s = st.date_input("시작일", value=today.replace(day=1), format="YYYY-MM-DD", key=f"{key}_from", width=150)
+            e = st.date_input("종료일", value=today, format="YYYY-MM-DD", key=f"{key}_to", width=150)
+            s, e = s or today.replace(day=1), e or today
+            if e < s:
+                s, e = e, s
+            return s, e, f"{s:%Y-%m-%d} ~ {e:%Y-%m-%d}", kind
+        if kind == "주":
+            d = st.date_input("기준일", value=today, format="YYYY-MM-DD", key=f"{key}_week", width=150,
                               help="고른 날이 속한 주(월~일)를 봅니다.")
-        s, e, label = period_bounds("주", d)
-        return s, e, label, kind
+            s, e, label = period_bounds("주", d)
+            return s, e, label, kind
 
-    years = sorted(set((years or []) + [today.year, ref.year]), reverse=True)
-    year = row[1].selectbox("연도", years, index=years.index(ref.year), key=f"{key}_year",
-                            format_func=lambda v: f"{v}년")
-    if kind == "월":
-        m = row[2].selectbox("월", list(range(1, 13)), index=ref.month - 1, format_func=lambda v: f"{v}월",
-                             key=f"{key}_month")
-        d = dt.date(year, m, 1)
-    elif kind == "분기":
-        q = row[2].selectbox("분기", [1, 2, 3, 4], index=(ref.month - 1) // 3, format_func=lambda v: f"{v}분기",
-                             key=f"{key}_q")
-        d = dt.date(year, (q - 1) * 3 + 1, 1)
-    elif kind == "반기":
-        h = row[2].selectbox("반기", HALF, index=0 if ref.month <= 6 else 1, key=f"{key}_h")
-        d = dt.date(year, 1 if h == "상반기" else 7, 1)
-    else:
-        d = dt.date(year, 1, 1)
+        years = sorted(set((years or []) + [today.year, ref.year]), reverse=True)
+        year = st.selectbox("연도", years, index=years.index(ref.year), key=f"{key}_year",
+                            format_func=lambda v: f"{v}년", width=130)
+        if kind == "월":
+            m = st.selectbox("월", list(range(1, 13)), index=ref.month - 1, format_func=lambda v: f"{v}월",
+                             key=f"{key}_month", width=110)
+            d = dt.date(year, m, 1)
+        elif kind == "분기":
+            q = st.selectbox("분기", [1, 2, 3, 4], index=(ref.month - 1) // 3, format_func=lambda v: f"{v}분기",
+                             key=f"{key}_q", width=110)
+            d = dt.date(year, (q - 1) * 3 + 1, 1)
+        elif kind == "반기":
+            h = st.selectbox("반기", HALF, index=0 if ref.month <= 6 else 1, key=f"{key}_h", width=120)
+            d = dt.date(year, 1 if h == "상반기" else 7, 1)
+        else:
+            d = dt.date(year, 1, 1)
     s, e, label = period_bounds(kind, d)
     return s, e, label, kind
 

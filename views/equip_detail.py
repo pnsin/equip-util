@@ -113,7 +113,7 @@ def render() -> None:
     with h1:
         page_header("장비별 가동률", "현황")
     with h2:
-        s, e, label, kind = period_picker("detail", calc.PERIOD_KINDS, "연", years=years)
+        s, e, label, kind = period_picker("detail", calc.PERIOD_KINDS, "연", years=years, align="right")
     eid = st.selectbox("장비", ids, format_func=label_of.get, key="detail_sel", label_visibility="collapsed",
                        placeholder="장비 검색")
     r = eq[eq["id"] == eid].iloc[0].to_dict()

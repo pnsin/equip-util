@@ -159,15 +159,15 @@ div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button[aria-checked="
 [data-testid="stElementContainer"]:has(iframe[height="0"]) {position: absolute !important; width: 0; height: 0;}
 /* 날짜 칸에 마우스를 올리면 뜨는 카드 */
 .st-key-calgrid div[class*="st-key-card"] {position: absolute !important; top: auto; bottom: calc(100% + 8px); left: -2px;
-  width: 320px !important; min-width: 320px !important; max-width: none !important; z-index: 60; pointer-events: none; opacity: 0; visibility: hidden;
-  transform: translateY(4px); transition: opacity .15s ease .35s, transform .15s ease .35s, visibility 0s linear .5s;}
+  width: 320px !important; min-width: 320px !important; max-width: none !important; z-index: 60; pointer-events: none; display: none !important;
+  }  /* 2026-11-10 서서히 나타나면 뒤가 비쳐 겹쳐 보여서 바로 뜨게 (display 로 켜고 끔) */
 .st-key-calgrid div[class*="st-key-cardr_"] {left: auto; right: -2px;}
-.st-key-calgrid div[class*="st-key-er_"]:hover div[class*="st-key-card"] {opacity: 1; visibility: visible;
-  transform: none; transition-delay: .35s, .35s, 0s;}
+.st-key-calgrid:not([data-dragging]) div[class*="st-key-er_"]:hover div[class*="st-key-card"] {display: block !important;
+  }
 .st-key-calgrid div[class*="st-key-sec_"]:hover {z-index: 50;}
 .st-key-calgrid div[class*="st-key-sec_"] div[class*="st-key-er_"]:hover {z-index: 30;}  /* 카드가 아래 실적 줄 위로 */
 /* 위쪽 두 줄은 카드를 아래로 펼침 (위로 펼치면 화면 밖으로 잘림) */
-.st-key-calgrid div[class*="st-key-cardv_"], .st-key-calgrid div[class*="st-key-cardrv_"] {top: calc(100% + 8px); bottom: auto; transform: translateY(-4px);}
+.st-key-calgrid div[class*="st-key-cardv_"], .st-key-calgrid div[class*="st-key-cardrv_"] {top: calc(100% + 8px); bottom: auto;}
 div[class*="st-key-cardv_"] .cal-card::after, div[class*="st-key-cardrv_"] .cal-card::after {bottom: auto; top: -7px;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {z-index: 40;}
 .cal-card {background: #334155; border: 1px solid #3A4866; border-radius: 14px;
