@@ -100,7 +100,8 @@ def render_itube() -> None:
     fname = st.text_input("파일 이름", value=_itube_filename(cfg, s, e))
     template = itube_template(cfg)
     if records:
-        data = itube.make_itube_file(records, [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], template)
+        pairs = [(n, c) for n, c in zip(eq["name"], eq["code"]) if c]
+        data = lambda records=records, pairs=pairs, template=template: itube.make_itube_file(records, pairs, template)  # noqa: E731 - 누를 때만 만듦
         st.download_button("i-Tube 장비일지 내려받기", data=data, file_name=fname, mime=XLSX,
                            type="primary", width="stretch", icon=":material/download:")
         with st.expander("미리보기"):
@@ -150,7 +151,8 @@ def render_report() -> None:
                                 "사용시간": st.column_config.NumberColumn(format="%.1f"),
                                 "가용시간": st.column_config.NumberColumn(format="%.1f"),
                                 "수수료": st.column_config.NumberColumn(format="%d")})
-    data = itube.make_report(label, summary, tot, monthly, by_purpose, by_type, in_period, target, annual)
+    args = (label, summary, tot, monthly, by_purpose, by_type, in_period, target, annual)
+    data = lambda args=args: itube.make_report(*args)  # noqa: E731 - 누를 때만 만듦
     st.download_button(w("가동률 분석 보고서 내려받기"), data=data, mime=XLSX, type="primary", icon=":material/download:",
                        file_name=w(f"장비가동률_분석_{label.replace(' ', '')}.xlsx"), width="stretch")
 
@@ -211,8 +213,8 @@ def _download_body(key: str) -> None:
         st.warning("i-Tube는 한 번에 1000건까지 올릴 수 있어요. 기간을 나눠 주세요.", icon=":material/info:")
     if sel.empty:
         return
-    data = itube.make_itube_file(sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c],
-                                 itube_template(cfg))
+    args = (sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], itube_template(cfg))
+    data = lambda args=args: itube.make_itube_file(*args)  # noqa: E731 - 누를 때만 만듦
     fname = _itube_filename(cfg, s, e)
     if field != "전체":
         fname = fname.replace(".xlsx", f"_{field}.xlsx")

@@ -180,9 +180,11 @@ def excel_box(key: str, df, heads: dict, sheet: str, apply, extra_sheet: tuple |
     """엑셀로 내려받기 → 고쳐서 올리기. apply(합친 목록) 은 오류 목록을 돌려줌."""
     from core import sheet_io
     with st.popover("엑셀로 한번에 고치기", icon=":material/table_view:"):
-        data = sheet_io.to_xlsx(df, heads, sheet)
-        if extra_sheet:  # 읽기용 참고 시트 (올려도 반영되지 않음)
-            data = sheet_io.add_sheet(data, *extra_sheet)
+        def data(df=df, extra_sheet=extra_sheet):  # 엑셀 파일은 '엑셀 받기'를 누를 때만 만듦 (화면이 다시 그려질 때마다 만들지 않음)
+            out = sheet_io.to_xlsx(df, heads, sheet)
+            if extra_sheet:  # 읽기용 참고 시트 (올려도 반영되지 않음)
+                out = sheet_io.add_sheet(out, *extra_sheet)
+            return out
         c1, c2 = st.columns(2, gap="small")
         with c1.container(border=True, horizontal_alignment="center", gap="xsmall"):
             st.html("<div style='text-align:center;font-weight:700'>내려받기</div>")

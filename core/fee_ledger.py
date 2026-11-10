@@ -63,7 +63,7 @@ def read_file(data: bytes) -> pd.DataFrame:
 
 @st.cache_data(ttl=120, show_spinner=False)
 def load() -> pd.DataFrame:
-    df = db.get_store().read("fee_ledger")
+    df = db._tab("fee_ledger")
     for c in MONEY:
         df[c] = pd.to_numeric(df[c], errors="coerce")
     for c in DATES:

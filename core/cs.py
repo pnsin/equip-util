@@ -33,7 +33,7 @@ def _ids(v) -> list[int]:
 
 @st.cache_data(ttl=120, show_spinner=False)
 def load() -> pd.DataFrame:
-    df = db.get_store().read(T)
+    df = db._tab(T)
     df = df[df["id"].astype(str).str.strip() != ""].copy()
     for c in db.cols(T):
         if c not in ("date", "follow_up"):

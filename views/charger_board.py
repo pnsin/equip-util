@@ -228,7 +228,7 @@ def render() -> None:
         all_open = st.toggle("채널 모두 펼치기", key="cb_all")
         st.space("stretch")
         if centers:
-            st.download_button("현황표 엑셀로", chargers.to_excel(stt, today), icon=":material/download:",
+            st.download_button("현황표 엑셀로", lambda stt=stt, today=today: chargers.to_excel(stt, today),  # 누를 때만 만듦 icon=":material/download:",
                                file_name=f"충방전기_현황표_{today:%y%m%d}.xlsx", key="cb_dl",
                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         st.button("충방전기 예약", icon=":material/add:", key="cb_new", on_click=_book_new, type="primary")

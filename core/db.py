@@ -332,10 +332,12 @@ class SheetStore:
         return {t: self._frame(t, (vrs[i].get("values", []) if i < len(vrs) else [])) for i, t in enumerate(ts)}
 
     def append(self, t: str, rows: list[list]) -> None:
+        _dirty(t)
         if rows:
             _call(self.ws[t].append_rows, rows, value_input_option="RAW", table_range="A1")
 
     def rewrite(self, t: str, rows: list[list]) -> None:
+        _dirty(t)
         ws = self.ws[t]
         n = len(cols(t))
         old = len(_call(ws.col_values, 1))
@@ -352,6 +354,7 @@ class SheetStore:
 
     def update_rows(self, t: str, rows: dict[str, list]) -> int:
         """ID가 같은 행만 고칩니다. 전체를 다시 쓰지 않으므로 동시에 입력한 다른 사람의 행이 지워지지 않습니다."""
+        _dirty(t)
         from gspread.utils import rowcol_to_a1
         where = self._row_numbers(t)
         n = len(cols(t))
@@ -362,6 +365,7 @@ class SheetStore:
         return len(data)
 
     def delete_ids(self, t: str, ids: list[str]) -> int:
+        _dirty(t)
         where = self._row_numbers(t)
         nums = sorted({where[i] for i in ids if i in where}, reverse=True)  # 아래 행부터 지워야 번호가 안 밀림
         if nums:
@@ -393,13 +397,16 @@ class CsvStore:
         return df.reindex(columns=cols(t), fill_value="")
 
     def append(self, t: str, rows: list[list]) -> None:
+        _dirty(t)
         df = pd.concat([self.read(t), pd.DataFrame(rows, columns=cols(t)).astype(str)], ignore_index=True)
         df.to_csv(self._path(t), index=False)
 
     def rewrite(self, t: str, rows: list[list]) -> None:
+        _dirty(t)
         pd.DataFrame(rows, columns=cols(t)).to_csv(self._path(t), index=False)
 
     def update_rows(self, t: str, rows: dict[str, list]) -> int:
+        _dirty(t)
         df = self.read(t)
         n = 0
         for rid, row in rows.items():
@@ -411,6 +418,7 @@ class CsvStore:
         return n
 
     def delete_ids(self, t: str, ids: list[str]) -> int:
+        _dirty(t)
         df = self.read(t)
         mask = df["id"].astype(str).str.strip().isin(set(ids))
         self.rewrite(t, df[~mask].values.tolist())
@@ -457,13 +465,22 @@ def storage_label() -> str:
     return get_store().label
 
 
-# 화면에서 늘 쓰는 탭은 한 번에 읽어 2분 동안 기억합니다 (휴지통·수정기록은 그 화면에서만 따로 읽음)
-SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings", "channels", "maint")
+# 화면에서 쓰는 탭은 구글 요청 한 번으로 같이 읽어 30분 동안 기억합니다 (앱에서 저장하면 바로 새로 읽음).
+# 사진이 든 장비 정보 탭과 휴지통·수정기록은 그 화면에서만 따로 읽음.
+SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings", "channels", "maint",
+                 "rates", "quotes", "cs", "fee_ledger", "equip_history")
 
 
-@st.cache_data(ttl=600, show_spinner=False)
+# cache_resource: 꺼낼 때마다 통째로 복사하지 않음 (_tab 이 필요한 탭만 복사해 씀)
+@st.cache_resource(ttl=1800, show_spinner=False)
 def _snapshot() -> dict[str, pd.DataFrame]:
     return get_store().read_many(list(SNAPSHOT_TABS))
+
+
+def _dirty(t: str) -> None:
+    """묶음으로 읽어 둔 탭에 쓰면 그 묶음을 버려, 다음 화면에서 바뀐 내용을 읽게 함."""
+    if t in SNAPSHOT_TABS:
+        _snapshot.clear()
 
 
 def _tab(t: str) -> pd.DataFrame:
@@ -501,8 +518,10 @@ def clear_caches() -> None:
     load_logs.clear()
     load_channels.clear()
     get_settings.clear()
-    from core import cs
+    from core import cs, fee_ledger, history
     cs.load.clear()
+    fee_ledger.load.clear()
+    history.load.clear()
 
 
 def _new_ids(n: int) -> list[str]:
@@ -1899,7 +1918,7 @@ RATE_TEXT = ("name", "spec", "unit", "note")
 @st.cache_data(ttl=120)
 def load_rates() -> pd.DataFrame:
     """장비 단가. 장비ID 가 있으면 장비 목록의 장비, 없으면 시험·기타 항목."""
-    df = get_store().read("rates")
+    df = _tab("rates")
     for c in ("id", "equip_id", "price_req", "price_self", "order"):
         df[c] = pd.to_numeric(df[c].astype(str).str.replace(",", ""), errors="coerce")
     df = df.dropna(subset=["id"])
@@ -1942,7 +1961,7 @@ def save_rates(rows: list[dict]) -> None:
 
 @st.cache_data(ttl=120)
 def load_quotes() -> pd.DataFrame:
-    df = get_store().read("quotes")
+    df = _tab("quotes")
     df["id"] = df["id"].map(to_str)
     df = df[df["id"] != ""]
     for c in ("amount", "amount_vat"):

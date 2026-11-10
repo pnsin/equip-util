@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import html
 import json
@@ -514,7 +515,7 @@ def render_new() -> None:
         if st.button("고친 내용 저장하고 PDF 만들기" if again else "발급하고 PDF 만들기", type="primary",
                      icon=":material/picture_as_pdf:", width="stretch", disabled=bool(problems), key=f"q_issue_{ver}"):
             _issue(d, t)
-        st.download_button("엑셀로 받기", data=quote_doc.fill_xlsx(d), width="stretch", icon=":material/download:",
+        st.download_button("엑셀로 받기", data=lambda d=copy.deepcopy(d): quote_doc.fill_xlsx(d), width="stretch", icon=":material/download:",
                            file_name=quote_doc.file_name(d, "xlsx"), key=f"q_xlsx_{ver}",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                            help="같은 양식의 엑셀 파일 (저장하지 않고 받기만)")
@@ -599,7 +600,7 @@ def _ledger() -> None:
                                     format_func=lambda y: f"{y}년") or years[0]
         st.space("stretch")
         cur = df[df["issued_on"].dt.year == year]
-        st.download_button("발급대장 엑셀", _ledger_xlsx(cur, year), file_name=f"견적서_발급대장_{year}.xlsx",
+        st.download_button("발급대장 엑셀", lambda cur=cur, year=year: _ledger_xlsx(cur, year), file_name=f"견적서_발급대장_{year}.xlsx",
                            icon=":material/download:", key="q_led_dl",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     view = cur[list(LEDGER)].rename(columns=LEDGER)
