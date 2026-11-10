@@ -11,7 +11,7 @@ import streamlit as st
 
 from core import db
 from ui_style import page_header
-from views.common import center_pick, pick_done, pick_table, search_box
+from views.common import center_pick, in_center, pick_done, pick_table, search_box
 
 COLS = {"id": "id", "date": "날짜", "equip": "장비", "kind": "종류", "content": "내용", "staff": "담당자",
         "cost": "비용(원)", "note": "비고"}
@@ -47,7 +47,7 @@ def _by_equipment(df: pd.DataFrame, eq: pd.DataFrame, center: str | None) -> Non
     year = dt.date.today().year
     if center:
         cen = db.equip_centers(eq)
-        eq = eq[eq["id"].astype(int).map(cen).eq(center)]
+        eq = eq[in_center(eq["id"].astype(int).map(cen), center)]
     last, cnt, cost = {}, {}, {}
     for e, d, c in zip(df["equip_id"], df["date"], df["cost"]):
         if pd.isna(e):
@@ -117,7 +117,7 @@ def render() -> None:
         mask &= view["종류"].isin(pick)
     if center:
         cen = db.equip_centers(eq)
-        mask &= pd.Series([cen.get(id_of.get(e)) == center for e in view["장비"]], index=view.index)
+        mask &= in_center(pd.Series([cen.get(id_of.get(e)) or "" for e in view["장비"]], index=view.index), center)
     filtered = bool(q or pick or center)
 
     staff = db.staff_names(include=list(df["staff"]))

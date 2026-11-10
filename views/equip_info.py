@@ -189,7 +189,7 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
     df = eq[eq["depth"] == 0]  # 세부장비는 장비 한 대 화면에서 봄
     if center:
         cen = db.equip_centers(eq)
-        df = df[df["id"].astype(int).map(cen).eq(center)]
+        df = df[common.in_center(df["id"].astype(int).map(cen), center)]
     if q:
         spec_txt = (info["equip_specs"].assign(t=lambda d: d["item"] + " " + d["value"])
                     .groupby("equip_id")["t"].agg(" ".join) if not info["equip_specs"].empty else pd.Series(dtype=str))
