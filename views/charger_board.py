@@ -33,8 +33,19 @@ CSS = """<style>
 .cb-t td.c {color: var(--muted);}
 .cb-t td.m {color: #94A3B8;}
 .cb-dash {color: #94A3B8;}
-.cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink);} .cb-t td.pd {width: 110px;}
-.cb-t td.co {max-width: 170px; width: 170px; overflow: hidden; text-overflow: ellipsis;}
+.cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink);}
+.cb-t td.co {overflow: hidden; text-overflow: ellipsis;}
+/* 엑셀 틀 고정처럼: 왼쪽 6칸은 그대로, 오른쪽 타임라인만 옆으로 스크롤 (2026-11-10) */
+.cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: sticky; z-index: 3; background: var(--panel); box-sizing: border-box;}
+.cb-t .s0 {left: 0; width: 210px; min-width: 210px; max-width: 210px;}
+.cb-t .s1 {left: 210px; width: 72px; min-width: 72px; max-width: 72px;}
+.cb-t .s2 {left: 282px; width: 92px; min-width: 92px; max-width: 92px;}
+.cb-t .s3 {left: 374px; width: 150px; min-width: 150px; max-width: 150px;}
+.cb-t .s4 {left: 524px; width: 160px; min-width: 160px; max-width: 160px;}
+.cb-t .s5 {left: 684px; width: 110px; min-width: 110px; max-width: 110px; box-shadow: inset -1px 0 0 #64748B;}
+.cb-t td.s0[colspan] {width: 374px; max-width: 374px;} .cb-t td.s4[colspan] {width: 270px; max-width: 270px; box-shadow: inset -1px 0 0 #64748B;}
+.cb-t th.tl {padding: 8px 0;}
+@media (max-width: 700px) {.cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: static;}}
 .cb-t td.tl {position: relative; padding: 0;}
 .cb-tl, .cb-mh {width: var(--tlw); min-width: var(--tlw);}
 .cb-t tr.grp td {border-top: 1px solid #52617A;}
@@ -57,7 +68,7 @@ CSS = """<style>
 label.cb-ch input {display: none;}
 label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-t tr.chx {visibility: collapse;} .cb-box.all tr.chx {visibility: visible;}
-.cb-t tr.chx td {background: rgba(99,102,241,.05); height: 28px;} .cb-t tr.chx td.n {color: #94A3B8; font-weight: 700; text-align: center;}
+.cb-t tr.chx td {background: linear-gradient(rgba(99,102,241,.05), rgba(99,102,241,.05)), var(--panel); height: 28px;} .cb-t tr.chx td.n {color: #94A3B8; font-weight: 700; text-align: center;}
 .cb-t tr.chx td:empty {border-bottom-color: transparent;}
 .cb-ch summary::-webkit-details-marker {display: none;}
 .cb-ch summary i, label.cb-ch i {font-style: normal; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--accent);
@@ -66,12 +77,12 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-ch[open] summary i {background: var(--accent); color: #fff;}
 .cb-ch ul {list-style: none; margin: 4px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(4, max-content); gap: 2px 14px;}
 .cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #1E8E5A; white-space: nowrap;}
-.cb-t td.u {white-space: nowrap; vertical-align: middle; padding: 0 12px; line-height: 1.35;}
+.cb-t td.u {white-space: normal; vertical-align: middle; padding: 0 12px; line-height: 1.35;}
 .cb-t td.u .sp {font: inherit; color: inherit;}
 .cb-ch li b {color: var(--muted); font-weight: 600; min-width: 38px;}
 .cb-ch li.on {color: #E35D78; font-weight: 700;}
 .cb-t td:has(details[open]) {white-space: normal; vertical-align: top; padding-top: 6px;}
-.cb-sum td {background: rgba(85,143,230,0.16); font-weight: 700; color: var(--muted);}
+.cb-sum td {background: linear-gradient(rgba(85,143,230,0.16), rgba(85,143,230,0.16)), var(--panel); font-weight: 700; color: var(--muted);}
 .cb-foot {display: flex; flex-wrap: wrap; gap: 14px; font-size: .74rem; color: var(--muted); margin-top: 8px;}
 .cb-foot i {display: inline-block; width: 11px; height: 11px; border-radius: 4px; margin-right: 5px; vertical-align: -1px;}
 @media (max-width: 600px) {.cb-kpis {grid-template-columns: 1fr;}}
@@ -180,11 +191,11 @@ def _chan_rows(r: dict, bks: list[dict], w0, w1, today, grid: str, now_line: str
             bars = "<div class='cb-free'>비어 있음</div>"
         cur = next((b for b in mine if b["start"] <= today <= b["end"]), None)
         b = cur or next((b for b in mine if b["start"] > today), None)
-        who = f"<td class='co' title='{html.escape(b['company'])}'>{html.escape(b['company'])}</td>" if b else "<td class='m'>—</td>"
+        who = f"<td class='co s4' title='{html.escape(b['company'])}'>{html.escape(b['company'])}</td>" if b else "<td class='m s4'>—</td>"
         when = chargers.span_text(b["start"], b["end"], today) + ("" if cur else " 예약") if b else ""
         h = 28 + 26 * max(len(lanes) - 1, 0)
-        out.append(f"<tr class='chx g{cid}'><td></td><td></td><td class='n'>ch {n}</td>{who}"
-                   f"<td class='pd'>{html.escape(when)}</td>"
+        out.append(f"<tr class='chx g{cid}'><td class='s1'></td><td class='s2'></td><td class='n s3'>ch {n}</td>{who}"
+                   f"<td class='pd s5'>{html.escape(when)}</td>"
                    f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
     return "".join(out)
 
@@ -212,12 +223,7 @@ def render() -> None:
                                           label_visibility="collapsed") or "전체"
         d0 = today.replace(day=1)
         d1 = ((d0 + dt.timedelta(days=95)).replace(day=1)) - dt.timedelta(days=1)  # 이번 달 + 2개월
-        # 2026-11-10 기간 하나로 고르면 시작이 자꾸 바뀌어서, 시작·끝을 따로 고름
-        r0 = st.date_input("조회 기간", value=d0, key="cb_from", format="YYYY-MM-DD", width=150,
-                           help="타임라인에 보일 기간. 길게 고르면 옆으로 밀어서 볼 수 있어요.")
-        # 값·최솟값이 바뀌면 Streamlit이 칸을 처음 값으로 되돌리므로 고정값만 줌
-        r1 = st.date_input("~", value=d1, key="cb_to", format="YYYY-MM-DD", width=150)
-        rng = (min(r0, r1), max(r0, r1))
+        rng = (d0, d1)  # 조회 기간은 이번 달 + 2개월 고정 (2026-11-10 기간 고르기 없앰)
         all_open = st.toggle("채널 모두 펼치기", key="cb_all")
         st.space("stretch")
         if centers:
@@ -242,12 +248,15 @@ def render() -> None:
 
         # 타임라인: 고른 기간 (기본 = 이번 달 + 2개월)
         w0, w1 = (rng if isinstance(rng, (list, tuple)) and len(rng) == 2 else (d0, d1))
+        # 달마다 칸 너비가 같도록 고른 기간을 달 단위로 맞춤 (시작 달 1일 ~ 끝 달 말일)
+        w0 = w0.replace(day=1)
+        w1 = (w1.replace(day=1) + dt.timedelta(days=32)).replace(day=1) - dt.timedelta(days=1)
         months, m = [w0], (w0.replace(day=1) + dt.timedelta(days=32)).replace(day=1)
         while m <= w1:
             months.append(m)
             m = (m + dt.timedelta(days=32)).replace(day=1)
         span = (w1 - w0).days + 1
-        tlw = max(420, int(span / 30.4 * 120))  # 한 달 = 120px, 길면 옆으로 스크롤
+        tlw = max(420, int(span / 30.4 * (120 if span <= 190 else 70)))  # 한 달 120px (6개월 넘으면 70px), 길면 옆으로 스크롤
         pos = lambda d: (d - w0).days / span * 100  # noqa: E731
         grid = "".join(f"<div class='cb-g' style='left:{pos(x):.2f}%'></div>" for x in months[1:])
         now_line = f"<div class='cb-now' style='left:{pos(today):.2f}%'></div>" if w0 <= today <= w1 else ""
@@ -274,7 +283,7 @@ def render() -> None:
             nm = shorts[r["unit"]]
             spec = (_spec(r.get("unit_sheet", "")) or _spec(r["unit"])  # 사양(V·A·ch)은 챔버 구성에 적은 이름에서
                     or f"{int(unit_ch.get(r['unit'], 0))}ch")  # 어디에도 없으면 채널 수라도
-            u_td = (f"<td class='u' rowspan='{span_u.get(ri, 1)}' title='{html.escape(r['unit'])}'>{html.escape(nm)}"
+            u_td = (f"<td class='u s0' rowspan='{span_u.get(ri, 1)}' title='{html.escape(r['unit'])}'>{html.escape(nm)}"
                     + (f" <span class='sp'>({html.escape(spec)})</span>" if spec else "") + "</td>") if new_u else ""
             c = html.escape(r["cycler"]) if (new_u or r["cycler"] != prev_c) else ""
             prev_u, prev_c = r["unit"], r["cycler"]
@@ -287,25 +296,25 @@ def render() -> None:
                 bars = "<div class='cb-free'>비어 있음</div>"
             h = 31 + 26 * max(len(lanes) - 1, 0)
             cos = list(dict.fromkeys(x["company"] for x in r["nows"])) or ([b["company"]] if b else [])
-            who = (f"<td class='co' title='{html.escape(', '.join(cos))}'>{html.escape(cos[0])}" + (f" <span class='m'>외 {len(cos) - 1}</span>" if len(cos) > 1 else "")
-                   + "</td>" if cos else "<td class='m'>—</td>")
+            who = (f"<td class='co s4' title='{html.escape(', '.join(cos))}'>{html.escape(cos[0])}" + (f" <span class='m'>외 {len(cos) - 1}</span>" if len(cos) > 1 else "")
+                   + "</td>" if cos else "<td class='m s4'>—</td>")
             n_all = int(r["ch_count"]) or len(chargers.chamber_chs(r["channels"], 0))
             mini = (f"<span class='cb-mini' title='오늘 {r['used']}/{n_all}ch 사용'><i style='width:{r['used'] / n_all * 100:.0f}%'></i></span>"
                     f"<span class='cb-n'>{r['used']}/{n_all}</span>") if r["used"] and n_all and r["used"] < n_all else ""
             when = chargers.span_text(b["start"], b["end"], today) + ("" if r["now"] else " 예약") if b else ""
-            rows.append(f"<tr class='cbr {'grp' if new_u and rows else ''}'>{u_td}<td class='c'>{c}</td>"
-                        f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{_ch_label(r, mini)}</td>{who}"
-                        f"<td class='pd'>{html.escape(when)}</td>"
+            rows.append(f"<tr class='cbr {'grp' if new_u and rows else ''}'>{u_td}<td class='c s1'>{c}</td>"
+                        f"<td class='s2'>{html.escape(r['chamber']) or DASH}</td><td class='m s3'>{_ch_label(r, mini)}</td>{who}"
+                        f"<td class='pd s5'>{html.escape(when)}</td>"
                         f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
             rows.append(_chan_rows(r, list(all_bk.get(int(r["id"]), pd.DataFrame()).to_dict("records")), w0, w1, today,
                                    grid, now_line, tlw))
             show_css.append(f"tr.cbr:has(#ck{int(r['id'])}:checked) ~ tr.g{int(r['id'])}{{visibility:visible;}}")
-        rows.append(f"<tr class='cb-sum'><td colspan='3'>{html.escape(db.CENTER_SHORT.get(center, center))} 합계</td><td>{total} ch</td>"
-                    f"<td colspan='3'>사용 중 {used} · 비어 있음 {total - used}</td></tr>")
+        rows.append(f"<tr class='cb-sum'><td colspan='3' class='s0'>{html.escape(db.CENTER_SHORT.get(center, center))} 합계</td><td class='s3'>{total} ch</td>"
+                    f"<td colspan='2' class='s4'>사용 중 {used} · 비어 있음 {total - used}</td><td></td></tr>")
         st.markdown(
             "<style>" + "".join(show_css) + "</style>"
-            f"<div class='cb-box{' all' if all_open else ''}'><table class='cb-t' style='--tlw:{tlw}px'><tr><th>장비</th><th>싸이클러</th><th>챔버</th><th>채널</th>"
-            f"<th>업체</th><th>기간</th><th class='tl'><div class='cb-mh'>{mh}</div></th></tr>"
+            f"<div class='cb-box{' all' if all_open else ''}'><table class='cb-t' style='--tlw:{tlw}px'><tr><th class='s0'>장비</th><th class='s1'>싸이클러</th><th class='s2'>챔버</th><th class='s3'>채널</th>"
+            f"<th class='s4'>업체</th><th class='s5'>기간</th><th class='tl'><div class='cb-mh'>{mh}</div></th></tr>"
             + "".join(rows) + "</table></div>"
             "<div class='cb-foot'>"
             + "".join(f"<span><i style='background:{CATS[k][1]}'></i>{k}</span>" for k in ("시험", "제조", "분석", "지원"))
