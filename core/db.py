@@ -1051,16 +1051,21 @@ def load_equipment(full: bool = False) -> pd.DataFrame:
     """
     df = _equipment_frame(_tab("equipment"), fold=not full)
     names = dict(zip(df["id"], df["name"]))
-    labels = []
-    for n, c, d, r in zip(df["name"], df["code"], df["depth"], df["root_id"]):
-        lb = f"{n} ({c})" if c else n
+    base = []
+    for n, d, r in zip(df["name"], df["depth"], df["root_id"]):
+        lb = n
         if d > 0 and names.get(r) and names[r] != n:
             lb = f"{lb} · {names[r]}"  # 세부장비는 어느 장비 소속인지 함께
-        labels.append(lb)
+        base.append(lb)
     seen: dict[str, int] = {}
-    for lb in labels:
+    for lb in base:
         seen[lb] = seen.get(lb, 0) + 1
-    df["label"] = [f"{lb} #{i}" if seen[lb] > 1 else lb for lb, i in zip(labels, df["id"])]
+    # 이름만 보이게 (2026-11-10): 같은 이름이 여럿일 때만 ITUBE번호로, 그래도 같으면 #번호로 구분
+    labels = [f"{lb} ({c})" if seen[lb] > 1 and c else lb for lb, c in zip(base, df["code"])]
+    seen2: dict[str, int] = {}
+    for lb in labels:
+        seen2[lb] = seen2.get(lb, 0) + 1
+    df["label"] = [f"{lb} #{i}" if seen2[lb] > 1 else lb for lb, i in zip(labels, df["id"])]
     return add_pick_labels(df)
 
 
