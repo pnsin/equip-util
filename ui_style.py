@@ -482,9 +482,9 @@ _CLEAN_CSS = """<style>
 [data-testid="stPopoverBody"] [data-testid="stFileUploader"]{margin-bottom:0}
 [data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]){min-width:400px}
 [data-testid="stPopoverBody"] button p{white-space:nowrap}
-[data-testid="stFileUploaderDropzone"] button{font-size:0;display:flex;justify-content:center;align-items:center}
-[data-testid="stFileUploaderDropzone"] button *{display:none}
-[data-testid="stFileUploaderDropzone"] button::after{content:"파일 선택";font-size:14px;margin:0 auto}
+[data-testid="stFileUploaderDropzone"] button [data-testid="stMarkdownContainer"] p{font-size:0}
+[data-testid="stFileUploaderDropzone"] button [data-testid="stMarkdownContainer"] p::after{content:"파일 선택";font-size:14px}
+[data-testid="stPopoverBody"] [data-testid="stFileUploaderDropzone"] button [data-testid="stMarkdownContainer"] p::after{content:"엑셀 선택"}
 
   .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stAppViewContainer"] { background: var(--bg) !important; }
   [data-testid="stSidebar"] { background: var(--side) !important; border-right: 1px solid var(--side-line) !important; }
