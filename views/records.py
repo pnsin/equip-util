@@ -323,4 +323,4 @@ def _by_logs() -> None:
                     st.session_state.records_saved = f"{n}건을 {new_start:%m/%d}로 복제했습니다."
                     st.session_state.pop("records_editor", None)
                     st.rerun()
-            c3.caption("복제한 실적은 '실적 입력' 달력에서도 바로 보입니다.")
+            c3.caption("복제한 실적은 '시험 일정' 달력에서도 바로 보입니다.")
