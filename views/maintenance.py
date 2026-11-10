@@ -94,11 +94,11 @@ def render() -> None:
     view = view.astype({c: "string" for c in ("장비", "종류", "내용", "담당자", "비고")})
     view["날짜"] = pd.to_datetime(view["날짜"]).dt.date
 
-    c0, c9 = st.columns([4, 1.2], vertical_alignment="center")
-    with c0:
+    with st.container(horizontal=True, vertical_alignment="center"):  # 기록/장비별은 오른쪽 끝 (표 끝과 맞춤)
         center = center_pick("maint_center")
-    mode = c9.segmented_control("보기", ["기록", "장비별"], default="기록", key="maint_mode",
-                                label_visibility="collapsed") or "기록"
+        st.space("stretch")
+        mode = st.segmented_control("보기", ["기록", "장비별"], default="기록", key="maint_mode",
+                                    label_visibility="collapsed") or "기록"
     if mode == "장비별":
         _by_equipment(df, eq, center)
         return

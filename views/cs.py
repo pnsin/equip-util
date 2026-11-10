@@ -18,7 +18,7 @@ WD = "월화수목금토일"
 PAGE = 30
 
 CSS = """<style>
-.cs-stats {display: flex; gap: 12px; flex-wrap: wrap; margin: .2rem 0 1rem;}
+.cs-stats {display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin: .2rem 0 1rem;}
 .cs-stat {text-align: center; background: var(--panel); border-radius: 18px; padding: 14px 20px 13px; min-width: 150px;
   box-shadow: 0 4px 16px rgba(30, 36, 51, .04); border: 1px solid var(--line); transition: all 0.25s ease;}
 .cs-stat:hover {transform: translateY(-2px); box-shadow: 0 12px 24px rgba(30, 36, 51, .08); border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
@@ -103,8 +103,7 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
 
 def _stats(df: pd.DataFrame) -> None:
     s = cs.stats(df)
-    tiles = [(s["month"], "이번 달 활동", "var(--ink)", ""), (s["year"], "올해 활동", "var(--accent)", ""),
-             (s["companies"], "이번 달 만난 업체", "var(--ink)", "")]
+    tiles = [(s["month"], "이번 달 활동", "var(--ink)", ""), (s["year"], "올해 활동", "var(--accent)", "")]
     st.markdown('<div class="cs-stats">' + "".join(
         f'<div class="cs-stat"><b style="color:{c}">{n}</b><span>{E(t)}</span>{x}</div>' for n, t, c, x in tiles)
         + "</div>", unsafe_allow_html=True)

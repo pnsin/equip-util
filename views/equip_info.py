@@ -180,9 +180,9 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
         if pd.notna(r.parent_id):
             kids_of.setdefault(int(r.parent_id), []).append(r.name)
 
-    center = common.center_pick("info_center")
     q = ""  # 2026-11-10 장비가 많지 않아 검색칸 없앰
-    with st.container(horizontal=True):
+    with st.container(horizontal=True, vertical_alignment="center"):  # 센터 고르기와 카드/목록을 한 줄에
+        center = common.center_pick("info_center")
         st.space("stretch")
         view = st.segmented_control("보기", ["카드", "목록"], default="카드", key="info_view",
                                     label_visibility="collapsed") or "카드"
