@@ -115,14 +115,18 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
             RATE["price_self"]: pd.to_numeric(ex["price_self"], errors="coerce").values,
             "비고": ex["note"].fillna("").values})], ignore_index=True)
     is_x = pd.Series([i >= n_dev for i in range(len(view))], index=view.index)
+    xl_eq = eq.copy()  # 엑셀 내려받기용: 장비 열 + 단가 열 (2026-11-10 한 표에 단가까지)
+    for v in RATE.values():
+        xl_eq[v] = list(view[v][:n_dev])
+    extras_now = view.iloc[n_dev:].copy()
 
     xl_heads = {"parent_id": "소속 장비 ID"} | {k: v for k, v in COLS.items()
-                                               if k not in ("id", "retired_on", "in_kpi")}
+                                               if k not in ("id", "retired_on", "in_kpi")} | {v: v for v in RATE.values()}
     with st.container(horizontal=True, vertical_alignment="center"):
         center = center_pick("equip_center")
         st.space("stretch")
         sub = st.toggle("세부장비도 보기", key="equip_subs")
-        excel_box("equip_xl", eq, xl_heads, "장비", lambda m: list(db.save_equipment(m)))
+        excel_box("equip_xl", xl_eq, xl_heads, "장비", lambda m: _apply_excel(m, rates, extras_now))
     # 2026-11-10 주장비를 골라 그 아래 세부장비를 펼쳐 봄 (표 안에서 바로 펼치기는 Streamlit 표가 지원하지 않음)
     pid = {int(i): int(p) for i, p in zip(eq["id"], eq["parent_id"]) if pd.notna(p)}
     has_kids = set(pid.values())
@@ -204,6 +208,17 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
             pick_done("equip_tbl")
             st.session_state.equip_saved = f"{len(gone)}대 삭제했어요." if gone else "저장했어요."
             st.rerun()
+
+
+def _apply_excel(merged: pd.DataFrame, rates: pd.DataFrame, extras: pd.DataFrame) -> list[str]:
+    """엑셀로 올린 장비 + 단가 반영: 장비를 먼저 저장하고, 오류가 없으면 단가도 저장."""
+    rate_cols = list(RATE.values())
+    errors = list(db.save_equipment(merged.drop(columns=rate_cols, errors="ignore")))
+    if errors:
+        return errors
+    out = merged.rename(columns={"name": "장비명(한글)"})[["id", "장비명(한글)"] + rate_cols]
+    _save_rates_from(out, rates, extras)
+    return []
 
 
 RATE_HEADS = {"equip_id": "장비ID", "name": "견적서 이름", "spec": "용량", "unit": "단위", "price_req": "의뢰 단가",
