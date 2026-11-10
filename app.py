@@ -120,7 +120,6 @@ PAGES = {
     ],
     "기준 정보": [
         st.Page(equipment.render, title="장비 목록", url_path="equipment"),
-        st.Page(equipment.render_prices, title="수수료 단가", url_path="prices"),
         st.Page(staff.render, title="담당자", url_path="staff"),
     ],
     "관리": [
@@ -135,6 +134,7 @@ common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1],
 # 예전 주소(/dashboard, /calendar …)로 들어와도 "Page not found" 없이 해당 화면이 열리게 하는 숨은 주소
 ALIASES = [
     st.Page(equipment.render_prices, title="수수료 단가", url_path="rates"),  # 예전 주소
+    st.Page(equipment.render_prices, title="수수료 단가 ", url_path="prices"),  # 예전 주소
     st.Page(dashboard.render, title="대시보드", url_path="dashboard"),
     st.Page(input_page.render, title="실적 입력", url_path="calendar"),
     st.Page(input_page.render, title="실적 입력", url_path="entry"),
@@ -173,6 +173,12 @@ def sidebar(local: bool) -> None:
         on = f'[data-testid="stSidebar"] a[href="{cur}"]'
         css.append(f'{on} {{background: rgba(99,102,241,.16) !important;}} {on} p {{color: #EEF2FF !important; font-weight: 600 !important;}} '
                    f'{on} [data-testid="stIconMaterial"] {{color: #A5B4FC !important;}}')
+        # 2026-11-10 메뉴 앞 작은 점 (지금 화면은 보라색으로 빛남)
+        lk = '[data-testid="stSidebar"] [data-testid="stPageLink"] a'
+        css.append(f'{lk} span::before {{display:none !important;}} '
+                   f'{lk}::before {{content:""; width:6px; height:6px; border-radius:50%; background:#3B475C; flex:none; '
+                   f'transition:all .2s ease;}} {lk}:hover::before {{background:#94A3B8;}} '
+                   f'{on}::before {{background:#818CF8 !important; box-shadow:0 0 0 3px rgba(129,140,248,.22);}}')
         st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
         st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
         st.divider()
