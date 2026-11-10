@@ -123,14 +123,30 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
         st.space("stretch")
         sub = st.toggle("세부장비도 보기", key="equip_subs")
         excel_box("equip_xl", eq, xl_heads, "장비", lambda m: list(db.save_equipment(m)))
+    # 2026-11-10 주장비를 골라 그 아래 세부장비를 펼쳐 봄 (표 안에서 바로 펼치기는 Streamlit 표가 지원하지 않음)
+    pid = {int(i): int(p) for i, p in zip(eq["id"], eq["parent_id"]) if pd.notna(p)}
+    has_kids = set(pid.values())
+    open_opts = [label_of[i] for i in eq["id"].astype(int) if i in has_kids and i not in pid]
+    opened = st.multiselect("세부장비 펼치기", open_opts, key="equip_open", placeholder="장비를 고르면 그 아래 세부장비가 함께 보여요",
+                            label_visibility="collapsed") if open_opts and not sub else []
+    open_ids = {i for i, l in label_of.items() if l in opened}
+
+    def _shown(i: int) -> bool:
+        if i not in pid:
+            return True
+        n = 0
+        while i in pid and n < 10:  # 위쪽 장비 중 하나라도 펼쳤으면 그 아래 전부 보임
+            i, n = pid[i], n + 1
+            if i in open_ids:
+                return True
+        return False
     q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호")
     mask = pd.Series(True, index=view.index)
-    depth = list(eq["depth"]) + [0] * (len(view) - n_dev)
     if q:
         hay = view[["장비명(한글)", "ITUBE번호", "관리자", "자산번호", "주장비(종)", "모델명"]].fillna("").astype(str).agg(" ".join, axis=1)
         mask &= hay.str.contains(q, case=False, regex=False)
     elif not sub:
-        mask &= pd.Series([d == 0 for d in depth], index=view.index)
+        mask &= pd.Series([_shown(int(i)) for i in eq["id"]] + [True] * (len(view) - n_dev), index=view.index)
     if center:
         cen = db.equip_centers(eq)
         mask &= pd.to_numeric(view["id"], errors="coerce").map(cen).eq(center) & ~is_x
