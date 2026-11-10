@@ -59,8 +59,10 @@ CSS = """<style>
   color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
   line-height: 1;}
 .cb-ch[open] summary i {background: var(--accent); color: #fff;}
-.cb-ch ul {list-style: none; margin: 4px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, auto)); gap: 2px 14px;}
-.cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #1E8E5A;}
+.cb-ch ul {list-style: none; margin: 4px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(4, max-content); gap: 2px 14px;}
+.cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #1E8E5A; white-space: nowrap;}
+.cb-t td.u {white-space: normal; vertical-align: top; padding-top: 8px; line-height: 1.35; min-width: 150px; max-width: 220px; word-break: keep-all;}
+.cb-t td.u small {display: block; font-size: .68rem; font-weight: 500; color: #94A3B8;}
 .cb-ch li b {color: var(--muted); font-weight: 600; min-width: 38px;}
 .cb-ch li.on {color: #E35D78; font-weight: 700;}
 .cb-t td:has(details[open]) {white-space: normal; vertical-align: top; padding-top: 6px;}
@@ -94,6 +96,17 @@ def _edit(b: dict) -> None:
     st.session_state.cal_month = d.replace(day=1)
     st.session_state.cal_pick = {"day": d, "id": int(b["log_ids"][0]), "rec": {}, "period": True,
                                  "label": b["company"]}
+
+
+def _short(name: str) -> str:
+    """'배터리 완제품 활성화 장비(5V, 50A, 192ch)+챔버12대(…)' → '배터리 완제품 활성화 장비' (전체 이름은 마우스를 올리면)."""
+    n = str(name).split("+")[0]
+    return (n.split("(")[0].strip() or n.strip()) if n else str(name)
+
+
+def _spec(name: str) -> str:
+    n = str(name).split("+")[0]
+    return n[n.find("(") + 1:n.find(")")] if "(" in n and ")" in n else ""
 
 
 def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool, lane: int = 0) -> str:
@@ -186,11 +199,22 @@ def render() -> None:
         now_line = f"<div class='cb-now' style='left:{pos(today):.2f}%'></div>"
         mh = "".join(f"<span style='left:{pos(x):.2f}%'>{x.month}월</span>" for x in months)
         rows, prev_u, prev_c = [], None, None
+        recs = g.to_dict("records")
+        span_u = {}  # 같은 충방전기 줄 수 (장비 칸 셀 병합)
+        start = 0
+        for i, r in enumerate(recs):
+            if i and r["unit"] != recs[i - 1]["unit"]:
+                start = i
+            span_u[start] = i - start + 1
+        shorts = {u: _short(u) for u in dict.fromkeys(x["unit"] for x in recs)}
+        dup = {v for v in shorts.values() if list(shorts.values()).count(v) > 1}
         all_bk = {cid: b for cid, b in bk.groupby("chamber_id")} if not bk.empty else {}
-        for r in g.to_dict("records"):
+        for ri, r in enumerate(recs):
             b = r["now"] or r["next"]
             new_u = r["unit"] != prev_u
-            u = html.escape(r["unit"]) if new_u else ""
+            nm, spec = shorts[r["unit"]], _spec(r["unit"])
+            u_td = (f"<td class='u' rowspan='{span_u.get(ri, 1)}' title='{html.escape(r['unit'])}'>{html.escape(nm)}"
+                    + (f"<small>{html.escape(spec)}</small>" if spec and nm in dup else "") + "</td>") if new_u else ""
             c = html.escape(r["cycler"]) if (new_u or r["cycler"] != prev_c) else ""
             prev_u, prev_c = r["unit"], r["cycler"]
             bars, lanes = "", []  # 기간이 겹치는 예약(채널 일부씩)은 줄을 나눠 그림
@@ -208,7 +232,7 @@ def render() -> None:
             mini = (f"<span class='cb-mini' title='오늘 {r['used']}/{n_all}ch 사용'><i style='width:{r['used'] / n_all * 100:.0f}%'></i></span>"
                     f"<span class='cb-n'>{r['used']}/{n_all}</span>") if r["used"] and n_all and r["used"] < n_all else ""
             when = chargers.span_text(b["start"], b["end"], today) + ("" if r["now"] else " 예약") if b else ""
-            rows.append(f"<tr class='{'grp' if new_u and rows else ''}'><td class='u'>{u}</td><td class='c'>{c}</td>"
+            rows.append(f"<tr class='{'grp' if new_u and rows else ''}'>{u_td}<td class='c'>{c}</td>"
                         f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{_ch_list(r, mini)}</td>{who}"
                         f"<td class='m'>{html.escape(when)}</td>"
                         f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
