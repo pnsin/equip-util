@@ -28,9 +28,10 @@ CSS = """<style>
 .cb-k span {font-size: .76rem; color: var(--muted);}
 .cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); padding: 6px 0 8px; overflow-x: auto;}
 .cb-t {border-collapse: collapse; width: 100%; font-size: .8rem; min-width: 860px;}
-.cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: left; padding: 8px 8px; border-bottom: 1px solid #26334D;
+.cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #26334D;
   white-space: nowrap;}
 .cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #26334D; white-space: nowrap;}
+.cb-t td {text-align: center;} .cb-t td.u small {text-align: center;} .cb-t td.tl {text-align: left;}
 .cb-t td.u {font-weight: 700; color: var(--ink);}
 .cb-t td.c {color: var(--muted);}
 .cb-t td.m {color: #94A3B8;}
@@ -66,7 +67,7 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-ch[open] summary i {background: var(--accent); color: #fff;}
 .cb-ch ul {list-style: none; margin: 4px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(4, max-content); gap: 2px 14px;}
 .cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #1E8E5A; white-space: nowrap;}
-.cb-t td.u {white-space: normal; vertical-align: top; padding-top: 8px; line-height: 1.35; min-width: 150px; max-width: 220px; word-break: keep-all;}
+.cb-t td.u {white-space: nowrap; vertical-align: middle; padding: 0 12px; line-height: 1.35;}
 .cb-t td.u small {display: block; font-size: .68rem; font-weight: 500; color: #94A3B8;}
 .cb-ch li b {color: var(--muted); font-weight: 600; min-width: 38px;}
 .cb-ch li.on {color: #E35D78; font-weight: 700;}
