@@ -162,8 +162,12 @@ div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button[aria-checked="
   width: 320px !important; min-width: 320px !important; max-width: none !important; z-index: 60; pointer-events: none; opacity: 0; visibility: hidden;
   transform: translateY(4px); transition: opacity .15s ease .35s, transform .15s ease .35s, visibility 0s linear .5s;}
 .st-key-calgrid div[class*="st-key-cardr_"] {left: auto; right: -2px;}
-.st-key-calgrid div[class*="st-key-cell_"]:hover div[class*="st-key-card"] {opacity: 1; visibility: visible;
+.st-key-calgrid div[class*="st-key-sec_"]:hover div[class*="st-key-card"] {opacity: 1; visibility: visible;
   transform: none; transition-delay: .35s, .35s, 0s;}
+.st-key-calgrid div[class*="st-key-sec_"]:hover {z-index: 50;}
+/* 위쪽 두 줄은 카드를 아래로 펼침 (위로 펼치면 화면 밖으로 잘림) */
+.st-key-calgrid div[class*="st-key-cardv_"], .st-key-calgrid div[class*="st-key-cardrv_"] {top: calc(100% + 8px); bottom: auto; transform: translateY(-4px);}
+div[class*="st-key-cardv_"] .cal-card::after, div[class*="st-key-cardrv_"] .cal-card::after {bottom: auto; top: -7px;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {z-index: 40;}
 .cal-card {background: #334155; border: 1px solid #3A4866; border-radius: 14px;
   box-shadow: 0 14px 32px rgba(15, 30, 60, .32); padding: 13px 15px; color: rgba(85,139,230,0.16);}
@@ -413,8 +417,12 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 .st-key-calgrid div[class*="st-key-sec_edu_"] {--sec-bg: rgba(230,176,85,0.16); --sec-fg: #FFC266; --chip-fg: #FFC266;}
 .st-key-calgrid div[class*="st-key-sec_sup_"] {--sec-bg: rgba(85,177,230,0.16); --sec-fg: #6CC4FF; --chip-fg: #6CC4FF;}
 /* 줄 이름(시험·제조·분석)을 누르면 그 구분 장비로 새 실적 — 이름 위에 투명 버튼 */
-.st-key-calgrid div[class*="st-key-lane_"] {position: absolute !important; top: 0; left: 0; right: 0; height: 19px;
+/* 2026-11-10 구역 빈 곳 어디를 눌러도 그 구분으로 (실적 줄은 그 위에 있어 따로 눌림) */
+.st-key-calgrid div[class*="st-key-lane_"] {position: absolute !important; top: 0; left: 0; right: 0; bottom: 0; height: auto; width: auto !important;
   z-index: 2; pointer-events: auto; margin: 0 !important;}
+.st-key-calgrid div[class*="st-key-lane_"] div, .st-key-calgrid div[class*="st-key-lane_"] span.stTooltipIcon, .st-key-calgrid div[class*="st-key-lane_"] span.stTooltipHoverTarget, .st-key-calgrid div[class*="st-key-lane_"] button {height: 100% !important; width: 100% !important;}
+.st-key-calgrid div[class*="st-key-sec_"] div[class*="st-key-er_"],
+.st-key-calgrid div[class*="st-key-sec_"] div[class*="st-key-more_"] {position: relative; z-index: 3;}
 .st-key-calgrid div[class*="st-key-lane_"] button {width: 100%; height: 100%; min-height: 0 !important; padding: 0 !important;
   opacity: 0; cursor: pointer;}
 .st-key-calgrid div[class*="st-key-sec_"]:has(div[class*="st-key-lane_"]:hover) .cal-sec-h {
@@ -687,9 +695,11 @@ def _cat_of(use: str) -> str:
 
 
 def _card_html(d: dt.date, entries: list[dict]) -> str:
-    """날짜 칸 위에 뜨는 카드 (그날 실적 전체를 큰 글씨로)."""
+    """구역(시험·충방전·제조·분석)에 마우스를 올리면 뜨는 카드: 그 구역 실적만 (2026-11-10)."""
     e_ = html.escape
     total = sum(x["hours"] for x in entries)
+    chs = sum(x.get("ch_n", 0) for x in entries)
+    amount = f"{chs}ch" if entries and all(x.get("ch_n") for x in entries) else _hours(total)
     rows = []
     for x in entries:
         cells = [("업체", x["company"]), ("채널", f"{x['ch_txt']} ({x['ch_n']}ch)") if x.get("ch_n") else ("시간", _hours(x["hours"]))]
@@ -703,7 +713,7 @@ def _card_html(d: dt.date, entries: list[dict]) -> str:
         rows.append(f"<div class='cc-e' style='border-left-color:{fg}'><div class='cc-n'>{tag}{e_(x['equip'])}</div>"
                     f"<div class='cc-r'>{grid}</div></div>")
     return (f"<div class='cal-card'><div class='cc-h'><span class='cc-d'>{d.month}월 {d.day}일 "
-            f"({WEEKDAYS[d.weekday()]})</span><span class='cc-sum'>{len(entries)}건 · {_hours(total)}</span></div>"
+            f"({WEEKDAYS[d.weekday()]})</span><span class='cc-sum'>{len(entries)}건 · {amount}</span></div>"
             + "".join(rows) + "</div>")
 
 
@@ -1180,7 +1190,7 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
         sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{GROUP_LABEL.get(c, c)}<b>{hours}</b></div>",
                      unsafe_allow_html=True)
         # 줄 이름 위에 투명 버튼: 누르면 이 구분 장비만 보이는 새 실적 입력
-        sec.button(GROUP_LABEL.get(c, c), key=f"lane_{CAT_KEY[c]}_{d}", type="tertiary", help=f"{GROUP_LABEL.get(c, c)} 실적 추가",
+        sec.button(GROUP_LABEL.get(c, c), key=f"lane_{CAT_KEY[c]}_{d}", type="tertiary", 
                    on_click=_click_lane, args=(d, c))
         for e in ents[:CELL_LINES]:
             short = e["equip"]  # 세부장비 이름 그대로 (양극·음극 구분이 보이게, 길면 … 처리)
@@ -1202,15 +1212,18 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
                            on_click=_click_x, args=(d, e))
         if len(ents) > CELL_LINES:
             sec.container(key=f"more_{d}_{CAT_KEY[c]}").markdown(f"+{len(ents) - CELL_LINES}")
-    if entries:
-        side = "r" if d.weekday() >= 4 else ""  # 오른쪽 칸은 카드를 왼쪽으로 펼침
-        cell.container(key=f"card{side}_{d}").markdown(_card_html(d, entries), unsafe_allow_html=True)
+        if ents:  # 이 구역에 마우스를 올리면 이 구역 실적만 카드로
+            side = "r" if d.weekday() >= 4 else ""  # 오른쪽 칸은 카드를 왼쪽으로 펼침
+            m0 = st.session_state.get("cal_month", d.replace(day=1))
+            row = (d - (m0 - dt.timedelta(days=m0.weekday()))).days // 7
+            down = "v" if row < 2 else ""  # 위쪽 두 줄은 아래로 펼침
+            sec.container(key=f"card{side}{down}_{CAT_KEY[c]}_{d}").markdown(_card_html(d, ents), unsafe_allow_html=True)
 
 
 def render(header: bool = True) -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     if header:
-        page_header("달력 입력", "실적")
+        page_header("시험 일정", "실적")
     st.session_state.pop("cal_saved", None)  # 저장·삭제 알림은 띄우지 않음 (달력 칸에 바로 보임)
 
     cfg = db.get_settings()
