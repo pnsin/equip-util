@@ -53,9 +53,9 @@ CSS = """<style>
 .dst.big .dch {background: rgba(255,255,255,.14); color: #F8FAFC;}
 .dst.big .dch.g {color: #9FE3C1;} .dst.big .dch.r {color: rgba(230,85,85,0.3);}
 .dlead {border-radius: 12px; padding: 11px 16px; font-size: 14px; line-height: 1.6; color: #F8FAFC; margin-top: 12px;}
-.dct {font-size: 15px !important; font-weight: 800; color: #F1F5F9 !important; margin: 16px 0 -4px; padding-left: 9px;
+.dct {font-size: 15px !important; font-weight: 800; color: #F1F5F9 !important; margin: 22px 0 12px; padding-left: 9px;
   border-left: 3px solid #6366F1; line-height: 1.2; letter-spacing: -.01em;}
-.dq {display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px; margin: -10px 8px 4px;}
+.dq {display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px; margin: -10px 8px 14px;}
 .dq div {border-top: 1.5px solid #64748B; text-align: center; font-size: 12px; color: #94A3B8; padding-top: 6px;}
 .dq b {color: #F8FAFC; margin-left: 4px;}
 .dbox {border: 1px solid #26334D; border-radius: 16px; padding: 14px 18px; height: 100%;}
@@ -301,7 +301,7 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
             unsafe_allow_html=True)
 
         # 센터별 주장비 (올해 누적, 산정 대상 장비 = 세부장비 시간 합산)
-        st.markdown('<div class="dct" style="margin-bottom:2px">센터별 주장비 · 올해 누적</div>', unsafe_allow_html=True)
+        st.markdown('<div class="dct" style="margin:26px 0 12px">센터별 주장비 · 올해 누적</div>', unsafe_allow_html=True)
         k = year_sum[year_sum["KPI"]].copy() if not year_sum.empty else year_sum
         if k.empty:
             st.markdown('<div class="dnone">산정 대상 장비가 없어요</div>', unsafe_allow_html=True)
