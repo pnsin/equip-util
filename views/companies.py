@@ -12,7 +12,7 @@ COLS = {
 
 
 def render() -> None:
-    page_header("업체 목록", "업체")
+    page_header("업체 목록", "기준 정보")
     msg = st.session_state.pop("company_saved", None)
     if msg:
         st.toast(msg, icon=":material/check_circle:")
