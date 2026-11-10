@@ -47,6 +47,25 @@ def to_xlsx(df: pd.DataFrame, heads: dict[str, str], sheet: str) -> bytes:
     return buf.getvalue()
 
 
+def add_sheet(data: bytes, name: str, df: pd.DataFrame) -> bytes:
+    """내려받는 엑셀 뒤에 참고용 시트를 붙임 (올릴 때는 첫 시트만 읽으므로 반영되지 않음)."""
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font
+
+    wb = load_workbook(io.BytesIO(data))
+    ws = wb.create_sheet(name)
+    ws.append(list(df.columns))
+    for r in df.itertuples(index=False):
+        ws.append([_cell(v) for v in r])
+    for c in ws[1]:
+        c.font = Font(bold=True)
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = min(40, max(8, max(len(str(c.value or "")) for c in col[:200]) * 1.6))
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
 def _norm(v) -> str:
     v = _cell(v)
     if isinstance(v, float) and v.is_integer():

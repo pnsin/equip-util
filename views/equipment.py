@@ -126,7 +126,8 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
         center = center_pick("equip_center")
         st.space("stretch")
         sub = st.toggle("세부장비도 보기", key="equip_subs")
-        excel_box("equip_xl", xl_eq, xl_heads, "장비", lambda m: _apply_excel(m, rates, extras_now))
+        excel_box("equip_xl", xl_eq, xl_heads, "장비", lambda m: _apply_excel(m, rates, extras_now),
+                  extra_sheet=("시험·기타 항목(참고용)", extras_now[["장비명(한글)"] + list(RATE.values()) + ["비고"]]))
     # 2026-11-10 주장비를 골라 그 아래 세부장비를 펼쳐 봄 (표 안에서 바로 펼치기는 Streamlit 표가 지원하지 않음)
     pid = {int(i): int(p) for i, p in zip(eq["id"], eq["parent_id"]) if pd.notna(p)}
     has_kids = set(pid.values())

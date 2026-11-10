@@ -170,11 +170,14 @@ def center_pick(key: str) -> str | None:
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
-def excel_box(key: str, df, heads: dict, sheet: str, apply) -> None:
+def excel_box(key: str, df, heads: dict, sheet: str, apply, extra_sheet: tuple | None = None) -> None:
     """엑셀로 내려받기 → 고쳐서 올리기. apply(합친 목록) 은 오류 목록을 돌려줌."""
     from core import sheet_io
     with st.popover("엑셀로 한번에 고치기", icon=":material/table_view:"):
-        st.download_button("1. 지금 목록 내려받기", sheet_io.to_xlsx(df, heads, sheet), mime=XLSX,
+        data = sheet_io.to_xlsx(df, heads, sheet)
+        if extra_sheet:  # 읽기용 참고 시트 (올려도 반영되지 않음)
+            data = sheet_io.add_sheet(data, *extra_sheet)
+        st.download_button("1. 지금 목록 내려받기", data, mime=XLSX,
                            file_name=f"{sheet}_목록_{dt.date.today():%y%m%d}.xlsx", icon=":material/download:",
                            key=f"{key}_dl", width="stretch")
         st.caption("맨 앞 ID는 고치지 마세요. 새 줄은 ID를 비워 두면 추가돼요. 파일에서 뺀 줄은 지워지지 않아요.")
