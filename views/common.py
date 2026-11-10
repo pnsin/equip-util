@@ -183,11 +183,16 @@ def excel_box(key: str, df, heads: dict, sheet: str, apply, extra_sheet: tuple |
         data = sheet_io.to_xlsx(df, heads, sheet)
         if extra_sheet:  # 읽기용 참고 시트 (올려도 반영되지 않음)
             data = sheet_io.add_sheet(data, *extra_sheet)
-        st.download_button("1. 지금 목록 내려받기", data, mime=XLSX,
-                           file_name=f"{sheet}_목록_{dt.date.today():%y%m%d}.xlsx", icon=":material/download:",
-                           key=f"{key}_dl", width="stretch")
-        st.caption("맨 앞 ID는 고치지 마세요. 새 줄은 ID를 비워 두면 추가돼요. 파일에서 뺀 줄은 지워지지 않아요.")
-        up = st.file_uploader("2. 고친 엑셀 올리기", type=["xlsx"], key=f"{key}_up")
+        st.caption("① 내려받아 엑셀에서 고치고 → ② 다시 올리면 한 번에 반영돼요. 맨 앞 ID는 그대로 두고, 새 줄은 ID를 비워 주세요. 파일에서 뺀 줄은 지워지지 않아요.")
+        c1, c2 = st.columns(2, gap="small")
+        with c1.container(border=True, height=150, horizontal_alignment="center"):
+            st.html("<div style='text-align:center;font-weight:700'>① 내려받기</div>")
+            st.download_button("엑셀 받기", data, mime=XLSX,
+                               file_name=f"{sheet}_목록_{dt.date.today():%y%m%d}.xlsx", icon=":material/download:",
+                               key=f"{key}_dl", width="stretch")
+        with c2.container(border=True, height=150, horizontal_alignment="center"):
+            st.html("<div style='text-align:center;font-weight:700'>② 올리기</div>")
+            up = st.file_uploader("고친 엑셀 올리기", type=["xlsx"], key=f"{key}_up", label_visibility="collapsed")
         if up is None:
             return
         try:

@@ -475,6 +475,10 @@ _CSS = """
 
 # 깔끔형(clean·clean-dark): 파스텔·그라데이션을 걷어 내고 바탕·선·글자만으로 정리
 _CLEAN_CSS = """<style>
+[data-testid="stFileUploaderDropzone"]{flex-direction:column;gap:6px;padding:10px;background:transparent;border:1px dashed var(--line,#64748B);border-radius:10px}
+[data-testid="stFileUploaderDropzoneInstructions"]{display:none}
+[data-testid="stFileUploaderDropzone"] button{width:100%}
+
   .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stAppViewContainer"] { background: var(--bg) !important; }
   [data-testid="stSidebar"] { background: var(--side) !important; border-right: 1px solid var(--side-line) !important; }
   [data-testid="stSidebar"] .nav-group { color: var(--side-dim) !important; border-top: 0 !important; letter-spacing: .04em; }
