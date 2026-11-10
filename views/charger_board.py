@@ -36,8 +36,9 @@ CSS = """<style>
 .cb-t td.c {color: var(--muted);}
 .cb-t td.m {color: #94A3B8;}
 .cb-dash {color: #94A3B8;}
-.cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink);} .cb-t td.pd {min-width: 150px;}
-.cb-t td.tl {position: relative; width: 34%; padding: 0;}
+.cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink);} .cb-t td.pd {width: 110px;}
+.cb-t td.co {max-width: 170px; width: 170px; overflow: hidden; text-overflow: ellipsis;}
+.cb-t td.tl {position: relative; width: 44%; padding: 0;}
 .cb-t tr.grp td {border-top: 1px solid #52617A;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
@@ -178,7 +179,7 @@ def _chan_rows(r: dict, bks: list[dict], w0, w1, today, grid: str, now_line: str
             bars = "<div class='cb-free'>비어 있음</div>"
         cur = next((b for b in mine if b["start"] <= today <= b["end"]), None)
         b = cur or next((b for b in mine if b["start"] > today), None)
-        who = f"<td class='co'>{html.escape(b['company'])}</td>" if b else "<td class='m'>—</td>"
+        who = f"<td class='co' title='{html.escape(b['company'])}'>{html.escape(b['company'])}</td>" if b else "<td class='m'>—</td>"
         when = chargers.span_text(b["start"], b["end"], today) + ("" if cur else " 예약") if b else ""
         h = 28 + 26 * max(len(lanes) - 1, 0)
         out.append(f"<tr class='chx g{cid}'><td></td><td></td><td class='n'>ch {n}</td>{who}"
@@ -286,7 +287,7 @@ def render() -> None:
                 bars = "<div class='cb-free'>비어 있음</div>"
             h = 31 + 26 * max(len(lanes) - 1, 0)
             cos = list(dict.fromkeys(x["company"] for x in r["nows"])) or ([b["company"]] if b else [])
-            who = (f"<td class='co'>{html.escape(cos[0])}" + (f" <span class='m'>외 {len(cos) - 1}</span>" if len(cos) > 1 else "")
+            who = (f"<td class='co' title='{html.escape(', '.join(cos))}'>{html.escape(cos[0])}" + (f" <span class='m'>외 {len(cos) - 1}</span>" if len(cos) > 1 else "")
                    + "</td>" if cos else "<td class='m'>—</td>")
             n_all = int(r["ch_count"]) or len(chargers.chamber_chs(r["channels"], 0))
             mini = (f"<span class='cb-mini' title='오늘 {r['used']}/{n_all}ch 사용'><i style='width:{r['used'] / n_all * 100:.0f}%'></i></span>"
