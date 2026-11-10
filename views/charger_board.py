@@ -24,7 +24,7 @@ CSS = """<style>
 .cb-k span {display: block; font-size: 1rem; font-weight: 700; color: var(--kc); margin-bottom: 2px;}
 .cb-k b {display: block; font-size: 1.45rem; color: var(--ink); line-height: 1.3;}
 .cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); padding: 6px 0 8px; overflow-x: auto;}
-.cb-t {border-collapse: collapse; width: max-content; min-width: 100%; font-size: .8rem;}
+.cb-t {border-collapse: collapse; width: max-content; margin: 0 auto; font-size: .8rem;}
 .cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #52617A;
   white-space: nowrap;}
 .cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #52617A; white-space: nowrap;}
@@ -38,17 +38,17 @@ CSS = """<style>
 .cb-t td.co {overflow: hidden; text-overflow: ellipsis;}
 /* 엑셀 틀 고정처럼: 왼쪽 6칸은 그대로, 오른쪽 타임라인만 옆으로 스크롤 (2026-11-10) */
 .cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: sticky; z-index: 3; background: var(--panel); box-sizing: border-box;}
-.cb-t .s0 {left: 0; width: 210px; min-width: 210px; max-width: 210px;}
-.cb-t .s1 {left: 210px; width: 72px; min-width: 72px; max-width: 72px;}
-.cb-t .s2 {left: 282px; width: 92px; min-width: 92px; max-width: 92px;}
-.cb-t .s3 {left: 374px; width: 150px; min-width: 150px; max-width: 150px;}
-.cb-t .s4 {left: 524px; width: 160px; min-width: 160px; max-width: 160px;}
-.cb-t .s5 {left: 684px; width: 110px; min-width: 110px; max-width: 110px; box-shadow: inset -1px 0 0 #64748B;}
-.cb-t td.s0[colspan] {width: 374px; max-width: 374px;} .cb-t td.s4[colspan] {width: 270px; max-width: 270px; box-shadow: inset -1px 0 0 #64748B;}
+.cb-t .s0 {left: 0; width: 330px; min-width: 330px; max-width: 330px;}
+.cb-t .s1 {left: 330px; width: 72px; min-width: 72px; max-width: 72px;}
+.cb-t .s2 {left: 402px; width: 92px; min-width: 92px; max-width: 92px;}
+.cb-t .s3 {left: 494px; width: 150px; min-width: 150px; max-width: 150px;}
+.cb-t .s4 {left: 644px; width: 160px; min-width: 160px; max-width: 160px;}
+.cb-t .s5 {left: 804px; width: 150px; min-width: 150px; max-width: 150px; box-shadow: inset -1px 0 0 #64748B;}
+.cb-t td.s0[colspan] {width: 494px; max-width: 494px;} .cb-t td.s4[colspan] {width: 310px; max-width: 310px; box-shadow: inset -1px 0 0 #64748B;}
 .cb-t th.tl {padding: 8px 0;}
 @media (max-width: 700px) {.cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: static;}}
 .cb-t td.tl {position: relative; padding: 0;}
-.cb-tl, .cb-mh {width: 100%; min-width: var(--tlw);}  /* 칸 전체를 달 수로 똑같이 나눔 */
+.cb-tl, .cb-mh {width: var(--tlw); min-width: var(--tlw);}  /* 달마다 같은 너비 */
 .cb-t tr.grp td {border-top: 1px solid #52617A;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
@@ -78,7 +78,7 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-ch[open] summary i {background: var(--accent); color: #fff;}
 .cb-ch ul {list-style: none; margin: 4px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(4, max-content); gap: 2px 14px;}
 .cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #1E8E5A; white-space: nowrap;}
-.cb-t td.u {white-space: normal; vertical-align: middle; padding: 0 12px; line-height: 1.35;}
+.cb-t td.u {white-space: nowrap; vertical-align: middle; padding: 0 12px; line-height: 1.35;}
 .cb-t td.u .sp {font: inherit; color: inherit;}
 .cb-ch li b {color: var(--muted); font-weight: 600; min-width: 38px;}
 .cb-ch li.on {color: #E35D78; font-weight: 700;}
@@ -257,7 +257,7 @@ def render() -> None:
             months.append(m)
             m = (m + dt.timedelta(days=32)).replace(day=1)
         span = (w1 - w0).days + 1
-        tlw = max(420, int(span / 30.4 * (120 if span <= 190 else 70)))  # 한 달 120px (6개월 넘으면 70px), 길면 옆으로 스크롤
+        tlw = int(span / 30.4 * 130)  # 한 달 약 130px
         pos = lambda d: (d - w0).days / span * 100  # noqa: E731
         grid = "".join(f"<div class='cb-g' style='left:{pos(x):.2f}%'></div>" for x in months[1:])
         now_line = f"<div class='cb-now' style='left:{pos(today):.2f}%'></div>" if w0 <= today <= w1 else ""
