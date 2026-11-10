@@ -162,11 +162,8 @@ def _box(col, title: str, body: str, right: str = "", right_color: str = "") -> 
 
 
 def _man(won: float) -> str:
-    """원 → '1억 2,350' / '1,840' (만원 단위, 단위 글자는 따로)."""
-    m = round(won / 10000)
-    if m >= 10000:
-        return f"{m // 10000}억 {m % 10000:,}" if m % 10000 else f"{m // 10000}억"
-    return f"{m:,}"
+    """원 → '1,234,000' (원 단위 전체, 단위 글자는 따로)."""
+    return f"{round(won):,}"
 
 
 def _pick(event):
@@ -336,10 +333,10 @@ def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, y
         m_fee, y_fee, py_fee = fees.get(cm, 0), sum(fees.values()), prev["supply"].sum() if not prev.empty else 0
         unpaid = cur["unpaid"].fillna(0) if not cur.empty else pd.Series(dtype=float)
         _stats([
-            (f"{cm}월", _man(m_fee), "만원", _delta((m_fee - pm_fee) / 10000, "만원", "지난달"), False),
-            (f"{year}년 누적", _man(y_fee), "만원",
+            (f"{cm}월", _man(m_fee), "원", _delta(m_fee - pm_fee, "원", "지난달"), False),
+            (f"{year}년 누적", _man(y_fee), "원",
              _delta((y_fee / py_fee - 1) * 100, "%", "작년") if py_fee else "", True),
-            ("미수금 · 올해", _man(unpaid.sum()), "만원",
+            ("미수금 · 올해", _man(unpaid.sum()), "원",
              _chip(f"{int((unpaid > 0).sum())}건 남았어요", "r") if unpaid.sum() > 0 else _chip("모두 받았어요", "g"), False),
         ])
         done = {m: v for m, v in fees.items() if m <= cm}
@@ -347,15 +344,15 @@ def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, y
             _lead("수수료 입력 › 재무팀 매출장에서 엑셀을 올리면 여기에 나와요.", TEAL)
         elif done and sum(done.values()) > 0:
             best = max(done, key=done.get)
-            _lead(f"올해 한 달 평균 <b>{_man(sum(done.values()) / cm)}만원</b>이 발행됐어요. "
-                  f"{best}월이 <b>{_man(done[best])}만원</b>으로 가장 많았어요.", TEAL)
+            _lead(f"올해 한 달 평균 <b>{_man(sum(done.values()) / cm)}원</b>이 발행됐어요. "
+                  f"{best}월이 <b>{_man(done[best])}원</b>으로 가장 많았어요.", TEAL)
         else:
             _lead("올해는 아직 발행된 수수료가 없어요.", TEAL)
 
-        st.markdown('<div class="dct">월별 수수료 (만원, 세금일자 · 공급가 기준)</div>', unsafe_allow_html=True)
-        vals = [fees.get(m, 0) / 10000 if m <= cm or m in fees else None for m in range(1, 13)]
+        st.markdown('<div class="dct">월별 수수료 (원, 세금일자 · 공급가 기준)</div>', unsafe_allow_html=True)
+        vals = [fees.get(m, 0) if m <= cm or m in fees else None for m in range(1, 13)]
         _bars(vals, months, cm - 1, TEAL, lambda v: f"{v:,.0f}", "dash_fee_m",
-              hover="%{x} 수수료 %{y:,.0f}만원<extra></extra>", custom=list(range(1, 13)))
+              hover="%{x} 수수료 %{y:,.0f}원<extra></extra>", custom=list(range(1, 13)))
 
         c1, c2 = st.columns(2)
         if cur.empty or cur["supply"].sum() <= 0:

@@ -142,7 +142,7 @@ def render() -> None:
     m[0].metric(w("가동률"), f"{util:.1f}%", f"{util - prev_util:+.1f}%p")
     m[1].metric("사용시간", f"{(row['사용시간'] if row is not None else 0):,.0f} h",
                 help=f"가용시간 {(row['가용시간'] if row is not None else 0):,.0f} h")
-    m[2].metric("수수료", f"{(row['사용료'] if row is not None else 0) / 10000:,.0f} 만원")
+    m[2].metric("수수료", f"{(row['사용료'] if row is not None else 0):,.0f} 원")
     m[3].metric("실적", f"{(row['건수'] if row is not None else 0):,} 건")
     past = logs[logs["start_date"] <= pd.Timestamp(cutoff)]
     last = past["end_date"].max() if not past.empty else None
