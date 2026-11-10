@@ -158,7 +158,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
         mask &= pd.Series([_shown(int(i)) for i in eq["id"]] + [True] * (len(view) - n_dev), index=view.index)
     if center:
         cen = db.equip_centers(eq)
-        mask &= in_center(pd.to_numeric(view["id"], errors="coerce").map(cen), center) & ~is_x
+        mask &= in_center(pd.to_numeric(view["id"], errors="coerce").map(cen), center) & (~is_x if center != "기타" else True)
 
     kinds = list(dict.fromkeys(seed.EQUIP_KINDS_ALL + [k for k in eq["kind"] if k] + [XK]))
     cats = list(dict.fromkeys(["단독장비", "시스템장비", "시스템시설", "단독장비(복수구매)"] + [c for c in eq["category"] if c]))
