@@ -129,7 +129,10 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool, lane: int = 0) -> str:
     left = (a - w0).days / span * 100
     width = max(((z - a).days + 1) / span * 100, 1.2)
     bg, fg = CATS.get(PURPOSE_CAT.get(b["purpose"], "시험"), CATS["시험"])
-    text = ""  # 2026-11-10 업체·기간은 옆 칸에 있으니 막대에는 글씨를 쓰지 않음 (마우스를 올리면 설명)
+    # 2026-11-10 막대 안에는 진행일/전체일만 (업체·기간은 옆 칸에)
+    total = (b["end"] - b["start"]).days + 1
+    done = min(max((dt.date.today() - b["start"]).days + 1, 0), total)
+    text = f"{done}/{total}"
     tip = f"{b['company']} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b["staff"] else "")
     return (f"<div class='cb-bar{' soon' if soon else ''}' title='{html.escape(tip)}' "
             f"style='left:{left:.2f}%;width:{width:.2f}%;top:{5 + lane * 26}px;--bg:{bg};--fg:{fg}'>{html.escape(text)}</div>")
