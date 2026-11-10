@@ -16,6 +16,7 @@ from ui_style import page_header
 from views.common import center_pick, excel_box, pick_done, pick_table, search_box
 
 KPI_COL = w("가동률 산정")
+XK = "시험·기타"  # 장비가 아닌 단가 항목의 장비구분
 TREE = "　"          # 구조 표시 칸 (읽기 전용)
 PARENT = "소속 장비"  # 상위 장비 (고르면 세부장비가 됨)
 NO_PARENT = "—"       # 소속 없음 (독립 장비)
@@ -75,7 +76,6 @@ def render() -> None:
     """기준 정보 › 장비 목록 (2026-11-10 수수료 단가는 따로 메뉴)."""
     eq, cfg = _page("장비 목록")
     _devices(eq, cfg)
-    _extras(db.load_rates(), eq)
 
 
 def render_prices() -> None:
@@ -102,6 +102,19 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     view[RATE["price_self"]] = pd.to_numeric([g(i, "price_self") for i in ids], errors="coerce")
     view["도입일"] = view["도입일"].dt.date
     view["불용일"] = view["불용일"].dt.date
+    # 2026-11-10: 장비가 아닌 시험·기타 항목(클린룸, 고온시험 등)도 같은 표에 (장비구분 = '시험·기타 항목', 단가 탭에만 저장)
+    view["_x"] = None
+    known = set(ids)
+    ex = rates[rates["equip_id"].isna() | ~rates["equip_id"].fillna(-1).astype(int).isin(known)]
+    n_dev = len(view)
+    if not ex.empty:
+        view = pd.concat([view, pd.DataFrame({
+            "_x": ex["id"].values, "장비명(한글)": ex["name"].fillna("").values, "장비구분": XK, PARENT: NO_PARENT,
+            RATE["spec"]: ex["spec"].fillna("").values, RATE["unit"]: ex["unit"].fillna("hr").replace("", "hr").values,
+            RATE["price_req"]: pd.to_numeric(ex["price_req"], errors="coerce").values,
+            RATE["price_self"]: pd.to_numeric(ex["price_self"], errors="coerce").values,
+            "비고": ex["note"].fillna("").values})], ignore_index=True)
+    is_x = pd.Series([i >= n_dev for i in range(len(view))], index=view.index)
 
     xl_heads = {"parent_id": "소속 장비 ID"} | {k: v for k, v in COLS.items()
                                                if k not in ("id", "retired_on", "in_kpi")}
@@ -112,16 +125,17 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
         excel_box("equip_xl", eq, xl_heads, "장비", lambda m: list(db.save_equipment(m)))
     q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호")
     mask = pd.Series(True, index=view.index)
+    depth = list(eq["depth"]) + [0] * (len(view) - n_dev)
     if q:
-        hay = view[["장비명(한글)", "ITUBE번호", "관리자", "자산번호", "주장비(종)", "모델명"]].astype(str).agg(" ".join, axis=1)
+        hay = view[["장비명(한글)", "ITUBE번호", "관리자", "자산번호", "주장비(종)", "모델명"]].fillna("").astype(str).agg(" ".join, axis=1)
         mask &= hay.str.contains(q, case=False, regex=False)
     elif not sub:
-        mask &= eq["depth"].reset_index(drop=True).eq(0)
+        mask &= pd.Series([d == 0 for d in depth], index=view.index)
     if center:
         cen = db.equip_centers(eq)
-        mask &= pd.to_numeric(view["id"], errors="coerce").map(cen).eq(center)
+        mask &= pd.to_numeric(view["id"], errors="coerce").map(cen).eq(center) & ~is_x
 
-    kinds = list(dict.fromkeys(seed.EQUIP_KINDS_ALL + [k for k in eq["kind"] if k]))
+    kinds = list(dict.fromkeys(seed.EQUIP_KINDS_ALL + [k for k in eq["kind"] if k] + [XK]))
     cats = list(dict.fromkeys(["단독장비", "시스템장비", "시스템시설", "단독장비(복수구매)"] + [c for c in eq["category"] if c]))
     uses = list(dict.fromkeys(list(seed.PURPOSES) + ["제조"] + [u for u in eq["use"] if u]))
     action, out, gone = pick_table(
@@ -161,14 +175,16 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
         })
     if action:
         id_of = {v: k for k, v in label_of.items()}
-        o = out.drop(columns=[TREE] + list(RATE.values())).rename(columns={v: k for k, v in COLS.items()})
+        xo = out["_x"].notna() | (out["장비구분"].eq(XK) & pd.to_numeric(out["id"], errors="coerce").isna())
+        extras, out = out[xo], out[~xo]
+        o = out.drop(columns=[TREE, "_x"] + list(RATE.values())).rename(columns={v: k for k, v in COLS.items()})
         o["parent_id"] = [id_of.get(p) if isinstance(p, str) and p and p != NO_PARENT else None for p in out[PARENT]]
         o = o.drop(columns=[PARENT])
         errors = db.save_equipment(o)
         for e in errors:
             st.warning(e)
         if not errors:
-            _save_rates_from(out, rates)
+            _save_rates_from(out, rates, extras)
             pick_done("equip_tbl")
             st.session_state.equip_saved = f"{len(gone)}대 삭제했어요." if gone else "저장했어요."
             st.rerun()
@@ -178,7 +194,7 @@ RATE_HEADS = {"equip_id": "장비ID", "name": "견적서 이름", "spec": "용�
               "price_self": "직접 단가", "note": "비고"}
 
 
-def _save_rates_from(out: pd.DataFrame, rates: pd.DataFrame) -> None:
+def _save_rates_from(out: pd.DataFrame, rates: pd.DataFrame, extras: pd.DataFrame) -> None:
     """장비 목록 표의 단가 칸을 단가 탭에 저장. 새 장비는 이름으로 id를 찾고, 지운 장비의 단가는 함께 지움."""
     eq = db.load_equipment(full=True)
     id_by_name = dict(zip(eq["name"], eq["id"].astype(int)))
@@ -196,29 +212,11 @@ def _save_rates_from(out: pd.DataFrame, rates: pd.DataFrame) -> None:
     seen = {r["equip_id"] for r in rows}
     rows += [r | {"_named": True} for r in rates.to_dict("records")
              if pd.notna(r["equip_id"]) and int(r["equip_id"]) in known and int(r["equip_id"]) not in seen]
-    rows += [r | {"equip_id": None} for r in rates.to_dict("records")
-             if pd.isna(r["equip_id"]) and quotes._s(r.get("name"))]
+    for r in extras.to_dict("records"):  # 시험·기타 항목
+        nm = quotes._s(r.get("장비명(한글)"))
+        if nm:
+            rid = db.to_num(r.get("_x"))
+            rows.append({"id": int(rid) if rid is not None else None, "equip_id": None, "name": nm,
+                         "spec": r.get(RATE["spec"]), "unit": r.get(RATE["unit"]), "price_req": r.get(RATE["price_req"]),
+                         "price_self": r.get(RATE["price_self"]), "note": r.get("비고")})
     db.save_rates(rows)
-
-
-def _extras(rates: pd.DataFrame, eq: pd.DataFrame) -> None:
-    """장비 목록에 없는 시험·기타 항목 (클린룸, 고온시험 등) 단가. 처음부터 펼쳐 둠 (2026-11-10)."""
-    known = set(eq["id"].astype(int))
-    ex = rates[rates["equip_id"].isna() | ~rates["equip_id"].fillna(-1).astype(int).isin(known)]
-    ex = ex[["id", "name", "spec", "unit", "price_req", "price_self", "note"]].reset_index(drop=True)
-    st.markdown(f"<div class='eq-h'>시험 · 기타 항목 단가 <span>{len(ex)}</span></div>", unsafe_allow_html=True)
-    action, out, gone = pick_table(
-        ex, "extra_tbl", name_col="name", add_label="항목 추가",
-        column_order=["name", "spec", "unit", "price_req", "note"],
-        column_config={
-            "name": st.column_config.TextColumn("항목", width=300, required=True),
-            "spec": st.column_config.TextColumn("용량", width="small"),
-            "unit": st.column_config.SelectboxColumn("단위", options=UNITS, default="hr", width="small"),
-            "price_req": st.column_config.NumberColumn("단가", format="localized", min_value=0, width="small"),
-            "note": st.column_config.TextColumn("비고", width="large")})
-    if action:
-        dev = [r | {"_named": True} for r in rates.to_dict("records") if pd.notna(r["equip_id"]) and int(r["equip_id"]) in known]
-        db.save_rates(dev + [r | {"equip_id": None} for r in out.to_dict("records") if quotes._s(r.get("name"))])
-        pick_done("extra_tbl")
-        st.session_state.equip_saved = f"{len(gone)}개 삭제했어요." if gone else "저장했어요."
-        st.rerun()

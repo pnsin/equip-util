@@ -78,7 +78,7 @@ def render_itube() -> None:
     m1, m2, m3 = st.columns(3)
     m1.metric("건수", f"{len(sel):,}")
     m2.metric("사용시간", f"{sel['hours'].sum():,.0f} h")
-    m3.metric("사용료", f"{sel['fee'].sum():,.0f} 원")
+    m3.metric("수수료", f"{sel['fee'].sum():,.0f} 원")
 
     if not no_code.empty:
         names = ", ".join(sorted(set(no_code["equip_name"])))
@@ -108,7 +108,7 @@ def render_itube() -> None:
                               "end_date", "hours", "fee"]].rename(columns={
                 "purpose": "사용목적", "usage_type": "활용유형", "company": "기업명", "equip_name": "장비명",
                 "equip_code": "장비번호", "start_date": "시작일", "end_date": "종료일", "hours": "사용시간",
-                "fee": "사용료"}), hide_index=True, width="stretch",
+                "fee": "수수료"}), hide_index=True, width="stretch",
                 column_config={"시작일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                "종료일": st.column_config.DateColumn(format="YYYY-MM-DD")})
     else:
@@ -131,7 +131,7 @@ def render_report() -> None:
         _, me, _ = calc.period_bounds("월", cur)
         t = calc.totals(calc.equipment_summary(daily, eq, max(cur, s), min(me, e_eff), annual))
         months.append({"월": f"{cur:%Y-%m}", "사용시간": t["used"], "가용시간": t["avail"],
-                       UTIL_PCT: t["util"], "사용료": t["fee"]})
+                       UTIL_PCT: t["util"], "수수료": t["fee"]})
         cur = me + dt.timedelta(days=1)
     monthly = pd.DataFrame(months)
     in_period = logs[(logs["start_date"] <= pd.Timestamp(e)) & (logs["end_date"] >= pd.Timestamp(s))]
@@ -142,14 +142,14 @@ def render_report() -> None:
     m1.metric(w("평균 가동률"), f"{tot['util']:.1f}%")
     m2.metric("사용시간", f"{tot['used']:,.0f} h")
     m3.metric("가용시간", f"{tot['avail']:,.0f} h")
-    m4.metric("사용료", f"{tot['fee']:,.0f} 원")
+    m4.metric("수수료", f"{tot['fee']:,.0f} 원")
     if e_eff < e:
         st.caption(f"{cutoff:%m/%d}까지 집계")
     st.dataframe(monthly, hide_index=True, width="stretch",
                  column_config={UTIL_PCT: st.column_config.NumberColumn(format="%.1f"),
                                 "사용시간": st.column_config.NumberColumn(format="%.1f"),
                                 "가용시간": st.column_config.NumberColumn(format="%.1f"),
-                                "사용료": st.column_config.NumberColumn(format="%d")})
+                                "수수료": st.column_config.NumberColumn(format="%d")})
     data = itube.make_report(label, summary, tot, monthly, by_purpose, by_type, in_period, target, annual)
     st.download_button(w("가동률 분석 보고서 내려받기"), data=data, mime=XLSX, type="primary", icon=":material/download:",
                        file_name=w(f"장비가동률_분석_{label.replace(' ', '')}.xlsx"), width="stretch")

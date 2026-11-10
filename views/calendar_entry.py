@@ -43,9 +43,9 @@ CSS = """<style>
 /* 화면 폭을 넓게 쓰고, 넓은 화면에서는 달력 오른쪽에 입력 카드 */
 /* 좁은 화면: 입력 카드는 오른쪽에 떠 있는 서랍처럼 */
 @media (max-width: 1500px) {
-  .st-key-calwrap > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:not(:has(.st-key-ep_panel)) {
+  .st-key-calwrap [data-testid="stColumn"]:not(:has(.st-key-ep_panel)):not(.st-key-calgrid [data-testid="stColumn"]):not(.st-key-ep_panel [data-testid="stColumn"]) {
     width: 100% !important; flex: 1 1 100% !important;}
-  .st-key-calwrap > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(.st-key-ep_panel) {
+  .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) {
     position: fixed !important; right: 16px; top: 4.2rem; width: 380px !important; flex: none !important; z-index: 900;}
   .st-key-ep_panel {box-shadow: 0 18px 48px rgba(15, 30, 60, .25) !important;}
 }
@@ -170,6 +170,8 @@ div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 .cal-card .cc-n {font-size: .95rem; font-weight: 700; line-height: 1.35; margin-bottom: 4px; word-break: keep-all; color: #fff;}
 .cal-card .cc-r {display: grid; grid-template-columns: 3.2em 1fr; gap: 2px 8px; font-size: .88rem; line-height: 1.5;}
 .cal-card .cc-r span:nth-child(odd) {color: #94A3B8;}
+.cal-card .cc-r span:nth-child(even) {color: #F1F5F9 !important;}
+.cal-card .cc-sum {color: #A5B4FC !important;}
 .cal-card .cc-h2 {font-weight: 700;}
 .cal-card .cc-tag {display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 7px; border-radius: 999px;
   margin-right: 6px; vertical-align: 1px;}
@@ -346,7 +348,7 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
   padding: 16px !important; border-radius: 22px !important; gap: .5rem !important;
   box-shadow: 0 1px 2px rgba(30, 50, 90, .04), 0 10px 30px rgba(30, 50, 90, .06) !important;}
 @media (max-width: 1500px) {
-  .st-key-calwrap [data-testid="stColumn"]:not(:has(.st-key-ep_panel)) {width: 100% !important; flex: 1 1 100% !important;}
+  .st-key-calwrap [data-testid="stColumn"]:not(:has(.st-key-ep_panel)):not(.st-key-calgrid [data-testid="stColumn"]):not(.st-key-ep_panel [data-testid="stColumn"]) {width: 100% !important; flex: 1 1 100% !important;}
   .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) {position: fixed !important; right: 16px; top: 4rem;
     width: 360px !important; flex: none !important; z-index: 900;}
   .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) > [data-testid="stVerticalBlock"] {height: auto;}
