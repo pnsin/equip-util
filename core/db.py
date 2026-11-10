@@ -1329,6 +1329,7 @@ def save_companies(edited: pd.DataFrame) -> None:
             rec["id"] = next_id
             next_id += 1
         out.append(rec)
+    _rename_refs("companies", out, [("usage", "company"), ("cs", "company")], "업체 이름 바꿈")
     _save_master("companies", out)
     refresh_data()
 
@@ -1393,8 +1394,29 @@ def save_staff(edited: pd.DataFrame) -> None:
             rec["id"] = next_id
             next_id += 1
         out.append(rec)
+    _rename_refs("staff", out, [("equipment", "manager"), ("maint", "staff"), ("cs", "staff")], "담당자 이름 바꿈")
     _save_master("staff", out)
     refresh_data()
+
+
+def _rename_refs(t: str, out: list[dict], refs: list[tuple[str, str]], label: str) -> None:
+    """2026-11-10 이름을 바꾸면 그 이름을 쓰던 다른 기록도 같이 바꿈 (어디서나 같은 이름이 보이게)."""
+    store = get_store()
+    cur = store.read(t)
+    old = {str(i).strip(): to_str(n) for i, n in zip(cur["id"], cur["name"])}
+    ren = {old[str(r["id"])]: r["name"] for r in out if old.get(str(r["id"])) and old[str(r["id"])] != r["name"]}
+    if not ren:
+        return
+    one = lambda v: ren.get(str(v).strip(), v)
+    for tab, col in refs:
+        df = _raw(tab)
+        if df.empty or col not in df:
+            continue
+        new = df[col].map(lambda v: ", ".join(str(one(x.strip())) for x in str(v).split(",")) if "," in str(v) else one(v))
+        if (new != df[col]).any():
+            _step(("rewrite", tab, df.values.tolist()), label)
+            df[col] = new
+            store.rewrite(tab, df[cols(tab)].values.tolist())
 
 
 # ── 충방전기 챔버 구성 ────────────────────────────────────────
@@ -1413,6 +1435,14 @@ def load_channels() -> pd.DataFrame:
         df[c] = df[c].map(to_str)
     df["ch_count"] = df["ch_count"].fillna(0).astype("int64")
     df["order"] = df["order"].fillna(df["id"])
+    # 2026-11-10 장비명·건물은 장비 목록에서 (장비 목록을 고치면 여기도 바로 바뀜)
+    eq = load_equipment(full=True)
+    if not eq.empty and not df.empty:
+        name = dict(zip(eq["id"].astype(int), eq["name"]))
+        cen = equip_centers(eq)
+        eid = df["equip_id"].map(lambda v: int(v) if pd.notna(v) else None)
+        df["unit"] = [(name.get(e) or u) if e is not None else u for e, u in zip(eid, df["unit"])]
+        df["center"] = [(cen.get(e) or c) if e is not None else c for e, c in zip(eid, df["center"])]
     return df.sort_values(["order", "id"]).reset_index(drop=True)
 
 
@@ -1558,6 +1588,14 @@ def _usage_frame(df: pd.DataFrame) -> pd.DataFrame:
 @st.cache_data(ttl=600)
 def load_logs() -> pd.DataFrame:
     df = _usage_frame(_tab("usage")).drop(columns=["equip_ref"])
+    # 2026-11-10 사업자번호·업종·품목은 업체 목록 값을 씀 (업체 목록을 고치면 실적·i-Tube 파일도 같이 바뀜)
+    comp = load_companies()
+    if not comp.empty and not df.empty:
+        by = comp.drop_duplicates("name").set_index("name")
+        for c in ("brn", "industry", "item", "sub_item"):
+            m = df["company"].map(by[c]) if c in by else None
+            if m is not None:
+                df[c] = [v if isinstance(v, str) and v.strip() else o for v, o in zip(m, df[c])]
     fold = _fold_map(_equipment_frame_raw())
     if fold:  # 빠진 중간 장비에 바로 넣은 실적은 그 위 장비 실적으로
         df["equip_id"] = df["equip_id"].map(lambda v: fold.get(int(v), v) if pd.notna(v) else v)

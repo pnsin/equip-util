@@ -116,10 +116,10 @@ PAGES = {
         st.Page(cs_view.render, title="CS활동", url_path="cs"),
         st.Page(quote.render_new, title="견적서 작성", url_path="quote"),
         st.Page(quote.render_ledger, title="견적서 발급대장", url_path="quote-ledger"),
-        st.Page(companies.render, title="업체 목록", url_path="companies"),
     ],
     "기준 정보": [
         st.Page(equipment.render, title="장비 목록", url_path="equipment"),
+        st.Page(companies.render, title="업체 목록", url_path="companies"),
         st.Page(staff.render, title="담당자", url_path="staff"),
     ],
     "관리": [

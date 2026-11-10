@@ -89,7 +89,7 @@ def rate_table(eq: pd.DataFrame, rates: pd.DataFrame, chargers: set | None = Non
         rows.append({
             "id": _n(r.get("id")), "equip_id": int(d["id"]), "group": _s(d.get("group")),
             "equip": _s(d.get("short")) or _s(d.get("name")),
-            "name": _s(r.get("name")) or _s(d.get("name")), "spec": _s(r.get("spec")),
+            "name": _s(d.get("name")), "spec": _s(r.get("spec")),  # 2026-11-10 이름은 장비 목록 그대로 (한 곳에서만)
             "unit": _s(r.get("unit")) or ("ch" if int(d["id"]) in (chargers or ()) else "hr"),
             "price_req": _n(r.get("price_req")), "price_self": _n(r.get("price_self")), "note": _s(r.get("note")),
             "_named": bool(_s(r.get("name"))) and _s(r.get("name")) != _s(d.get("name")),

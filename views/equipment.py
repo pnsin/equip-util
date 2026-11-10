@@ -31,7 +31,7 @@ COLS = {
 BASIC = ["장비명(한글)", "대분류", "주장비(종)", PARENT, "ITUBE번호", "장비구분", "대수", "관리자", "장비위치",
          "장비용도"]
 # 2026-11-05 장비 단가를 장비 목록에 합침: '단가' 를 켜면 이 열들이 보이고, 저장하면 단가 탭에 같이 저장
-RATE = {"name": "견적서 이름", "spec": "견적 용량", "unit": "단위", "price_req": "의뢰 단가", "price_self": "직접 단가"}
+RATE = {"spec": "견적 용량", "unit": "단위", "price_req": "의뢰 단가", "price_self": "직접 단가"}
 
 CSS = """<style>
 .eq-sum {display:flex; flex-wrap:wrap; gap:.5rem; margin:-.2rem 0 1rem;}
@@ -96,7 +96,6 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     ids = eq["id"].astype(int).tolist()
     g = lambda i, c: rate_of.get(i, {}).get(c)
     # 2026-11-10: 수수료 단가도 장비 목록 표 안에 (메뉴 하나로)
-    view[RATE["name"]] = [(lambda n, nm: "" if n == nm else n)(g(i, "name") or "", nm) for i, nm in zip(ids, eq["name"])]
     view[RATE["spec"]] = [g(i, "spec") or "" for i in ids]
     view[RATE["unit"]] = [g(i, "unit") or ("ch" if i in chg else "hr") for i in ids]
     view[RATE["price_req"]] = pd.to_numeric([g(i, "price_req") for i in ids], errors="coerce")
@@ -152,7 +151,6 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
             "불용일": st.column_config.DateColumn(format="YYYY-MM-DD", help="쓰지 않게 된 날. 지우는 대신 넣으세요."),
             KPI_COL: st.column_config.CheckboxColumn(default=True),
             "비고": st.column_config.TextColumn(width="medium"),
-            RATE["name"]: st.column_config.TextColumn(width="medium", help="견적서에 찍히는 이름. 비우면 장비명."),
             RATE["spec"]: st.column_config.TextColumn(width="small"),
             RATE["unit"]: st.column_config.SelectboxColumn(options=UNITS, default="hr", width=64,
                                                          help="ch = 채널 1개 · 1시간 단가"),
@@ -192,8 +190,7 @@ def _save_rates_from(out: pd.DataFrame, rates: pd.DataFrame) -> None:
         if eid is None or int(eid) not in known:
             continue
         eid = int(eid)
-        nm = quotes._s(r.get(RATE["name"]))
-        rows.append({"id": (old.get(eid) or {}).get("id"), "equip_id": eid, "name": nm, "_named": bool(nm),
+        rows.append({"id": (old.get(eid) or {}).get("id"), "equip_id": eid, "name": "", "_named": True,
                      "spec": r.get(RATE["spec"]), "unit": r.get(RATE["unit"]), "price_req": r.get(RATE["price_req"]),
                      "price_self": r.get(RATE["price_self"]), "note": (old.get(eid) or {}).get("note", "")})
     seen = {r["equip_id"] for r in rows}
