@@ -445,6 +445,8 @@ div[class*="st-key-ep_mode_"] [data-testid="stButtonGroup"] button[aria-checked=
 .ep-sum span {font-size: .74rem; color: var(--muted);}
 /* 충방전기 챔버 고르기 */
 .ep-chlab {font-size: .875rem; color: var(--ink); margin: 8px 0 2px; line-height: 1.4;}
+.ep-busy {display: inline-block; margin-left: 8px; padding: 2px 10px; border-radius: 10px; font-weight: 700; font-size: .78rem;
+  background: rgba(230,85,114,0.16); color: #FFB3C1; border: 1px solid rgba(230,85,120,0.3);}
 div[class*="st-key-ep_cbox_"] {margin-top: 4px;}
 div[class*="st-key-ep_cbox_"] .ep-chlab {margin: 0; font-size: .8rem; color: var(--muted);}
 div[class*="st-key-ep_cbox_"] button {min-height: 0 !important; padding: 0 4px !important;}
@@ -1636,11 +1638,21 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                         st.session_state[pk] = [n for n in st.session_state[pk] if n in free or n == ALL_CH]
                     st.session_state[pk + "_prev"] = list(st.session_state[pk] or [])
                     n_on = len([n for n in st.session_state[pk] or [] if n != ALL_CH])
+                    # 이미 쓰는 업체를 챔버가 하나일 때도 보여 줌 (2026-11-10)
+                    cos = list(dict.fromkeys(c for c in used.get(i, {}).values() if c))
+                    tag = ""
+                    if cos:
+                        txt = (f"{len(chs) - len(free)}/{len(chs)}ch 사용 중 · " if free else "") + ", ".join(cos)
+                        tag = f"<span class='ep-busy'>{html.escape(txt)}</span>"
                     with st.container(key=f"ep_cbox_{k}_{i}", horizontal=True, gap="small", vertical_alignment="center"):
                         st.markdown(f"<div class='ep-chlab'>{html.escape(mine.set_index('id')['chamber'].get(i, '') or ch_name.get(i, ''))} 채널 "
-                                    f"<b>{n_on}</b>/{len(chs)}</div>", unsafe_allow_html=True)
+                                    f"<b>{n_on}</b>/{len(chs)} {tag}</div>", unsafe_allow_html=True)
                         st.space("stretch")
-                        st.button("비우기", key=f"ep_cnz_{k}_{i}", type="tertiary", on_click=_all_chs, args=(pk, free, False))
+                        if free:
+                            st.button("비우기", key=f"ep_cnz_{k}_{i}", type="tertiary", on_click=_all_chs, args=(pk, free, False))
+                    if not free:  # 남은 채널이 없으면 고를 칩도 없음
+                        picked[i] = []
+                        continue
                     picked[i] = [n for n in st.pills(f"채널 {i}", [ALL_CH] + free, selection_mode="multi", key=pk,
                                                      on_change=_ch_toggle, args=(pk, free),
                                                      label_visibility="collapsed") or [] if n != ALL_CH]
