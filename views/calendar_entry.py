@@ -1602,13 +1602,11 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 ch_name = {int(i): " · ".join(x for x in (c, f"ch {n}" if n else "") if x) or u
                            for i, c, u, n in zip(mine["id"], mine["chamber"], mine["unit"], mine["channels"])}
                 ch_cyc = dict(zip(mine["id"].astype(int), mine["cycler"]))
-                if len(ch_ids) == 1:  # 챔버가 하나면 고를 필요 없이 바로 채널 (2026-11-10)
-                    v_ch = ch_ids
-                else:
-                    st.markdown("<div class='ep-chlab'>챔버</div>", unsafe_allow_html=True)
-                    v_ch = None
-                v_ch = v_ch or st.pills("챔버", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",
-                                default=[i for i in db.chamber_ids(cur.get("chambers")) if i in ch_ids] if cur is not None else None,
+                # 챔버가 하나여도 여러 개인 충방전기와 똑같이 챔버 칩을 보여 줌 (쓰는 중이면 업체명) — 2026-11-10
+                st.markdown("<div class='ep-chlab'>챔버</div>", unsafe_allow_html=True)
+                one = ch_ids if len(ch_ids) == 1 and ch_ids[0] not in busy else None  # 하나뿐이고 비어 있으면 미리 골라 둠
+                v_ch = st.pills("챔버", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",
+                                default=[i for i in db.chamber_ids(cur.get("chambers")) if i in ch_ids] if cur is not None else one,
                                 format_func=lambda i: (ch_name.get(i) or f"#{i}") + (
                                     f" · {busy[i]}" if i in busy else f" · {part_busy[i]}" if i in part_busy else ""),
                                 label_visibility="collapsed",
