@@ -113,7 +113,8 @@ div[class*="st-key-ep_row_anal_"] button {--chip-fg: #A99BFF;}
 .st-key-ep_newcomp {margin-top: -.45rem;}
 .st-key-ep_newcomp button {min-height: 0; padding: 0; color: var(--accent);} .st-key-ep_newcomp button p {font-size: .76rem; font-weight: 700;}
 .st-key-ep_btns {margin-top: .5rem;}
-.st-key-ep_btns div[class*="st-key-ep_del"] {width: auto !important;}
+.st-key-ep_btns > div {flex: 1 1 0 !important;}
+.st-key-ep_asnew button {height: 46px; border-radius: 13px; font-weight: 800;}
 .st-key-ep_save button {height: 46px; border-radius: 13px; font-weight: 800; box-shadow: 0 4px 12px rgba(45, 143, 213, .3); border: none;}
 .st-key-ep_del button {height: 46px; border-radius: 13px; color: #E5484D; background: rgba(230,85,95,0.16); border: none; padding: 0 18px;}
 .st-key-ep_del button:hover {background: rgba(230,85,95,0.16); color: #D63A40;}
@@ -374,16 +375,9 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
 .st-key-ep_form [data-baseweb="select"] div, .st-key-ep_form input, .st-key-ep_form textarea {font-size: .82rem !important;}
 .st-key-ep_form [data-testid="stButtonGroup"] button {height: 28px !important; padding: 0 10px !important;}
 .st-key-ep_form [data-testid="stButtonGroup"] button p {font-size: .76rem !important; font-weight: 700 !important;}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(1) {--pc: #FF8DA1; --pb: rgba(230,85,114,0.16);}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(2) {--pc: #5EE0A8; --pb: rgba(85,230,158,0.16);}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(3) {--pc: #A99BFF; --pb: rgba(121,85,230,0.16);}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(4) {--pc: #FFC266; --pb: rgba(230,176,85,0.16);}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(5) {--pc: #6CC4FF; --pb: rgba(85,177,230,0.16);}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button {background: var(--pb, rgba(85,126,230,0.16)) !important;}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button p {color: var(--pc, #94A3B8) !important;}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: var(--pc, #2D8FD5) !important;}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
-div[class*="st-key-ep_type_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #334155 !important;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button, div[class*="st-key-ep_type_"] [data-testid="stButtonGroup"] button {background: transparent !important;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button[aria-checked="true"], div[class*="st-key-ep_type_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #6366F1 !important; border-color: #6366F1 !important;}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p, div[class*="st-key-ep_type_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 /* 숫자 칸 (−/＋) */
 div[class*="st-key-num_"] {gap: 0 !important;}
 div[class*="st-key-num_"] [data-testid="stMarkdownContainer"] {margin-bottom: 0 !important;}
@@ -396,7 +390,7 @@ div[class*="st-key-numr_"] [data-baseweb="input"] {background: transparent !impo
 div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding: 0 2px !important;}
 .st-key-ep_form [data-testid="stExpander"] details {border: none !important; background: transparent;}
 .st-key-ep_form [data-testid="stExpander"] summary {padding: 0 !important; font-size: .78rem; color: var(--accent); font-weight: 700;}
-.st-key-ep_save button, .st-key-ep_del button {height: 40px !important;}
+.st-key-ep_save button, .st-key-ep_del button, .st-key-ep_asnew button {height: 40px !important;}
 /* ===== v4: 구역형 달력 (시험/제조/분석 줄) + 시안 색 ===== */
 .st-key-calgrid div[class*="st-key-cell_"] {min-height: 168px !important; padding: 34px 6px 8px !important; gap: 4px !important;}
 .st-key-calgrid .cal-out {min-height: 168px !important;}
@@ -1436,9 +1430,6 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                         f"<em>{WEEKDAYS[day.weekday()]}요일</em></span>"
                         f"<span class='ep-n'>실적 {len(rows)}건 · {_hours(total)}</span></div>",
                         unsafe_allow_html=True, width="stretch")
-            if st.button("실적 추가", icon=":material/add:", key="ep_new", help="이 날짜에 실적을 하나 더 넣어요"):
-                _new_entry()
-                st.rerun()
             if st.button("", icon=":material/close:", key="ep_close", help="닫기"):
                 _close_panel()
                 st.rerun()
@@ -1476,6 +1467,21 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
 
         def ix(opts, v):
             return opts.index(v) if v in opts else None
+
+        # 2026-11-10 있는 실적을 열면 맨 위에서 신규 / 수정 / 삭제를 고르고 시작 (신규 = 열어 둔 실적은 그대로 두고 새로 넣음)
+        mode = None
+        if cur is not None:
+            with st.container(horizontal=True, gap="small", key="ep_modes", vertical_alignment="center"):
+                mode = st.segmented_control("할 일", ["신규", "수정"], key=f"ep_act_{k}", label_visibility="collapsed")
+                if st.button("삭제", icon=":material/delete:", key="ep_del"):
+                    if not series.empty:
+                        a_, b_ = per.series_span(series)
+                        st.session_state.cal_delask = {
+                            "kind": "ids", "ids": [int(i) for i in series["id"]],
+                            "text": f"{a_:%m/%d}~{b_:%m/%d} 기간 실적({_cut(short_of.get(cur['equip_id'], ''), 16)})을 삭제할까요?"}
+                    else:
+                        _ask_delete()
+                    st.rerun()
 
         form = st.container(key="ep_form")
         with form:
@@ -1632,20 +1638,15 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 v_ct = st.text_area("지원내용", content, height=80, placeholder="자세한 내용", key=f"ep_ct_{k}")
                 v_etc = st.text_input("기타", db.to_str(cur["etc"]) if cur is not None else "", key=f"ep_etc_{k}")
 
-            with st.container(horizontal=True, gap="small", key="ep_btns"):
-                save = st.button("저장" if cur is not None else "추가", icon=":material/check:", type="primary",
-                                 key="ep_save", width="stretch")
-                if cur is not None:
-                    if st.button("삭제", icon=":material/delete:", key="ep_del"):
-                        if is_series:
-                            a, b = per.series_span(series)
-                            st.session_state.cal_delask = {
-                                "kind": "ids", "ids": [int(i) for i in series["id"]],
-                                "text": f"{a:%m/%d}~{b:%m/%d} 기간 실적({_cut(v_eq or '', 16)})을 삭제할까요?"}
-                        else:
-                            _ask_delete()
-                        st.rerun()
-        if save:
+            pressed = st.button("저장", icon=":material/check:", type="primary", key="ep_save", width="stretch")
+        as_new = pressed and (cur is None or mode == "신규")
+        save = pressed and cur is not None and mode == "수정"
+        if pressed and cur is not None and mode is None:
+            st.error("위에서 '신규' 또는 '수정'을 먼저 고르세요.")
+        edit_was = cur is not None
+        if save or as_new:
+            if as_new and edit_was:  # 원래 실적은 건드리지 않음
+                cur, edit_id, is_series, series = None, None, False, logs.iloc[0:0]
             row = {"장비": v_eq, "업체": v_comp, "담당자": v_staff, "활용유형": v_type, "사용목적": v_purp,
                    "사용시간": v_h, "시료수": v_s, "사용료": v_f, "지원개요": v_ov, "지원내용": v_ct, "기타": v_etc}
             base = ({k_: cur.get(k_) for k_ in db.LOG_FIELDS if k_ in cur} if cur is not None else {})
@@ -1657,6 +1658,10 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             if not mine.empty and (not v_ch or any(not picked.get(i) for i in v_ch if all_chs.get(i))):
                 errors.append("채널을 고르세요.")
             clash = [f"{ch_name.get(i, i)}({busy[i]})" for i in v_ch if i in busy] if not mine.empty else []
+            if as_new and edit_was and not mine.empty and not clash:  # 열어 둔 실적의 채널도 겹치면 안 됨
+                used_all = _busy_chambers(logs, v_ps, v_pe, set(), chans)
+                clash = [f"{ch_name.get(i, i)}({next(iter(used_all[i].values()))})" for i in v_ch
+                         if i in used_all and set(picked.get(i) or all_chs.get(i) or []) & set(used_all[i])]
             if clash:
                 errors.append("그 기간에 이미 쓰는 채널이에요: " + ", ".join(clash))
             if not v_eq:
