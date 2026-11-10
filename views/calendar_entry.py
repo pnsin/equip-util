@@ -600,7 +600,18 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
         span = {k: (g["start_date"].min(), g["end_date"].max()) for k, g in sl.groupby("series")}
     chans = db.load_channels()
     ch_name = dict(zip(chans["id"].astype(int), chans["chamber"])) if not chans.empty else {}
-    chg = db.charger_ids(eq, chans)
+    ch_all = ({int(i): chg.chamber_chs(c, n) for i, c, n in zip(chans["id"], chans["channels"], chans["ch_count"])}
+              if not chans.empty else {})
+
+    def _used_ch(lg) -> tuple[int, str]:
+        """충방전기 실적이 쓰는 채널: (채널 수, '챔버 1~16, …')."""
+        tot, parts = 0, []
+        for cid in db.chamber_ids(lg.get("chambers")):
+            u = chg.used_of(chg.part_of(lg.get("ch_part"), cid), ch_all.get(cid, []))
+            tot += len(u)
+            parts.append(f"{ch_name.get(cid, '')} {chg.fmt(u).replace('-', '~')}".strip())
+        return tot, ", ".join(parts)
+    chg_ids = db.charger_ids(eq, chans)
     root_of = dict(zip(eq["id"].astype(int), eq["root_id"])) if "root_id" in eq else {}
     out: dict[dt.date, list[dict]] = {}
     for r in in_month.itertuples(index=False):
@@ -618,10 +629,11 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
                 f" · {ch_name[i]}" for i in db.chamber_ids(lg.get("chambers"))[:2] if i in ch_name)
                 + (" …" if len(db.chamber_ids(lg.get("chambers"))) > 2 else ""),
             "company": db.to_str(lg["company"]) or "내부",
-            "cat": _log_cat(lg["purpose"], int(r.equip_id) in chg),
+            "cat": _log_cat(lg["purpose"], int(r.equip_id) in chg_ids),
             "hours": float(r.hours), "staff": db.to_str(lg["created_by"]),
             "period": f"{a:%m/%d}~{b:%m/%d}" if multi else "",
-            "charger": int(r.equip_id) in chg, "equip_id": int(r.equip_id),
+            "charger": int(r.equip_id) in chg_ids, "equip_id": int(r.equip_id),
+            **(dict(zip(("ch_n", "ch_txt"), _used_ch(lg))) if int(r.equip_id) in chg_ids else {}),
             "root": int(root_of.get(int(r.equip_id), r.equip_id) or r.equip_id),
             "n_ch": max(len(db.chamber_ids(lg.get("chambers"))), 1),
         })
@@ -680,7 +692,7 @@ def _card_html(d: dt.date, entries: list[dict]) -> str:
     total = sum(x["hours"] for x in entries)
     rows = []
     for x in entries:
-        cells = [("업체", x["company"]), ("시간", _hours(x["hours"]))]
+        cells = [("업체", x["company"]), ("채널", f"{x['ch_txt']} ({x['ch_n']}ch)") if x.get("ch_n") else ("시간", _hours(x["hours"]))]
         if x["staff"]:
             cells.append(("담당", x["staff"]))
         if x["period"]:
@@ -699,7 +711,7 @@ def _entry_card(e: dict) -> str:
     """마우스를 올리면 뜨는 작은 카드: 장비명 굵게, 아래 줄에 업체·시간·담당자."""
     lines = [f"**{_md(e['equip'])}**",
              f":gray[업체]\u2003{_md(e['company'])}",
-             f":gray[시간]\u2003**{_hours(e['hours'])}**"
+             (f":gray[채널]\u2003**{_md(e['ch_txt'])} ({e['ch_n']}ch)**" if e.get("ch_n") else f":gray[시간]\u2003**{_hours(e['hours'])}**")
              + (f"\u2003\u2003:gray[담당]\u2003{_md(e['staff'])}" if e["staff"] else "")]
     if e["period"]:
         lines.append(f":gray[기간]\u2003{e['period']}")
@@ -1163,6 +1175,8 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
             min(db.CHARGER_DAY_MAX, sum(e["hours"] for e in chg if e["root"] == i)) for i in {e["root"] for e in chg})
         sec = cell.container(key=f"sec_{CAT_KEY[c]}_{d}")
         hours = _hours(sum(e["hours"] for e in ents if not e.get("charger")) + chg_h) if ents else ""
+        if ents and c == CHARGER_GROUP:  # 충방전 구역은 시간 대신 쓰는 채널 수
+            hours = f"{sum(e.get('ch_n', 0) for e in ents)}ch"
         sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{GROUP_LABEL.get(c, c)}<b>{hours}</b></div>",
                      unsafe_allow_html=True)
         # 줄 이름 위에 투명 버튼: 누르면 이 구분 장비만 보이는 새 실적 입력
@@ -1170,7 +1184,7 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
                    on_click=_click_lane, args=(d, c))
         for e in ents[:CELL_LINES]:
             short = e["equip"]  # 세부장비 이름 그대로 (양극·음극 구분이 보이게, 길면 … 처리)
-            label = f"{_md(short)}\n\n{_hours(e['hours'])}\n\n{_md(e['company'])}"
+            label = f"{_md(short)}\n\n{str(e['ch_n']) + 'ch' if e.get('ch_n') else _hours(e['hours'])}\n\n{_md(e['company'])}"
             if st.session_state.get("cal_xconfirm") == (d, e["id"]):
                 cf = sec.container(key=f"cf_{d}_{e['id']}")
                 cf.markdown(f"<div class='cal-cf-q'><b>{html.escape(_cut(short, 10))}</b> 삭제할까요?</div>",
