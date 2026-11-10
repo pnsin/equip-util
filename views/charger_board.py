@@ -131,8 +131,7 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool, lane: int = 0) -> str:
     left = (a - w0).days / span * 100
     width = max(((z - a).days + 1) / span * 100, 1.2)
     bg, fg = CATS.get(PURPOSE_CAT.get(b["purpose"], "시험"), CATS["시험"])
-    # 2026-11-10 업체명은 옆 칸에 있으니 막대에는 정확한 기간을
-    text = " · ".join(x for x in (f"{b['start']:%Y.%m.%d} ~ {b['end']:%Y.%m.%d}", b["ch_part"] and f"ch {b['ch_part']}") if x)
+    text = ""  # 2026-11-10 업체·기간은 옆 칸에 있으니 막대에는 글씨를 쓰지 않음 (마우스를 올리면 설명)
     tip = f"{b['company']} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b["staff"] else "")
     return (f"<div class='cb-bar{' soon' if soon else ''}' title='{html.escape(tip)}' "
             f"style='left:{left:.2f}%;width:{width:.2f}%;top:{5 + lane * 26}px;--bg:{bg};--fg:{fg}'>{html.escape(text)}</div>")
