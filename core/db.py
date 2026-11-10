@@ -1220,6 +1220,7 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
     current = _equipment_frame(store.read("equipment"))
     orig = {int(r["id"]): r for r in current.to_dict("records")}
     used_ids = set(pd.to_numeric(store.read("usage")["equip_id"], errors="coerce").dropna().astype(int))
+    used_ids |= set(pd.to_numeric(store.read("maint")["equip_id"], errors="coerce").dropna().astype(int))  # 유지보수 기록도
     errors: list[str] = []
     out, keep = [], set()
     next_id = (max(orig) if orig else 0) + 1
@@ -1248,9 +1249,44 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
         while p is not None and p not in alive:  # 지운 상위 장비 → 그 위 장비로
             p = old_parent.get(p)
         rec["parent_id"] = p if p != rec["id"] else None
-    _save_master("equipment", out)
+    with undo_group("장비 저장"):
+        _save_master("equipment", out)
+        _purge_equip_refs(set(orig) - alive)  # 지운 장비가 다른 탭에 남지 않게 (2026-11-10)
     clear_caches()
     return errors
+
+
+# 장비를 지우면 함께 지울 탭: (탭, 장비 번호가 든 열)
+_EQUIP_REF_TABS = (("channels", "equip_id"), ("equip_specs", "equip_id"), ("equip_docs", "equip_id"),
+                   ("equip_photos", "equip_id"), ("equip_history", "equip_id"), ("equip_notes", "id"))
+
+
+def _purge_equip_refs(gone: set[int]) -> None:
+    """지운 장비의 충방전기 구성·사양·자료·사진·히스토리·메모를 지우고, CS활동의 관련 장비에서 뺍니다 (되돌리기 가능)."""
+    if not gone:
+        return
+    store = get_store()
+    for tab, col in _EQUIP_REF_TABS:
+        try:
+            df = _raw(tab)
+        except Exception:  # 아직 만들어지지 않은 탭
+            continue
+        if df.empty or col not in df:
+            continue
+        hit = pd.to_numeric(df[col].astype(str).str.replace(",", ""), errors="coerce").isin(gone)
+        if hit.any():
+            _step(("rewrite", tab, df.values.tolist()), "장비 삭제에 따른 정리")
+            store.rewrite(tab, df[~hit][cols(tab)].values.tolist())
+    cs = _raw("cs")
+    if not cs.empty and "equip_ids" in cs:
+        def _drop(v):
+            ids = [x.strip() for x in str(v).split(",") if x.strip()]
+            return ", ".join(x for x in ids if pd.to_numeric(x, errors="coerce") not in gone)
+        new = cs["equip_ids"].map(_drop)
+        if (new != cs["equip_ids"].astype(str)).any():
+            _step(("rewrite", "cs", cs.values.tolist()), "장비 삭제에 따른 정리")
+            cs["equip_ids"] = new
+            store.rewrite("cs", cs[cols("cs")].values.tolist())
 
 
 # ── 업체 ────────────────────────────────────────────────────────
