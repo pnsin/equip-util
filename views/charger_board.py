@@ -36,8 +36,8 @@ CSS = """<style>
 .cb-t td.c {color: var(--muted);}
 .cb-t td.m {color: #94A3B8;}
 .cb-dash {color: #94A3B8;}
-.cb-t td.co {font-weight: 700; color: var(--ink);}
-.cb-t td.tl {position: relative; width: 48%; padding: 0;}
+.cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink);} .cb-t td.pd {min-width: 150px;}
+.cb-t td.tl {position: relative; width: 34%; padding: 0;}
 .cb-t tr.grp td {border-top: 1px solid #52617A;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
@@ -182,7 +182,7 @@ def _chan_rows(r: dict, bks: list[dict], w0, w1, today, grid: str, now_line: str
         when = chargers.span_text(b["start"], b["end"], today) + ("" if cur else " 예약") if b else ""
         h = 28 + 26 * max(len(lanes) - 1, 0)
         out.append(f"<tr class='chx g{cid}'><td></td><td></td><td class='n'>ch {n}</td>{who}"
-                   f"<td class='m'>{html.escape(when)}</td>"
+                   f"<td class='pd'>{html.escape(when)}</td>"
                    f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
     return "".join(out)
 
@@ -294,7 +294,7 @@ def render() -> None:
             when = chargers.span_text(b["start"], b["end"], today) + ("" if r["now"] else " 예약") if b else ""
             rows.append(f"<tr class='cbr {'grp' if new_u and rows else ''}'>{u_td}<td class='c'>{c}</td>"
                         f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{_ch_label(r, mini)}</td>{who}"
-                        f"<td class='m'>{html.escape(when)}</td>"
+                        f"<td class='pd'>{html.escape(when)}</td>"
                         f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
             rows.append(_chan_rows(r, list(all_bk.get(int(r["id"]), pd.DataFrame()).to_dict("records")), w0, w1, today,
                                    grid, now_line, tlw))
