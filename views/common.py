@@ -370,7 +370,7 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
         table, key=f"{key}_lock_{ver}", hide_index=True, width="stretch", column_order=order,
         disabled=[c for c in table.columns if c != PICK],
         height=height or min(640, 38 + 35 * (len(table) + 1)),
-        column_config={**_as_text(column_config), PICK: st.column_config.CheckboxColumn(PICK, width=52, default=False)})
+        column_config={**_as_text(column_config), PICK: st.column_config.CheckboxColumn(PICK, width=64, default=False)})
     sel = [int(i) for i in locked.index[locked[PICK].fillna(False).astype(bool)]]
     n_new = ss.get(f"{key}_new_{ver}", 0)
     action, out, gone = None, view, []
