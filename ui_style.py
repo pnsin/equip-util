@@ -531,6 +531,8 @@ _SLATE_CSS = """<style>
   .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] { background: #6366F1 !important; color: #fff !important; }
   .stButton button[kind="primary"] p, .stDownloadButton button[kind="primary"] p, .stFormSubmitButton button[kind="primary"] p { color: #fff !important; }
   .stButton button[kind="primary"]:hover { background: #4F46E5 !important; }
+  .stButton button[kind="primary"]:disabled, .stDownloadButton button[kind="primary"]:disabled { background: #334155 !important; border-color: #475569 !important; opacity: 1 !important; }
+  .stButton button[kind="primary"]:disabled p, .stButton button[kind="primary"]:disabled span { color: #CBD5E1 !important; }
   .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) { border-radius: 12px !important; }
   [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: #0F172A !important; border-color: #334155 !important; }
   [data-testid="stDataFrame"] { border: 1px solid #334155; border-radius: 12px; overflow: hidden; background: #1E293B; }

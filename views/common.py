@@ -332,6 +332,16 @@ def num_input(container, label: str, key: str, value: float, step: float = 1, lo
 PICK = "선택"
 
 
+def _as_text(cfg: dict) -> dict:
+    """잠긴 표에선 고르기 칸도 글자 칸으로 (고르기 칸은 가운데 정렬이 안 먹어서, 2026-11-10)."""
+    out = {}
+    for k, c in cfg.items():
+        if isinstance(c, dict) and (c.get("type_config") or {}).get("type") == "selectbox":
+            c = {**c, "type_config": {"type": "text"}}
+        out[k] = c
+    return out
+
+
 def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_order: list[str], name_col: str,
                mask=None, height: int | None = None, can_add: bool = True, add_label: str = "새로 추가",
                edit_order: list[str] | None = None) -> tuple[str | None, pd.DataFrame, list[str]]:
@@ -351,7 +361,7 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
         table, key=f"{key}_lock_{ver}", hide_index=True, width="stretch", column_order=order,
         disabled=[c for c in table.columns if c != PICK],
         height=height or min(640, 38 + 35 * (len(table) + 1)),
-        column_config={**column_config, PICK: st.column_config.CheckboxColumn(PICK, width=52, default=False)})
+        column_config={**_as_text(column_config), PICK: st.column_config.CheckboxColumn(PICK, width=52, default=False)})
     sel = [int(i) for i in locked.index[locked[PICK].fillna(False).astype(bool)]]
     n_new = ss.get(f"{key}_new_{ver}", 0)
     action, out, gone = None, view, []

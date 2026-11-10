@@ -37,8 +37,10 @@ def render() -> None:
                 view, key="trash_editor", hide_index=True, width="stretch", disabled=["종류", "내용", "지운 사람", "지운 시각"],
                 column_order=["선택", "종류", "내용", "지운 사람", "지운 시각"],
                 column_config={"선택": st.column_config.CheckboxColumn(width="small"),
-                               "내용": st.column_config.TextColumn(width="large"),
-                               "지운 시각": st.column_config.DatetimeColumn(format="YYYY-MM-DD HH:mm")})
+                               "종류": st.column_config.TextColumn(width=90),
+                               "내용": st.column_config.TextColumn(width=800),
+                               "지운 사람": st.column_config.TextColumn(width=80),
+                               "지운 시각": st.column_config.DatetimeColumn("지운 일시", format="YYYY-MM-DD HH:mm", width=140)})
             picked = list(edited.loc[edited["선택"].fillna(False).astype(bool), "id"])
             c1, c2, _, c4 = st.columns([1.2, 1.2, 1.4, 1.2])
             if c1.button(f"데이터 복구 ({len(picked)})", type="primary", icon=":material/restore_from_trash:",
@@ -80,7 +82,24 @@ def render() -> None:
             h = h[h["action"].isin(acts)]
         if q:
             h = h[h["summary"].str.contains(q, case=False, regex=False)]
-        st.dataframe(h.rename(columns={"at": "시각", "who": "누가", "action": "작업", "target": "대상", "summary": "내용"}),
-                     hide_index=True, width="stretch", height=560,
-                     column_config={"시각": st.column_config.DatetimeColumn(format="YYYY-MM-DD HH:mm"),
-                                    "내용": st.column_config.TextColumn(width="large")})
+        view = h.rename(columns={"at": "일시", "who": "누가", "action": "작업", "target": "대상", "summary": "내용"})
+        view.insert(0, "선택", False)
+        ed = st.data_editor(view, key=f"hist_ed_{st.session_state.get('hist_ver', 0)}", hide_index=True, width="stretch",
+                            height=560, disabled=["일시", "누가", "작업", "대상", "내용"],
+                            column_order=["선택", "일시", "누가", "작업", "대상", "내용"],
+                            column_config={"선택": st.column_config.CheckboxColumn(width=52),
+                                           "일시": st.column_config.DatetimeColumn(format="YYYY-MM-DD HH:mm", width=140),
+                                           "누가": st.column_config.TextColumn(width=70),
+                                           "작업": st.column_config.TextColumn(width=80),
+                                           "대상": st.column_config.TextColumn(width=100),
+                                           "내용": st.column_config.TextColumn(width=900)})
+        pick = ed[ed["선택"].fillna(False).astype(bool)]
+        with st.popover(f"선택한 기록 삭제 ({len(pick)})", icon=":material/delete:", disabled=pick.empty):
+            st.markdown(f"고른 기록 {len(pick)}건을 지웁니다. 되살릴 수 없습니다.")
+            if st.button("삭제", type="primary", key="hist_del_go"):
+                keys = [(a.strftime("%Y-%m-%d %H:%M:%S") if pd.notna(a) else "", w, ac, t, sm)
+                        for a, w, ac, t, sm in zip(pick["일시"], pick["누가"], pick["작업"], pick["대상"], pick["내용"])]
+                n = db.delete_history(keys)
+                st.session_state.trash_saved = f"기록 {n}건을 지웠어요."
+                st.session_state.hist_ver = st.session_state.get("hist_ver", 0) + 1
+                st.rerun()

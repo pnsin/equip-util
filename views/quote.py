@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime as dt
 import html
 import json
+import uuid
 
 import pandas as pd
 import streamlit as st
@@ -207,10 +208,11 @@ def _next_no(day: dt.date) -> str:
 
 
 # 장비사용료 할인 기준 (고르면 할인율이 들어가고, 숫자는 직접 고칠 수 있음)
+DISC_HELP = "고른 할인을 더해요 (장기사용은 가장 큰 것 하나) · 제조장비 최대 20%, 시험평가장비 최대 30%"
 DISC_RULES = {
-    "제조": {"max": 20, "help": "제조장비 최대 20%",
+    "제조": {"max": 20, "help": DISC_HELP,
              "opts": {"지역기업 10%": 10, "회원사 5%": 5, "장기사용 5%": 5}},
-    "시험": {"max": 30, "help": "시험평가장비 최대 30% · 지역기업·회원사는 제조장비 할인율을 더해요",
+    "시험": {"max": 30, "help": DISC_HELP,
              "opts": {"장기 100~300h 10%": 10, "장기 301~500h 15%": 15, "장기 501h↑ 20%": 20,
                       "지역기업 10%": 10, "회원사 5%": 5}},
 }
@@ -268,7 +270,7 @@ def _load_saved(rec: dict, copy: bool) -> dict:
     return base
 
 
-def _line_columns(form: str, options: list[str]) -> tuple[list[str], dict]:
+def _line_columns(form: str, options: list[str], has_ch: bool = False) -> tuple[list[str], dict]:
     pick = st.column_config.SelectboxColumn("장비 고르기", options=options, width="medium",
                                             help="고르면 장비명·단가가 단가표에서 채워져요. 목록에 없으면 비워 두고 장비명에 직접 써도 돼요.")
     amount = st.column_config.NumberColumn("금액", format=NUM, min_value=0,
@@ -280,7 +282,7 @@ def _line_columns(form: str, options: list[str]) -> tuple[list[str], dict]:
     ch = st.column_config.NumberColumn("채널", min_value=0, step=1, width="small", format="%d",
                                        help="충방전기처럼 ch당 단가일 때 쓰는 채널 수. 금액 = 단가 × 채널 수. 비우면 1")
     if form == "시험":
-        order = ["pick", "mode", "spec", "name", "count", "qty", "ch", "price", "difficulty", "amount", "manual"]
+        order = ["pick", "mode", "spec", "name", "count", "qty", "ch", "price", "difficulty", "amount"]
         cfg = {"pick": pick, "mode": mode, "ch": ch,
                "spec": st.column_config.TextColumn("품명", width="medium"),
                "name": st.column_config.TextColumn("장비명/시험명", width="medium"),
@@ -290,7 +292,7 @@ def _line_columns(form: str, options: list[str]) -> tuple[list[str], dict]:
                "difficulty": st.column_config.NumberColumn("난이도", min_value=0, step=0.1, width="small", format="%.1f"),
                "amount": amount, "manual": manual}
     else:
-        order = ["pick", "mode", "name", "spec", "note", "qty", "unit", "ch", "price", "amount", "manual"]
+        order = ["pick", "mode", "name", "spec", "note", "qty", "unit", "ch", "price", "amount"]
         cfg = {"pick": pick, "mode": mode, "ch": ch,
                "name": st.column_config.TextColumn("장비명", width="medium"),
                "spec": st.column_config.TextColumn("용량", width="small"),
@@ -298,6 +300,9 @@ def _line_columns(form: str, options: list[str]) -> tuple[list[str], dict]:
                "qty": st.column_config.NumberColumn("사용량", min_value=0, width="small"),
                "unit": st.column_config.SelectboxColumn("단위", options=UNITS, width="small"),
                "price": price, "amount": amount, "manual": manual}
+    # 2026-11-10: '직접' 칸은 빼고(누르면 새로고침만 됨), 채널은 충방전기 줄이 있을 때만
+    if not has_ch:
+        order = [c for c in order if c != "ch"]
     return order, cfg
 
 
@@ -407,15 +412,21 @@ def render_new() -> None:
     # 1. 장비사용료
     with st.container(border=True, key="q_lines_box"):
         st.markdown('<div class="q-sub">1. 장비사용료</div>', unsafe_allow_html=True)
-        order, cfg = _line_columns(form, list(options))
+        has_ch = any(str(ln.get("unit") or "") == "ch" or db.to_num(ln.get("ch")) for ln in d["lines"]) or any(
+            str((options.get(ln.get("pick") or "") or {}).get("unit") or "") == "ch" for ln in d["lines"])
+        order, cfg = _line_columns(form, list(options), has_ch)
         # 표에 넣는 원본은 줄을 다시 정리할 때만 바꿈 (원본이 바뀌면 Streamlit 이 표에서 고친 내용을 버림)
         lines_df = _frame(d.setdefault("lines_base", d["lines"]), list(quotes.LINE_KEYS),
                           ("key", "pick", "mode", "name", "spec", "note", "unit"))
         # 보이는 칸 순서대로 열을 둠 (숨긴 열이 사이에 있으면 표에서 고친 값이 다른 열로 들어가는 문제가 있음)
         lines_df = lines_df[order + [c for c in lines_df.columns if c not in order]]
-        ed = st.data_editor(lines_df, key=f"q_lines_{ver}", hide_index=True, width="stretch", num_rows="dynamic",
+        ed = st.data_editor(lines_df, key=f"q_lines_{ver}", hide_index=True, width="stretch", num_rows="fixed",
                             column_order=order, column_config=cfg,
                             height=38 + 35 * (len(lines_df) + 1))
+        if st.button("줄 추가", icon=":material/add:", type="tertiary", key=f"q_addline_{ver}"):
+            d["lines"] = d["lines"] + [quotes.new_line(form)]
+            _bump(d)
+            st.rerun()
         new_lines = quotes.apply_line_edits(form, d["lines"], _records(ed), options)
         if len(new_lines) > MAX_LINES[form]:
             st.caption(f":orange[양식에는 {MAX_LINES[form]}줄까지 들어가요. 그 아래 줄은 PDF에 빠져요.]")
@@ -452,12 +463,16 @@ def render_new() -> None:
                   "price": st.column_config.NumberColumn("단가", format=NUM, min_value=0),
                   "amount": st.column_config.NumberColumn("금액", format=NUM, min_value=0),
                   "manual": st.column_config.CheckboxColumn("직접", width="small")}
-        ex_order = ["name", "qty", "unit", "price", "amount", "manual"] if form == "제조" else \
-            ["name", "qty", "price", "amount", "manual"]
+        ex_order = ["name", "qty", "unit", "price", "amount"] if form == "제조" else ["name", "qty", "price", "amount"]
         ex_df = ex_df[ex_order + [c for c in ex_df.columns if c not in ex_order]]
         ed2 = st.data_editor(ex_df, key=f"q_ex_{ver}", hide_index=True, width="stretch",
-                             num_rows="dynamic" if form == "제조" else "fixed",
+                             num_rows="fixed",
                              column_order=ex_order, column_config=ex_cfg, height=38 + 35 * (len(ex_df) + 1))
+        if form == "제조" and st.button("줄 추가", icon=":material/add:", type="tertiary", key=f"q_addex_{ver}"):
+            d["extras"] = d["extras"] + [{"key": uuid.uuid4().hex[:8], "name": "", "qty": None, "unit": "", "price": None,
+                                          "amount": None, "manual": False}]
+            _bump(d)
+            st.rerun()
         new_ex = quotes.apply_extra_edits(d["extras"], _records(ed2))
         if len(new_ex) > MAX_EXTRAS[form]:
             st.caption(f":orange[양식에는 {MAX_EXTRAS[form]}줄까지 들어가요.]")
@@ -493,7 +508,8 @@ def render_new() -> None:
     with action_box:
         problems = _problems(d)
         for p in problems:
-            st.caption(f":orange[{p}]")
+            st.markdown(f'<div style="color:#FCD34D;font-size:14px;font-weight:600;margin:.1rem 0 .3rem">⚠ {p}</div>',
+                        unsafe_allow_html=True)
         again = bool(d.get("id"))
         if st.button("고친 내용 저장하고 PDF 만들기" if again else "발급하고 PDF 만들기", type="primary",
                      icon=":material/picture_as_pdf:", width="stretch", disabled=bool(problems), key=f"q_issue_{ver}"):
@@ -513,6 +529,11 @@ def render_new() -> None:
     if files and files.get("no") == d["no"] and files.get("preview"):
         with st.expander("PDF 미리보기", expanded=True):
             st.image(files["preview"], width=760)
+
+
+def render_ledger() -> None:
+    """업체 › 견적서 발급대장 (2026-11-10 견적서 작성과 따로 메뉴)."""
+    page_header("견적서 발급대장", "업체")
     _ledger()
 
 
@@ -569,7 +590,6 @@ def _ledger_xlsx(df: pd.DataFrame, year: int) -> bytes:
 def _ledger() -> None:
     """견적서 발급대장: 발급한 견적서 목록을 보고 엑셀로 내려받기 (2026-11-10)."""
     df = db.load_quotes()
-    st.markdown('<div class="q-sub" style="margin-top:1.4rem">발급대장</div>', unsafe_allow_html=True)
     if df.empty:
         st.caption("아직 발급한 견적서가 없어요.")
         return
@@ -587,7 +607,7 @@ def _ledger() -> None:
                  column_config={"발급일자": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                 "계(VAT별도)": st.column_config.NumberColumn(format="localized"),
                                 "계(부가세 포함)": st.column_config.NumberColumn(format="localized")})
-    st.caption(f"{year}년 {len(view)}건 · 견적서를 다시 열려면 위 '저장한 견적서 불러오기'에서 고르세요.")
+    st.caption(f"{year}년 {len(view)}건 · 견적서를 다시 열려면 '견적서 작성'의 '저장한 견적서 불러오기'에서 고르세요.")
 
 def _changed(new: list[dict], edited: list[dict]) -> bool:
     """정리한 줄이 표에 보이는 값과 달라졌는지 (달라졌으면 표를 다시 그려야 함)."""
