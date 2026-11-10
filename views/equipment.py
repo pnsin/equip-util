@@ -12,7 +12,7 @@ import streamlit as st
 from core import db, quotes, seed
 from core.quote_doc import UNITS
 from core.terms import w
-from ui_style import page_header, section_bar
+from ui_style import page_header
 from views.common import center_pick, excel_box, pick_done, pick_table, search_box
 
 KPI_COL = w("가동률 산정")
@@ -62,22 +62,29 @@ def _summary(eq: pd.DataFrame) -> None:
         unsafe_allow_html=True)
 
 
-def render() -> None:
-    cfg = db.get_settings()
-    page_header("장비 목록 및 수수료 단가", "기준 정보")
+def _page(title: str) -> tuple[pd.DataFrame, dict]:
+    page_header(title, "기준 정보")
     st.markdown(CSS, unsafe_allow_html=True)
     msg = st.session_state.pop("equip_saved", None)
     if msg:
         st.toast(msg, icon=":material/check_circle:")
-    eq = db.load_equipment(full=True)
-    rates = db.load_rates()
+    return db.load_equipment(full=True), db.get_settings()
+
+
+def render() -> None:
+    """기준 정보 › 장비 목록 (2026-11-10 수수료 단가는 따로 메뉴)."""
+    eq, cfg = _page("장비 목록")
     _devices(eq, cfg)
-    _prices(eq, rates)
+
+
+def render_prices() -> None:
+    """기준 정보 › 수수료 단가: 장비 단가 + 시험·기타 항목 단가."""
+    eq, _ = _page("수수료 단가")
+    _prices(eq, db.load_rates())
 
 
 def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     """① 장비 목록: 평소엔 잠겨 있고 '선택'한 줄만 고쳐 저장 / 삭제 (2026-11-10)."""
-    section_bar("장비 목록", no=1, first=True)
     _summary(eq)
     label_of = dict(zip(eq["id"].astype(int), eq["label"]))
     view = eq[list(COLS)].rename(columns=COLS)
@@ -155,7 +162,6 @@ RATE_HEADS = {"equip_id": "장비ID", "name": "견적서 이름", "spec": "용�
 
 def _prices(eq: pd.DataFrame, rates: pd.DataFrame) -> None:
     """② 수수료 단가: 장비 단가 + 시험·기타 항목 단가. 장비 목록과 같은 방식 (선택 → 저장 / 삭제, 엑셀로 한번에)."""
-    section_bar("수수료 단가", no=2)
 
     def _apply_xl(m):
         db.save_rates([r | {"_named": True} for r in m.to_dict("records")])

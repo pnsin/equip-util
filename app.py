@@ -118,7 +118,8 @@ PAGES = {
         st.Page(companies.render, title="업체 목록", url_path="companies"),
     ],
     "기준 정보": [
-        st.Page(equipment.render, title="장비 목록 및 수수료 단가", url_path="equipment"),
+        st.Page(equipment.render, title="장비 목록", url_path="equipment"),
+        st.Page(equipment.render_prices, title="수수료 단가", url_path="prices"),
         st.Page(staff.render, title="담당자", url_path="staff"),
     ],
     "관리": [
@@ -132,7 +133,7 @@ common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1],
 
 # 예전 주소(/dashboard, /calendar …)로 들어와도 "Page not found" 없이 해당 화면이 열리게 하는 숨은 주소
 ALIASES = [
-    st.Page(equipment.render, title="장비 목록", url_path="rates"),  # 2026-11-05 장비 단가는 장비 목록 '단가' 보기로
+    st.Page(equipment.render_prices, title="수수료 단가", url_path="rates"),  # 예전 주소
     st.Page(dashboard.render, title="대시보드", url_path="dashboard"),
     st.Page(input_page.render, title="실적 입력", url_path="calendar"),
     st.Page(input_page.render, title="실적 입력", url_path="entry"),
@@ -149,7 +150,7 @@ NAV_ICONS = {
     "실적 입력": ":material/edit_calendar:", "수수료 입력": ":material/payments:", "i-Tube 제출 파일": ":material/upload_file:",
     "장비 정보": ":material/precision_manufacturing:", "유지보수": ":material/build:",
     "CS활동": ":material/handshake:", "견적서 작성": ":material/request_quote:", "업체 목록": ":material/apartment:",
-    "장비 목록 및 수수료 단가": ":material/inventory_2:", "담당자": ":material/group:",
+    "장비 목록": ":material/inventory_2:", "수수료 단가": ":material/sell:", "담당자": ":material/group:",
     "설정": ":material/settings:", "가져오기 · 백업": ":material/cloud_sync:", "휴지통 · 기록": ":material/delete:",
 }
 NAV_COLORS = [("#5B6CFF", "#E9EBFF"), ("#E0628F", "#FDE8F0"), ("#17936A", "#DFF5EC"),
@@ -166,6 +167,11 @@ def sidebar(local: bool) -> None:
             for p in pages:
                 st.page_link(p, label=p.title, icon=NAV_ICONS.get(p.title))
                 css.append(f'[data-testid="stSidebar"] a[href="{p.url_path}"] {{--nc:{fg};--nb:{bg};}}')
+        # 지금 화면 메뉴 강조 (Streamlit 은 aria-current 를 달지 않아 주소로 고름)
+        cur = "" if getattr(pg, "_default", False) else pg.url_path
+        on = f'[data-testid="stSidebar"] a[href="{cur}"]'
+        css.append(f'{on} {{background: rgba(99,102,241,.16) !important;}} {on} p {{color: #EEF2FF !important; font-weight: 600 !important;}} '
+                   f'{on} [data-testid="stIconMaterial"] {{color: #A5B4FC !important;}}')
         st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
         st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
         st.divider()

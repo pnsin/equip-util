@@ -509,6 +509,24 @@ _SLATE_CSS = """<style>
         background: #1E293B !important; box-shadow: inset 3px 0 0 #6366F1 !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] span, [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span { color: #F8FAFC !important; font-weight: 600; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] [data-testid="stIconMaterial"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] [data-testid="stIconMaterial"] { color: #818CF8 !important; }
+  /* 2026-11-10 왼쪽 메뉴 다시: 묶음 제목 작게, 줄 간격 고르게, 고른 메뉴는 연한 남보라 알약 */
+  [data-testid="stSidebar"] .nav-group { font-size: .7rem !important; font-weight: 600 !important; letter-spacing: .06em !important;
+        color: #475569 !important; margin: 1.15rem 0 .45rem 0 !important; padding: 0 .7rem !important; }
+  [data-testid="stSidebar"] [data-testid="stElementContainer"]:has([data-testid="stPageLink"]) { margin-bottom: -1.05rem !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a { padding: .42rem .7rem !important; border-radius: 9px !important; gap: .7rem !important;
+        transition: background .15s ease; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { color: #94A3B8 !important; font-size: .9rem !important; font-weight: 500 !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a [data-testid="stIconMaterial"] { color: #64748B !important; font-size: 18px !important;
+        width: 20px !important; background: transparent !important; box-shadow: none !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover { background: #131B2C !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover span { color: #E2E8F0 !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] {
+        background: rgba(99,102,241,.16) !important; box-shadow: none !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] span, [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span {
+        color: #EEF2FF !important; font-weight: 600 !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] [data-testid="stIconMaterial"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] [data-testid="stIconMaterial"] {
+        color: #A5B4FC !important; }
+  [data-testid="stSidebar"] .brand { border-bottom: 1px solid #1A2335 !important; margin-bottom: .2rem !important; }
   .ph { border-bottom: 1px solid #1E293B !important; } .ph .t { font-size: 24px !important; }
   .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] { background: #6366F1 !important; color: #fff !important; }
   .stButton button[kind="primary"] p, .stDownloadButton button[kind="primary"] p, .stFormSubmitButton button[kind="primary"] p { color: #fff !important; }
