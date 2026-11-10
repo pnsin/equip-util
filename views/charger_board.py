@@ -214,8 +214,9 @@ def render() -> None:
         # 2026-11-10 기간 하나로 고르면 시작이 자꾸 바뀌어서, 시작·끝을 따로 고름
         r0 = st.date_input("조회 기간", value=d0, key="cb_from", format="YYYY-MM-DD", width=150,
                            help="타임라인에 보일 기간. 길게 고르면 옆으로 밀어서 볼 수 있어요.")
-        r1 = st.date_input("~", value=max(d1, r0), min_value=r0, key="cb_to", format="YYYY-MM-DD", width=150)
-        rng = (r0, max(r0, r1))
+        # 값·최솟값이 바뀌면 Streamlit이 칸을 처음 값으로 되돌리므로 고정값만 줌
+        r1 = st.date_input("~", value=d1, key="cb_to", format="YYYY-MM-DD", width=150)
+        rng = (min(r0, r1), max(r0, r1))
         all_open = st.toggle("채널 모두 펼치기", key="cb_all")
         st.space("stretch")
         if centers:
@@ -248,7 +249,7 @@ def render() -> None:
         tlw = max(520, int(span / 30.4 * 105))
         pos = lambda d: (d - w0).days / span * 100  # noqa: E731
         grid = "".join(f"<div class='cb-g' style='left:{pos(x):.2f}%'></div>" for x in months[1:])
-        now_line = f"<div class='cb-now' style='left:{pos(today):.2f}%'></div>"
+        now_line = f"<div class='cb-now' style='left:{pos(today):.2f}%'></div>" if w0 <= today <= w1 else ""
         edges = [pos(x) for x in months] + [100.0]  # 월 글자는 그 달 칸의 가운데에
         mh = "".join(f"<span style='left:{edges[i]:.2f}%;width:{edges[i + 1] - edges[i]:.2f}%'>{x.month}월</span>"
                      for i, x in enumerate(months))
