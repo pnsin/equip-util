@@ -39,12 +39,12 @@ CSS = """<style>
 /* 엑셀 틀 고정처럼: 왼쪽 6칸은 그대로, 오른쪽 타임라인만 옆으로 스크롤 (2026-11-10) */
 .cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: sticky; z-index: 3; background: var(--panel); box-sizing: border-box;}
 .cb-t .s0 {left: 0; width: 330px; min-width: 330px; max-width: 330px;}
-.cb-t .s1 {left: 330px; width: 72px; min-width: 72px; max-width: 72px;}
-.cb-t .s2 {left: 402px; width: 92px; min-width: 92px; max-width: 92px;}
-.cb-t .s3 {left: 494px; width: 150px; min-width: 150px; max-width: 150px;}
-.cb-t .s4 {left: 644px; width: 160px; min-width: 160px; max-width: 160px;}
-.cb-t .s5 {left: 804px; width: 150px; min-width: 150px; max-width: 150px; box-shadow: inset -1px 0 0 #64748B;}
-.cb-t td.s0[colspan] {width: 494px; max-width: 494px;} .cb-t td.s4[colspan] {width: 310px; max-width: 310px; box-shadow: inset -1px 0 0 #64748B;}
+.cb-t .s1 {left: 330px; width: 120px; min-width: 120px; max-width: 120px;}
+.cb-t .s2 {left: 450px; width: 120px; min-width: 120px; max-width: 120px;}
+.cb-t .s3 {left: 570px; width: 120px; min-width: 120px; max-width: 120px;}
+.cb-t .s4 {left: 690px; width: 160px; min-width: 160px; max-width: 160px;}
+.cb-t .s5 {left: 850px; width: 120px; min-width: 120px; max-width: 120px; box-shadow: inset -1px 0 0 #64748B;}
+.cb-t td.s0[colspan] {width: 570px; max-width: 570px;} .cb-t td.s4[colspan] {width: 280px; max-width: 280px; box-shadow: inset -1px 0 0 #64748B;}
 .cb-t th.tl {padding: 8px 0;}
 @media (max-width: 700px) {.cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: static;}}
 .cb-t td.tl {position: relative; padding: 0;}
@@ -60,7 +60,7 @@ CSS = """<style>
   display: flex; align-items: center; overflow: hidden; white-space: nowrap; border-left: 4px solid var(--fg);
   background: var(--bg); color: var(--fg); z-index: 1;}
 .cb-bar.soon {border: 1.5px dashed #E8B04B; background: rgba(230,182,85,0.16); color: #B5650B;}
-.cb-mini {display: inline-block; width: 34px; height: 6px; border-radius: 3px; background: rgba(85,230,158,0.16); margin: 0 5px 1px 8px;
+.cb-mini {display: inline-block; width: 22px; height: 6px; border-radius: 3px; background: rgba(85,230,158,0.16); margin: 0 4px 1px 5px;
   vertical-align: middle; overflow: hidden;}
 .cb-mini i {display: block; height: 100%; background: #E35D78; border-radius: 3px;}
 .cb-n {font-size: .7rem; font-weight: 700; color: #B8435C;}
