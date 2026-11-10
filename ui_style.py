@@ -562,6 +562,9 @@ _SLATE_CSS = """<style>
         box-shadow: none !important; transform: none !important; padding: 20px 24px !important; }
   .st-key-dsec_util { border-top: 4px solid #6366F1 !important; } .st-key-dsec_fee { border-top: 4px solid #10B981 !important; }
   .st-key-dsec_maint { border-top: 4px solid #8B5CF6 !important; }
+  .dst .sl, .dst.big .sl { font-size: 19px !important; font-weight: 700 !important; }
+  .st-key-dsec_util .dst .sl, .st-key-dsec_util .dst.big .sl { color: #A5B4FC !important; } .st-key-dsec_fee .dst .sl, .st-key-dsec_fee .dst.big .sl { color: #6EE7B7 !important; }
+  .st-key-dsec_maint .dst .sl, .st-key-dsec_maint .dst.big .sl { color: #C4B5FD !important; }
   .dst { background: #0F172A !important; border: 1px solid #64748B !important; border-radius: 12px !important; box-shadow: none !important; }
   .dst:hover { background: #26334D !important; transform: none !important; }
   .dst.big { background: #26334D !important; border: 1px solid #475569 !important; }
