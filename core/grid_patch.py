@@ -60,7 +60,7 @@ RUNTIME_JS = """
   P.rect = function(x, y, w, h){ this.__r = [x, y, w, h]; return rect.apply(this, arguments); };
   P.fillText = function(t, x, y, mw){
     var r = this.__r;
-    if (r && (this.textAlign === 'left' || this.textAlign === 'start' || this.textAlign === 'right') && x >= r[0] - 1 && x <= r[0] + r[2] && inGrid(this.canvas)){
+    if (r && (this.textAlign === 'left' || this.textAlign === 'start' || this.textAlign === 'right') && x >= r[0] - 1 && x <= r[0] + r[2] && inGrid(this.canvas) && this.measureText(t).width <= r[2] - 20){
       this.textAlign = 'center';
       ft.call(this, t, r[0] + r[2] / 2, y);
       this.textAlign = 'start';
