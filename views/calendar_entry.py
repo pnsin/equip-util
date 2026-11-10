@@ -86,8 +86,8 @@ CSS = """<style>
 .st-key-ep_list button[data-testid="stBaseButton-primary"] p:first-child {color: #F8FAFC !important;}
 .st-key-ep_panel [data-testid="stMarkdownContainer"]:has(.ep-t, .ep-h, .ep-empty) {margin-bottom: 0 !important;}
 .ep-empty {font-size: .85rem; color: #94A3B8; background: rgba(85,143,230,0.16); border-radius: 12px; padding: 12px; text-align: center;}
-div[class*="st-key-ep_row_test_"] button {--chip-fg: #E35D78;} div[class*="st-key-ep_row_chg_"] button {--chip-fg: #C04FD8;} div[class*="st-key-ep_row_make_"] button {--chip-fg: #1FA971;}
-div[class*="st-key-ep_row_anal_"] button {--chip-fg: #7C5CE0;}
+div[class*="st-key-ep_row_test_"] button {--chip-fg: #FF8DA1;} div[class*="st-key-ep_row_chg_"] button {--chip-fg: #E58BFF;} div[class*="st-key-ep_row_make_"] button {--chip-fg: #5EE0A8;}
+div[class*="st-key-ep_row_anal_"] button {--chip-fg: #A99BFF;}
 .st-key-ep_form {border-top: 1px solid #26334D; padding-top: 14px; gap: .65rem;}
 .ep-t {font-weight: 800; font-size: 1.05rem; color: var(--ink); display: flex; align-items: center; gap: 8px;}
 .ep-t span {font-size: .72rem; font-weight: 800; padding: 2px 9px; border-radius: 999px;}
@@ -191,13 +191,13 @@ div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 .cal-chips {display: flex; gap: 4px; margin: 0 0 4px;}
 .cal-chip {flex: 1; text-align: center; font-size: .68rem; font-weight: 800; padding: 2px 0; border-radius: 999px;
   background: #26334D; color: #94A3B8; white-space: nowrap;}
-.cal-chip.on.c-test {background: rgba(230,85,114,0.16); color: #E35D78;} .cal-chip.on.c-make {background: rgba(85,230,153,0.16); color: #1FA971;}
-.cal-chip.on.c-anal {background: rgba(117,85,230,0.16); color: #7C5CE0;} .cal-chip.on.c-etc {background: #26334D; color: #94A3B8;}
+.cal-chip.on.c-test {background: rgba(230,85,114,0.16); color: #FF8DA1;} .cal-chip.on.c-make {background: rgba(85,230,153,0.16); color: #5EE0A8;}
+.cal-chip.on.c-anal {background: rgba(117,85,230,0.16); color: #A99BFF;} .cal-chip.on.c-etc {background: #26334D; color: #94A3B8;}
 .cal-chip.c-etc:not(.on) {display: none;}
 /* 빈 구역: 색 없이 얇은 줄과 흐린 글자만 */
 .st-key-calgrid div[class*="st-key-sec_"]:not(:has(div[class*="st-key-er_"])):not(:has(div[class*="st-key-cf_"])) {
   background: transparent; border-radius: 0; padding: 1px 5px 3px; border-bottom: 1px solid #26334D;}
-.cal-sec-h.none {opacity: .38;}
+.cal-sec-h.none {opacity: .9;}
 /* ✕ 누른 뒤 '삭제할까요?' */
 .st-key-calgrid div[class*="st-key-cf_"] {pointer-events: auto; position: relative; z-index: 3; gap: 4px !important;
   background: rgba(230,85,85,0.16); border: 1px solid rgba(230,85,85,0.3); border-radius: 8px; padding: 5px 6px;}
@@ -205,11 +205,11 @@ div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 .st-key-calgrid div[class*="st-key-cf_"] button {min-height: 0; height: 24px; padding: 0 4px; border-radius: 6px;}
 .st-key-calgrid div[class*="st-key-cf_"] button p {font-size: .72rem !important; font-weight: 700;}
 .st-key-calgrid div[class*="st-key-cfy_"] button {background: #E5484D !important; border-color: #E5484D !important; color: #fff !important;}
-.st-key-calgrid div[class*="st-key-sec_test_"] {--sec-bg: rgba(230,85,114,0.16); --sec-line: #E35D7833; --sec-fg: #E35D78; --chip-fg: #E35D78;}
-.st-key-calgrid div[class*="st-key-sec_chg_"] {--sec-bg: rgba(217,70,239,0.14); --sec-line: #C04FD833; --sec-fg: #C04FD8; --chip-fg: #C04FD8;}
-.st-key-calgrid div[class*="st-key-sec_make_"] {--sec-bg: rgba(85,230,153,0.16); --sec-line: #1FA97133; --sec-fg: #1FA971; --chip-fg: #1FA971;}
-.st-key-calgrid div[class*="st-key-sec_anal_"] {--sec-bg: rgba(117,85,230,0.16); --sec-line: #7C5CE033; --sec-fg: #7C5CE0; --chip-fg: #7C5CE0;}
-.st-key-calgrid div[class*="st-key-sec_etc_"] {--sec-bg: #26334D; --sec-line: #8A97A833; --sec-fg: #94A3B8; --chip-fg: #94A3B8;}
+.st-key-calgrid div[class*="st-key-sec_test_"] {--sec-bg: rgba(230,85,114,0.16); --sec-line: #FF8DA166; --sec-fg: #FF8DA1; --chip-fg: #FF8DA1;}
+.st-key-calgrid div[class*="st-key-sec_chg_"] {--sec-bg: rgba(217,70,239,0.14); --sec-line: #E58BFF66; --sec-fg: #E58BFF; --chip-fg: #E58BFF;}
+.st-key-calgrid div[class*="st-key-sec_make_"] {--sec-bg: rgba(85,230,153,0.16); --sec-line: #5EE0A866; --sec-fg: #5EE0A8; --chip-fg: #5EE0A8;}
+.st-key-calgrid div[class*="st-key-sec_anal_"] {--sec-bg: rgba(117,85,230,0.16); --sec-line: #A99BFF66; --sec-fg: #A99BFF; --chip-fg: #A99BFF;}
+.st-key-calgrid div[class*="st-key-sec_etc_"] {--sec-bg: #26334D; --sec-line: #8A97A866; --sec-fg: #94A3B8; --chip-fg: #94A3B8;}
 /* 구분 필터 */
 div[class*="st-key-cal_cats"] {margin: .1rem 0 .4rem;}
 div[class*="st-key-cal_cats"] button {border-radius: 999px !important; font-weight: 600;}
@@ -314,7 +314,7 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
   background: rgba(85,133,230,0.16); border-radius: 14px !important; box-shadow: none !important; border: 1.5px solid transparent !important;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 4px 14px rgba(30, 50, 90, .08) !important; background: var(--panel);}
 .st-key-calgrid .cal-out {min-height: 112px !important; background: transparent !important; border: none !important;
-  font-size: .9rem !important; padding: 8px 10px !important; color: #334155 !important;}
+  font-size: .9rem !important; padding: 8px 10px !important; color: #8B9AB0 !important;}
 .st-key-calgrid div[class*="st-key-day_"] button {padding: 5px 6px !important; border-radius: 14px !important;}
 .st-key-calgrid div[class*="st-key-day_"] button strong {font-size: .9rem !important; min-width: 24px !important; height: 24px !important;}
 .st-key-calgrid div[class*="st-key-day_"] button:hover strong {background: rgba(45, 143, 213, .10);}
@@ -324,8 +324,8 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
 .cal-dh {display: flex; align-items: center; gap: 4px; height: 18px;}
 .cal-dots {display: flex; gap: 2px;} .cal-dots i {width: 6px; height: 6px; border-radius: 50%; display: block;}
 .cal-tot {margin-left: auto; font-size: .7rem; font-weight: 700; color: #94A3B8;}
-.c-test {background: #E35D78;} .c-make {background: #1FA971;} .c-anal {background: #7C5CE0;}
-.c-edu {background: #E39A2D;} .c-sup {background: #2E9BD6;} .c-etc {background: #334155;}
+.c-test {background: #FF8DA1;} .c-make {background: #5EE0A8;} .c-anal {background: #A99BFF;}
+.c-edu {background: #FFC266;} .c-sup {background: #6CC4FF;} .c-etc {background: #334155;}
 /* 스티커 한 줄: 장비 이름 ··· 시간 */
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button {background: var(--chip-bg, #26334D) !important; border-radius: 8px !important;
   padding: 3px 7px 3px 12px !important; min-height: 0 !important; box-shadow: none !important; position: relative;}
@@ -374,11 +374,11 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
 .st-key-ep_form [data-baseweb="select"] div, .st-key-ep_form input, .st-key-ep_form textarea {font-size: .82rem !important;}
 .st-key-ep_form [data-testid="stButtonGroup"] button {height: 28px !important; padding: 0 10px !important;}
 .st-key-ep_form [data-testid="stButtonGroup"] button p {font-size: .76rem !important; font-weight: 700 !important;}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(1) {--pc: #E35D78; --pb: rgba(230,85,114,0.16);}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(2) {--pc: #1FA971; --pb: rgba(85,230,158,0.16);}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(3) {--pc: #7C5CE0; --pb: rgba(121,85,230,0.16);}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(4) {--pc: #E39A2D; --pb: rgba(230,176,85,0.16);}
-div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(5) {--pc: #2E9BD6; --pb: rgba(85,177,230,0.16);}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(1) {--pc: #FF8DA1; --pb: rgba(230,85,114,0.16);}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(2) {--pc: #5EE0A8; --pb: rgba(85,230,158,0.16);}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(3) {--pc: #A99BFF; --pb: rgba(121,85,230,0.16);}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(4) {--pc: #FFC266; --pb: rgba(230,176,85,0.16);}
+div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button:nth-of-type(5) {--pc: #6CC4FF; --pb: rgba(85,177,230,0.16);}
 div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button {background: var(--pb, rgba(85,126,230,0.16)) !important;}
 div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button p {color: var(--pc, #94A3B8) !important;}
 div[class*="st-key-ep_purp_"] [data-testid="stButtonGroup"] button[aria-checked="true"] {background: var(--pc, #2D8FD5) !important;}
@@ -404,12 +404,12 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 .st-key-calgrid div[class*="st-key-sec_"] {background: transparent !important; padding: 0 !important; gap: 3px !important;
   border: none !important; border-radius: 0 !important;}
 .st-key-calgrid div[class*="st-key-sec_"]:not(:has(div[class*="st-key-er_"])):not(:has(div[class*="st-key-cf_"])) {
-  border: 1px dashed color-mix(in srgb, var(--sec-fg) 30%, transparent) !important; border-radius: 999px !important;
+  border: 1px dashed color-mix(in srgb, var(--sec-fg) 55%, transparent) !important; border-radius: 999px !important;
   padding: 0 4px !important;}
-.cal-sec-h {font-size: .68rem !important; line-height: 1.55 !important; padding: 0 4px !important;}
-.cal-sec-h.none {opacity: .55 !important;}
-.st-key-calgrid div[class*="st-key-sec_edu_"] {--sec-bg: rgba(230,176,85,0.16); --sec-fg: #E39A2D; --chip-fg: #E39A2D;}
-.st-key-calgrid div[class*="st-key-sec_sup_"] {--sec-bg: rgba(85,177,230,0.16); --sec-fg: #2E9BD6; --chip-fg: #2E9BD6;}
+.cal-sec-h {font-size: .74rem !important; line-height: 1.55 !important; padding: 0 4px !important;}
+.cal-sec-h.none {opacity: .95 !important; font-size: .74rem !important;}
+.st-key-calgrid div[class*="st-key-sec_edu_"] {--sec-bg: rgba(230,176,85,0.16); --sec-fg: #FFC266; --chip-fg: #FFC266;}
+.st-key-calgrid div[class*="st-key-sec_sup_"] {--sec-bg: rgba(85,177,230,0.16); --sec-fg: #6CC4FF; --chip-fg: #6CC4FF;}
 /* 줄 이름(시험·제조·분석)을 누르면 그 구분 장비로 새 실적 — 이름 위에 투명 버튼 */
 .st-key-calgrid div[class*="st-key-lane_"] {position: absolute !important; top: 0; left: 0; right: 0; height: 19px;
   z-index: 2; pointer-events: auto; margin: 0 !important;}
@@ -646,8 +646,8 @@ def _day_head(d: dt.date, entries: list[dict], holiday: bool, today: bool) -> tu
 
 # 장비용도(장비 정보) → 달력 구분. 색은 구분마다 고정 (배경, 진한 색)
 CHARGER_GROUP = "시험(충방전기)"
-CATS = {"시험": ("rgba(230,85,114,0.16)", "#E35D78"), CHARGER_GROUP: ("rgba(217,70,239,0.16)", "#C04FD8"), "제조": ("rgba(85,230,158,0.16)", "#1FA971"), "분석": ("rgba(121,85,230,0.16)", "#7C5CE0"),
-        "교육": ("rgba(230,176,85,0.16)", "#E39A2D"), "지원": ("rgba(85,177,230,0.16)", "#2E9BD6"), "기타": ("#26334D", "#334155")}
+CATS = {"시험": ("rgba(230,85,114,0.16)", "#FF8DA1"), CHARGER_GROUP: ("rgba(217,70,239,0.16)", "#E58BFF"), "제조": ("rgba(85,230,158,0.16)", "#5EE0A8"), "분석": ("rgba(121,85,230,0.16)", "#A99BFF"),
+        "교육": ("rgba(230,176,85,0.16)", "#FFC266"), "지원": ("rgba(85,177,230,0.16)", "#6CC4FF"), "기타": ("#26334D", "#94A3B8")}
 CAT_ORDER = list(CATS)
 FIXED_CATS = ["시험", CHARGER_GROUP, "제조", "분석", "교육", "지원"]
 LANE_CATS = ["시험", CHARGER_GROUP, "제조", "분석"]  # 칸마다 비어 있어도 보이는 구역 (2026-11-10 시험을 환경·충방전으로 나눔)

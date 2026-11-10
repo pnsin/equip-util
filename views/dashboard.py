@@ -297,7 +297,7 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
               target=target or None, top=top, hover=w("%{x} 가동률 %{y:.1f}%<extra></extra>"))
         st.markdown('<div class="dq">' + "".join(
             f'<div>{q}분기<b>{q_of[q]["가동률"]:.1f}%</b></div>' if q in q_of and pd.notna(q_of[q]["가동률"])
-            else f'<div>{q}분기<b style="color:#334155">–</b></div>' for q in range(1, 5)) + '</div>',
+            else f'<div>{q}분기<b style="color:#94A3B8">–</b></div>' for q in range(1, 5)) + '</div>',
             unsafe_allow_html=True)
 
         # 센터별 주장비 (올해 누적, 산정 대상 장비 = 세부장비 시간 합산)
