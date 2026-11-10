@@ -211,8 +211,11 @@ def render() -> None:
                                           label_visibility="collapsed") or "전체"
         d0 = today.replace(day=1)
         d1 = ((d0 + dt.timedelta(days=95)).replace(day=1)) - dt.timedelta(days=1)  # 이번 달 + 2개월
-        rng = st.date_input("보는 기간", value=(d0, d1), key="cb_range", format="YYYY-MM-DD", width=260,
-                            help="타임라인에 보일 기간. 길게 고르면 옆으로 밀어서 볼 수 있어요.")
+        # 2026-11-10 기간 하나로 고르면 시작이 자꾸 바뀌어서, 시작·끝을 따로 고름
+        r0 = st.date_input("조회 기간", value=d0, key="cb_from", format="YYYY-MM-DD", width=150,
+                           help="타임라인에 보일 기간. 길게 고르면 옆으로 밀어서 볼 수 있어요.")
+        r1 = st.date_input("~", value=max(d1, r0), min_value=r0, key="cb_to", format="YYYY-MM-DD", width=150)
+        rng = (r0, max(r0, r1))
         all_open = st.toggle("채널 모두 펼치기", key="cb_all")
         st.space("stretch")
         if centers:
