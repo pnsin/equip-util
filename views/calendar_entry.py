@@ -165,6 +165,7 @@ div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button[aria-checked="
 .st-key-calgrid div[class*="st-key-er_"]:hover div[class*="st-key-card"] {opacity: 1; visibility: visible;
   transform: none; transition-delay: .35s, .35s, 0s;}
 .st-key-calgrid div[class*="st-key-sec_"]:hover {z-index: 50;}
+.st-key-calgrid div[class*="st-key-sec_"] div[class*="st-key-er_"]:hover {z-index: 30;}  /* 카드가 아래 실적 줄 위로 */
 /* 위쪽 두 줄은 카드를 아래로 펼침 (위로 펼치면 화면 밖으로 잘림) */
 .st-key-calgrid div[class*="st-key-cardv_"], .st-key-calgrid div[class*="st-key-cardrv_"] {top: calc(100% + 8px); bottom: auto; transform: translateY(-4px);}
 div[class*="st-key-cardv_"] .cal-card::after, div[class*="st-key-cardrv_"] .cal-card::after {bottom: auto; top: -7px;}
@@ -1222,7 +1223,7 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
 def render(header: bool = True) -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     if header:
-        page_header("시험 일정", "실적")
+        page_header("장비 일정 등록", "실적")
     st.session_state.pop("cal_saved", None)  # 저장·삭제 알림은 띄우지 않음 (달력 칸에 바로 보임)
 
     cfg = db.get_settings()
