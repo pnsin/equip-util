@@ -161,7 +161,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     action, out, gone = pick_table(
         view, "equip_tbl", mask=mask, name_col="장비명(한글)", add_label="장비 추가",
         height=min(640, 38 + 35 * (int(mask.sum()) + 1)),
-        column_order=BASIC + list(RATE.values()), edit_order=BASIC + list(RATE.values()) + ["모델명", "제조사", "구매처", "자산번호",
+        column_order=BASIC + list(RATE.values()) + ["비고"], edit_order=BASIC + list(RATE.values()) + ["모델명", "제조사", "구매처", "자산번호",
                                                                           "국가연구시설장비번호", "연간기준시간", "도입일",
                                                                           "불용일", KPI_COL, "비고"],
         column_config={
