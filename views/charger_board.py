@@ -53,9 +53,14 @@ CSS = """<style>
 .cb-mini i {display: block; height: 100%; background: #E35D78; border-radius: 3px;}
 .cb-n {font-size: .7rem; font-weight: 700; color: #B8435C;}
 .cb-free {position: absolute; top: 8px; left: 6px; font-size: .72rem; font-weight: 700; color: #1E8E5A;}
-.cb-ch summary {cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px;}
+.cb-ch summary, label.cb-ch {cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px;}
+label.cb-ch input {display: none;}
+label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
+.cb-t tr.chx {display: none;} .cb-box.all tr.chx {display: table-row;}
+.cb-t tr.chx td {background: rgba(99,102,241,.05); height: 28px;} .cb-t tr.chx td.n {color: #94A3B8; font-weight: 700; text-align: center;}
+.cb-t tr.chx td:empty {border-bottom-color: transparent;}
 .cb-ch summary::-webkit-details-marker {display: none;}
-.cb-ch summary i {font-style: normal; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--accent);
+.cb-ch summary i, label.cb-ch i {font-style: normal; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--accent);
   color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
   line-height: 1;}
 .cb-ch[open] summary i {background: var(--accent); color: #fff;}
@@ -123,6 +128,12 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool, lane: int = 0) -> str:
             f"style='left:{left:.2f}%;width:{width:.2f}%;top:{5 + lane * 26}px;--bg:{bg};--fg:{fg}'>{html.escape(text)}</div>")
 
 
+def _ch_label(r: dict, mini: str) -> str:
+    """채널 칸: ⊕ 를 누르면 아래에 채널별 줄이 펼쳐짐 (체크박스 + CSS)."""
+    return (f"<label class='cb-ch'><input type='checkbox' id='ck{int(r['id'])}'><i>+</i>"
+            f"{html.escape(r['channels'])}{mini}</label>")
+
+
 def _ch_list(r: dict, mini: str) -> str:
     """채널 칸: ⊕ 를 누르면 채널마다 오늘 쓰는 중인지 · 어느 업체가 쓰는지 펼쳐 봄 (2026-11-10)."""
     chs = chargers.chamber_chs(r["channels"], r["ch_count"])
@@ -136,6 +147,31 @@ def _ch_list(r: dict, mini: str) -> str:
                     for n in chs)
     return (f"<details class='cb-ch'><summary><i>+</i>{html.escape(r['channels'])}{mini}</summary>"
             f"<ul>{items}</ul></details>")
+
+
+def _chan_rows(r: dict, bks: list[dict], w0, w1, today, grid: str, now_line: str, tlw: int) -> str:
+    """⊕ 를 누르면 챔버 아래로 펼쳐지는 채널별 줄: 채널 · 업체 · 기간 · 타임라인 (2026-11-10)."""
+    cid = int(r["id"])
+    chs = chargers.chamber_chs(r["channels"], r["ch_count"])
+    out = []
+    for n in chs:
+        mine = sorted((b for b in bks if n in chargers.used_of(b["ch_part"], chs)), key=lambda x: x["start"])
+        bars, lanes = "", []
+        for bb in mine:
+            ln = next((j for j, e in enumerate(lanes) if e < bb["start"]), len(lanes))
+            lanes[ln:ln + 1] = [bb["end"]]
+            bars += _bar(bb, w0, w1, soon=bb["start"] > today, lane=ln)
+        if not bars:
+            bars = "<div class='cb-free'>비어 있음</div>"
+        cur = next((b for b in mine if b["start"] <= today <= b["end"]), None)
+        b = cur or next((b for b in mine if b["start"] > today), None)
+        who = f"<td class='co'>{html.escape(b['company'])}</td>" if b else "<td class='m'>—</td>"
+        when = chargers.span_text(b["start"], b["end"], today) + ("" if cur else " 예약") if b else ""
+        h = 28 + 26 * max(len(lanes) - 1, 0)
+        out.append(f"<tr class='chx g{cid}'><td></td><td></td><td class='n'>ch {n}</td>{who}"
+                   f"<td class='m'>{html.escape(when)}</td>"
+                   f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
+    return "".join(out)
 
 
 def render() -> None:
@@ -159,6 +195,11 @@ def render() -> None:
             center = st.segmented_control("건물", ["전체"] + order, default="전체", key="cb_center",
                                           format_func=lambda c: db.CENTER_SHORT.get(c, c),
                                           label_visibility="collapsed") or "전체"
+        d0 = today.replace(day=1)
+        d1 = ((d0 + dt.timedelta(days=95)).replace(day=1)) - dt.timedelta(days=1)  # 이번 달 + 2개월
+        rng = st.date_input("보는 기간", value=(d0, d1), key="cb_range", format="YYYY-MM-DD", width=260,
+                            help="타임라인에 보일 기간. 길게 고르면 옆으로 밀어서 볼 수 있어요.")
+        all_open = st.toggle("채널 모두 펼치기", key="cb_all")
         st.space("stretch")
         if centers:
             st.download_button("현황표 엑셀로", chargers.to_excel(stt, today), icon=":material/download:",
@@ -167,7 +208,7 @@ def render() -> None:
         st.button("충방전기 예약", icon=":material/add:", key="cb_new", on_click=_book_new, type="primary")
 
     if not centers:
-        st.info("챔버 구성이 아직 없어요. 아래 '챔버 구성 고치기'에서 건물 · 장비명 · 싸이클러 · 챔버 · 채널을 넣어 주세요.")
+        st.info("챔버 구성이 아직 없어요. 챔버 구성은 관리자에게 문의해 주세요.")
     else:
         g = stt if center == "전체" else stt[stt["center"] == center]
         total = int(g["ch_count"].sum())
@@ -185,27 +226,27 @@ def render() -> None:
             f"<div class='cb-k'><i style='background:rgba(230,182,85,0.16)'>⏳</i><div><b>{ending}건</b>"
             f"<span>7일 안에 끝남 · 예약 {waiting}건</span></div></div></div>", unsafe_allow_html=True)
 
-        # 타임라인: 지난달 1일 ~ 5개월 뒤
-        w0 = (today.replace(day=1) - dt.timedelta(days=1)).replace(day=1)
-        m, w1 = w0, w0
-        months = []
-        for _ in range(6):
+        # 타임라인: 고른 기간 (기본 = 이번 달 + 2개월)
+        w0, w1 = (rng if isinstance(rng, (list, tuple)) and len(rng) == 2 else (d0, d1))
+        months, m = [w0], (w0.replace(day=1) + dt.timedelta(days=32)).replace(day=1)
+        while m <= w1:
             months.append(m)
             m = (m + dt.timedelta(days=32)).replace(day=1)
-        w1 = m - dt.timedelta(days=1)
         span = (w1 - w0).days + 1
+        tlw = max(520, int(span / 30.4 * 105))
         pos = lambda d: (d - w0).days / span * 100  # noqa: E731
         grid = "".join(f"<div class='cb-g' style='left:{pos(x):.2f}%'></div>" for x in months[1:])
         now_line = f"<div class='cb-now' style='left:{pos(today):.2f}%'></div>"
         mh = "".join(f"<span style='left:{pos(x):.2f}%'>{x.month}월</span>" for x in months)
-        rows, prev_u, prev_c = [], None, None
+        rows, prev_u, prev_c, show_css = [], None, None, []
         recs = g.to_dict("records")
         span_u = {}  # 같은 충방전기 줄 수 (장비 칸 셀 병합)
         start = 0
         for i, r in enumerate(recs):
             if i and r["unit"] != recs[i - 1]["unit"]:
                 start = i
-            span_u[start] = i - start + 1
+            span_u.setdefault(start, 0)
+            span_u[start] = span_u.get(start, 0) + 1 + len(chargers.chamber_chs(r["channels"], r["ch_count"]))
         shorts = {u: _short(u) for u in dict.fromkeys(x["unit"] for x in recs)}
         dup = {v for v in shorts.values() if list(shorts.values()).count(v) > 1}
         all_bk = {cid: b for cid, b in bk.groupby("chamber_id")} if not bk.empty else {}
@@ -232,14 +273,18 @@ def render() -> None:
             mini = (f"<span class='cb-mini' title='오늘 {r['used']}/{n_all}ch 사용'><i style='width:{r['used'] / n_all * 100:.0f}%'></i></span>"
                     f"<span class='cb-n'>{r['used']}/{n_all}</span>") if r["used"] and n_all and r["used"] < n_all else ""
             when = chargers.span_text(b["start"], b["end"], today) + ("" if r["now"] else " 예약") if b else ""
-            rows.append(f"<tr class='{'grp' if new_u and rows else ''}'>{u_td}<td class='c'>{c}</td>"
-                        f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{_ch_list(r, mini)}</td>{who}"
+            rows.append(f"<tr class='cbr {'grp' if new_u and rows else ''}'>{u_td}<td class='c'>{c}</td>"
+                        f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{_ch_label(r, mini)}</td>{who}"
                         f"<td class='m'>{html.escape(when)}</td>"
                         f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
+            rows.append(_chan_rows(r, list(all_bk.get(int(r["id"]), pd.DataFrame()).to_dict("records")), w0, w1, today,
+                                   grid, now_line, tlw))
+            show_css.append(f"tr.cbr:has(#ck{int(r['id'])}:checked) ~ tr.g{int(r['id'])}{{display:table-row;}}")
         rows.append(f"<tr class='cb-sum'><td colspan='3'>{html.escape(db.CENTER_SHORT.get(center, center))} 합계</td><td>{total} ch</td>"
                     f"<td colspan='3'>사용 중 {used} · 비어 있음 {total - used}</td></tr>")
         st.markdown(
-            "<div class='cb-box'><table class='cb-t'><tr><th>장비</th><th>싸이클러</th><th>챔버</th><th>채널</th>"
+            "<style>" + "".join(show_css) + "</style>"
+            f"<div class='cb-box{' all' if all_open else ''}'><table class='cb-t' style='min-width:{480 + tlw}px'><tr><th>장비</th><th>싸이클러</th><th>챔버</th><th>채널</th>"
             f"<th>업체</th><th>기간</th><th class='tl'><div class='cb-mh'>{mh}</div></th></tr>"
             + "".join(rows) + "</table></div>"
             "<div class='cb-foot'>"
@@ -262,7 +307,9 @@ def render() -> None:
                 st.button("고치기", icon=":material/edit:", key="cb_edit_go", disabled=pick is None,
                           on_click=_edit, args=(opts[pick] if pick is not None else {},))
 
-    _config_editor(ch, eq)
+    # 2026-11-10 '챔버 구성 고치기'는 화면에서 숨김 (필요하면 아래 줄 주석을 풀면 다시 나옴). 챔버 구성이 비어 있을 때만 보임
+    if ch.empty:
+        _config_editor(ch, eq)
 
 
 def _config_editor(ch: pd.DataFrame, eq: pd.DataFrame) -> None:
