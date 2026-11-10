@@ -31,7 +31,7 @@ CSS = """<style>
 .cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #26334D;
   white-space: nowrap;}
 .cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #26334D; white-space: nowrap;}
-.cb-t td {text-align: center;} .cb-t td.u small {text-align: center;} .cb-t td.tl {text-align: left;}
+.cb-t td {text-align: center;} .cb-t td.tl {text-align: left;}
 .cb-t td.u {font-weight: 700; color: var(--ink);}
 .cb-t td.c {color: var(--muted);}
 .cb-t td.m {color: #94A3B8;}
@@ -68,7 +68,7 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-ch ul {list-style: none; margin: 4px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(4, max-content); gap: 2px 14px;}
 .cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #1E8E5A; white-space: nowrap;}
 .cb-t td.u {white-space: nowrap; vertical-align: middle; padding: 0 12px; line-height: 1.35;}
-.cb-t td.u small {display: block; font-size: .68rem; font-weight: 500; color: #94A3B8;}
+.cb-t td.u .sp {font: inherit; color: inherit;}
 .cb-ch li b {color: var(--muted); font-weight: 600; min-width: 38px;}
 .cb-ch li.on {color: #E35D78; font-weight: 700;}
 .cb-t td:has(details[open]) {white-space: normal; vertical-align: top; padding-top: 6px;}
@@ -110,9 +110,17 @@ def _short(name: str) -> str:
     return (n.split("(")[0].strip() or n.strip()) if n else str(name)
 
 
+# 충방전기 현황표(박해철님 메일 26.11.04)에서 전압이 빠진 이름 → 전압 (이름 뒤 괄호에 전압이 없을 때만 앞에 붙임)
+VOLT_FALLBACK = {"활성화 충방전기": "5V", "셀 평가 충방전기": "5V"}
+
+
 def _spec(name: str) -> str:
     n = str(name).split("+")[0]
-    return n[n.find("(") + 1:n.find(")")] if "(" in n and ")" in n else ""
+    sp = n[n.find("(") + 1:n.find(")")] if "(" in n and ")" in n else ""
+    if sp and "V" not in sp.upper().replace("CH", ""):
+        v = VOLT_FALLBACK.get(_short(name))
+        sp = f"{v}, {sp}" if v else sp
+    return sp
 
 
 def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool, lane: int = 0) -> str:
@@ -250,15 +258,19 @@ def render() -> None:
                 start = i
             span_u.setdefault(start, 0)
             span_u[start] = span_u.get(start, 0) + 1 + len(chargers.chamber_chs(r["channels"], r["ch_count"]))
+        unit_ch = {}
+        for x in recs:
+            unit_ch[x["unit"]] = unit_ch.get(x["unit"], 0) + int(x["ch_count"] or 0)
         shorts = {u: _short(u) for u in dict.fromkeys(x["unit"] for x in recs)}
-        dup = {v for v in shorts.values() if list(shorts.values()).count(v) > 1}
         all_bk = {cid: b for cid, b in bk.groupby("chamber_id")} if not bk.empty else {}
         for ri, r in enumerate(recs):
             b = r["now"] or r["next"]
             new_u = r["unit"] != prev_u
-            nm, spec = shorts[r["unit"]], _spec(r["unit"])
+            nm = shorts[r["unit"]]
+            spec = (_spec(r.get("unit_sheet", "")) or _spec(r["unit"])  # 사양(V·A·ch)은 챔버 구성에 적은 이름에서
+                    or f"{int(unit_ch.get(r['unit'], 0))}ch")  # 어디에도 없으면 채널 수라도
             u_td = (f"<td class='u' rowspan='{span_u.get(ri, 1)}' title='{html.escape(r['unit'])}'>{html.escape(nm)}"
-                    + (f"<small>{html.escape(spec)}</small>" if spec and nm in dup else "") + "</td>") if new_u else ""
+                    + (f" <span class='sp'>({html.escape(spec)})</span>" if spec else "") + "</td>") if new_u else ""
             c = html.escape(r["cycler"]) if (new_u or r["cycler"] != prev_c) else ""
             prev_u, prev_c = r["unit"], r["cycler"]
             bars, lanes = "", []  # 기간이 겹치는 예약(채널 일부씩)은 줄을 나눠 그림
