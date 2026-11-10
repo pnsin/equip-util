@@ -77,7 +77,7 @@ def kr_holidays(years) -> set[dt.date]:
         return set()
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=300, max_entries=16, show_spinner=False)
 def expand_daily(logs: pd.DataFrame, mode: str = "spread", caps: dict | None = None) -> pd.DataFrame:
     """실적을 날짜별 시간으로 나눕니다.
 
@@ -229,6 +229,7 @@ def available_hours(eq_row, s: dt.date, e: dt.date, default_annual: float) -> fl
     return annual * year_fraction(s2, e2)
 
 
+@st.cache_data(ttl=300, max_entries=128, show_spinner=False)  # 종합 현황에서 같은 기간을 여러 번 계산하지 않게
 def equipment_summary(daily: pd.DataFrame, equip: pd.DataFrame, s: dt.date, e: dt.date,
                       default_annual: float, tree: pd.DataFrame | None = None) -> pd.DataFrame:
     """장비별 사용시간·가용시간·가동률.

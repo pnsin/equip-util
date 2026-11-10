@@ -364,7 +364,7 @@ def render() -> None:
         q = st.text_input("검색", placeholder="업체·장비·내용으로 찾기", key="cs_q", label_visibility="collapsed",
                           icon=":material/search:")
         view = _filter(df, q.strip(), label_of)
-        st.download_button("", cs.to_excel(view), file_name=f"CS활동_{dt.date.today():%y%m%d}.xlsx",
+        st.download_button("", lambda view=view: cs.to_excel(view), file_name=f"CS활동_{dt.date.today():%y%m%d}.xlsx",
                            icon=":material/download:", key="cs_xlsx", help="보이는 목록을 엑셀로 내려받기",
                            disabled=view.empty)
 

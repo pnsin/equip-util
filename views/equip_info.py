@@ -428,7 +428,7 @@ def _history(ids: list[int], eq: pd.DataFrame) -> None:
         if not df.empty:
             with h2.container(horizontal=True):
                 st.space("stretch")
-                st.download_button("엑셀", history.to_xlsx(df, name_of), f"장비히스토리_{name_of.get(eid, eid)}.xlsx",
+                st.download_button("엑셀", lambda df=df, name_of=name_of: history.to_xlsx(df, name_of), f"장비히스토리_{name_of.get(eid, eid)}.xlsx",
                                    icon=":material/download:", key=f"hist_xl_{eid}", type="tertiary")
         if df.empty:
             st.caption("아직 기록이 없어요.")

@@ -13,7 +13,7 @@ T = "equip_history"
 
 @st.cache_data(ttl=120, show_spinner=False)
 def load() -> pd.DataFrame:
-    df = db.get_store().read(T)
+    df = db._tab(T)
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
     df["equip_id"] = pd.to_numeric(df["equip_id"], errors="coerce")
     df = df.dropna(subset=["id", "equip_id"])
