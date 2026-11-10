@@ -28,9 +28,9 @@ CSS = """<style>
 .cb-k span {font-size: .76rem; color: var(--muted);}
 .cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); padding: 6px 0 8px; overflow-x: auto;}
 .cb-t {border-collapse: collapse; width: 100%; font-size: .8rem; min-width: 860px;}
-.cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #26334D;
+.cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #52617A;
   white-space: nowrap;}
-.cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #26334D; white-space: nowrap;}
+.cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #52617A; white-space: nowrap;}
 .cb-t td {text-align: center;} .cb-t td.tl {text-align: left;}
 .cb-t td.u {font-weight: 700; color: var(--ink);}
 .cb-t td.c {color: var(--muted);}
@@ -38,12 +38,12 @@ CSS = """<style>
 .cb-dash {color: #94A3B8;}
 .cb-t td.co {font-weight: 700; color: var(--ink);}
 .cb-t td.tl {position: relative; width: 48%; padding: 0;}
-.cb-t tr.grp td {border-top: 1px solid #26334D;}
+.cb-t tr.grp td {border-top: 1px solid #52617A;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
 .cb-mh span {position: absolute; top: 0; font-size: .7rem; color: #94A3B8; font-weight: 600; text-align: center; box-sizing: border-box;
-  border-left: 1px solid #26334D;}
-.cb-g {position: absolute; top: 0; bottom: 0; width: 1px; background: #26334D;}
+  border-left: 1px solid #52617A;}
+.cb-g {position: absolute; top: 0; bottom: 0; width: 1px; background: #52617A;}
 .cb-now {position: absolute; top: -2px; bottom: -2px; width: 2px; background: #E35D78; border-radius: 2px; z-index: 2;}
 .cb-bar {position: absolute; top: 5px; height: 21px; border-radius: 8px; font-size: .7rem; font-weight: 700; padding: 0 8px;
   display: flex; align-items: center; overflow: hidden; white-space: nowrap; border-left: 4px solid var(--fg);
@@ -139,6 +139,8 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool, lane: int = 0) -> str:
 
 def _ch_label(r: dict, mini: str) -> str:
     """채널 칸: ⊕ 를 누르면 아래에 채널별 줄이 펼쳐짐 (체크박스 + CSS)."""
+    if (int(r["ch_count"] or 0) or len(chargers.chamber_chs(r["channels"], 0))) <= 1:
+        return html.escape(r["channels"]) + mini  # 채널이 1개면 펼칠 것이 없음
     return (f"<label class='cb-ch'><input type='checkbox' id='ck{int(r['id'])}'><i>+</i>"
             f"{html.escape(r['channels'])}{mini}</label>")
 
@@ -162,6 +164,8 @@ def _chan_rows(r: dict, bks: list[dict], w0, w1, today, grid: str, now_line: str
     """⊕ 를 누르면 챔버 아래로 펼쳐지는 채널별 줄: 채널 · 업체 · 기간 · 타임라인 (2026-11-10)."""
     cid = int(r["id"])
     chs = chargers.chamber_chs(r["channels"], r["ch_count"])
+    if len(chs) <= 1:
+        return ""
     out = []
     for n in chs:
         mine = sorted((b for b in bks if n in chargers.used_of(b["ch_part"], chs)), key=lambda x: x["start"])
@@ -257,7 +261,7 @@ def render() -> None:
             if i and r["unit"] != recs[i - 1]["unit"]:
                 start = i
             span_u.setdefault(start, 0)
-            span_u[start] = span_u.get(start, 0) + 1 + len(chargers.chamber_chs(r["channels"], r["ch_count"]))
+            span_u[start] = span_u.get(start, 0) + 1 + (len(chs_) if len(chs_ := chargers.chamber_chs(r["channels"], r["ch_count"])) > 1 else 0)
         unit_ch = {}
         for x in recs:
             unit_ch[x["unit"]] = unit_ch.get(x["unit"], 0) + int(x["ch_count"] or 0)

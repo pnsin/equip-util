@@ -82,7 +82,7 @@ THEMES = {
     # G. 다크 엔터프라이즈 (2026-11-06 사용자 명세서: Stripe/Datadog형)
     "slate": {
         "bg": "#0F172A", "panel": "#1E293B", "panel2": "#26334D", "deep": "#090D16",
-        "line": "#334155", "line2": "#475569", "ink": "#F8FAFC", "muted": "#94A3B8", "dim": "#64748B",
+        "line": "#64748B", "line2": "#7C8CA3", "ink": "#F8FAFC", "muted": "#94A3B8", "dim": "#64748B",
         "accent": "#6366F1", "accent-hi": "#818CF8", "accent-bg": "rgba(99,102,241,.15)",
         "ok": "#10B981", "ok-bg": "rgba(16,185,129,.15)", "ng": "#F87171", "ng-bg": "rgba(248,113,113,.15)", "warn": "#F59E0B", "warn-bg": "rgba(245,158,11,.15)",
         "bar-off": "#334155", "shadow": "0 16px 40px rgba(0,0,0,.45)", "card-shadow": "none",
@@ -398,6 +398,7 @@ _CSS = """
   }
   /* 견적서 (2026-11-04) */
   .q-tile { background: var(--panel); border-radius: 14px; box-shadow: var(--card-shadow); padding: .8rem 1rem; margin-bottom: .6rem; }
+  .q-tile, .eq-info div, .cs-stat { text-align: center; align-items: center; }
   .q-tile b { display: block; font-size: 1.6rem; line-height: 1.2; }
   .q-tile span { font-size: .85rem; color: var(--muted); }
   .q-inline { display: inline-block; min-width: 9rem; margin-right: .6rem; }
@@ -534,8 +535,8 @@ _SLATE_CSS = """<style>
   .stButton button[kind="primary"]:disabled, .stDownloadButton button[kind="primary"]:disabled { background: #334155 !important; border-color: #475569 !important; opacity: 1 !important; }
   .stButton button[kind="primary"]:disabled p, .stButton button[kind="primary"]:disabled span { color: #CBD5E1 !important; }
   .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) { border-radius: 12px !important; }
-  [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: #0F172A !important; border-color: #334155 !important; }
-  [data-testid="stDataFrame"] { border: 1px solid #334155; border-radius: 12px; overflow: hidden; background: #1E293B; }
+  [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: #0F172A !important; border-color: #64748B !important; }
+  [data-testid="stDataFrame"] { border: 1px solid #64748B; border-radius: 12px; overflow: hidden; background: #1E293B; }
   [data-testid="stAlert"] > div { background: #1E293B !important; border-left: 4px solid #F59E0B; border-radius: 10px; color: #E2E8F0; }
   [data-testid="stAlert"] p { color: #E2E8F0 !important; }
   /* 빈 상태: 높이 48px 안쪽의 가로 배너 */
@@ -545,11 +546,11 @@ _SLATE_CSS = """<style>
   .empty .h { white-space: nowrap; font-size: .92rem !important; margin: 0 !important; color: #F8FAFC !important; }
   .empty .b { font-size: .85rem !important; color: #94A3B8 !important; }
   /* 대시보드: 카드 12px · 위쪽 색 막대 · 숫자 크게/단위 작게 · 알약 배지 */
-  [class*="st-key-dsec_"] { background: #1E293B !important; border: 1px solid #334155 !important; border-radius: 12px !important;
+  [class*="st-key-dsec_"] { background: #1E293B !important; border: 1px solid #64748B !important; border-radius: 12px !important;
         box-shadow: none !important; transform: none !important; padding: 20px 24px !important; }
   .st-key-dsec_util { border-top: 4px solid #6366F1 !important; } .st-key-dsec_fee { border-top: 4px solid #10B981 !important; }
   .st-key-dsec_maint { border-top: 4px solid #8B5CF6 !important; }
-  .dst { background: #0F172A !important; border: 1px solid #334155 !important; border-radius: 12px !important; box-shadow: none !important; }
+  .dst { background: #0F172A !important; border: 1px solid #64748B !important; border-radius: 12px !important; box-shadow: none !important; }
   .dst:hover { background: #26334D !important; transform: none !important; }
   .dst.big { background: #26334D !important; border: 1px solid #475569 !important; }
   .dst.big * { color: inherit !important; } .dst.big .sl { color: #94A3B8 !important; }
@@ -558,12 +559,12 @@ _SLATE_CSS = """<style>
   .dch { background: rgba(148,163,184,.15) !important; color: #CBD5E1 !important; }
   .dch.g { background: rgba(16,185,129,.15) !important; color: #34D399 !important; }
   .dch.r { background: rgba(248,113,113,.15) !important; color: #F87171 !important; }
-  .dh .per { background: #0F172A !important; border: 1px solid #334155; }
+  .dh .per { background: #0F172A !important; border: 1px solid #64748B; }
   /* 접속 화면도 같은 다크 톤 */
   .stApp:has(.login-bg, .login-preview-bg) [data-testid="stAppViewContainer"] { background: #0F172A !important; }
   .login-blur-overlay { background: radial-gradient(circle at 50% 40%, rgba(30,41,59,.72) 0%, rgba(15,23,42,.94) 100%) !important; }
-  .st-key-login_card { background: rgba(30,41,59,.92) !important; border: 1px solid #334155 !important; box-shadow: 0 24px 60px rgba(0,0,0,.5) !important; }
-  .st-key-login_card [data-testid="stTextInputRootElement"], .st-key-login_card [data-testid="stTextInputRootElement"]:focus-within { background: #0F172A !important; border-color: #334155; }
+  .st-key-login_card { background: rgba(30,41,59,.92) !important; border: 1px solid #64748B !important; box-shadow: 0 24px 60px rgba(0,0,0,.5) !important; }
+  .st-key-login_card [data-testid="stTextInputRootElement"], .st-key-login_card [data-testid="stTextInputRootElement"]:focus-within { background: #0F172A !important; border-color: #64748B; }
   .st-key-login_card input { color: #F8FAFC !important; }
   .st-key-login_card .stButton button, .st-key-login_card [data-testid="stFormSubmitButton"] button { background: #6366F1 !important; border: 0 !important; }
   .login-head .s, .login-head p { color: #94A3B8 !important; }

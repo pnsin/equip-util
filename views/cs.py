@@ -19,7 +19,7 @@ PAGE = 30
 
 CSS = """<style>
 .cs-stats {display: flex; gap: 12px; flex-wrap: wrap; margin: .2rem 0 1rem;}
-.cs-stat {background: var(--panel); border-radius: 18px; padding: 14px 20px 13px; min-width: 150px;
+.cs-stat {text-align: center; background: var(--panel); border-radius: 18px; padding: 14px 20px 13px; min-width: 150px;
   box-shadow: 0 4px 16px rgba(30, 36, 51, .04); border: 1px solid var(--line); transition: all 0.25s ease;}
 .cs-stat:hover {transform: translateY(-2px); box-shadow: 0 12px 24px rgba(30, 36, 51, .08); border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
 .cs-stat b {display: block; font-size: 1.8rem; font-weight: 800; line-height: 1.15; color: var(--ink);

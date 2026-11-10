@@ -39,3 +39,39 @@ def apply() -> int:
         return n
     except Exception:  # 읽기 전용 설치 등: 그냥 넘어감
         return 0
+
+
+# 브라우저가 옛 DataFrame 화면 파일을 1년간 저장해 두면(캐시) 위 고침이 안 보이므로,
+# 화면에서 직접 그림 도구(canvas)를 가로채 '왼쪽 정렬로 그리는 글자'를 칸 가운데로 옮김.
+# 이미 가운데로 그려진 글자는 건드리지 않아서 위 고침과 함께 써도 안전.
+RUNTIME_JS = """
+(function(){
+  var W = window; if (W.__gridCenter) return; W.__gridCenter = 1;
+  var P = W.CanvasRenderingContext2D && W.CanvasRenderingContext2D.prototype; if (!P) return;
+  var rect = P.rect, ft = P.fillText, memo = new WeakMap();
+  function inGrid(c){
+    var v = memo.get(c);
+    if (v === undefined){
+      v = !!(c && c.closest && c.closest('[data-testid="stDataFrame"],[data-testid="stDataFrameGlideDataEditor"]'));
+      if (v) memo.set(c, v);
+    }
+    return v;
+  }
+  P.rect = function(x, y, w, h){ this.__r = [x, y, w, h]; return rect.apply(this, arguments); };
+  P.fillText = function(t, x, y, mw){
+    var r = this.__r;
+    if (r && (this.textAlign === 'left' || this.textAlign === 'start' || this.textAlign === 'right') && x >= r[0] - 1 && x <= r[0] + r[2] && inGrid(this.canvas)){
+      this.textAlign = 'center';
+      ft.call(this, t, r[0] + r[2] / 2, y);
+      this.textAlign = 'start';
+      return;
+    }
+    return ft.apply(this, arguments);
+  };
+})();
+"""
+
+
+def inject():
+    import streamlit as st
+    st.html("<script>" + RUNTIME_JS + "</script>", unsafe_allow_javascript=True)

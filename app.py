@@ -10,6 +10,8 @@ import ui_style  # noqa: E402
 st.set_page_config(page_title=ui_style.SYSTEM_TITLE, page_icon=ui_style.favicon(), layout="wide",
                    initial_sidebar_state="expanded")
 
+grid_patch.inject()  # 브라우저 캐시와 상관없이 표 글자 가운데 (core/grid_patch.py)
+
 import importlib  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
