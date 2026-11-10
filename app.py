@@ -1,5 +1,8 @@
 import hmac
 
+from core import grid_patch
+
+grid_patch.apply()  # 표 제목줄·고르기 칸 가운데 정렬 (core/grid_patch.py)
 import streamlit as st
 
 import ui_style  # noqa: E402
