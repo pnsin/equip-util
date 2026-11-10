@@ -131,14 +131,12 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     pid = {int(i): int(p) for i, p in zip(eq["id"], eq["parent_id"]) if pd.notna(p)}
     has_kids = set(pid.values())
     open_opts = [label_of[i] for i in eq["id"].astype(int) if i in has_kids and i not in pid]
-    n_kids = {}
-    for p_ in pid.values():
-        n_kids[p_] = n_kids.get(p_, 0) + 1
-    lab_n = {label_of[i]: n_kids.get(i, 0) for i in label_of}
-    opened = []
-    if open_opts and not sub:  # 버튼을 누르면 그 장비 아래로 세부장비가 펼쳐짐 (한 번 더 누르면 접힘)
-        opened = st.pills("세부장비 펼치기", open_opts, selection_mode="multi", key="equip_open",
-                          format_func=lambda l: f"＋ {l}  {lab_n.get(l, 0)}", label_visibility="collapsed") or []
+    if center and open_opts:  # 센터를 고르면 그 센터 장비만 고를 수 있게
+        cen0 = db.equip_centers(eq)
+        id_of_label = {l: i for i, l in label_of.items()}
+        open_opts = [l for l in open_opts if cen0.get(id_of_label[l]) == center]
+    opened = st.multiselect("세부장비 펼치기", open_opts, key="equip_open", placeholder="장비를 검색해 고르면 그 아래 세부장비가 함께 보여요",
+                            label_visibility="collapsed") if open_opts and not sub else []
     open_ids = {i for i, l in label_of.items() if l in opened}
 
     def _shown(i: int) -> bool:
