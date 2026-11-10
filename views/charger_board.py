@@ -19,13 +19,10 @@ CSS = """<style>
 .st-key-cb_center [data-testid="stButtonGroup"] button p {font-weight: 700; color: var(--muted);}
 .st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #334155 !important;}
 .st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
-.cb-kpis {display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px;}
-.cb-k {background: var(--panel); border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08);
-  display: flex; gap: 12px; align-items: center;}
-.cb-k i {width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-  font-style: normal; font-size: 19px; flex: none;}
-.cb-k b {display: block; font-size: 1.25rem; color: var(--ink); line-height: 1.25;}
-.cb-k span {font-size: .76rem; color: var(--muted);}
+.cb-kpis {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px;}
+.cb-k {background: var(--panel); border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); text-align: center;}
+.cb-k span {display: block; font-size: 1rem; font-weight: 700; color: var(--kc); margin-bottom: 2px;}
+.cb-k b {display: block; font-size: 1.45rem; color: var(--ink); line-height: 1.3;}
 .cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); padding: 6px 0 8px; overflow-x: auto;}
 .cb-t {border-collapse: collapse; width: 100%; font-size: .8rem; min-width: 860px;}
 .cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #52617A;
@@ -76,7 +73,7 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-sum td {background: rgba(85,143,230,0.16); font-weight: 700; color: var(--muted);}
 .cb-foot {display: flex; flex-wrap: wrap; gap: 14px; font-size: .74rem; color: var(--muted); margin-top: 8px;}
 .cb-foot i {display: inline-block; width: 11px; height: 11px; border-radius: 4px; margin-right: 5px; vertical-align: -1px;}
-@media (max-width: 900px) {.cb-kpis {grid-template-columns: repeat(2, minmax(0, 1fr));}}
+@media (max-width: 600px) {.cb-kpis {grid-template-columns: 1fr;}}
 </style>"""
 
 
@@ -227,18 +224,13 @@ def render() -> None:
         g = stt if center == "전체" else stt[stt["center"] == center]
         total = int(g["ch_count"].sum())
         used = int(g["used"].sum())
-        free_ch = [c for c, b in zip(g["chamber"], g["now"]) if not b]
-        ending = sum(1 for b in g["now"] if b and b["end"] <= today + dt.timedelta(days=7))
-        waiting = sum(1 for n, b in zip(g["now"], g["next"]) if not n and b)
         pct = f" · {used / total:.0%}" if total else ""
         st.markdown(
             "<div class='cb-kpis'>"
-            f"<div class='cb-k'><i style='background:rgba(85,102,230,0.16)'>🔋</i><div><b>{total} ch</b><span>전체 채널</span></div></div>"
-            f"<div class='cb-k'><i style='background:rgba(230,85,114,0.16)'>⚡</i><div><b>{used} ch{pct}</b><span>오늘 사용 중</span></div></div>"
-            f"<div class='cb-k'><i style='background:rgba(85,230,158,0.16)'>🌱</i><div><b>{total - used} ch</b>"
-            f"<span>오늘 비어 있음 · 챔버 {len(free_ch)}개</span></div></div>"
-            f"<div class='cb-k'><i style='background:rgba(230,182,85,0.16)'>⏳</i><div><b>{ending}건</b>"
-            f"<span>7일 안에 끝남 · 예약 {waiting}건</span></div></div></div>", unsafe_allow_html=True)
+            f"<div class='cb-k' style='--kc:#A5B4FC'><span>전체 채널</span><b>{total} ch</b></div>"
+            f"<div class='cb-k' style='--kc:#FF8DA1'><span>사용 중 채널</span><b>{used} ch{pct}</b></div>"
+            f"<div class='cb-k' style='--kc:#6EE7B7'><span>미사용 채널</span><b>{total - used} ch</b></div>"
+            "</div>", unsafe_allow_html=True)
 
         # 타임라인: 고른 기간 (기본 = 이번 달 + 2개월)
         w0, w1 = (rng if isinstance(rng, (list, tuple)) and len(rng) == 2 else (d0, d1))
