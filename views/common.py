@@ -325,3 +325,70 @@ def num_input(container, label: str, key: str, value: float, step: float = 1, lo
         return float(value)
     v = max(lo, v)
     return min(hi, v) if hi is not None else v
+
+
+# ── 잠긴 표 + 고른 줄만 고치기 (2026-11-10 사용자 요청: 평소엔 수정 막고, 선택한 줄만 고쳐서 저장 / 삭제) ──
+
+PICK = "선택"
+
+
+def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_order: list[str], name_col: str,
+               mask=None, height: int | None = None, can_add: bool = True, add_label: str = "새로 추가",
+               edit_order: list[str] | None = None) -> tuple[str | None, pd.DataFrame, list[str]]:
+    """평소에는 읽기만 되는 표. 맨 앞 '선택'을 체크한 줄만 아래 칸에서 고치고 [저장] / [삭제].
+
+    돌려주는 값: (누른 버튼 'save' · 'delete' · None, 반영한 전체 표, 지운 줄 이름).
+    전체 표는 view 순서 그대로이고 새 줄은 맨 뒤에 붙습니다 (기존 save_* 함수에 그대로 넘기면 됨).
+    """
+    ss = st.session_state
+    ver = ss.get(f"{key}_ver", 0)
+    view = view.reset_index(drop=True)
+    shown = view if mask is None else view[pd.Series(mask, index=view.index).fillna(False).astype(bool)]
+    table = shown.copy()
+    table.insert(0, PICK, False)
+    order = [PICK] + [c for c in column_order if c in table.columns]
+    locked = st.data_editor(
+        table, key=f"{key}_lock_{ver}", hide_index=True, width="stretch", column_order=order,
+        disabled=[c for c in table.columns if c != PICK],
+        height=height or min(640, 38 + 35 * (len(table) + 1)),
+        column_config={**column_config, PICK: st.column_config.CheckboxColumn(PICK, width=52, default=False)})
+    sel = [int(i) for i in locked.index[locked[PICK].fillna(False).astype(bool)]]
+    n_new = ss.get(f"{key}_new_{ver}", 0)
+    action, out, gone = None, view, []
+    if sel or n_new:
+        blank = pd.DataFrame([{c: None for c in view.columns}] * n_new,
+                             index=range(len(view), len(view) + n_new)) if n_new else view.iloc[0:0]
+        part = pd.concat([view.loc[sel], blank]) if n_new else view.loc[sel]
+        with st.container(border=True, key=f"{key}_editbox"):
+            ed = st.data_editor(part, key=f"{key}_edit_{ver}_{'_'.join(map(str, sel))}_{n_new}", hide_index=True,
+                                width="stretch", column_order=edit_order or [c for c in column_order if c in part.columns],
+                                column_config=column_config)
+            with st.container(horizontal=True, gap="small"):
+                if st.button("저장", type="primary", icon=":material/save:", key=f"{key}_save_{ver}"):
+                    action = "save"
+                if sel and st.button("삭제", icon=":material/delete:", key=f"{key}_del_{ver}"):
+                    action = "delete"
+                if st.button("취소", type="tertiary", key=f"{key}_cancel_{ver}"):
+                    ss[f"{key}_ver"] = ver + 1
+                    st.rerun()
+        if action == "save":
+            out = view.copy()
+            for i in sel:
+                out.loc[i] = ed.loc[i]
+            new = ed.loc[[i for i in ed.index if i >= len(view)]]
+            new = new[new.apply(lambda r: any(str(v).strip() not in ("", "None", "nan", "<NA>", "NaT")
+                                              for v in r.values), axis=1)]
+            out = pd.concat([out, new]).reset_index(drop=True)
+        elif action == "delete":
+            gone = [str(view.at[i, name_col]) for i in sel]
+            out = view.drop(index=sel).reset_index(drop=True)
+    if can_add and not (sel or n_new):
+        if st.button(add_label, icon=":material/add:", key=f"{key}_add_{ver}", type="tertiary"):
+            ss[f"{key}_new_{ver}"] = 1
+            st.rerun()
+    return action, out, gone
+
+
+def pick_done(key: str) -> None:
+    """저장·삭제 뒤 표를 처음 상태로 (선택 풀림)."""
+    st.session_state[f"{key}_ver"] = st.session_state.get(f"{key}_ver", 0) + 1

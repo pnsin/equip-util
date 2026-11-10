@@ -53,6 +53,17 @@ CSS = """<style>
 .cb-mini i {display: block; height: 100%; background: #E35D78; border-radius: 3px;}
 .cb-n {font-size: .7rem; font-weight: 700; color: #B8435C;}
 .cb-free {position: absolute; top: 8px; left: 6px; font-size: .72rem; font-weight: 700; color: #1E8E5A;}
+.cb-ch summary {cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px;}
+.cb-ch summary::-webkit-details-marker {display: none;}
+.cb-ch summary i {font-style: normal; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--accent);
+  color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
+  line-height: 1;}
+.cb-ch[open] summary i {background: var(--accent); color: #fff;}
+.cb-ch ul {list-style: none; margin: 4px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, auto)); gap: 2px 14px;}
+.cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #1E8E5A;}
+.cb-ch li b {color: var(--muted); font-weight: 600; min-width: 38px;}
+.cb-ch li.on {color: #E35D78; font-weight: 700;}
+.cb-t td:has(details[open]) {white-space: normal; vertical-align: top; padding-top: 6px;}
 .cb-sum td {background: rgba(85,143,230,0.16); font-weight: 700; color: var(--muted);}
 .cb-foot {display: flex; flex-wrap: wrap; gap: 14px; font-size: .74rem; color: var(--muted); margin-top: 8px;}
 .cb-foot i {display: inline-block; width: 11px; height: 11px; border-radius: 4px; margin-right: 5px; vertical-align: -1px;}
@@ -97,6 +108,21 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool, lane: int = 0) -> str:
     tip = f"{b['company']} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b["staff"] else "")
     return (f"<div class='cb-bar{' soon' if soon else ''}' title='{html.escape(tip)}' "
             f"style='left:{left:.2f}%;width:{width:.2f}%;top:{5 + lane * 26}px;--bg:{bg};--fg:{fg}'>{html.escape(text)}</div>")
+
+
+def _ch_list(r: dict, mini: str) -> str:
+    """채널 칸: ⊕ 를 누르면 채널마다 오늘 쓰는 중인지 · 어느 업체가 쓰는지 펼쳐 봄 (2026-11-10)."""
+    chs = chargers.chamber_chs(r["channels"], r["ch_count"])
+    if not chs:
+        return html.escape(r["channels"]) + mini
+    who: dict[int, str] = {}
+    for b in r["nows"]:
+        for n in chargers.used_of(b["ch_part"], chs):
+            who.setdefault(n, b["company"] or "내부")
+    items = "".join(f"<li class='{'on' if n in who else ''}'><b>ch {n}</b><span>{html.escape(who[n]) if n in who else '비어 있음'}</span></li>"
+                    for n in chs)
+    return (f"<details class='cb-ch'><summary><i>+</i>{html.escape(r['channels'])}{mini}</summary>"
+            f"<ul>{items}</ul></details>")
 
 
 def render() -> None:
@@ -183,7 +209,7 @@ def render() -> None:
                     f"<span class='cb-n'>{r['used']}/{n_all}</span>") if r["used"] and n_all and r["used"] < n_all else ""
             when = chargers.span_text(b["start"], b["end"], today) + ("" if r["now"] else " 예약") if b else ""
             rows.append(f"<tr class='{'grp' if new_u and rows else ''}'><td class='u'>{u}</td><td class='c'>{c}</td>"
-                        f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{html.escape(r['channels'])}{mini}</td>{who}"
+                        f"<td>{html.escape(r['chamber']) or DASH}</td><td class='m'>{_ch_list(r, mini)}</td>{who}"
                         f"<td class='m'>{html.escape(when)}</td>"
                         f"<td class='tl'><div class='cb-tl' style='height:{h}px'>{grid}{now_line}{bars}</div></td></tr>")
         rows.append(f"<tr class='cb-sum'><td colspan='3'>{html.escape(db.CENTER_SHORT.get(center, center))} 합계</td><td>{total} ch</td>"

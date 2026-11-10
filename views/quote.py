@@ -72,7 +72,7 @@ def render_rates() -> None:
     msg = st.session_state.pop("rates_saved", None)
     if msg:
         st.toast(msg, icon=":material/check_circle:")
-    eq = db.load_equipment()
+    eq = db.load_equipment(full=True)
     devices, extras = quotes.rate_table(eq, db.load_rates(), db.charger_ids(eq))
     ver = st.session_state.get("rates_ver", 0)
     ss = st.session_state
@@ -323,7 +323,7 @@ def render_new() -> None:
     page_header("견적서 작성", "업체")
     d = _draft()
     ver = st.session_state.get("q_ver", 0)
-    eq = db.load_equipment()
+    eq = db.load_equipment(full=True)
     devices, extras = quotes.rate_table(eq, db.load_rates(), db.charger_ids(eq))
     options = quotes.pick_options(devices, extras)
     comp = db.load_companies()
@@ -513,6 +513,81 @@ def render_new() -> None:
     if files and files.get("no") == d["no"] and files.get("preview"):
         with st.expander("PDF 미리보기", expanded=True):
             st.image(files["preview"], width=760)
+    _ledger()
+
+
+LEDGER = {"no": "견적번호", "issued_on": "발급일자", "company": "업체명", "equip_text": "기기명", "model": "모델명",
+          "requester": "의뢰자", "region": "광역/도", "amount": "계(VAT별도)", "amount_vat": "계(부가세 포함)",
+          "status": "진행여부", "writer": "발행자", "note": "비고"}
+
+
+def _ledger_xlsx(df: pd.DataFrame, year: int) -> bytes:
+    """발급대장 엑셀 (팀이 쓰던 '견적서 발급대장' 모양: 제목 두 줄 + 표)."""
+    import io
+
+    import openpyxl
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"발급대장({year})"
+    heads = ["구분", "발급일자", "견적번호", "No."] + list(LEDGER.values())[2:]
+    n = len(heads)
+    ws.cell(1, 1, "재단법인 충북테크노파크").font = Font(bold=True, size=12)
+    ws.cell(2, 1, f"차세대전지팀 견적서 발급대장({year})").font = Font(bold=True, size=14)
+    for r in (1, 2):
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=n)
+        ws.cell(r, 1).alignment = Alignment(horizontal="center")
+    thin = Side(style="thin", color="999999")
+    box = Border(left=thin, right=thin, top=thin, bottom=thin)
+    for c, h in enumerate(heads, start=1):
+        x = ws.cell(4, c, h)
+        x.font, x.border = Font(bold=True), box
+        x.fill = PatternFill("solid", fgColor="DDEBF7")
+        x.alignment = Alignment(horizontal="center", vertical="center")
+    for i, r in enumerate(df.sort_values(["issued_on", "seq"]).to_dict("records"), start=5):
+        day = r["issued_on"]
+        vals = [str(r["no"]).split("-")[0] if r["no"] else "", day.date() if pd.notna(day) else "", r["no"],
+                db.to_num(r["seq"]), r["company"], r["equip_text"], r["model"], r["requester"], r["region"],
+                r["amount"] if pd.notna(r["amount"]) else None, r["amount_vat"] if pd.notna(r["amount_vat"]) else None,
+                r["status"], r["writer"], r["note"]]
+        for c, v in enumerate(vals, start=1):
+            x = ws.cell(i, c, v)
+            x.border = box
+            x.alignment = Alignment(horizontal="center", vertical="center")
+            if isinstance(v, dt.date):
+                x.number_format = "yyyy-mm-dd"
+            elif c in (10, 11):
+                x.number_format = "#,##0"
+    for c, wdt in enumerate([7, 12, 15, 6, 22, 24, 14, 10, 9, 14, 14, 10, 9, 20], start=1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(c)].width = wdt
+    ws.freeze_panes = "A5"
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def _ledger() -> None:
+    """견적서 발급대장: 발급한 견적서 목록을 보고 엑셀로 내려받기 (2026-11-10)."""
+    df = db.load_quotes()
+    st.markdown('<div class="q-sub" style="margin-top:1.4rem">발급대장</div>', unsafe_allow_html=True)
+    if df.empty:
+        st.caption("아직 발급한 견적서가 없어요.")
+        return
+    years = sorted({d.year for d in df["issued_on"].dropna()}, reverse=True) or [dt.date.today().year]
+    with st.container(horizontal=True, vertical_alignment="center"):
+        year = st.segmented_control("연도", years, default=years[0], key="q_led_year", label_visibility="collapsed",
+                                    format_func=lambda y: f"{y}년") or years[0]
+        st.space("stretch")
+        cur = df[df["issued_on"].dt.year == year]
+        st.download_button("발급대장 엑셀", _ledger_xlsx(cur, year), file_name=f"견적서_발급대장_{year}.xlsx",
+                           icon=":material/download:", key="q_led_dl",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    view = cur[list(LEDGER)].rename(columns=LEDGER)
+    st.dataframe(view, hide_index=True, width="stretch", height=min(520, 38 + 35 * (len(view) + 1)),
+                 column_config={"발급일자": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                                "계(VAT별도)": st.column_config.NumberColumn(format="localized"),
+                                "계(부가세 포함)": st.column_config.NumberColumn(format="localized")})
+    st.caption(f"{year}년 {len(view)}건 · 견적서를 다시 열려면 위 '저장한 견적서 불러오기'에서 고르세요.")
 
 def _changed(new: list[dict], edited: list[dict]) -> bool:
     """정리한 줄이 표에 보이는 값과 달라졌는지 (달라졌으면 표를 다시 그려야 함)."""

@@ -12,12 +12,13 @@ import streamlit as st
 from core import calc, db
 from core.terms import w
 from ui_style import CHART_CONFIG, T, chart_layout, empty_state, page_header
-from views.common import go_records
+from views.common import go_records, period_picker
 
 CFG = CHART_CONFIG
 E = html.escape
 SHORT_OF = {v: k for k, v in db.CENTER_SHORT.items()}  # 센터 전체 이름 → 문백·제조검증·MV
 CENTER_ORDER = ["문백", "제조검증", "MV"]
+SHORT: dict[int, str] = {}  # 장비 ID → 짧은 이름 (화면 그릴 때 채움)
 
 # 구역 색: (진한 색, 연한 막대, 바탕)
 BLUE = ("#5B6CFF", "rgba(85,102,230,0.16)", "rgba(85,102,230,0.16)")
@@ -180,21 +181,14 @@ def _pick(event):
 
 # ── 필터 ─────────────────────────────────────────────────────
 
-def _filters(eq: pd.DataFrame, centers: dict[int, str], years: list[int]) -> tuple[pd.DataFrame, int]:
-    uses = sorted(v for v in eq["use"].unique() if v)
-    c0, c1, c2, c3 = st.columns([2.2, 1.4, 1.4, 1], vertical_alignment="bottom")
+def _filters(years: list[int]) -> tuple[int, int | None]:
+    """2026-11-10: 센터·용도 필터는 없애고 장비별 가동률과 같은 기간 고르기 (연 / 월)."""
+    c0, c1 = st.columns([1, 1.5], vertical_alignment="bottom")
     with c0:
         page_header("대시보드", "현황")
-    loc = c1.multiselect("센터", CENTER_ORDER, placeholder="전체 센터", key="dash_loc", label_visibility="collapsed")
-    use = c2.multiselect("장비용도", uses, placeholder="전체 용도", key="dash_use", label_visibility="collapsed")
-    year = c3.selectbox("연도", years, index=len(years) - 1, key="dash_year", format_func=lambda y: f"{y}년",
-                        label_visibility="collapsed")
-    out = eq
-    if loc:
-        out = out[[centers.get(int(i), "") in loc for i in out["id"]]]
-    if use:
-        out = out[out["use"].isin(use)]
-    return out, int(year)
+    with c1:
+        s, _, _, kind = period_picker("dash", ["월", "연"], "연", years=years)
+    return s.year, (s.month if kind == "월" else None)
 
 
 # ── 화면 ─────────────────────────────────────────────────────
@@ -210,8 +204,10 @@ def render() -> None:
     years = sorted({d.year for d in logs_all["start_date"].dropna()} | {today.year}) if not logs_all.empty else [today.year]
     centers = {i: SHORT_OF.get(c, "") for i, c in db.equip_centers(eq_all).items()}
 
-    eq, year = _filters(eq_all, centers, years)
-    logs = logs_all[logs_all["equip_id"].isin(eq["id"])] if len(eq) < len(eq_all) else logs_all
+    year, pick_m = _filters(years)
+    eq, logs = eq_all, logs_all
+    SHORT.clear()
+    SHORT.update(zip(eq_all["id"].astype(int), eq_all["short"]))  # 같은 이름 장비는 'n호기'로
     if logs_all.empty:
         empty_state("아직 사용실적이 없습니다", "'실적 입력'에서 입력하거나 '가져오기 · 백업'에서 기존 엑셀을 가져오세요.", "◷")
 
@@ -219,9 +215,11 @@ def render() -> None:
     cutoff = today if this_year else None
     ys, ye = dt.date(year, 1, 1), dt.date(year, 12, 31)
     ye_eff = calc.effective_end(ys, ye, cutoff) if this_year else ye
-    cm = today.month if this_year else 12               # '이번 달'
+    cm = pick_m or (today.month if this_year else 12)  # '이번 달' (월을 고르면 그 달)
     cq = (cm - 1) // 3 + 1                              # '이번 분기'
     period = f"{year}년 · {today:%m/%d} 기준" if this_year else f"{year}년"
+    if pick_m:
+        period = f"{year}년 {pick_m}월"
     months = [f"{m}월" for m in range(1, 13)]
 
     daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"), db.charger_caps())
@@ -261,12 +259,12 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
     with st.container(key="dsec_util"):
         _head(1, w("가동률"), BLUE, "%", period)
         _stats([
-            (f"이번 달 · {cm}월", f"{m_tot['util']:.1f}", "%",
+            (f"{cm}월", f"{m_tot['util']:.1f}", "%",
              _delta(m_tot["util"] - pm_tot["util"], "%p", "지난달", "{:.1f}") if pm_tot["avail"] else "", False),
-            (f"이번 분기 · {cq}분기", f"{q_tot['util']:.1f}", "%",
+            (f"{cq}분기", f"{q_tot['util']:.1f}", "%",
              _delta(q_tot["util"] - pq_tot["util"], "%p", f"{cq - 1 if cq > 1 else 4}분기", "{:.1f}")
              if pq_tot["avail"] else "", False),
-            (f"올해 누적 · {year}년", f"{y_tot['util']:.1f}", "%",
+            (f"{year}년 누적", f"{y_tot['util']:.1f}", "%",
              _delta(y_tot["util"] - py_tot["util"], "%p", "작년", "{:.1f}") if py_tot["avail"] else "", True),
         ])
         # 한 줄 요약
@@ -313,8 +311,8 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
         for i, c in enumerate(groups):
             g = k[k["c"] == c].sort_values("가동률", ascending=False, na_position="last")
             used, avail = g["사용시간"].sum(), g["가용시간"].sum()
-            rows = [(n, v if pd.notna(v) else 0, f"{v:.0f}%" if pd.notna(v) else "–")
-                    for n, v in zip(g["장비명"], g["가동률"])]
+            rows = [(SHORT.get(int(i), n), v if pd.notna(v) else 0, f"{v:.0f}%" if pd.notna(v) else "–")
+                    for i, n, v in zip(g["equip_id"], g["장비명"], g["가동률"])]
             _box(cols[i % len(cols)], c, _mini_list(rows, BLUE[0], 100),
                  f"{used / avail * 100:.0f}%" if avail else "–", BLUE[0])
 
@@ -337,8 +335,8 @@ def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, y
         m_fee, y_fee, py_fee = fees.get(cm, 0), sum(fees.values()), prev["supply"].sum() if not prev.empty else 0
         unpaid = cur["unpaid"].fillna(0) if not cur.empty else pd.Series(dtype=float)
         _stats([
-            (f"이번 달 · {cm}월", _man(m_fee), "만원", _delta((m_fee - pm_fee) / 10000, "만원", "지난달"), False),
-            (f"올해 누적 · {year}년", _man(y_fee), "만원",
+            (f"{cm}월", _man(m_fee), "만원", _delta((m_fee - pm_fee) / 10000, "만원", "지난달"), False),
+            (f"{year}년 누적", _man(y_fee), "만원",
              _delta((y_fee / py_fee - 1) * 100, "%", "작년") if py_fee else "", True),
             ("미수금 · 올해", _man(unpaid.sum()), "만원",
              _chip(f"{int((unpaid > 0).sum())}건 남았어요", "r") if unpaid.sum() > 0 else _chip("모두 받았어요", "g"), False),
@@ -385,9 +383,9 @@ def _maint_section(year, cm, period, months, eq, eq_all, filtered: bool, today) 
         n_cur, n_prev = by_m.get(cm, 0), by_m.get(cm - 1, 0) if cm > 1 else None
         top_eq = df[df["eqn"] != ""]["eqn"].value_counts() if not df.empty else pd.Series(dtype=int)
         _stats([
-            (f"이번 달 · {cm}월", f"{n_cur}", "건",
+            (f"{cm}월", f"{n_cur}", "건",
              _delta(n_cur - n_prev, "건", "지난달", up_good=False) if n_prev is not None else "", False),
-            (f"올해 누적 · {year}년", f"{len(df)}", "건", "", True),
+            (f"{year}년 누적", f"{len(df)}", "건", "", True),
             ("가장 많은 장비", top_eq.index[0] if len(top_eq) else "–", "",
              _chip(f"올해 {top_eq.iloc[0]}건", "n") if len(top_eq) else "", False),
         ])

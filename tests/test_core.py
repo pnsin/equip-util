@@ -222,7 +222,7 @@ def _tree_store(store):
 
 def test_tree_order_labels_and_itube_unit(store):
     _tree_store(store)
-    eq = db.load_equipment()
+    eq = db.load_equipment(full=True)
     assert list(eq["id"]) == [1, 2, 3, 4]
     assert list(eq["depth"]) == [0, 1, 2, 0]
     assert eq.set_index("id").at[3, "label"] == "믹서(양극) · 시스템"
@@ -230,9 +230,20 @@ def test_tree_order_labels_and_itube_unit(store):
     assert sorted(db.descendants(eq)[1]) == [1, 2, 3]
 
 
-def test_rollup_adds_child_hours_without_double_count(store):
+def test_fold_name_only_middle_device(store):
+    """'믹서' 아래 '믹서(양극)'뿐이면 기본 목록에서 '믹서'는 빠지고 양극이 위 장비에 바로 붙음. 믹서 실적은 위 장비로."""
     _tree_store(store)
     eq = db.load_equipment()
+    assert list(eq["id"]) == [1, 3, 4]
+    assert eq.set_index("id").at[3, "parent_id"] == 1
+    db.insert_logs([dict(equip_id=2, start_date=D(2026, 7, 1), end_date=D(2026, 7, 1), hours=3, purpose="시험",
+                         usage_type="내부", company="")], "t")
+    assert list(db.load_logs()["equip_id"]) == [1]
+
+
+def test_rollup_adds_child_hours_without_double_count(store):
+    _tree_store(store)
+    eq = db.load_equipment(full=True)
     logs = pd.DataFrame([_log(id=1, equip_id=3, hours=10), _log(id=2, equip_id=1, hours=5),
                          _log(id=3, equip_id=4, hours=2)])
     daily = calc.expand_daily(logs, "spread")
@@ -390,7 +401,7 @@ def test_pick_only_leaf_devices_with_short_names():
     assert sorted(db.pick_ids(eq)) == [3, 5, 6, 7]  # 세부장비가 있는 장비(1, 2, 4)는 고를 수 없음
     assert short[3] == "전극 코터(양극) · 문백" and short[5] == "전극 코터(양극) · 오창"  # 같은 이름만 구분
     assert short[2] == "전극 코터"
-    assert short[6] == "방폭챔버 · 2406-C-0013"  # 센터도 같으면 장비번호로
+    assert short[6] == "방폭챔버 2호기" and short[7] == "방폭챔버 1호기"  # 센터도 같으면 장비번호 순으로 n호기
     assert db.path_text(eq, 3) == "전극 코터 › 전극제조 시스템 (2212-C-0709)"
 
 

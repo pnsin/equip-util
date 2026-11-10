@@ -18,7 +18,6 @@ from core import db, photos
 from core.terms import w
 from ui_style import empty_state, page_header
 from views import common
-from views.common import search_box
 
 GROUP = "장비"
 DOC_KINDS = ["설명서", "SOP", "사양서", "교육자료", "점검표", "사진·도면", "기타"]
@@ -107,7 +106,8 @@ CSS = """<style>
 .th {aspect-ratio: 4 / 3; border-radius: 9px; overflow: hidden; border: 2px solid transparent; background: var(--panel2);}
 .th.on {border-color: var(--accent);}
 .th img {width: 100%; height: 100%; object-fit: cover; display: block;}
-.st-key-info_up section {padding: .4rem .6rem; border-radius: 12px; border: 1.5px dashed var(--line2); background: var(--deep);}
+.st-key-info_up section {padding: 0; border: none !important; background: transparent !important;}
+.up-hint {font-size: .74rem; color: var(--muted); margin-top: -.3rem;}
 .st-key-info_up section button {font-size: .8rem;}
 .st-key-info_up [data-testid="stFileUploaderDropzoneInstructions"] {display: none;}
 .st-key-info_up label p {font-size: .78rem; color: var(--muted);}
@@ -181,10 +181,9 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
             kids_of.setdefault(int(r.parent_id), []).append(r.name)
 
     center = common.center_pick("info_center")
-    c1, c2 = st.columns([3, 1.1], vertical_alignment="center")
-    with c1:
-        q = search_box("info_q", "장비명 · ITUBE번호 · 모델명 · 사양으로 찾기")
-    with c2:
+    q = ""  # 2026-11-10 장비가 많지 않아 검색칸 없앰
+    with st.container(horizontal=True):
+        st.space("stretch")
         view = st.segmented_control("보기", ["카드", "목록"], default="카드", key="info_view",
                                     label_visibility="collapsed") or "카드"
     df = eq[eq["depth"] == 0]  # 세부장비는 장비 한 대 화면에서 봄
@@ -318,8 +317,9 @@ def _photos(eid: int, name: str, icon: str, info: dict) -> None:
 
     ver = st.session_state.get("info_up_ver", 0)
     with st.container(key="info_up"):
-        ups = st.file_uploader("사진 올리기 · 여기로 끌어다 놓기 · Ctrl+V 붙여넣기", type=["png", "jpg", "jpeg", "webp", "gif", "bmp"],
+        ups = st.file_uploader("사진 올리기", type=["png", "jpg", "jpeg", "webp", "gif", "bmp"], label_visibility="collapsed",
                                accept_multiple_files=True, key=f"info_up_{eid}_{ver}")
+        st.markdown("<div class='up-hint'>사진 올리기 · 여기로 끌어다 놓기 · Ctrl+V 붙여넣기</div>", unsafe_allow_html=True)
     st.html(PASTE_JS, unsafe_allow_javascript=True)
     if ups:
         new = []
@@ -350,26 +350,24 @@ def _clean(df: pd.DataFrame, keys: list[str]) -> list[dict]:
 
 def _specs(eid: int, name: str, info: dict) -> None:
     base = _of(info["equip_specs"], eid)[["id", "item", "value"]].reset_index(drop=True)
-    ver = st.session_state.get(f"info_sp_ver_{eid}", 0)
-    st.markdown("<div class='boxh'><b>주요 사양</b><small>바로 고치면 저장돼요 · 엑셀에서 붙여넣기 가능</small></div>",
-                unsafe_allow_html=True)
-    ed = st.data_editor(base, key=f"info_specs_{eid}_{ver}", num_rows="dynamic", hide_index=True, width="stretch",
-                        column_order=["item", "value"],
-                        column_config={"item": st.column_config.TextColumn("항목", width="small"),
-                                       "value": st.column_config.TextColumn("값", width="large")})
-    new, old = _clean(ed, ["item", "value"]), _clean(base, ["item", "value"])
-    if new != old:
-        db.save_info_rows("equip_specs", eid, new, f"{name} 사양")
-        st.session_state[f"info_sp_ver_{eid}"] = ver + 1
+    st.markdown("<div class='boxh'><b>주요 사양</b></div>", unsafe_allow_html=True)
+    action, out, _ = common.pick_table(
+        base, f"info_sp_{eid}", name_col="item", column_order=["item", "value"], add_label="사양 추가",
+        height=min(420, 38 + 35 * (len(base) + 1)) if len(base) else 74,
+        column_config={"item": st.column_config.TextColumn("항목", width="small"),
+                       "value": st.column_config.TextColumn("값", width="large")})
+    if action:
+        db.save_info_rows("equip_specs", eid, _clean(out, ["item", "value"]), f"{name} 사양")
+        common.pick_done(f"info_sp_{eid}")
         st.rerun()
 
 
 def _docs(eid: int, name: str, info: dict) -> None:
     base = _of(info["equip_docs"], eid)[["id", "kind", "title", "url", "note"]].reset_index(drop=True)
     e = html.escape
-    st.markdown("<div class='boxh'><b>자료</b><small>설명서 · SOP · 사양서 링크</small></div>", unsafe_allow_html=True)
+    st.markdown("<div class='boxh'><b>매뉴얼</b><small>설명서 · SOP · 사양서 링크</small></div>", unsafe_allow_html=True)
     if base.empty:
-        st.markdown("<div class='nodoc'>아직 자료가 없어요. 드라이브나 사내 폴더 링크를 넣어 두면 누구나 바로 열 수 있어요.</div>",
+        st.markdown("<div class='nodoc'>아직 매뉴얼이 없어요. 드라이브나 사내 폴더 링크를 넣어 두면 누구나 바로 열 수 있어요.</div>",
                     unsafe_allow_html=True)
     rows = []
     for r in base.itertuples(index=False):
@@ -383,7 +381,7 @@ def _docs(eid: int, name: str, info: dict) -> None:
     if rows:
         st.markdown("".join(rows), unsafe_allow_html=True)
     ver = st.session_state.get(f"info_dc_ver_{eid}", 0)
-    with st.popover("자료 추가 · 고치기", icon=":material/add_link:", width="stretch"):
+    with st.popover("매뉴얼 추가 · 고치기", icon=":material/add_link:", width="stretch"):
         ed = st.data_editor(base, key=f"info_docs_{eid}_{ver}", num_rows="dynamic", hide_index=True, width="stretch",
                             column_order=["kind", "title", "url", "note"],
                             column_config={
@@ -396,7 +394,7 @@ def _docs(eid: int, name: str, info: dict) -> None:
         st.caption("줄을 고치면 바로 저장돼요. 지우려면 줄 왼쪽을 눌러 고른 뒤 Delete.")
     new, old = _clean(ed, ["kind", "title", "url", "note"]), _clean(base, ["kind", "title", "url", "note"])
     if new != old:
-        db.save_info_rows("equip_docs", eid, new, f"{name} 자료")
+        db.save_info_rows("equip_docs", eid, new, f"{name} 매뉴얼")
         st.session_state[f"info_dc_ver_{eid}"] = ver + 1
         st.rerun()
 
@@ -413,7 +411,7 @@ def _notes(eid: int, info: dict, key: str, title: str, hint: str, place: str) ->
     if k not in st.session_state:
         st.session_state[k] = row.iloc[0][key] if not row.empty else ""
     st.markdown(f"<div class='boxh'><b>{title}</b><small>{hint}</small></div>", unsafe_allow_html=True)
-    st.text_area(title, key=k, label_visibility="collapsed", placeholder=place, height=110,
+    st.text_area(title, key=k, label_visibility="collapsed", placeholder=place, height=68,
                  on_change=_save_note, args=(eid,))
 
 
@@ -424,14 +422,18 @@ def _history(ids: list[int], eq: pd.DataFrame) -> None:
     name_of = dict(zip(eq["id"].astype(int), eq["name"]))
     df = history.load()
     df = df[df["equip_id"].isin(ids)] if not df.empty else df
-    e = html.escape
     with st.container(border=True, key=f"hist_{eid}"):
         h1, h2 = st.columns([3, 1], vertical_alignment="center")
-        h1.markdown(f"<div class='boxh'><b>장비 히스토리</b><small>{len(df)}건 · 최근 기록이 위</small></div>",
-                    unsafe_allow_html=True)
+        h1.markdown("<div class='boxh'><b>장비 히스토리</b></div>", unsafe_allow_html=True)
         if not df.empty:
-            h2.download_button("엑셀", history.to_xlsx(df, name_of), f"장비히스토리_{name_of.get(eid, eid)}.xlsx",
-                               icon=":material/download:", width="stretch", key=f"hist_xl_{eid}")
+            with h2.container(horizontal=True):
+                st.space("stretch")
+                st.download_button("엑셀", history.to_xlsx(df, name_of), f"장비히스토리_{name_of.get(eid, eid)}.xlsx",
+                                   icon=":material/download:", key=f"hist_xl_{eid}", type="tertiary")
+        if df.empty:
+            st.caption("아직 기록이 없어요.")
+        for r in df.to_dict("records"):  # 기록이 먼저 보이게 (추가 칸은 아래) — 2026-11-10
+            _hist_row(r, ids, name_of)
         ver = st.session_state.get("hist_ver", 0)
         with st.expander("기록 추가", icon=":material/add:"):
             with st.form(f"hist_add_{eid}_{ver}", border=False):
@@ -453,29 +455,30 @@ def _history(ids: list[int], eq: pd.DataFrame) -> None:
                         history.add(int(who), day, text.strip(), thumb, big)
                         st.session_state.hist_ver = ver + 1
                         st.rerun()
-        if df.empty:
-            st.caption("아직 기록이 없어요.")
-            return
-        for r in df.to_dict("records"):
-            rid = int(r["id"])
-            c1, c2, c3 = st.columns([0.9, 4, 0.5], vertical_alignment="top")
-            c1.markdown(f"<b>{r['date'] or ''}</b>", unsafe_allow_html=True)
-            dev = f"<small style='color:var(--accent)'>{e(name_of.get(r['equip_id'], ''))}</small><br>" \
-                if len(ids) > 1 else ""
-            c2.markdown(f"{dev}{e(str(r['content'])).replace(chr(10), '<br>')}"
-                        f"<br><small style='color:var(--muted)'>{e(str(r['created_by'] or ''))}</small>",
-                        unsafe_allow_html=True)
-            if r["thumb"]:
-                c2.markdown(f"<img src='{photos.data_uri(r['photo'] or r['thumb'])}' style='max-width:260px;"
-                            "border-radius:8px'>", unsafe_allow_html=True)
-            with c3.popover("", icon=":material/more_horiz:"):
-                new = st.text_area("내용", value=str(r["content"]), key=f"hist_ed_{rid}")
-                if st.button("고치기", key=f"hist_up_{rid}", type="primary"):
-                    history.update(rid, content=new.strip())
-                    st.rerun()
-                if st.button("지우기", key=f"hist_del_{rid}", icon=":material/delete:"):
-                    history.delete(rid)
-                    st.rerun()
+
+
+def _hist_row(r: dict, ids: list[int], name_of: dict) -> None:
+    from core import history
+    e = html.escape
+    rid = int(r["id"])
+    c1, c2, c3 = st.columns([0.9, 4, 0.6], vertical_alignment="top")
+    c1.markdown(f"<b>{r['date'] or ''}</b>", unsafe_allow_html=True)
+    dev = f"<small style='color:var(--accent)'>{e(name_of.get(r['equip_id'], ''))}</small><br>" if len(ids) > 1 else ""
+    c2.markdown(f"{dev}{e(str(r['content'])).replace(chr(10), '<br>')}"
+                f"<br><small style='color:var(--muted)'>{e(str(r['created_by'] or ''))}</small>",
+                unsafe_allow_html=True)
+    if r["thumb"]:
+        c2.markdown(f"<img src='{photos.data_uri(r['photo'] or r['thumb'])}' style='max-width:260px;"
+                    "border-radius:8px'>", unsafe_allow_html=True)
+    with c3.popover("수정", width="stretch"):
+        new = st.text_area("내용", value=str(r["content"]), key=f"hist_ed_{rid}", height=160)
+        b1, b2 = st.columns(2)
+        if b1.button("고치기", key=f"hist_up_{rid}", type="primary", width="stretch"):
+            history.update(rid, content=new.strip())
+            st.rerun()
+        if b2.button("지우기", key=f"hist_del_{rid}", icon=":material/delete:", width="stretch"):
+            history.delete(rid)
+            st.rerun()
 
 
 def _family(root: int, eq: pd.DataFrame) -> list[tuple[int, int]]:
@@ -518,15 +521,14 @@ def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
     cur = st.session_state.get(key, eid)
     nav, body = st.columns([1, 3.3], gap="medium")
     with nav, st.container(border=True, key="info_nav"):
-        q = st.text_input("세부장비 찾기", key=f"info_unit_q_{eid}", placeholder=f"세부장비 {len(fam)}개에서 찾기",
-                          label_visibility="collapsed", icon=":material/search:")
+        q = ""
         depth = dict(fam)
         ids = [i for i, _ in fam if not q or q.lower() in name_of.get(i, "").lower()]
         if cur != eid and cur not in ids:
             ids = [cur] + ids
         with st.container(height=min(620, 60 + 36 * (len(ids) + 1)), border=False):
             sel = st.radio("세부장비", [eid] + ids, key=key, label_visibility="collapsed",
-                           format_func=lambda i: "■ 주장비 전체" if i == eid
+                           format_func=lambda i: "주장비 전체" if i == eid
                            else "\u3000" * (depth.get(i, 1) - 1) + name_of.get(i, str(i)))
     with body:
         _unit(sel, eq, info, in_list=True)
@@ -581,8 +583,6 @@ def _unit(eid: int, eq: pd.DataFrame, info: dict, in_list: bool = False) -> None
     c1, c2 = st.columns([1.05, 1], gap="medium")
     with c1, st.container(border=True):
         _specs(eid, r["name"], info)
-        _notes(eid, info, "caution", "사용 시 주의", "다 쓰고 칸 밖을 누르면 저장돼요",
-               "예) 사용 후 블레이드 세척 필수 (NMP)\n진공 펌프 오일 3개월마다 확인")
     with c2, st.container(border=True):
         _docs(eid, r["name"], info)
         _notes(eid, info, "contact", "A/S 연락처", "제조사 · 구매처 담당자",

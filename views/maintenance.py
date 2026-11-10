@@ -1,8 +1,7 @@
 """장비 정보 › 유지보수: 언제 · 누가 · 어떤 장비에 · 어떤 유지보수를 했는지 적는 단순 기록 표.
 
 - 장비는 장비 목록(기준 정보 › 장비)에서 고릅니다. 세부장비는 '세부장비 · 소속 장비' 로 보입니다.
-- 셀을 바로 고치고, 끌어 선택해 Ctrl+C / Ctrl+V, Delete, 머리글을 눌러 정렬 (엑셀처럼).
-- 맨 아래 빈 줄에 적으면 새 기록이 됩니다.
+- 평소엔 표가 잠겨 있고, '선택'한 줄만 아래에서 고쳐 [저장] / [삭제] (2026-11-10).
 """
 import datetime as dt
 import html
@@ -12,7 +11,7 @@ import streamlit as st
 
 from core import db
 from ui_style import page_header
-from views.common import center_pick, filtered_editor, merge_edits, pin_table, search_box, unpin
+from views.common import center_pick, pick_done, pick_table, search_box
 
 COLS = {"id": "id", "date": "날짜", "equip": "장비", "kind": "종류", "content": "내용", "staff": "담당자",
         "cost": "비용(원)", "note": "비고"}
@@ -73,11 +72,6 @@ def _by_equipment(df: pd.DataFrame, eq: pd.DataFrame, center: str | None) -> Non
     st.caption(f"전체 {len(tbl)}대 · 유지보수 기록이 한 번도 없는 장비 {none}대")
 
 
-def _clear_editor() -> None:
-    for k in [k for k in st.session_state if str(k).startswith("maint_editor")]:
-        st.session_state.pop(k, None)
-
-
 def render() -> None:
     page_header("유지보수", "장비")
     st.markdown(CSS, unsafe_allow_html=True)
@@ -99,7 +93,6 @@ def render() -> None:
     })
     view = view.astype({c: "string" for c in ("장비", "종류", "내용", "담당자", "비고")})
     view["날짜"] = pd.to_datetime(view["날짜"]).dt.date
-    view, newer = pin_table("maint_editor_", view)
 
     c0, c9 = st.columns([4, 1.2], vertical_alignment="center")
     with c0:
@@ -129,34 +122,23 @@ def render() -> None:
 
     staff = db.staff_names(include=list(df["staff"]))
     equip_opts = list(label_of.values()) + sorted({v for v in view["장비"].dropna() if v and v not in id_of})
-    edited, shown = filtered_editor(
-        view, mask if filtered else None,
-        key=f"maint_editor_{q}_{pick}", num_rows="dynamic", hide_index=True, width="stretch",
-        height=min(700, 38 + 35 * (int(mask.sum()) + 2)),
+    action, out, gone = pick_table(
+        view, "maint_tbl", mask=mask if filtered else None, name_col="내용", add_label="기록 추가",
         column_order=SHOW,
         column_config={
             "날짜": st.column_config.DateColumn(format="YYYY-MM-DD", default=dt.date.today(), width=110),
-            "장비": st.column_config.SelectboxColumn(options=equip_opts, width="medium",
-                                                   help="장비 목록에서 고릅니다. 세부장비는 '세부장비 · 소속 장비'로 보여요."),
+            "장비": st.column_config.SelectboxColumn(options=equip_opts, width="medium"),
             "종류": st.column_config.SelectboxColumn(options=kinds, width="small"),
-            "내용": st.column_config.TextColumn(width="medium"),
+            "내용": st.column_config.TextColumn(width="large"),
             "비용(원)": st.column_config.NumberColumn(min_value=0, step=1000, format="localized", width="small"),
             "담당자": st.column_config.SelectboxColumn(options=staff, width="small"),
             "비고": st.column_config.TextColumn(width="small"),
-        },
-    )
-    st.caption((f"{shown}건 표시 · " if filtered else "")
-               + "맨 아래 빈 줄에 적으면 새 기록이 돼요. 줄 왼쪽을 눌러 고른 뒤 Delete 키로 지울 수 있어요.")
-
-    n_del = len(view) - len(edited.dropna(subset=["id"]))
-    if st.button("변경 내용 저장", type="primary", icon=":material/save:"):
-        if newer is not None:  # 그사이 다른 분이 저장함 → 내가 바꾼 줄만 얹기
-            edited = merge_edits(view, edited, newer)
-        unpin("maint_editor_")
-        out = edited.rename(columns={v: k for k, v in COLS.items()})
-        out["equip_id"] = [id_of.get(e) if isinstance(e, str) else None for e in out["equip"]]
-        out["equip_ref"] = out["equip"]
-        n = db.save_maint(out.drop(columns=["equip"]))
-        st.session_state.maint_saved = f"유지보수 기록 {n}건을 저장했어요." + (f" ({n_del}건 삭제)" if n_del > 0 else "")
-        _clear_editor()
+        })
+    if action:
+        o = out.rename(columns={v: k for k, v in COLS.items()})
+        o["equip_id"] = [id_of.get(e) if isinstance(e, str) else None for e in o["equip"]]
+        o["equip_ref"] = o["equip"]
+        db.save_maint(o.drop(columns=["equip"]))
+        pick_done("maint_tbl")
+        st.session_state.maint_saved = f"{len(gone)}건 삭제했어요." if gone else "저장했어요."
         st.rerun()
