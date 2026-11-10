@@ -475,9 +475,16 @@ _CSS = """
 
 # 깔끔형(clean·clean-dark): 파스텔·그라데이션을 걷어 내고 바탕·선·글자만으로 정리
 _CLEAN_CSS = """<style>
-[data-testid="stFileUploaderDropzone"]{flex-direction:column;gap:6px;padding:10px;background:transparent;border:1px dashed var(--line,#64748B);border-radius:10px}
+[data-testid="stFileUploaderDropzone"]{flex-direction:column;gap:6px;padding:0;background:transparent;border:none;border-radius:10px}
 [data-testid="stFileUploaderDropzoneInstructions"]{display:none}
 [data-testid="stFileUploaderDropzone"] button{width:100%}
+[data-testid="stPopoverBody"] [data-testid="stFileUploader"] section{min-height:0;margin:0}
+[data-testid="stPopoverBody"] [data-testid="stFileUploader"]{margin-bottom:0}
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]){min-width:400px}
+[data-testid="stPopoverBody"] button p{white-space:nowrap}
+[data-testid="stFileUploaderDropzone"] button{font-size:0;display:flex;justify-content:center;align-items:center}
+[data-testid="stFileUploaderDropzone"] button *{display:none}
+[data-testid="stFileUploaderDropzone"] button::after{content:"파일 선택";font-size:14px;margin:0 auto}
 
   .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stAppViewContainer"] { background: var(--bg) !important; }
   [data-testid="stSidebar"] { background: var(--side) !important; border-right: 1px solid var(--side-line) !important; }
