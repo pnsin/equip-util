@@ -13,7 +13,7 @@ from core import db, quotes, seed
 from core.quote_doc import UNITS
 from core.terms import w
 from ui_style import page_header
-from views.common import center_pick, excel_box, pick_done, pick_table, search_box
+from views.common import center_pick, in_center, excel_box, pick_done, pick_table, search_box
 
 KPI_COL = w("가동률 산정")
 XK = "시험·기타"  # 장비가 아닌 단가 항목의 장비구분
@@ -135,7 +135,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     if center and open_opts:  # 센터를 고르면 그 센터 장비만 고를 수 있게
         cen0 = db.equip_centers(eq)
         id_of_label = {l: i for i, l in label_of.items()}
-        open_opts = [l for l in open_opts if cen0.get(id_of_label[l]) == center]
+        open_opts = [l for l in open_opts if in_center(pd.Series([cen0.get(id_of_label[l]) or ""]), center).iloc[0]]
     opened = st.multiselect("세부장비 펼치기", open_opts, key="equip_open", placeholder="장비를 검색해 고르면 그 아래 세부장비가 함께 보여요",
                             label_visibility="collapsed") if open_opts and not sub else []
     open_ids = {i for i, l in label_of.items() if l in opened}
@@ -158,7 +158,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
         mask &= pd.Series([_shown(int(i)) for i in eq["id"]] + [True] * (len(view) - n_dev), index=view.index)
     if center:
         cen = db.equip_centers(eq)
-        mask &= pd.to_numeric(view["id"], errors="coerce").map(cen).eq(center) & ~is_x
+        mask &= in_center(pd.to_numeric(view["id"], errors="coerce").map(cen), center) & ~is_x
 
     kinds = list(dict.fromkeys(seed.EQUIP_KINDS_ALL + [k for k in eq["kind"] if k] + [XK]))
     cats = list(dict.fromkeys(["단독장비", "시스템장비", "시스템시설", "단독장비(복수구매)"] + [c for c in eq["category"] if c]))

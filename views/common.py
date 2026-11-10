@@ -162,9 +162,15 @@ POS = "_pos"
 def center_pick(key: str) -> str | None:
     """전체 / 센터 셋 중 고르기. 전체면 None."""
     from core import db
-    c = st.segmented_control("센터", ["전체"] + db.CENTERS, default="전체", key=key,
+    c = st.segmented_control("센터", ["전체"] + db.CENTERS + ["기타"], default="전체", key=key,
                              label_visibility="collapsed")
     return None if c in (None, "전체") else c
+
+
+def in_center(cen, center: str):
+    """센터 이름 시리즈 → 고른 센터인지. '기타' 는 세 센터 어디에도 없는 장비."""
+    from core import db
+    return ~cen.isin(db.CENTERS) if center == "기타" else cen.eq(center)
 
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
