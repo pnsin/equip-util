@@ -58,6 +58,11 @@ RUNTIME_JS = """
     return v;
   }
   P.rect = function(x, y, w, h){ this.__r = [x, y, w, h]; return rect.apply(this, arguments); };
+  var di = P.drawImage;
+  P.drawImage = function(img, x, y, w, h){  // 모든 표의 머리글 아이콘(종류·정렬 표시)은 숨김
+    if (arguments.length >= 5 && y >= -2 && y < 40 && w <= 28 && h <= 28 && inGrid(this.canvas)){ return; }
+    return di.apply(this, arguments);
+  };
   P.fillText = function(t, x, y, mw){
     var r = this.__r;
     if (r && (this.textAlign === 'left' || this.textAlign === 'start' || this.textAlign === 'right') && x >= r[0] - 1 && x <= r[0] + r[2] && inGrid(this.canvas) && this.measureText(t).width <= r[2] - 20){
