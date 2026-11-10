@@ -511,7 +511,7 @@ _SLATE_CSS = """<style>
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] [data-testid="stIconMaterial"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] [data-testid="stIconMaterial"] { color: #818CF8 !important; }
   /* 2026-11-10 왼쪽 메뉴 다시: 묶음 제목 작게, 줄 간격 고르게, 고른 메뉴는 연한 남보라 알약 */
   [data-testid="stSidebar"] .nav-group { font-size: .7rem !important; font-weight: 600 !important; letter-spacing: .06em !important;
-        color: #475569 !important; margin: 1.15rem 0 .45rem 0 !important; padding: 0 .7rem !important; }
+        color: #8B9AB0 !important; margin: 1.15rem 0 .45rem 0 !important; padding: 0 .7rem !important; }
   [data-testid="stSidebar"] [data-testid="stElementContainer"]:has([data-testid="stPageLink"]) { margin-bottom: -1.05rem !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a { padding: .42rem .7rem !important; border-radius: 9px !important; gap: .7rem !important;
         transition: background .15s ease; }

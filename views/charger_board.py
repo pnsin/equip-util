@@ -41,7 +41,7 @@ CSS = """<style>
 .cb-t tr.grp td {border-top: 1px solid #26334D;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
-.cb-mh span {position: absolute; top: 0; font-size: .7rem; color: #94A3B8; font-weight: 600; padding-left: 5px;
+.cb-mh span {position: absolute; top: 0; font-size: .7rem; color: #94A3B8; font-weight: 600; text-align: center; box-sizing: border-box;
   border-left: 1px solid #26334D;}
 .cb-g {position: absolute; top: 0; bottom: 0; width: 1px; background: #26334D;}
 .cb-now {position: absolute; top: -2px; bottom: -2px; width: 2px; background: #E35D78; border-radius: 2px; z-index: 2;}
@@ -238,7 +238,9 @@ def render() -> None:
         pos = lambda d: (d - w0).days / span * 100  # noqa: E731
         grid = "".join(f"<div class='cb-g' style='left:{pos(x):.2f}%'></div>" for x in months[1:])
         now_line = f"<div class='cb-now' style='left:{pos(today):.2f}%'></div>"
-        mh = "".join(f"<span style='left:{pos(x):.2f}%'>{x.month}월</span>" for x in months)
+        edges = [pos(x) for x in months] + [100.0]  # 월 글자는 그 달 칸의 가운데에
+        mh = "".join(f"<span style='left:{edges[i]:.2f}%;width:{edges[i + 1] - edges[i]:.2f}%'>{x.month}월</span>"
+                     for i, x in enumerate(months))
         rows, prev_u, prev_c, show_css = [], None, None, []
         recs = g.to_dict("records")
         span_u = {}  # 같은 충방전기 줄 수 (장비 칸 셀 병합)
