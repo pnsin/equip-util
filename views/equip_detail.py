@@ -9,7 +9,7 @@ import streamlit as st
 from core import calc, db
 from core.terms import w
 from ui_style import CHART_CONFIG, T, chart_layout, nice_step, empty_state, page_header, section_bar
-from views.common import go_records, period_picker
+from views.common import period_picker
 
 CFG = CHART_CONFIG
 
@@ -92,7 +92,6 @@ def render() -> None:
     .sb-h, .sb-s {text-align: right; color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums;}
     @media (max-width: 640px) {.sb-r {grid-template-columns: minmax(110px, 1.4fr) 1fr 56px; } .sb-h, .sb-s {display: none;}}
     </style>""", unsafe_allow_html=True)
-    page_header("장비별 가동률", "현황")
     cfg = db.get_settings()
     eq = db.load_equipment()
     logs_all = db.load_logs()
@@ -102,12 +101,21 @@ def render() -> None:
         empty_state("등록된 장비가 없습니다", "'기준 정보 › 장비'에서 먼저 장비를 추가하세요.")
         return
 
-    ids = list(eq["id"].astype(int))
+    top_ids = set(eq.loc[eq["parent_id"].isna(), "id"].astype(int)) if "parent_id" in eq else set()
+    ids = [i for i in eq["id"].astype(int) if not top_ids or i in top_ids]  # 주장비만 고름 (세부장비는 아래 표로)
     label_of = dict(zip(eq["id"].astype(int), eq["label"]))
     want = st.session_state.pop("detail_equip", None)
-    if want in label_of:
-        st.session_state.detail_sel = int(want)
-    st.session_state.setdefault("detail_sel", ids[0])
+    if want in label_of:  # 세부장비로 들어오면 그 주장비를 보여 줌
+        fam = db.descendants(eq)
+        st.session_state.detail_sel = next((t for t in ids if int(want) in fam.get(t, [t])), int(want))
+    if st.session_state.get("detail_sel") not in ids:
+        st.session_state.detail_sel = ids[0]
+    years = sorted({d.year for d in logs_all["start_date"].dropna()}) if not logs_all.empty else []
+    h1, h2 = st.columns([1, 1.5], vertical_alignment="bottom")
+    with h1:
+        page_header("장비별 가동률", "현황")
+    with h2:
+        s, e, label, kind = period_picker("detail", calc.PERIOD_KINDS, "연", years=years)
     eid = st.selectbox("장비", ids, format_func=label_of.get, key="detail_sel", label_visibility="collapsed",
                        placeholder="장비 검색")
     r = eq[eq["id"] == eid].iloc[0].to_dict()
@@ -116,8 +124,6 @@ def render() -> None:
     kids = list(eq.loc[eq["parent_id"] == eid, "name"]) if "parent_id" in eq else []
     _info(r, annual, parent, kids)
 
-    years = sorted({d.year for d in logs_all["start_date"].dropna()}) if not logs_all.empty else []
-    s, e, label, kind = period_picker("detail", calc.PERIOD_KINDS, "연", years=years)
     cutoff = dt.date.today()
     e_eff = calc.effective_end(s, e, cutoff)
     one = eq[eq["id"] == eid]
@@ -166,7 +172,7 @@ def render() -> None:
 
     c1, c2 = st.columns([1, 1.6])
     with c1:
-        section_bar("주요 업체", sub="사용시간 기준")
+        section_bar("주요 업체")
         b = calc.breakdown(daily, logs, s, e_eff, "company").head(8)
         if b.empty:
             st.caption("이 기간에 실적이 없습니다.")
@@ -189,5 +195,3 @@ def render() -> None:
                 column_config={"시작일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                "종료일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                "사용료": st.column_config.NumberColumn(format="%d")})
-        if st.button("수수료 입력에서 고치기", icon=":material/edit_note:", key="detail_to_records"):
-            go_records(equip_label=label_of[eid], start=s, end=e_eff)

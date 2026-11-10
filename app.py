@@ -118,7 +118,7 @@ PAGES = {
         st.Page(companies.render, title="업체 목록", url_path="companies"),
     ],
     "기준 정보": [
-        st.Page(equipment.render, title="장비 목록", url_path="equipment"),
+        st.Page(equipment.render, title="장비 목록 및 수수료 단가", url_path="equipment"),
         st.Page(staff.render, title="담당자", url_path="staff"),
     ],
     "관리": [
@@ -149,7 +149,7 @@ NAV_ICONS = {
     "실적 입력": ":material/edit_calendar:", "수수료 입력": ":material/payments:", "i-Tube 제출 파일": ":material/upload_file:",
     "장비 정보": ":material/precision_manufacturing:", "유지보수": ":material/build:",
     "CS활동": ":material/handshake:", "견적서 작성": ":material/request_quote:", "업체 목록": ":material/apartment:",
-    "장비 목록": ":material/inventory_2:", "담당자": ":material/group:",
+    "장비 목록 및 수수료 단가": ":material/inventory_2:", "담당자": ":material/group:",
     "설정": ":material/settings:", "가져오기 · 백업": ":material/cloud_sync:", "휴지통 · 기록": ":material/delete:",
 }
 NAV_COLORS = [("#5B6CFF", "#E9EBFF"), ("#E0628F", "#FDE8F0"), ("#17936A", "#DFF5EC"),

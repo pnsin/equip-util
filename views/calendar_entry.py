@@ -86,7 +86,7 @@ CSS = """<style>
 .st-key-ep_list button[data-testid="stBaseButton-primary"] p:first-child {color: #F8FAFC !important;}
 .st-key-ep_panel [data-testid="stMarkdownContainer"]:has(.ep-t, .ep-h, .ep-empty) {margin-bottom: 0 !important;}
 .ep-empty {font-size: .85rem; color: #94A3B8; background: rgba(85,143,230,0.16); border-radius: 12px; padding: 12px; text-align: center;}
-div[class*="st-key-ep_row_test_"] button {--chip-fg: #E35D78;} div[class*="st-key-ep_row_make_"] button {--chip-fg: #1FA971;}
+div[class*="st-key-ep_row_test_"] button {--chip-fg: #E35D78;} div[class*="st-key-ep_row_chg_"] button {--chip-fg: #C04FD8;} div[class*="st-key-ep_row_make_"] button {--chip-fg: #1FA971;}
 div[class*="st-key-ep_row_anal_"] button {--chip-fg: #7C5CE0;}
 .st-key-ep_form {border-top: 1px solid #26334D; padding-top: 14px; gap: .65rem;}
 .ep-t {font-weight: 800; font-size: 1.05rem; color: var(--ink); display: flex; align-items: center; gap: 8px;}
@@ -204,6 +204,7 @@ div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 .st-key-calgrid div[class*="st-key-cf_"] button p {font-size: .72rem !important; font-weight: 700;}
 .st-key-calgrid div[class*="st-key-cfy_"] button {background: #E5484D !important; border-color: #E5484D !important; color: #fff !important;}
 .st-key-calgrid div[class*="st-key-sec_test_"] {--sec-bg: rgba(230,85,114,0.16); --sec-line: #E35D7833; --sec-fg: #E35D78; --chip-fg: #E35D78;}
+.st-key-calgrid div[class*="st-key-sec_chg_"] {--sec-bg: rgba(217,70,239,0.14); --sec-line: #C04FD833; --sec-fg: #C04FD8; --chip-fg: #C04FD8;}
 .st-key-calgrid div[class*="st-key-sec_make_"] {--sec-bg: rgba(85,230,153,0.16); --sec-line: #1FA97133; --sec-fg: #1FA971; --chip-fg: #1FA971;}
 .st-key-calgrid div[class*="st-key-sec_anal_"] {--sec-bg: rgba(117,85,230,0.16); --sec-line: #7C5CE033; --sec-fg: #7C5CE0; --chip-fg: #7C5CE0;}
 .st-key-calgrid div[class*="st-key-sec_etc_"] {--sec-bg: #26334D; --sec-line: #8A97A833; --sec-fg: #94A3B8; --chip-fg: #94A3B8;}
@@ -613,7 +614,7 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
                 f" · {ch_name[i]}" for i in db.chamber_ids(lg.get("chambers"))[:2] if i in ch_name)
                 + (" …" if len(db.chamber_ids(lg.get("chambers"))) > 2 else ""),
             "company": db.to_str(lg["company"]) or "내부",
-            "cat": PURPOSE_CAT.get(db.to_str(lg["purpose"]), "지원"),
+            "cat": _log_cat(lg["purpose"], int(r.equip_id) in chg),
             "hours": float(r.hours), "staff": db.to_str(lg["created_by"]),
             "period": f"{a:%m/%d}~{b:%m/%d}" if multi else "",
             "charger": int(r.equip_id) in chg, "equip_id": int(r.equip_id),
@@ -642,18 +643,24 @@ def _day_head(d: dt.date, entries: list[dict], holiday: bool, today: bool) -> tu
 
 
 # 장비용도(장비 정보) → 달력 구분. 색은 구분마다 고정 (배경, 진한 색)
-CATS = {"시험": ("rgba(230,85,114,0.16)", "#E35D78"), "제조": ("rgba(85,230,158,0.16)", "#1FA971"), "분석": ("rgba(121,85,230,0.16)", "#7C5CE0"),
+CHARGER_GROUP = "시험(충방전기)"
+CATS = {"시험": ("rgba(230,85,114,0.16)", "#E35D78"), CHARGER_GROUP: ("rgba(217,70,239,0.16)", "#C04FD8"), "제조": ("rgba(85,230,158,0.16)", "#1FA971"), "분석": ("rgba(121,85,230,0.16)", "#7C5CE0"),
         "교육": ("rgba(230,176,85,0.16)", "#E39A2D"), "지원": ("rgba(85,177,230,0.16)", "#2E9BD6"), "기타": ("#26334D", "#334155")}
 CAT_ORDER = list(CATS)
-FIXED_CATS = ["시험", "제조", "분석", "교육", "지원"]
-LANE_CATS = ["시험", "제조", "분석"]  # 칸마다 비어 있어도 보이는 구역
-CHARGER_GROUP = "시험(충방전기)"
+FIXED_CATS = ["시험", CHARGER_GROUP, "제조", "분석", "교육", "지원"]
+LANE_CATS = ["시험", CHARGER_GROUP, "제조", "분석"]  # 칸마다 비어 있어도 보이는 구역 (2026-11-10 시험을 환경·충방전으로 나눔)
 GROUP_LABEL = {"시험": "시험(환경)", CHARGER_GROUP: "시험(충방전)"}  # 입력 카드 구분 버튼에 보이는 이름
 CARD_GROUPS = ["시험", CHARGER_GROUP, "제조", "분석"]  # 입력 카드 장비 구분 (시험 = 충방전기 뺀 시험 장비)
-CAT_KEY = {"시험": "test", "제조": "make", "분석": "anal", "교육": "edu", "지원": "sup", "기타": "etc"}
+CAT_KEY = {"시험": "test", CHARGER_GROUP: "chg", "제조": "make", "분석": "anal", "교육": "edu", "지원": "sup", "기타": "etc"}
 PURPOSE_CAT = {"시험": "시험", "생산": "제조", "분석": "분석", "계측": "분석", "교육": "교육", "기타": "지원"}
 LANE_PURPOSE = {"시험": "시험", "제조": "생산", "분석": "분석", "교육": "교육", "지원": "기타",
                 CHARGER_GROUP: "시험"}  # 줄을 눌러 열 때 사용목적
+
+
+def _log_cat(purpose, charger: bool) -> str:
+    """실적 → 달력 구역. 충방전기 시험은 '시험(충방전)' 구역에 따로."""
+    c = PURPOSE_CAT.get(db.to_str(purpose), "지원")
+    return CHARGER_GROUP if charger and c == "시험" else c
 
 
 def _cat_of(use: str) -> str:
@@ -676,7 +683,7 @@ def _card_html(d: dt.date, entries: list[dict]) -> str:
             cells.append(("기간", x["period"]))
         grid = "".join(f"<span>{e_(k)}</span><span>{e_(str(v))}</span>" for k, v in cells)
         bg, fg = CATS[x["cat"]]
-        tag = f"<span class='cc-tag' style='background:{bg};color:{fg}'>{x['cat']}</span>"
+        tag = f"<span class='cc-tag' style='background:{bg};color:{fg}'>{GROUP_LABEL.get(x['cat'], x['cat'])}</span>"
         rows.append(f"<div class='cc-e' style='border-left-color:{fg}'><div class='cc-n'>{tag}{e_(x['equip'])}</div>"
                     f"<div class='cc-r'>{grid}</div></div>")
     return (f"<div class='cal-card'><div class='cc-h'><span class='cc-d'>{d.month}월 {d.day}일 "
@@ -1152,10 +1159,10 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
             min(db.CHARGER_DAY_MAX, sum(e["hours"] for e in chg if e["root"] == i)) for i in {e["root"] for e in chg})
         sec = cell.container(key=f"sec_{CAT_KEY[c]}_{d}")
         hours = _hours(sum(e["hours"] for e in ents if not e.get("charger")) + chg_h) if ents else ""
-        sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{c}<b>{hours}</b></div>",
+        sec.markdown(f"<div class='cal-sec-h{'' if ents else ' none'}'>{GROUP_LABEL.get(c, c)}<b>{hours}</b></div>",
                      unsafe_allow_html=True)
         # 줄 이름 위에 투명 버튼: 누르면 이 구분 장비만 보이는 새 실적 입력
-        sec.button(c, key=f"lane_{CAT_KEY[c]}_{d}", type="tertiary", help=f"{c} 장비로 새 실적",
+        sec.button(GROUP_LABEL.get(c, c), key=f"lane_{CAT_KEY[c]}_{d}", type="tertiary", help=f"{GROUP_LABEL.get(c, c)} 실적 추가",
                    on_click=_click_lane, args=(d, c))
         for e in ents[:CELL_LINES]:
             short = e["equip"]  # 세부장비 이름 그대로 (양극·음극 구분이 보이게, 길면 … 처리)
@@ -1217,9 +1224,6 @@ def render(header: bool = True) -> None:
             st.session_state.cal_month = _shift_month(month, 1)
             st.rerun()
         legend = st.container(key="cal_legend", width="content")
-        if st.button("오늘", key="cal_today"):
-            _pick_day(today)
-            st.rerun()
 
     weeks = calendar.Calendar(firstweekday=0).monthdatescalendar(month.year, month.month)
     hol = kr_holidays({weeks[0][0].year, weeks[-1][-1].year, today.year, today.year + 1})
@@ -1227,9 +1231,9 @@ def render(header: bool = True) -> None:
     in_month = daily[(daily["day"] >= pd.Timestamp(weeks[0][0])) & (daily["day"] <= pd.Timestamp(weeks[-1][-1]))]
     by_day = _cell_entries(in_month, logs, eq)
     present = list(FIXED_CATS)
-    shown = legend.pills("구분", present, selection_mode="multi", default=present, key=f"cal_cats_{month}",
+    shown = legend.pills("구분", present, selection_mode="multi", default=present, key=f"cal_cats2_{month}",
                      label_visibility="collapsed",
-                     format_func=lambda c: f"{c} {sum(e['cat'] == c for dd, v in by_day.items() if dd.month == month.month for e in v)}")
+                     format_func=lambda c: f"{GROUP_LABEL.get(c, c)} {sum(e['cat'] == c for dd, v in by_day.items() if dd.month == month.month for e in v)}")
     pill_css = ""
     for i, c in enumerate(present, start=1):
         bg, fg = CATS[c]
@@ -1285,7 +1289,7 @@ def render(header: bool = True) -> None:
             continue
         for e in ents:
             bg, fg = CATS[e["cat"]]
-            sel += f" .st-key-er_{dd}_{e['id']} {{--chip-bg: {bg}; --chip-fg: {fg}; --cat-label: '{e['cat']}';}}"
+            sel += f" .st-key-er_{dd}_{e['id']} {{--chip-bg: {bg}; --chip-fg: {fg}; --cat-label: '{GROUP_LABEL.get(e['cat'], e['cat'])}';}}"
             if e.get("charger"):
                 sel += f" .st-key-er_{dd}_chg{CAT_KEY[e['cat']]} {{--chip-bg: {bg}; --chip-fg: {fg};}}"
     for p in picks:  # Ctrl+클릭으로 고른 실적들
@@ -1354,8 +1358,22 @@ def _busy_chambers(logs: pd.DataFrame, s: dt.date, e: dt.date, skip: set,
     return out
 
 
+ALL_CH = "전체"  # 채널 칩 맨 앞 '전체' (누르면 모두 고름 / 다시 누르면 모두 뺌)
+
+
 def _all_chs(key: str, opts: list, on: bool) -> None:
-    st.session_state[key] = list(opts) if on else []
+    st.session_state[key] = ([ALL_CH] + list(opts)) if on and opts else []
+
+
+def _ch_toggle(key: str, opts: list) -> None:
+    new, prev = list(st.session_state.get(key) or []), st.session_state.get(key + "_prev") or []
+    nums = [n for n in new if n != ALL_CH]
+    if ALL_CH in new and ALL_CH not in prev:
+        st.session_state[key] = [ALL_CH] + list(opts)
+    elif ALL_CH in prev and ALL_CH not in new:
+        st.session_state[key] = []
+    else:
+        st.session_state[key] = ([ALL_CH] if opts and len(nums) == len(opts) else []) + nums
 
 
 def _close_panel() -> None:
@@ -1416,7 +1434,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                         f"<em>{WEEKDAYS[day.weekday()]}요일</em></span>"
                         f"<span class='ep-n'>실적 {len(rows)}건 · {_hours(total)}</span></div>",
                         unsafe_allow_html=True, width="stretch")
-            if st.button("새 실적", icon=":material/add:", key="ep_new"):
+            if st.button("실적 추가", icon=":material/add:", key="ep_new", help="이 날짜에 실적을 하나 더 넣어요"):
                 _new_entry()
                 st.rerun()
             if st.button("", icon=":material/close:", key="ep_close", help="닫기"):
@@ -1426,7 +1444,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
         with st.container(key="ep_list", gap="small"):
             for r in rows.sort_values("id").to_dict("records"):
                 rid = int(r["id"])
-                c = PURPOSE_CAT.get(db.to_str(r["purpose"]), "지원")
+                c = _log_cat(r["purpose"], int(r["equip_id"]) in db.charger_ids(eq))
                 e = {"id": rid, "rec": r, "period": "", "equip": name_of.get(r["equip_id"], "?"),
                      "company": db.to_str(r["company"]) or "내부", "hours": float(r["hours"])}
                 if st.button(f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}",
@@ -1462,7 +1480,8 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             is_series = not series.empty
             v_mode = st.segmented_control("입력 방식", ["하루", "기간"], key=f"ep_mode_{k}",
                                           default="기간" if is_series else "하루", label_visibility="collapsed",
-                                          help="기간: 며칠~몇 달 계속 도는 시험을 한 번에 입력 (달력에는 매일 표시)") or (
+                                          format_func=lambda m: {"하루": "단기", "기간": "장기"}[m],
+                                          help="장기: 며칠~몇 달 계속 도는 시험을 한 번에 입력 (달력에는 매일 표시)") or (
                                               "기간" if is_series else "하루")
             if len(groups) > 2:  # 시험·제조·분석 중 하나만 골라 목록을 짧게
                 with st.container(key="ep_grp"):
@@ -1557,8 +1576,12 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 ch_name = {int(i): " · ".join(x for x in (c, f"ch {n}" if n else "") if x) or u
                            for i, c, u, n in zip(mine["id"], mine["chamber"], mine["unit"], mine["channels"])}
                 ch_cyc = dict(zip(mine["id"].astype(int), mine["cycler"]))
-                st.markdown("<div class='ep-chlab'>챔버</div>", unsafe_allow_html=True)
-                v_ch = st.pills("챔버", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",
+                if len(ch_ids) == 1:  # 챔버가 하나면 고를 필요 없이 바로 채널 (2026-11-10)
+                    v_ch = ch_ids
+                else:
+                    st.markdown("<div class='ep-chlab'>챔버</div>", unsafe_allow_html=True)
+                    v_ch = None
+                v_ch = v_ch or st.pills("챔버", ch_ids, selection_mode="multi", key=f"ep_ch_{k}_{v_eid}",
                                 default=[i for i in db.chamber_ids(cur.get("chambers")) if i in ch_ids] if cur is not None else None,
                                 format_func=lambda i: (ch_name.get(i) or f"#{i}") + (
                                     f" · {busy[i]}" if i in busy else f" · {part_busy[i]}" if i in part_busy else ""),
@@ -1581,16 +1604,20 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                     pk = f"ep_cn_{k}_{i}"
                     if pk not in st.session_state:
                         st.session_state[pk] = [n for n in (chg.nums(was) or free) if n in free]
-                    elif any(n not in free for n in st.session_state[pk] or []):
-                        st.session_state[pk] = [n for n in st.session_state[pk] if n in free]
+                        if free and len(st.session_state[pk]) == len(free):
+                            st.session_state[pk] = [ALL_CH] + st.session_state[pk]
+                    elif any(n not in free and n != ALL_CH for n in st.session_state[pk] or []):
+                        st.session_state[pk] = [n for n in st.session_state[pk] if n in free or n == ALL_CH]
+                    st.session_state[pk + "_prev"] = list(st.session_state[pk] or [])
+                    n_on = len([n for n in st.session_state[pk] or [] if n != ALL_CH])
                     with st.container(key=f"ep_cbox_{k}_{i}", horizontal=True, gap="small", vertical_alignment="center"):
                         st.markdown(f"<div class='ep-chlab'>{html.escape(mine.set_index('id')['chamber'].get(i, '') or ch_name.get(i, ''))} 채널 "
-                                    f"<b>{len(st.session_state[pk])}</b>/{len(chs)}</div>", unsafe_allow_html=True)
+                                    f"<b>{n_on}</b>/{len(chs)}</div>", unsafe_allow_html=True)
                         st.space("stretch")
-                        st.button("전체", key=f"ep_cna_{k}_{i}", type="tertiary", on_click=_all_chs, args=(pk, free, True))
                         st.button("비우기", key=f"ep_cnz_{k}_{i}", type="tertiary", on_click=_all_chs, args=(pk, free, False))
-                    picked[i] = st.pills(f"채널 {i}", free, selection_mode="multi", key=pk,
-                                         label_visibility="collapsed") or []
+                    picked[i] = [n for n in st.pills(f"채널 {i}", [ALL_CH] + free, selection_mode="multi", key=pk,
+                                                     on_change=_ch_toggle, args=(pk, free),
+                                                     label_visibility="collapsed") or [] if n != ALL_CH]
                 part = {i: chg.fmt(p) for i, p in picked.items() if set(p) != set(all_chs.get(i, []))}
                 if len(v_ch) == 1:
                     v_part = part.get(v_ch[0], "")

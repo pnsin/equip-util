@@ -353,6 +353,16 @@ def fill_xlsx(q: dict, part: str = "all") -> bytes:
     else:
         _fill_mfg(ws, q, d, t)
     _resolve_formulas(ws)
+    # 2026-11-10: 양식 아래·오른쪽에 남은 빈 테두리 칸(인쇄 영역 밖)은 지워 깔끔하게
+    last_row, last_col = (103, 12) if form == "시험" else (54, 11)
+    for m in [m for m in ws.merged_cells.ranges if m.min_row > last_row or m.min_col > last_col]:
+        ws.unmerge_cells(str(m))
+    for r in [r for r in ws.row_dimensions if r > last_row]:
+        del ws.row_dimensions[r]
+    if ws.max_row > last_row:
+        ws.delete_rows(last_row + 1, ws.max_row - last_row)
+    if ws.max_column > last_col:
+        ws.delete_cols(last_col + 1, ws.max_column - last_col)
     # 한 쪽 너비에 맞춰 인쇄 (글꼴이 조금 달라도 오른쪽이 잘리지 않게)
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_setup.fitToWidth = 1

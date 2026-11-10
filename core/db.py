@@ -9,6 +9,7 @@ secrets 에 [gsheets] spreadsheet_id 와 [gcp_service_account] 가 있으면 구
 from __future__ import annotations
 
 import datetime as dt
+import re
 import io
 import json
 import os
@@ -460,7 +461,7 @@ def storage_label() -> str:
 SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings", "channels", "maint")
 
 
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def _snapshot() -> dict[str, pd.DataFrame]:
     return get_store().read_many(list(SNAPSHOT_TABS))
 
@@ -861,7 +862,7 @@ def _settings_raw(df: pd.DataFrame | None = None) -> dict[str, str]:
     return {to_str(k): str(v) for k, v in zip(df["key"], df["value"]) if to_str(k)}
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=600)
 def get_settings() -> dict:
     plain, chunks = {}, {}
     for k, v in _settings_raw(_tab("settings")).items():
@@ -904,7 +905,16 @@ EQUIP_TEXT = ("name", "code", "kind", "manager", "note", "nfec", "model", "locat
               "group", "species", "category", "asset_no", "maker", "vendor", "system")
 
 
-def _equipment_frame(df: pd.DataFrame) -> pd.DataFrame:
+def _equipment_frame_raw() -> pd.DataFrame:
+    df = _tab("equipment").reindex(columns=["id", "name", "parent_id"]).copy()
+    df["id"] = pd.to_numeric(df["id"], errors="coerce")
+    df = df.dropna(subset=["id"])
+    df["parent_id"] = pd.to_numeric(df["parent_id"].astype(str).str.replace(",", ""), errors="coerce")
+    df["name"] = df["name"].fillna("").astype(str).str.strip()
+    return df
+
+
+def _equipment_frame(df: pd.DataFrame, fold: bool = False) -> pd.DataFrame:
     df = df.reindex(columns=cols("equipment"))  # 빠진 열이 있어도 멈추지 않게
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
     df = df.dropna(subset=["id"])
@@ -923,7 +933,36 @@ def _equipment_frame(df: pd.DataFrame) -> pd.DataFrame:
     df["parent_id"] = [p if pd.notna(p) and int(p) in ids and int(p) != i else pd.NA
                        for p, i in zip(df["parent_id"], df["id"])]
     df["parent_id"] = df["parent_id"].astype("Int64")
+    fold = _fold_map(df) if fold else {}
+    if fold:  # 묶음 이름뿐인 중간 장비(예: '5L 믹서' 아래 양극·음극)는 빼고 그 아래 장비를 위로 올림
+        df = df[~df["id"].isin(fold)].copy()
+        df["parent_id"] = pd.array([fold.get(int(p), p) if pd.notna(p) else pd.NA for p in df["parent_id"]],
+                                   dtype="Int64")
     return _tree_sort(df)
+
+
+def _fold_map(df: pd.DataFrame) -> dict[int, object]:
+    """빼도 되는 중간 장비 ID → 그 위 장비 ID.
+
+    2026-11-10 사용자 요청: 믹서 한 대에 양극·음극이 있으면 실적은 양극/음극에만 넣으므로 '믹서' 줄은 없앰.
+    위 장비가 있고, 아래 장비가 있고, 아래 장비 이름이 모두 이 이름으로 시작하는 경우만 (예: 5L 믹서 → 5L 믹서(양극)).
+    """
+    if df.empty or "parent_id" not in df:
+        return {}
+    par = {int(i): (int(p) if pd.notna(p) else None) for i, p in zip(df["id"], df["parent_id"])}
+    name = {int(i): re.sub(r"\s+", "", str(n)) for i, n in zip(df["id"], df["name"])}
+    kids: dict[int, list[int]] = {}
+    for i, p in par.items():
+        if p is not None:
+            kids.setdefault(p, []).append(i)
+    out = {i: par[i] for i, ks in kids.items()
+           if par.get(i) is not None and name[i] and all(name[k].startswith(name[i]) and name[k] != name[i] for k in ks)}
+    for i in list(out):  # 위 장비도 빠지면 그 위로
+        seen = {i}
+        while out[i] in out and out[i] not in seen:
+            seen.add(out[i])
+            out[i] = out[out[i]]
+    return out
 
 
 def _tree_sort(df: pd.DataFrame) -> pd.DataFrame:
@@ -988,9 +1027,13 @@ def descendants(eq: pd.DataFrame) -> dict[int, list[int]]:
     return out
 
 
-@st.cache_data(ttl=120)
-def load_equipment() -> pd.DataFrame:
-    df = _equipment_frame(_tab("equipment"))
+@st.cache_data(ttl=600)
+def load_equipment(full: bool = False) -> pd.DataFrame:
+    """장비 목록. 기본은 묶음 이름뿐인 중간 장비(예: '5L 믹서')를 뺀 목록 (화면·실적·가동률 모두 이것을 씀).
+
+    full=True 는 시트 그대로 (장비 목록 편집·단가·견적서용: 단가는 '5L 믹서'처럼 묶음 장비에 붙어 있음).
+    """
+    df = _equipment_frame(_tab("equipment"), fold=not full)
     names = dict(zip(df["id"], df["name"]))
     labels = []
     for n, c, d, r in zip(df["name"], df["code"], df["depth"], df["root_id"]):
@@ -1047,7 +1090,7 @@ def add_pick_labels(df: pd.DataFrame) -> pd.DataFrame:
     """입력 화면용 짧은 이름(short)과 맨 아래 장비 여부(leaf)를 붙입니다.
 
     short 는 장비 이름만 씁니다 (예: '5L 믹서(양극)'). 이름이 겹칠 때만 구분할 말을 붙입니다:
-    센터 지역명 → 그래도 겹치면 i-Tube 장비번호 → 그래도 겹치면 #ID.
+    센터 지역명 → 그래도 겹치면 i-Tube 번호 순으로 '1호기, 2호기'.
     leaf = 세부장비가 없는 장비 (실적은 여기에 입력).
     """
     df = df.copy()
@@ -1061,7 +1104,7 @@ def add_pick_labels(df: pd.DataFrame) -> pd.DataFrame:
     itube = df["itube_id"] if "itube_id" in df else pd.Series([pd.NA] * len(df))
     tube = [code_of.get(int(t), "") if pd.notna(t) else "" for t in itube]
     names = list(df["name"])
-    extras = ([_center(v) for v in df.get("location", [""] * len(df))], tube)
+    extras = ([_center(v) for v in df.get("location", [""] * len(df))],)
     groups: dict = {}
     for k, n in enumerate(names):
         groups.setdefault(n, []).append(k)
@@ -1075,6 +1118,9 @@ def add_pick_labels(df: pd.DataFrame) -> pd.DataFrame:
                 for k in ks:
                     out[k] = f"{n} · {ex[k]}"
                 break
+        else:  # 같은 이름 여러 대 → i-Tube 번호 순으로 1호기, 2호기 … (2026-11-10: 번호 대신 짧게)
+            for no, k in enumerate(sorted(ks, key=lambda k: (tube[k] or "~", k)), start=1):
+                out[k] = f"{n} {no}호기"
     cnt: dict = {}
     for o in out:
         cnt[o] = cnt.get(o, 0) + 1
@@ -1191,7 +1237,7 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
 COMPANY_TEXT = ("name", "brn", "contact", "phone", "industry", "item", "sub_item", "note")
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=600)
 def load_companies() -> pd.DataFrame:
     df = _tab("companies")
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
@@ -1276,7 +1322,7 @@ def save_companies(edited: pd.DataFrame) -> None:
 STAFF_TEXT = ("name", "phone", "email", "role", "note", "dept", "team", "part", "title", "birthday")
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=600)
 def load_staff() -> pd.DataFrame:
     df = _tab("staff")
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
@@ -1340,7 +1386,7 @@ def save_staff(edited: pd.DataFrame) -> None:
 CHARGER_DAY_MAX = 8  # 충방전기는 챔버·채널이 여러 개라도 하루 최대 8시간으로 셈 (주말·공휴일 제외)
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=600)
 def load_channels() -> pd.DataFrame:
     df = _tab("channels")
     for c in ("id", "equip_id", "ch_count", "order"):
@@ -1451,7 +1497,7 @@ def save_maint(edited: pd.DataFrame) -> int:
     store = get_store()
     old_ids = set(pd.to_numeric(store.read("maint")["id"], errors="coerce").dropna().astype(int))
     next_id = (max(old_ids) if old_ids else 0) + 1
-    names = dict(zip(load_equipment()["id"].astype(int), load_equipment()["name"]))
+    names = dict(zip(load_equipment(full=True)["id"].astype(int), load_equipment(full=True)["name"]))
     out = []
     for r in edited.to_dict("records"):
         rec = {c: to_str(r.get(c)) for c in MAINT_TEXT}
@@ -1493,9 +1539,12 @@ def _usage_frame(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=600)
 def load_logs() -> pd.DataFrame:
     df = _usage_frame(_tab("usage")).drop(columns=["equip_ref"])
+    fold = _fold_map(_equipment_frame_raw())
+    if fold:  # 빠진 중간 장비에 바로 넣은 실적은 그 위 장비 실적으로
+        df["equip_id"] = df["equip_id"].map(lambda v: fold.get(int(v), v) if pd.notna(v) else v)
     eq = load_equipment()[["id", "name", "code", "kind"]].rename(columns={
         "id": "_eid", "name": "equip_name", "code": "equip_code", "kind": "equip_kind"})
     df = df.merge(eq, left_on="equip_id", right_on="_eid", how="left").drop(columns=["_eid"])
@@ -1530,7 +1579,7 @@ def _clean_log(rec: dict) -> dict:
 
 
 def _equip_names() -> dict[int, str]:
-    eq = load_equipment()
+    eq = load_equipment(full=True)
     return dict(zip(eq["id"].astype(int), eq["label"]))
 
 

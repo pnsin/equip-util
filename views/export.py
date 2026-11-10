@@ -158,6 +158,22 @@ def render_report() -> None:
 # ── 실적 내려받기 (i-Tube 업로드 양식 equip_log_template) ──────────────
 
 LABELS = ["시험", "제조", "분석", "교육", "지원"]
+FIELDS = ["제조", "시험", "분석", "기타"]
+
+
+def equip_fields(eq: pd.DataFrame) -> dict[int, str]:
+    """장비 ID → 분야(제조·시험·분석, 없으면 '기타'). 세부장비는 장비용도가 비어 있으면 위 장비 것을 씀."""
+    use = {int(i): str(u).strip() for i, u in zip(eq["id"], eq["use"])}
+    par = {int(i): (int(p) if pd.notna(p) else None) for i, p in zip(eq["id"], eq["parent_id"])}
+    out = {}
+    for i in use:
+        cur, seen = i, set()
+        while cur is not None and not use.get(cur) and cur not in seen:
+            seen.add(cur)
+            cur = par.get(cur)
+        u = use.get(cur, "") if cur is not None else ""
+        out[i] = next((f for f in FIELDS[:3] if f in u), "기타")
+    return out
 
 
 def _download_body(key: str) -> None:
@@ -169,9 +185,18 @@ def _download_body(key: str) -> None:
     s, e, label, _ = period_picker(key, ["월", "분기", "반기", "연", "직접 지정"], "월", years=years)
     if e < s:
         s, e = e, s
-    labs = st.pills("구분", LABELS, selection_mode="multi", default=LABELS, key=f"{key}_labs",
-                    help="고른 구분의 실적만 넣습니다.") or LABELS
-    sel, no_code = itube_selection(logs, s, e, start_only=True, labels=labs)
+    # 2026-11-10: 분야는 입력할 때 고른 '사용목적'이 아니라 장비의 '장비용도'(제조·시험·분석)로 나눔.
+    # 장비마다 분야가 하나라 각 담당자가 자기 분야만 내려받아도 겹치거나 빠지는 실적이 없음.
+    field_of = equip_fields(eq)
+    all_sel, _ = itube_selection(logs, s, e, start_only=True)
+    cnt = all_sel["equip_id"].map(lambda v: field_of.get(int(v), "기타")).value_counts() if not all_sel.empty else {}
+    opts = ["전체"] + [f for f in FIELDS if f in cnt or f != "기타"]
+    field = st.segmented_control("분야", opts, default="전체", key=f"{key}_field",
+                                 format_func=lambda f: f if f == "전체" else f"{f} {int(cnt.get(f, 0))}") or "전체"
+    sel, no_code = itube_selection(logs, s, e, start_only=True)
+    if field != "전체":
+        sel = sel[sel["equip_id"].map(lambda v: field_of.get(int(v), "기타")) == field]
+        no_code = no_code[no_code["equip_id"].map(lambda v: field_of.get(int(v), "기타")) == field]
     if sel.empty and no_code.empty:
         empty_state("이 기간에는 실적이 없어요", f"{s:%Y-%m-%d} ~ {e:%Y-%m-%d}", icon="🗓️")
         return
@@ -188,7 +213,10 @@ def _download_body(key: str) -> None:
         return
     data = itube.make_itube_file(sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c],
                                  itube_template(cfg))
-    st.download_button("엑셀로 내려받기", data=data, file_name=_itube_filename(cfg, s, e), mime=XLSX,
+    fname = _itube_filename(cfg, s, e)
+    if field != "전체":
+        fname = fname.replace(".xlsx", f"_{field}.xlsx")
+    st.download_button("엑셀로 내려받기", data=data, file_name=fname, mime=XLSX,
                        type="primary", width="stretch", icon=":material/download:", key=f"{key}_btn")
 
 

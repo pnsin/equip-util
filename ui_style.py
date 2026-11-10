@@ -195,7 +195,7 @@ _CSS = """
   [data-testid="stMetricValue"], [data-testid="stNumberInputContainer"] input, .kpi b { font-variant-numeric: tabular-nums; }
 
   /* ---------- 지표 카드 (Bento Grid 스타일) ---------- */
-  [data-testid="stMetric"] { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem 1.4rem; box-shadow: var(--card-shadow); transition: all 0.25s ease; }
+  [data-testid="stMetric"] { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem 1.4rem; min-height: 8.4rem; box-sizing: border-box; box-shadow: var(--card-shadow); transition: all 0.25s ease; }
   [data-testid="stMetric"]:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
   [data-testid="stMetricLabel"] { color: var(--muted); font-size: .95rem; font-weight: 500; margin-bottom: 0.2rem; }
   [data-testid="stMetricValue"] { font-size: 1.8rem; font-weight: 700; color: var(--ink); }
@@ -502,6 +502,7 @@ _SLATE_CSS = """<style>
   [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         font-variant-numeric: tabular-nums; }
   [data-testid="stSidebar"] .brand-ic { background: #6366F1 !important; color: #fff !important; }
+  [data-testid="stSidebar"] .brand img { width: 184px !important; margin: -1.6rem 0 1.1rem .1rem !important; }
   [data-testid="stSidebar"] .nav-group { color: #64748B !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a span { color: #CBD5E1 !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] {
@@ -859,7 +860,8 @@ def _blank_none(fn):
                         target = cfg[col]
                         if target is not None:
                             if isinstance(target, dict):
-                                target.setdefault("alignment", "center")
+                                if target.get("alignment") is None:  # 열 설정에 alignment: None 이 이미 들어 있음
+                                    cfg[col] = {**target, "alignment": "center"}
                             else:
                                 if hasattr(target, "_alignment"):
                                     setattr(target, "_alignment", "center")

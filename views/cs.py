@@ -165,7 +165,7 @@ def _card(r: dict, label_of: dict, sel: bool) -> None:
 
 def _cards(view: pd.DataFrame, label_of: dict) -> None:
     if view.empty:
-        empty_state("아직 기록이 없어요", "오른쪽 위 '새 활동'으로 첫 기록을 남겨 보세요.", "🤝")
+        empty_state("아직 기록이 없어요", "오른쪽 칸에 적어 첫 기록을 남겨 보세요.", "🤝")
         return
     limit = st.session_state.get("cs_limit", PAGE)
     cur = st.session_state.get("cs_open")
@@ -265,7 +265,7 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
 
 def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], staff: list[str],
            part_of: dict) -> None:
-    rid = st.session_state.get("cs_open")
+    rid = st.session_state.get("cs_open") or "new"  # 아무것도 안 열었으면 바로 새 기록 칸 (2026-11-10)
     cur = None
     if rid != "new":
         hit = df[df["id"] == rid]
@@ -279,10 +279,11 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
     d0 = d0.date() if isinstance(d0, pd.Timestamp) and pd.notna(d0) else (d0 if isinstance(d0, dt.date) else dt.date.today())
     with st.container(key="cs_panel"):
         with st.container(key="cs_head", horizontal=True, vertical_alignment="center"):
-            title = "새 활동" if cur is None else "활동 고치기"
+            title = "CS활동 기록하기" if cur is None else "활동 고치기"
             st.markdown(f'<div class="cs-ph">{title}</div>', unsafe_allow_html=True)
             st.space("stretch")
-            st.button("", icon=":material/close:", key="cs_close", help="닫기", on_click=_close)
+            if cur is not None:
+                st.button("", icon=":material/close:", key="cs_close", help="닫기", on_click=_close)
         v_date = st.date_input("활동일", value=d0, format="YYYY-MM-DD", key=f"cs_d_{k}")
         part0 = pre.get("kind") if pre.get("kind") in PARTS else None
         v_part = st.segmented_control("파트", PARTS, default=part0, key=f"cs_p_{k}")
@@ -361,25 +362,14 @@ def render() -> None:
     with st.container(key="cs_tools", horizontal=True, vertical_alignment="center"):
         q = st.text_input("검색", placeholder="업체·장비·내용으로 찾기", key="cs_q", label_visibility="collapsed",
                           icon=":material/search:")
-        mode = st.segmented_control("보기", ["카드", "표"], default="카드", key="cs_mode",
-                                    label_visibility="collapsed") or "카드"
         view = _filter(df, q.strip(), label_of)
         st.download_button("", cs.to_excel(view), file_name=f"CS활동_{dt.date.today():%y%m%d}.xlsx",
                            icon=":material/download:", key="cs_xlsx", help="보이는 목록을 엑셀로 내려받기",
                            disabled=view.empty)
-        if mode == "카드":
-            st.button("새 활동", icon=":material/add:", key="cs_new", on_click=_new)
 
-    if mode == "표":
-        _close()
-        _table(view, label_of, id_of, companies, staff)
-        return
     with st.container(key="cs_wrap"):
-        if st.session_state.get("cs_open"):
-            left, right = st.columns([2.5, 1.05], gap="medium")
-            with left:
-                _cards(view, label_of)
-            with right:
-                _panel(df, label_of, id_of, companies, staff, part_of)
-        else:
+        left, right = st.columns([2.3, 1.15], gap="medium")
+        with left:
             _cards(view, label_of)
+        with right:
+            _panel(df, label_of, id_of, companies, staff, part_of)

@@ -3,7 +3,7 @@ import streamlit as st
 
 from core import db
 from ui_style import page_header
-from views.common import excel_box, merge_edits, pin_table, unpin, confirm_delete, delete_config, split_deleted, with_delete_column
+from views.common import excel_box, pick_done, pick_table
 
 COLS = {
     "id": "id", "dept": "부서", "team": "팀", "name": "이름", "title": "직급", "phone": "내선번호",
@@ -29,33 +29,25 @@ def render() -> None:
     view = staff[list(COLS)].rename(columns=COLS)
     # 빈 목록이면 열 형식을 알 수 없어 편집기가 오류를 내므로 형식을 고정
     view = view.astype({c: "string" for c in TEXT} | {"id": "Int64"})
-    view, newer = pin_table("staff_editor", view)
-    edited = st.data_editor(
-        with_delete_column(view), key="staff_editor", num_rows="dynamic", hide_index=True, width="stretch",
-        column_order=["삭제"] + [c for c in COLS.values() if c != "id"],
-        column_config=delete_config() | {
+    action, out, gone = pick_table(
+        view, "staff_tbl", name_col="이름",
+        column_order=[c for c in COLS.values() if c != "id"],
+        column_config={
             "이름": st.column_config.TextColumn(required=True),
             "직급": st.column_config.TextColumn(help="예: 선임연구원"),
             "내선번호": st.column_config.TextColumn(help="예: 043-270-2410"),
             "생일": st.column_config.TextColumn(help="예: 03-15"),
             "담당업무": st.column_config.TextColumn(help="예: 팀장, 운영, 시험, 제조"),
             "비고": st.column_config.TextColumn(width="medium"),
-        },
-    )
-    st.caption(f"전체 {len(edited.dropna(subset=['이름']))}명")
-    edited, deleted = split_deleted(edited, "이름")
-    ok = confirm_delete(deleted, "staff_editor_del", "명")
-    if st.button("변경 내용 저장", type="primary", disabled=not ok, icon=":material/save:"):
-        if newer is not None:  # 그사이 다른 분이 저장함 → 내가 바꾼 줄만 얹기
-            edited = merge_edits(view, edited, newer)
-        raw = edited.rename(columns={v: k for k, v in COLS.items()})
+        })
+    st.caption(f"전체 {len(view)}명")
+    if action:
+        raw = out.rename(columns={v: k for k, v in COLS.items()})
         errors = db.check_staff(raw)
         for e in errors:
             st.error(e)
         if not errors:
             db.save_staff(raw)
-            unpin("staff_editor")
-            st.session_state.staff_saved = "담당자 목록을 저장했습니다." + (f" ({len(deleted)}명 삭제)" if deleted else "")
-            st.session_state.pop("staff_editor", None)
-            st.session_state.pop("staff_editor_del", None)
+            pick_done("staff_tbl")
+            st.session_state.staff_saved = f"{len(gone)}명 삭제했어요." if gone else "저장했어요."
             st.rerun()
