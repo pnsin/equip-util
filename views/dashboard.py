@@ -183,7 +183,7 @@ def _filters(years: list[int]) -> tuple[int, int | None]:
     """2026-11-10: 센터·용도 필터는 없애고 장비별 가동률과 같은 기간 고르기 (연 / 월)."""
     c0, c1 = st.columns([1, 1.5], vertical_alignment="bottom")
     with c0:
-        page_header("대시보드", "현황")
+        page_header("종합 현황", "현황")
     with c1:
         s, _, _, kind = period_picker("dash", ["월", "연"], "연", years=years)
     return s.year, (s.month if kind == "월" else None)
