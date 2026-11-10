@@ -707,6 +707,22 @@ def load_history() -> pd.DataFrame:
     return df.sort_values("at", ascending=False).reset_index(drop=True)
 
 
+def delete_history(keys: list[tuple]) -> int:
+    """수정 기록 지우기 (2026-11-10). keys = (일시 'YYYY-MM-DD HH:MM:SS', 누가, 작업, 대상, 내용)."""
+    store = get_store()
+    df = store.read("history")
+    want = {tuple(str(x) for x in k) for k in keys}
+    at = pd.to_datetime(df["at"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M:%S").fillna("")
+    hit = [(a, str(w), str(ac), str(t), str(sm)) in want
+           for a, w, ac, t, sm in zip(at, df["who"], df["action"], df["target"], df["summary"])]
+    keep = df[[not h for h in hit]]
+    n = len(df) - len(keep)
+    if n:
+        store.rewrite("history", keep[cols("history")].astype(str).values.tolist())
+        load_history.clear()
+    return n
+
+
 def restore_trash(trash_ids: list[str]) -> dict:
     """휴지통에서 골라 되살립니다. 이미 있는 실적은 건너뛰고, 장비·업체·담당자는 ID가 겹치면 새 ID를 붙입니다."""
     store = get_store()
@@ -1742,7 +1758,19 @@ def backup_bytes() -> bytes:
         for t in ("equip_specs", "equip_docs", "equip_notes"):  # 사진은 엑셀 셀에 안 들어가 뺌
             store.read(t).to_excel(xw, sheet_name=t, index=False)
         store.read("cs").to_excel(xw, sheet_name="cs", index=False)
-    return bio.getvalue()
+    bio.seek(0)
+    import openpyxl
+    wb = openpyxl.load_workbook(bio)
+    for ws in wb.worksheets:  # 2026-11-10 탭 이름을 메뉴와 같은 한글로
+        ws.title = BACKUP_KO.get(ws.title, ws.title)
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
+
+
+BACKUP_KO = {"equipment": "장비 목록", "companies": "업체", "staff": "담당자", "usage_log": "가동 실적",
+             "maint": "유지보수", "settings": "설정", "rates": "수수료 단가", "quotes": "견적서",
+             "equip_specs": "장비 사양", "equip_docs": "장비 자료", "equip_notes": "장비 메모", "cs": "CS활동"}
 
 
 def restore_bytes(data: bytes) -> dict:
@@ -1756,6 +1784,8 @@ def restore_bytes(data: bytes) -> dict:
 
 def _restore_bytes(data: bytes) -> dict:
     sheets = pd.read_excel(io.BytesIO(data), sheet_name=None, dtype=str)
+    en = {v: k for k, v in BACKUP_KO.items()}
+    sheets = {en.get(k, k): v for k, v in sheets.items()}
     eq = sheets["equipment"].reindex(columns=cols("equipment")).fillna("")
     lg = sheets["usage_log"].reindex(columns=cols("usage")).fillna("")
     store = get_store()

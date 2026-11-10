@@ -115,6 +115,7 @@ PAGES = {
     "업체": [
         st.Page(cs_view.render, title="CS활동", url_path="cs"),
         st.Page(quote.render_new, title="견적서 작성", url_path="quote"),
+        st.Page(quote.render_ledger, title="견적서 발급대장", url_path="quote-ledger"),
         st.Page(companies.render, title="업체 목록", url_path="companies"),
     ],
     "기준 정보": [
@@ -165,7 +166,7 @@ def sidebar(local: bool) -> None:
             fg, bg = NAV_COLORS[gi % len(NAV_COLORS)]
             ui_style.nav_group(group)
             for p in pages:
-                st.page_link(p, label=p.title, icon=NAV_ICONS.get(p.title))
+                st.page_link(p, label=p.title)  # 2026-11-10 아이콘 없이 글자만 (깔끔하게)
                 css.append(f'[data-testid="stSidebar"] a[href="{p.url_path}"] {{--nc:{fg};--nb:{bg};}}')
         # 지금 화면 메뉴 강조 (Streamlit 은 aria-current 를 달지 않아 주소로 고름)
         cur = "" if getattr(pg, "_default", False) else pg.url_path
