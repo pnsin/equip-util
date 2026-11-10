@@ -82,7 +82,7 @@ THEMES = {
     # G. 다크 엔터프라이즈 (2026-11-06 사용자 명세서: Stripe/Datadog형)
     "slate": {
         "bg": "#0F172A", "panel": "#1E293B", "panel2": "#26334D", "deep": "#090D16",
-        "line": "#64748B", "line2": "#7C8CA3", "ink": "#F8FAFC", "muted": "#94A3B8", "dim": "#64748B",
+        "line": "#64748B", "line2": "#7C8CA3", "ink": "#F8FAFC", "muted": "#B4C0D2", "dim": "#8696AD",
         "accent": "#6366F1", "accent-hi": "#818CF8", "accent-bg": "rgba(99,102,241,.15)",
         "ok": "#10B981", "ok-bg": "rgba(16,185,129,.15)", "ng": "#F87171", "ng-bg": "rgba(248,113,113,.15)", "warn": "#F59E0B", "warn-bg": "rgba(245,158,11,.15)",
         "bar-off": "#334155", "shadow": "0 16px 40px rgba(0,0,0,.45)", "card-shadow": "none",
@@ -553,7 +553,7 @@ _SLATE_CSS = """<style>
   .dst { background: #0F172A !important; border: 1px solid #64748B !important; border-radius: 12px !important; box-shadow: none !important; }
   .dst:hover { background: #26334D !important; transform: none !important; }
   .dst.big { background: #26334D !important; border: 1px solid #475569 !important; }
-  .dst.big * { color: inherit !important; } .dst.big .sl { color: #94A3B8 !important; }
+  .dst.big * { color: inherit !important; } .dst.big .sl { color: #E2E8F0 !important; }
   .dst .sv, .dst.big .sv { font-size: 30px !important; font-weight: 700; color: #F8FAFC !important; font-variant-numeric: tabular-nums; }
   .dst .sv small { font-size: 16px !important; font-weight: 500 !important; color: #94A3B8 !important; }
   .dch { background: rgba(148,163,184,.15) !important; color: #CBD5E1 !important; }
