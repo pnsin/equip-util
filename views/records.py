@@ -28,14 +28,14 @@ FIELDS = {
     "종료일": "end_date",
     "휴무포함": "include_holidays",
     "사용시간": "hours",
-    "사용료": "fee",
+    "수수료": "fee",
     "사용목적(상세)": "purpose_detail",
     "기타": "etc",
     "담당자": "created_by",
 }
 
 
-DEFAULT_COLS = ["장비", "시작일", "종료일", "업체", "사용료", "사용목적", "활용유형", "사용시간", "시료수", "담당자",
+DEFAULT_COLS = ["장비", "시작일", "종료일", "업체", "수수료", "사용목적", "활용유형", "사용시간", "시료수", "담당자",
                 "세부지원내용", "수정자"]
 
 
@@ -203,10 +203,12 @@ def _by_logs() -> None:
     view["end_date"] = view["end_date"].dt.date
     view = view.set_index("id")[list(FIELDS.values())].rename(columns={v: k for k, v in FIELDS.items()})
     view["수정자"] = df.set_index("id")["updated_by"] if "updated_by" in df else ""
+    view["사용목적"] = view["사용목적"].map(seed.purpose_label)  # 달력과 같은 이름 (제조·지원)
     view.insert(0, "복제", False)
     view.insert(0, "삭제", False)
     all_cols = list(FIELDS) + ["수정자"]
     st.session_state.setdefault("rec_cols", DEFAULT_COLS)
+    st.session_state.rec_cols = [c for c in st.session_state.rec_cols if c in list(FIELDS) + ["수정자"]]
     t2, t1 = st.columns([1.2, 5], vertical_alignment="center")
     t1.caption("칸을 눌러 바로 고치고 '변경 내용 저장'. 지울 행은 '삭제', 다른 날로 복사할 행은 '복제'에 체크하세요.")
     with t2.popover("보이는 열", icon=":material/view_column:", width="stretch"):
@@ -219,7 +221,7 @@ def _by_logs() -> None:
     view, _ = pin_table(ed_key, view)  # 고치는 중에 다른 분이 저장해도 칸이 엉뚱한 줄로 가지 않게 (저장은 ID로)
     edited = st.data_editor(
         view, key=ed_key, hide_index=True, width="stretch", height=520,
-        disabled=["사업자번호", "수정자"],
+        disabled=["사업자번호", "업종", "품목", "세부품목", "수정자"],
         column_order=["삭제", "복제"] + list(dict.fromkeys(c for c in DEFAULT_COLS + all_cols if c in shown)),
         column_config={
             "복제": st.column_config.CheckboxColumn(width="small", help="체크한 행을 아래에서 고른 날짜로 복사합니다."),
@@ -227,21 +229,22 @@ def _by_logs() -> None:
             "담당자": st.column_config.SelectboxColumn(options=db.staff_names(list(df["created_by"])), required=True),
             "삭제": st.column_config.CheckboxColumn(width="small"),
             "장비": st.column_config.SelectboxColumn(options=list(eq["label"]), width="large", required=True),
-            "사용목적": st.column_config.SelectboxColumn(options=seed.PURPOSES, required=True),
+            "사용목적": st.column_config.SelectboxColumn(options=list(dict.fromkeys(seed.purpose_label(p) for p in seed.PURPOSES)),
+                                                     required=True),
             "활용유형": st.column_config.SelectboxColumn(options=seed.USAGE_TYPES, required=True),
             "업체": st.column_config.SelectboxColumn(
                 options=list(master) + sorted({c for c in view["업체"] if c and c not in master}),
                 help="'기준 정보 › 업체'에 등록된 업체만 고를 수 있습니다. 사업자번호는 업체 목록에서 자동으로 채워집니다."),
             "사업자번호": st.column_config.TextColumn(help="'기준 정보 › 업체'에서 고칩니다."),
-            "업종": st.column_config.SelectboxColumn(options=seed.INDUSTRIES),
-            "품목": st.column_config.SelectboxColumn(options=seed.ALL_ITEMS),
-            "세부품목": st.column_config.SelectboxColumn(options=seed.ALL_SUBITEMS),
+            "업종": st.column_config.TextColumn(help="'기준 정보 › 업체 목록'에서 고칩니다."),
+            "품목": st.column_config.TextColumn(help="'기준 정보 › 업체 목록'에서 고칩니다."),
+            "세부품목": st.column_config.TextColumn(help="'기준 정보 › 업체 목록'에서 고칩니다."),
             "공개": st.column_config.SelectboxColumn(options=seed.YN, width="small"),
             "휴무포함": st.column_config.SelectboxColumn(options=seed.YN, width="small"),
             "시작일": st.column_config.DateColumn(format="YYYY-MM-DD", required=True),
             "종료일": st.column_config.DateColumn(format="YYYY-MM-DD", required=True),
             "사용시간": st.column_config.NumberColumn(min_value=0, step=1, format="%d", required=True),
-            "사용료": st.column_config.NumberColumn("수수료(원)", min_value=0, step=1000, format="localized",
+            "수수료": st.column_config.NumberColumn("수수료(원)", min_value=0, step=1000, format="localized",
                                                 help="시험이 끝난 뒤 매긴 수수료. 칸을 눌러 바로 입력하세요."),
             "시료수": st.column_config.NumberColumn(min_value=0, step=1, format="%d"),
             "세부지원내용": st.column_config.TextColumn(width="large"),
@@ -267,6 +270,7 @@ def _by_logs() -> None:
             row = edited.loc[i]
             rec = {FIELDS[col]: row[col] for col in FIELDS if col != "장비"}
             rec["equip_id"] = id_of.get(row["장비"])
+            rec["purpose"] = {v: k for k, v in seed.PURPOSE_LABEL.items()}.get(rec.get("purpose"), rec.get("purpose"))
             rec["company"] = db.to_str(rec.get("company"))
             m = master.get(rec["company"])
             if m is not None:  # 사업자번호는 항상 업체 목록 기준
