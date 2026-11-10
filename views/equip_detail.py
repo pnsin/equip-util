@@ -20,9 +20,7 @@ def _info(r: dict, annual: float, parent: str = "", kids: list[str] | None = Non
              ("ITUBE번호", r["code"]), ("국가연구시설장비번호", r["nfec"]), ("관리자", r["manager"]),
              ("연간기준시간", f"{(r['annual_hours'] if pd.notna(r['annual_hours']) else annual):,.0f} h"),
              ("제조사", r.get("maker", "")), ("자산번호", r.get("asset_no", "")),
-             (w("가동률 산정"), "대상" if r["in_kpi"] else "제외")]
-    if kids:
-        items.append((f"세부장비 {len(kids)}", ", ".join(kids)))
+             ]
     cells = "".join(f"<div><span>{html.escape(k)}</span><b title='{html.escape(str(v))}'>{html.escape(str(v) or '-')}</b></div>"
                     for k, v in items if str(v).strip())
     st.markdown(f"<div class='eq-info'>{cells}</div>", unsafe_allow_html=True)
