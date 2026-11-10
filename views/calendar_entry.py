@@ -162,7 +162,7 @@ div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button[aria-checked="
   width: 320px !important; min-width: 320px !important; max-width: none !important; z-index: 60; pointer-events: none; opacity: 0; visibility: hidden;
   transform: translateY(4px); transition: opacity .15s ease .35s, transform .15s ease .35s, visibility 0s linear .5s;}
 .st-key-calgrid div[class*="st-key-cardr_"] {left: auto; right: -2px;}
-.st-key-calgrid div[class*="st-key-sec_"]:hover div[class*="st-key-card"] {opacity: 1; visibility: visible;
+.st-key-calgrid div[class*="st-key-er_"]:hover div[class*="st-key-card"] {opacity: 1; visibility: visible;
   transform: none; transition-delay: .35s, .35s, 0s;}
 .st-key-calgrid div[class*="st-key-sec_"]:hover {z-index: 50;}
 /* 위쪽 두 줄은 카드를 아래로 펼침 (위로 펼치면 화면 밖으로 잘림) */
@@ -1207,17 +1207,16 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
             row = sec.container(key=f"er_{d}_{e['id']}")
             row.button(label, key=f"ent_{d}_{e['id']}", width="stretch",
                        on_click=_click_entry, args=(d, e, clip, logs))
+            # 실적 줄에 마우스를 올리면 그 실적 하나만 카드로 (2026-11-10)
+            side = "r" if d.weekday() >= 4 else ""  # 오른쪽 칸은 카드를 왼쪽으로 펼침
+            m0 = st.session_state.get("cal_month", d.replace(day=1))
+            down = "v" if (d - (m0 - dt.timedelta(days=m0.weekday()))).days // 7 < 2 else ""  # 위쪽 두 줄은 아래로
+            row.container(key=f"card{side}{down}_{d}_{e['id']}").markdown(_card_html(d, [e]), unsafe_allow_html=True)
             if not e["period"]:
                 row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
                            on_click=_click_x, args=(d, e))
         if len(ents) > CELL_LINES:
             sec.container(key=f"more_{d}_{CAT_KEY[c]}").markdown(f"+{len(ents) - CELL_LINES}")
-        if ents:  # 이 구역에 마우스를 올리면 이 구역 실적만 카드로
-            side = "r" if d.weekday() >= 4 else ""  # 오른쪽 칸은 카드를 왼쪽으로 펼침
-            m0 = st.session_state.get("cal_month", d.replace(day=1))
-            row = (d - (m0 - dt.timedelta(days=m0.weekday()))).days // 7
-            down = "v" if row < 2 else ""  # 위쪽 두 줄은 아래로 펼침
-            sec.container(key=f"card{side}{down}_{CAT_KEY[c]}_{d}").markdown(_card_html(d, ents), unsafe_allow_html=True)
 
 
 def render(header: bool = True) -> None:
