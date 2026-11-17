@@ -752,7 +752,7 @@ _CHIP_SVG = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke
 def sidebar_brand():
     """왼쪽 메뉴 맨 위 머리글 (2026-11-17 노신 시안, 전극 공정 앱과 같은 모양): 칩 아이콘 + 팀 이름 + 시스템 이름."""
     st.markdown(f'<div class="cbtp-header-equip"><div class="cbtp-icon-equip">{_CHIP_SVG}</div>'
-                '<div class="cbtp-text-group"><span class="cbtp-dept-label">CBTP 배터리산업팀</span>'
+                '<div class="cbtp-text-group"><span class="cbtp-dept-label">배터리산업팀</span>'
                 f'<span class="cbtp-sys-title">{html.escape(SYSTEM_TITLE)}</span></div></div>', unsafe_allow_html=True)
 
 
