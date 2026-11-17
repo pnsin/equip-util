@@ -192,10 +192,6 @@ def sidebar(local: bool) -> None:
                               help=f"{last['at']:%H:%M} {last['label']}을(를) 취소합니다. "
                                    "여러 번 누르면 그 전 작업도 차례로 취소됩니다."):
             _undo()
-        if st.button("데이터 새로고침", icon=":material/refresh:",
-                     help="다른 팀원이 방금 저장한 내용이나 구글 시트에서 직접 고친 내용을 다시 불러옵니다."):
-            db.clear_caches()
-            st.rerun()
         where = "임시 저장소 (재시작 시 지워질 수 있음)" if local else "구글 시트에 자동 저장"
         st.markdown(f'<div class="side-foot"><span class="dot{" off" if local else ""}"></span>{where}</div>',
                     unsafe_allow_html=True)
