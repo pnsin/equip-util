@@ -551,13 +551,13 @@ _SLATE_CSS = """<style>
   [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.cbtp-foot-logo) { margin-top: auto; position: sticky; bottom: 0; z-index: 2;
         padding: 1.2rem 0 1rem; background: var(--side, #090D16); }
   [data-testid="stSidebar"] .cbtp-foot-logo { margin-top: 0; padding: 1rem 0 2.6rem; }
-  [data-testid="stSidebar"] .cbtp-header-equip { display: flex; align-items: center; gap: 12px; padding: 48px 4px 22px 4px; margin-bottom: 10px;
+  [data-testid="stSidebar"] .cbtp-header-equip { display: flex; align-items: center; gap: 14px; padding: 48px 4px 22px 4px; margin-bottom: 10px;
         border-bottom: 1px solid rgba(255,255,255,.08); }
-  [data-testid="stSidebar"] .cbtp-icon-equip { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center;
+  [data-testid="stSidebar"] .cbtp-icon-equip { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center;
         justify-content: center; background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.28); }
   [data-testid="stSidebar"] .cbtp-text-group { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  [data-testid="stSidebar"] .cbtp-dept-label { font-size: 11px; font-weight: 600; color: #8B949E; letter-spacing: .03em; line-height: 1.3; }
-  [data-testid="stSidebar"] .cbtp-sys-title { font-size: 16px; font-weight: 700; color: #F0F6FC; letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; }
+  [data-testid="stSidebar"] .cbtp-dept-label { font-size: 13px; font-weight: 600; color: #8B949E; letter-spacing: .03em; line-height: 1.3; }
+  [data-testid="stSidebar"] .cbtp-sys-title { font-size: 20px; font-weight: 700; color: #F0F6FC; letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; }
   .ph { border-bottom: 1px solid #1E293B !important; } .ph .t { font-size: 24px !important; }
   .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] { background: #6366F1 !important; color: #fff !important; }
   .stButton button[kind="primary"] p, .stDownloadButton button[kind="primary"] p, .stFormSubmitButton button[kind="primary"] p { color: #fff !important; }
@@ -748,7 +748,7 @@ def goal_bar(ratio: float, left_html: str, right_html: str, color: str | None = 
                 f'<div class="bar" style="--c:{c}"><i style="width:{pct:.1f}%"></i></div></div>', unsafe_allow_html=True)
 
 
-_CHIP_SVG = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2" '
+_CHIP_SVG = ('<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2" '
              'stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>'
              '<rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>'
              '<line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/>'
