@@ -545,8 +545,12 @@ _SLATE_CSS = """<style>
   [data-testid="stSidebar"] .cbtp-foot-logo { border-top: 1px solid rgba(255,255,255,.08); margin-top: .6rem; padding: 1.1rem 0 .4rem;
         display: flex; justify-content: center; }
   [data-testid="stSidebar"] .cbtp-foot-logo img { width: 150px; display: block; }
-  /* 로고는 메뉴 끝에서 적당히 띄워 아래쪽에 */
-  [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.cbtp-foot-logo) { padding-top: 1.6rem; padding-bottom: 1.5rem; }
+  /* 로고는 왼쪽 메뉴 맨 아래 (메뉴가 화면보다 길면 메뉴 끝에서 띄워서) */
+  .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stSidebarUserContent"] { padding-bottom: 0 !important; }
+  [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] { min-height: calc(100dvh - 3.2rem); }
+  [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.cbtp-foot-logo) { margin-top: auto; position: sticky; bottom: 0; z-index: 2;
+        padding: 1.2rem 0 1rem; background: var(--side, #090D16); }
+  [data-testid="stSidebar"] .cbtp-foot-logo { margin-top: 0; padding: 1rem 0 1.3rem; }
   [data-testid="stSidebar"] .cbtp-header-equip { display: flex; align-items: center; gap: 12px; padding: 8px 4px 20px 4px; margin-bottom: 4px;
         border-bottom: 1px solid rgba(255,255,255,.08); }
   [data-testid="stSidebar"] .cbtp-icon-equip { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center;

@@ -185,16 +185,14 @@ def sidebar(local: bool) -> None:
                    f'transition:all .2s ease;}} {lk}:hover::before {{background:#94A3B8;}} '
                    f'{on}::before {{background:#818CF8 !important; box-shadow:0 0 0 3px rgba(129,140,248,.22);}}')
         st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
-        st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
-        st.divider()
         last = db.last_undo()
-        if last and st.button("마지막 작업 되돌리기", icon=":material/undo:", key="undo_side",
-                              help=f"{last['at']:%H:%M} {last['label']}을(를) 취소합니다. "
-                                   "여러 번 누르면 그 전 작업도 차례로 취소됩니다."):
-            _undo()
-        where = "임시 저장소 (재시작 시 지워질 수 있음)" if local else "구글 시트에 자동 저장"
-        st.markdown(f'<div class="side-foot"><span class="dot{" off" if local else ""}"></span>{where}</div>',
-                    unsafe_allow_html=True)
+        if last:
+            st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
+            st.divider()
+            if st.button("마지막 작업 되돌리기", icon=":material/undo:", key="undo_side",
+                         help=f"{last['at']:%H:%M} {last['label']}을(를) 취소합니다. "
+                              "여러 번 누르면 그 전 작업도 차례로 취소됩니다."):
+                _undo()
         ui_style.sidebar_logo()
 
 
