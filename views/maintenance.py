@@ -102,12 +102,13 @@ def render() -> None:
     if mode == "장비별":
         _by_equipment(df, eq, center)
         return
-    c1, c2 = st.columns([2.2, 3], vertical_alignment="center")
+    c1, c2, c3 = st.columns([2.2, 2.4, 0.6], vertical_alignment="center")
     with c1:
         q = search_box("maint_q", "장비 · 내용 · 담당자")
     kinds = list(dict.fromkeys(db.MAINT_KINDS + [k for k in df["kind"] if k]))
     with c2:
         pick = st.pills("종류", kinds, selection_mode="multi", key="maint_kinds", label_visibility="collapsed")
+    add_at = c3.container(horizontal_alignment="right")
 
     mask = pd.Series(True, index=view.index)
     if q:
@@ -123,7 +124,7 @@ def render() -> None:
     staff = db.staff_names(include=list(df["staff"]))
     equip_opts = list(label_of.values()) + sorted({v for v in view["장비"].dropna() if v and v not in id_of})
     action, out, gone = pick_table(
-        view, "maint_tbl", mask=mask if filtered else None, name_col="내용", add_label="기록 추가",
+        view, "maint_tbl", mask=mask if filtered else None, name_col="내용", add_label="기록 추가", add_at=add_at,
         column_order=SHOW,
         column_config={
             "날짜": st.column_config.DateColumn(format="YYYY-MM-DD", default=dt.date.today(), width=110),

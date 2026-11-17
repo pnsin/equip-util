@@ -25,10 +25,9 @@ def render() -> None:
             db.save_companies(m)
         return errors
 
-    c1, c2 = st.columns([4, 1.3], vertical_alignment="center")
-    with c1:
+    with st.container(horizontal=True, vertical_alignment="center"):  # 검색 · 새로 추가 · 엑셀 (엑셀은 표 오른쪽 끝)
         q = search_box("company_q", "업체명·사업자등록번호·업체 담당자로 찾기")
-    with c2:
+        add_at = st.container(width="content")
         excel_box("company_xl", comp, {k: v for k, v in COLS.items() if k != "id"}, "업체", _apply_xl)
     mask = None
     if q:
@@ -37,7 +36,7 @@ def render() -> None:
                 | view["업체 담당자"].astype(str).str.contains(q, case=False, regex=False))
 
     action, out, gone = pick_table(
-        view, "company_tbl", mask=mask, name_col="업체명",
+        view, "company_tbl", mask=mask, name_col="업체명", add_at=add_at,
         column_order=[c for c in COLS.values() if c != "id"],
         column_config={
             "업체명": st.column_config.TextColumn(required=True, width="medium"),
