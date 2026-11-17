@@ -7,7 +7,9 @@ import streamlit as st
 from core import db, rules, seed
 from core.calc import period_bounds
 from ui_style import empty_state, page_header
-from views.common import pin_table, unpin
+from views.common import pick_done, pick_table, pin_table, unpin
+
+ID = "_id"
 
 # 표 열 이름 → DB 필드
 FIELDS = {
@@ -166,12 +168,14 @@ def _by_logs() -> None:
     top_of = dict(zip(tops["short"], tops["id"]))
     if any(x not in top_of for x in st.session_state.get("rec_eq", [])):
         st.session_state.rec_eq = [x for x in st.session_state.rec_eq if x in top_of]
-    c1, c2, c4 = st.container(border=True).columns([1.4, 2.4, 1])
-    rng = c1.date_input("사용시작일 범위", format="YYYY-MM-DD", help="기본값은 이번 분기입니다.", key="rec_range")
-    sel_eq = c2.multiselect("장비", list(top_of), placeholder="전체", key="rec_eq")
+    # 2026-11-17 거르기 줄: 상자·제목 없이 한 줄 (기간 · 장비 · 담당자 · 보이는 열)
+    c1, c2, c4, c5 = st.columns([1.5, 2.6, 1.2, 1], gap="small", vertical_alignment="center")
+    rng = c1.date_input("사용시작일 범위", format="YYYY-MM-DD", key="rec_range", label_visibility="collapsed")
+    sel_eq = c2.multiselect("장비", list(top_of), placeholder="장비 전체", key="rec_eq", label_visibility="collapsed")
     writers = sorted(w for w in logs["created_by"].unique() if w)
-    writer = c4.selectbox("담당자", ["전체"] + writers, key="rec_writer")
-    no_fee = st.toggle("수수료 안 넣은 것만", key="rec_nofee", help="수수료가 0원인 업체 실적만 보여 줍니다.")
+    writer = c4.selectbox("담당자", ["전체"] + writers, key="rec_writer", label_visibility="collapsed",
+                          format_func=lambda w: "담당자 전체" if w == "전체" else w)
+    no_fee = False
 
     df = logs.copy()
     if isinstance(rng, (tuple, list)) and len(rng) == 2:
@@ -186,11 +190,6 @@ def _by_logs() -> None:
     if no_fee:
         df = df[(df["fee"].fillna(0) <= 0) & (df["company"].fillna("") != "")]
 
-    m1, m2, m3 = st.columns(3)
-    m1.metric("건수", f"{len(df):,}")
-    m2.metric("사용시간 합계", f"{df['hours'].sum():,.0f} h")
-    m3.metric("수수료 합계", f"{df['fee'].sum():,.0f} 원")
-
     if df.empty:
         empty_state("조건에 맞는 실적이 없습니다", icon="⌕")
         return
@@ -204,30 +203,32 @@ def _by_logs() -> None:
     view = view.set_index("id")[list(FIELDS.values())].rename(columns={v: k for k, v in FIELDS.items()})
     view["수정자"] = df.set_index("id")["updated_by"] if "updated_by" in df else ""
     view["사용목적"] = view["사용목적"].map(seed.purpose_label)  # 달력과 같은 이름 (제조·지원)
-    view.insert(0, "복제", False)
-    view.insert(0, "삭제", False)
+    view.insert(0, ID, view.index.astype("int64"))  # 저장·삭제·복제는 ID로 (화면엔 안 보임)
+    view = view.reset_index(drop=True)
     all_cols = list(FIELDS) + ["수정자"]
     st.session_state.setdefault("rec_cols", DEFAULT_COLS)
     st.session_state.rec_cols = [c for c in st.session_state.rec_cols if c in list(FIELDS) + ["수정자"]]
-    t2, t1 = st.columns([1.2, 5], vertical_alignment="center")
-    t1.caption("칸을 눌러 바로 고치고 '변경 내용 저장'. 지울 행은 '삭제', 다른 날로 복사할 행은 '복제'에 체크하세요.")
-    with t2.popover("보이는 열", icon=":material/view_column:", width="stretch"):
+    with c5.popover("보이는 열", icon=":material/view_column:", width="stretch"):
         shown = st.multiselect("보이는 열", all_cols, key="rec_cols", label_visibility="collapsed")
         st.button("기본값으로", key="rec_cols_reset", type="tertiary",
                   on_click=lambda: st.session_state.update(rec_cols=DEFAULT_COLS))
     shown = shown or DEFAULT_COLS
+    order = list(dict.fromkeys(c for c in DEFAULT_COLS + all_cols if c in shown))
 
-    ed_key = f"records_editor_{abs(hash((str(rng), tuple(sel_eq), comp_q, writer, no_fee))) % 10 ** 8}"
+    ed_key = f"records_tbl_{abs(hash((str(rng), tuple(sel_eq), comp_q, writer, no_fee))) % 10 ** 8}"
     view, _ = pin_table(ed_key, view)  # 고치는 중에 다른 분이 저장해도 칸이 엉뚱한 줄로 가지 않게 (저장은 ID로)
-    edited = st.data_editor(
-        view, key=ed_key, hide_index=True, width="stretch", height=520,
+
+    def copy_day():
+        st.date_input("복제할 시작일", value=dt.date.today(), format="YYYY-MM-DD", key="rec_copy_day", width=220,
+                      help="'복제'를 누르면 고른 행을 이 날부터 시작하도록 복사합니다 (기간 실적은 같은 길이).")
+
+    action, out, _ = pick_table(
+        view, ed_key, name_col="장비", can_add=False, column_order=order,
         disabled=["사업자번호", "업종", "품목", "세부품목", "수정자"],
-        column_order=["삭제", "복제"] + list(dict.fromkeys(c for c in DEFAULT_COLS + all_cols if c in shown)),
+        extra_actions=[("copy", "복제", ":material/content_copy:")], extra_ui=copy_day,
         column_config={
-            "복제": st.column_config.CheckboxColumn(width="small", help="체크한 행을 아래에서 고른 날짜로 복사합니다."),
             "수정자": st.column_config.TextColumn("마지막 수정", help="이 실적을 마지막으로 고친 사람"),
             "담당자": st.column_config.SelectboxColumn(options=db.staff_names(list(df["created_by"])), required=True),
-            "삭제": st.column_config.CheckboxColumn(width="small"),
             "장비": st.column_config.SelectboxColumn(options=list(eq["label"]), width="large", required=True),
             "사용목적": st.column_config.SelectboxColumn(options=list(dict.fromkeys(seed.purpose_label(p) for p in seed.PURPOSES)),
                                                      required=True),
@@ -245,29 +246,24 @@ def _by_logs() -> None:
             "종료일": st.column_config.DateColumn(format="YYYY-MM-DD", required=True),
             "사용시간": st.column_config.NumberColumn(min_value=0, step=1, format="%d", required=True),
             "수수료": st.column_config.NumberColumn("수수료(원)", min_value=0, step=1000, format="localized",
-                                                help="시험이 끝난 뒤 매긴 수수료. 칸을 눌러 바로 입력하세요."),
+                                                help="시험이 끝난 뒤 매긴 수수료."),
             "시료수": st.column_config.NumberColumn(min_value=0, step=1, format="%d"),
             "세부지원내용": st.column_config.TextColumn(width="large"),
         },
     )
 
-    to_delete = [int(i) for i in edited.index[edited["삭제"].fillna(False).astype(bool)]]
-    changed = []
-    for i in edited.index:
-        if i in to_delete:
-            continue
-        a = edited.loc[i].drop(["삭제", "복제"]).astype(str)
-        b = view.loc[i].drop(["삭제", "복제"]).astype(str)
-        if not a.equals(b):
-            changed.append(i)
+    def done(msg):
+        st.session_state.records_saved = msg
+        pick_done(ed_key)
+        unpin(ed_key)
+        st.rerun()
 
-    confirm = True
-    c1, c2 = st.columns([1, 3])
-    if c1.button("변경 내용 저장", type="primary", disabled=not (changed or to_delete) or not confirm,
-                 icon=":material/save:", width="stretch"):
+    if action == "save":
         errors, updates = [], {}
-        for i in changed:
-            row = edited.loc[i]
+        for i in range(len(view)):
+            row = out.loc[i]
+            if row.drop(ID).astype(str).equals(view.loc[i].drop(ID).astype(str)):
+                continue
             rec = {FIELDS[col]: row[col] for col in FIELDS if col != "장비"}
             rec["equip_id"] = id_of.get(row["장비"])
             rec["purpose"] = {v: k for k, v in seed.PURPOSE_LABEL.items()}.get(rec.get("purpose"), rec.get("purpose"))
@@ -283,44 +279,33 @@ def _by_logs() -> None:
             if errs:
                 errors += [f"[{row['시작일']} {row['장비']}] {e}" for e in errs]
             else:
-                updates[int(i)] = rec
-        if errors:
-            for e in errors:
-                st.error(e)
-        else:
-            with db.undo_group(f"수수료 입력 저장 (수정 {len(updates)} · 삭제 {len(to_delete)})"):
+                updates[int(row[ID])] = rec
+        for e in errors:
+            st.error(e)
+        if not errors:
+            with db.undo_group(f"수수료 입력 저장 (수정 {len(updates)})"):
                 n_up = db.update_logs(updates) if updates else 0
-                n_del = db.delete_logs(to_delete)
-            st.session_state.records_saved = f"수정 {n_up}건 · 삭제 {n_del}건 반영했습니다."
-            st.session_state.pop(ed_key, None)
-            unpin(ed_key)
-            st.rerun()
-    c2.caption(f"수정 {len(changed)}건 · 삭제 {len(to_delete)}건 저장 대기" if (changed or to_delete) else "")
-
-    to_copy = [int(i) for i in edited.index[edited["복제"].fillna(False).astype(bool)]]
-    if to_copy:
-        with st.container(border=True):
-            c1, c2, c3 = st.columns([1.3, 1.2, 2], vertical_alignment="bottom")
-            new_start = c1.date_input("복제할 시작일", value=dt.date.today(), format="YYYY-MM-DD", key="rec_copy_day",
-                                      help="기간 실적은 같은 길이를 유지해 이 날부터 시작하도록 복사합니다.")
-            if c2.button(f"{len(to_copy)}건 복제", type="primary", icon=":material/content_copy:", width="stretch"):
-                errors, recs = [], []
-                for i in to_copy:
-                    src = df[df["id"] == i].iloc[0].to_dict()
-                    length = (src["end_date"] - src["start_date"]).days
-                    rec = {k: src.get(k) for k in db.LOG_FIELDS}
-                    rec.update(start_date=new_start, end_date=new_start + dt.timedelta(days=length),
-                               created_by=st.session_state.get("me") or src.get("created_by"))
-                    errs = rules.validate(rec)
-                    errors += [f"[{label_of.get(src['equip_id'], '')}] {e}" for e in errs]
-                    recs.append(rec)
-                if errors:
-                    for e in errors:
-                        st.error(e)
-                else:
-                    with db.undo_group(f"실적 {len(recs)}건 복제 ({new_start:%m/%d})"):
-                        n = db.insert_logs(recs)
-                    st.session_state.records_saved = f"{n}건을 {new_start:%m/%d}로 복제했습니다."
-                    st.session_state.pop("records_editor", None)
-                    st.rerun()
-            c3.caption("복제한 실적은 '장비 일정 등록' 달력에서도 바로 보입니다.")
+            done(f"{n_up}건을 고쳤습니다.")
+    elif action == "delete":
+        ids = [int(i) for i in set(view[ID]) - set(out[ID])]
+        with db.undo_group(f"수수료 입력 삭제 ({len(ids)})"):
+            n_del = db.delete_logs(ids)
+        done(f"{n_del}건을 지웠습니다.")
+    elif action == "copy":
+        new_start = st.session_state.get("rec_copy_day") or dt.date.today()
+        errors, recs = [], []
+        for i in out[ID]:
+            src = df[df["id"] == i].iloc[0].to_dict()
+            length = (src["end_date"] - src["start_date"]).days
+            rec = {k: src.get(k) for k in db.LOG_FIELDS}
+            rec.update(start_date=new_start, end_date=new_start + dt.timedelta(days=length),
+                       created_by=st.session_state.get("me") or src.get("created_by"))
+            errs = rules.validate(rec)
+            errors += [f"[{label_of.get(src['equip_id'], '')}] {e}" for e in errs]
+            recs.append(rec)
+        for e in errors:
+            st.error(e)
+        if not errors:
+            with db.undo_group(f"실적 {len(recs)}건 복제 ({new_start:%m/%d})"):
+                n = db.insert_logs(recs)
+            done(f"{n}건을 {new_start:%m/%d}로 복제했습니다. '장비 일정 등록' 달력에서도 바로 보여요.")
