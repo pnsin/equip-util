@@ -1442,6 +1442,22 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
     chargers = db.charger_ids(eq, chans)
     cat_of = dict(zip(eq["id"].astype(int), (_cat_of(u) for u in eq.get("use", pd.Series([""] * len(eq))))))
     cat_of.update({i: CHARGER_GROUP for i in chargers})  # 충방전기는 '시험(충방전기)'로 따로
+    # 2026-11-17 제조: 주장비(라인 전체)도 고를 수 있게, 바로 아래에 그 세부장비들을 '└'로 붙여 보여 줌
+    parent_of = {int(i): int(p) for i, p in zip(eq["id"], eq["parent_id"]) if pd.notna(p)} if "parent_id" in eq else {}
+    mains: set[int] = set()
+    ordered: list[int] = []
+    for i in pickable:
+        p = parent_of.get(i)
+        if p is not None and cat_of.get(p) == "제조" and cat_of.get(i) == "제조" and p in short_of:
+            if p not in mains:
+                mains.add(p)
+                ordered.append(p)
+        ordered.append(i)
+    pickable = ordered
+    sub_of_main = {short_of[i] for i in pickable if parent_of.get(i) in mains}
+
+    def eq_label(o: str) -> str:
+        return f"└ {o}" if o in sub_of_main else o
     comp_by_name = {r["name"]: r for r in comp.to_dict("records")}
     staff_opts = db.staff_names(list(rows["created_by"]))
     ver = st.session_state.setdefault("cal_ver", 0)
@@ -1547,7 +1563,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                     if keep and keep not in eq_opts:
                         eq_opts.append(keep)
             v_eq = st.selectbox("장비", eq_opts, index=ix(eq_opts, short_of.get(cur["equip_id"]) if cur is not None else None),
-                                placeholder="장비 이름을 입력해 찾기", key=f"ep_eq_{k}")
+                                format_func=eq_label, placeholder="장비 이름을 입력해 찾기", key=f"ep_eq_{k}")
             where = db.path_text(eq, eq_id[v_eq]) if v_eq in eq_id else ""
             if where:  # 어느 주장비 소속인지 작게 (시간은 주장비에 합산)
                 st.markdown(f"<div class='ep-path'><span>소속</span>{html.escape(where)}</div>", unsafe_allow_html=True)
