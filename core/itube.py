@@ -129,6 +129,23 @@ def _cell_value(key: str, rec: dict):
     return s or None
 
 
+INTERNAL_ORG = ("(재)충북테크노파크", "3018213840")  # 활용유형 '내부' = 우리 기관
+
+
+def _fill_defaults(rec: dict) -> dict:
+    """내려받기 전에 비어 있는 칸 채우기: 지원내용 ← 지원개요, 내부 → 우리 기관 이름·사업자번호."""
+    rec = dict(rec)
+    overview, method, content = seed.parse_detail(rec.get("detail"))
+    if overview and not content:
+        rec["detail"] = seed.compose_detail(overview, method or "-", overview)
+    if to_str(rec.get("usage_type")) == "내부":
+        if not to_str(rec.get("company")):
+            rec["company"] = INTERNAL_ORG[0]
+        if not digits(rec.get("brn")):
+            rec["brn"] = INTERNAL_ORG[1]
+    return rec
+
+
 def make_itube_file(records: list[dict], equipment_rows: list[tuple[str, str]],
                     template_bytes: bytes | None = None) -> bytes:
     """실적 목록을 i-Tube 업로드 양식에 채워 xlsx 바이트로 돌려줍니다.
@@ -136,6 +153,7 @@ def make_itube_file(records: list[dict], equipment_rows: list[tuple[str, str]],
     template_bytes 가 있으면(설정에서 올린 공식 양식) 그 파일에 그대로 채우고,
     없으면 build_blank 로 만든 양식에 채웁니다.
     """
+    records = [_fill_defaults(r) for r in records]
     if template_bytes:
         wb = load_workbook(io.BytesIO(template_bytes))
         ws = wb["Sheet1"] if "Sheet1" in wb.sheetnames else wb.worksheets[0]
