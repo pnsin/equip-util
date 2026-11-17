@@ -541,6 +541,19 @@ _SLATE_CSS = """<style>
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] [data-testid="stIconMaterial"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] [data-testid="stIconMaterial"] {
         color: #A5B4FC !important; }
   [data-testid="stSidebar"] .brand { border-bottom: 1px solid #1A2335 !important; margin-bottom: .2rem !important; }
+  /* 2026-11-17 왼쪽 메뉴 머리글 (칩 아이콘 + 팀 이름 + 시스템 이름) */
+  [data-testid="stSidebar"] .cbtp-foot-logo { border-top: 1px solid rgba(255,255,255,.08); margin-top: .6rem; padding: 1.1rem 0 .4rem;
+        display: flex; justify-content: center; }
+  [data-testid="stSidebar"] .cbtp-foot-logo img { width: 150px; display: block; }
+  /* 로고는 메뉴 끝에서 적당히 띄워 아래쪽에 */
+  [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.cbtp-foot-logo) { padding-top: 1.6rem; padding-bottom: 1.5rem; }
+  [data-testid="stSidebar"] .cbtp-header-equip { display: flex; align-items: center; gap: 12px; padding: 8px 4px 20px 4px; margin-bottom: 4px;
+        border-bottom: 1px solid rgba(255,255,255,.08); }
+  [data-testid="stSidebar"] .cbtp-icon-equip { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center;
+        justify-content: center; background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.28); }
+  [data-testid="stSidebar"] .cbtp-text-group { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  [data-testid="stSidebar"] .cbtp-dept-label { font-size: 11px; font-weight: 600; color: #8B949E; letter-spacing: .03em; line-height: 1.3; }
+  [data-testid="stSidebar"] .cbtp-sys-title { font-size: 16px; font-weight: 700; color: #F0F6FC; letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; }
   .ph { border-bottom: 1px solid #1E293B !important; } .ph .t { font-size: 24px !important; }
   .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] { background: #6366F1 !important; color: #fff !important; }
   .stButton button[kind="primary"] p, .stDownloadButton button[kind="primary"] p, .stFormSubmitButton button[kind="primary"] p { color: #fff !important; }
@@ -731,13 +744,25 @@ def goal_bar(ratio: float, left_html: str, right_html: str, color: str | None = 
                 f'<div class="bar" style="--c:{c}"><i style="width:{pct:.1f}%"></i></div></div>', unsafe_allow_html=True)
 
 
+_CHIP_SVG = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2" '
+             'stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>'
+             '<rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>'
+             '<line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/>'
+             '<line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>')
+
+
 def sidebar_brand():
-    """왼쪽 메뉴 맨 위: 로고(어두운 바탕용) + 시스템 이름."""
+    """왼쪽 메뉴 맨 위 머리글 (2026-11-17 노신 시안, 전극 공정 앱과 같은 모양): 칩 아이콘 + 팀 이름 + 시스템 이름."""
+    st.markdown(f'<div class="cbtp-header-equip"><div class="cbtp-icon-equip">{_CHIP_SVG}</div>'
+                '<div class="cbtp-text-group"><span class="cbtp-dept-label">배터리산업팀</span>'
+                f'<span class="cbtp-sys-title">{html.escape(SYSTEM_TITLE)}</span></div></div>', unsafe_allow_html=True)
+
+
+def sidebar_logo():
+    """왼쪽 메뉴 맨 아래 가운데 CBTP 로고."""
     uri = _data_uri(LOGO_PATH)
-    logo = f'<img src="{uri}" alt="로고">' if uri else ""
-    st.markdown(f'<div class="brand">{logo}<div class="brand-card"><span class="brand-ic">'
-                '<span class="material-symbols-rounded">precision_manufacturing</span></span>'
-                f'<p class="brand-title">{html.escape(SYSTEM_TITLE)}</p></div></div>', unsafe_allow_html=True)
+    if uri:
+        st.markdown(f'<div class="cbtp-foot-logo"><img src="{uri}" alt="CBTP 배터리산업팀"></div>', unsafe_allow_html=True)
 
 
 def nav_group(name: str):

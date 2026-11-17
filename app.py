@@ -176,7 +176,7 @@ def sidebar(local: bool) -> None:
         # 지금 화면 메뉴 강조 (Streamlit 은 aria-current 를 달지 않아 주소로 고름)
         cur = "" if getattr(pg, "_default", False) else pg.url_path
         on = f'[data-testid="stSidebar"] a[href="{cur}"]'
-        css.append(f'{on} {{background: rgba(99,102,241,.16) !important;}} {on} p {{color: #EEF2FF !important; font-weight: 600 !important;}} '
+        css.append(f'{on} {{background: #1A2234 !important;}} {on} p {{color: #A5B4FC !important; font-weight: 600 !important;}} '
                    f'{on} [data-testid="stIconMaterial"] {{color: #A5B4FC !important;}}')
         # 2026-11-10 메뉴 앞 작은 점 (지금 화면은 보라색으로 빛남)
         lk = '[data-testid="stSidebar"] [data-testid="stPageLink"] a'
@@ -188,17 +188,14 @@ def sidebar(local: bool) -> None:
         st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
         st.divider()
         last = db.last_undo()
-        if last and st.button("마지막 작업 되돌리기", icon=":material/undo:", width="stretch", key="undo_side",
+        if last and st.button("마지막 작업 되돌리기", icon=":material/undo:", key="undo_side",
                               help=f"{last['at']:%H:%M} {last['label']}을(를) 취소합니다. "
                                    "여러 번 누르면 그 전 작업도 차례로 취소됩니다."):
             _undo()
-        if st.button("데이터 새로고침", icon=":material/refresh:", width="stretch",
-                     help="다른 팀원이 방금 저장한 내용이나 구글 시트에서 직접 고친 내용을 다시 불러옵니다."):
-            db.clear_caches()
-            st.rerun()
         where = "임시 저장소 (재시작 시 지워질 수 있음)" if local else "구글 시트에 자동 저장"
         st.markdown(f'<div class="side-foot"><span class="dot{" off" if local else ""}"></span>{where}</div>',
                     unsafe_allow_html=True)
+        ui_style.sidebar_logo()
 
 
 # 주소(예: /input)로 바로 들어와도 접속 뒤에 그 화면이 열리도록 먼저 등록
