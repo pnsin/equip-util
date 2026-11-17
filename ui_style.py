@@ -545,6 +545,9 @@ _SLATE_CSS = """<style>
   [data-testid="stSidebar"] .cbtp-foot-logo { border-top: 1px solid rgba(255,255,255,.08); margin-top: .6rem; padding: 1.1rem 0 .4rem;
         display: flex; justify-content: center; }
   [data-testid="stSidebar"] .cbtp-foot-logo img { width: 150px; display: block; }
+  /* 로고는 메뉴 맨 아래에 붙임 (메뉴가 짧으면 화면 바닥까지 내려감) */
+  [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] { min-height: calc(100dvh - 4rem); }
+  [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.cbtp-foot-logo) { margin-top: auto; padding-top: 2.5rem; }
   [data-testid="stSidebar"] .cbtp-header-equip { display: flex; align-items: center; gap: 12px; padding: 8px 4px 20px 4px; margin-bottom: 4px;
         border-bottom: 1px solid rgba(255,255,255,.08); }
   [data-testid="stSidebar"] .cbtp-icon-equip { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center;
