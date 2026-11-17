@@ -9,7 +9,6 @@
 """
 from __future__ import annotations
 
-import base64
 import functools
 import html
 import os
@@ -123,16 +122,18 @@ CHART_GRID = T["line"]
 SERIES = [T["accent"], T["ok"], T["warn"], "#8E6CC0", "#D45087", "#2A9D8F", T["muted"]]
 
 _DIR = os.path.dirname(__file__)
-LOGO_PATH = os.path.join(_DIR, "assets", THEMES.get(THEME_NAME, THEMES["dark"])["logo"])
+# 로고는 static/ 폴더에서 주소로 불러옴 (브라우저가 한 번 받아 두고 다시 씀).
+# 예전처럼 글자(base64)로 넣으면 화면을 다시 그릴 때마다 190KB 를 새로 보내 느려짐 (2026-11-17)
+LOGO_PATH = os.path.join(_DIR, "static", THEMES.get(THEME_NAME, THEMES["dark"])["logo"])
 FAVICON_PATH = os.path.join(_DIR, "assets", "favicon.png")
 
 
 @functools.lru_cache(maxsize=4)
 def _data_uri(path: str) -> str:
+    """static/ 안의 그림 → 앱 주소 (config.toml enableStaticServing). 파일이 바뀌면 주소 끝 숫자가 바뀌어 새로 받음."""
     if not os.path.exists(path):
         return ""
-    with open(path, "rb") as f:
-        return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+    return f"app/static/{os.path.basename(path)}?v={int(os.path.getmtime(path)) % 100000}"
 
 
 def favicon():
@@ -896,7 +897,7 @@ def login_bg():
 
 def login_head(failed: bool = False):
     """접속 화면 위쪽: 착시 보정 로고 + 제목."""
-    uri = _data_uri(LOGO_PATH if THEMES.get(THEME_NAME, {}).get("base") == "dark" else os.path.join(_DIR, "assets", "logo_light.png"))
+    uri = _data_uri(LOGO_PATH if THEMES.get(THEME_NAME, {}).get("base") == "dark" else os.path.join(_DIR, "static", "logo_light.png"))
     logo = f'<div class="login-logo-wrap"><img class="login-logo-center" src="{uri}" alt="CBTP 배터리산업팀 로고"></div>' if uri else ""
     st.markdown(f'{logo}<div class="login-head"><div class="t">{html.escape(SYSTEM_TITLE)}</div>'
                 '<div class="d">팀 비밀번호로 들어와 주세요</div></div>', unsafe_allow_html=True)

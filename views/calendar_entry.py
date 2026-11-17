@@ -4,6 +4,7 @@ from __future__ import annotations
 import calendar
 import datetime as dt
 import html
+import json
 
 import pandas as pd
 import streamlit as st
@@ -503,6 +504,8 @@ div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button[aria-pressed="t
 .st-key-calgrid div[class*="st-key-ent_"][data-jsmulti="1"] button {box-shadow: 0 0 0 2px var(--accent) !important; background: rgba(85,154,230,0.16) !important;}
 .st-key-calgrid div[class*="st-key-ent_"][data-jsmulti="0"] button {box-shadow: none !important; background: var(--chip-bg, #26334D) !important;}
 .st-key-calgrid[data-dragging] div[class*="st-key-card"] {display: none !important;}
+/* 2026-11-17 숨은 카드 칸을 없앤 대신 그 칸이 만들던 줄 간격(3px)을 그대로 둠 */
+.st-key-calgrid div[class*="st-key-er_"] {padding-bottom: 3px;}
 [data-testid="stElementContainer"]:has(> div .cal-state), [data-testid="stMarkdown"]:has(.cal-state) {display: none !important;}
 </style>"""
 
@@ -602,7 +605,10 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
         return {}
     name_of = dict(zip(eq["id"].astype(int), eq["name"]))
     cat_of = dict(zip(eq["id"].astype(int), (_cat_of(u) for u in eq.get("use", pd.Series([""] * len(eq))))))
-    info = logs.set_index("id")
+    # 그달에 보이는 실적만 dict 로 (행마다 .loc 로 꺼내면 실적이 많을 때 느림)
+    ids = set(in_month["log_id"])
+    sub = logs[logs["id"].isin(ids)].drop_duplicates("id")
+    info = dict(zip(sub["id"], sub.drop(columns=["id"]).to_dict("records")))
     span: dict[str, tuple] = {}  # 묶음ID → 전체 기간 (달마다 나눠 저장한 기간 실적)
     if "series" in logs:
         sl = logs[logs["series"].map(db.to_str) != ""]
@@ -624,12 +630,12 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
     root_of = dict(zip(eq["id"].astype(int), eq["root_id"])) if "root_id" in eq else {}
     out: dict[dt.date, list[dict]] = {}
     for r in in_month.itertuples(index=False):
-        if r.log_id not in info.index:
+        lg = info.get(r.log_id)
+        if lg is None:
             continue
-        lg = info.loc[r.log_id]
         a, b = span.get(db.to_str(lg.get("series")), (lg["start_date"], lg["end_date"]))
         multi = a != b
-        rec = lg.to_dict() | {"id": int(r.log_id)}
+        rec = dict(lg) | {"id": int(r.log_id)}
         if multi:  # 기간 실적은 그날 몫만 하루짜리로 복사
             rec.update(hours=round(float(r.hours), 1), fee=round(float(r.fee)))
         out.setdefault(r.day.date(), []).append({
@@ -693,6 +699,19 @@ def _cat_of(use: str) -> str:
     if u in ("생산", "제조"):
         return "제조"
     return u if u in CATS else "기타"
+
+
+def _card_data(d: dt.date, e: dict) -> list:
+    """실적 한 건의 마우스 카드 내용 (글자만). 모양은 KEYS_JS 의 cardHtml 이 _card_html 과 똑같이 만듦."""
+    cells = [("업체", e["company"]), ("채널", f"{e['ch_txt']} ({e['ch_n']}ch)") if e.get("ch_n") else ("시간", _hours(e["hours"]))]
+    if e["staff"]:
+        cells.append(("담당", e["staff"]))
+    if e["period"]:
+        cells.append(("기간", e["period"]))
+    amount = f"{e['ch_n']}ch" if e.get("ch_n") else _hours(e["hours"])
+    bg, fg = CATS[e["cat"]]
+    return [f"{d.month}월 {d.day}일 ({WEEKDAYS[d.weekday()]})", f"1건 · {amount}", bg, fg,
+            GROUP_LABEL.get(e["cat"], e["cat"]), e["equip"], [str(x) for kv in cells for x in kv]]
 
 
 def _card_html(d: dt.date, entries: list[dict]) -> str:
@@ -1083,6 +1102,41 @@ KEYS_JS = r"""
       if (done || Date.now() - t0 > 8000) { clearInterval(win.__calQuickT); clearQuick(); }
     }, 80);
   };
+  // 실적 줄에 마우스를 올리면 그 줄에만 카드를 끼워 넣음 (모양·위치는 CSS 그대로)
+  let cardSrc = null, cardMap = {}, cardRow = null;
+  const esc = (v) => String(v).replace(/[&<>"']/g, (ch) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;'}[ch]));
+  // _card_html (파이썬) 과 같은 모양: [위치, 날짜, 건수·시간, 배경색, 글자색, 구분, 장비, [이름, 값, …]]
+  const cardHtml = (c) => {
+    const [, day, sum, bg, fg, tag, equip, kv] = c;
+    let grid = '';
+    for (let i = 0; i < kv.length; i += 2) grid += '<span>' + esc(kv[i]) + '</span><span>' + esc(kv[i + 1]) + '</span>';
+    return "<div class='cal-card'><div class='cc-h'><span class='cc-d'>" + day + "</span><span class='cc-sum'>" + esc(sum) +
+      "</span></div><div class='cc-e' style='border-left-color:" + fg + "'><div class='cc-n'><span class='cc-tag' style='background:" +
+      bg + ";color:" + fg + "'>" + tag + "</span>" + esc(equip) + "</div><div class='cc-r'>" + grid + "</div></div></div>";
+  };
+  const cardsNow = () => {
+    const el = doc.querySelector('.cal-cards[data-cards]');
+    const t = el ? el.getAttribute('data-cards') : '';
+    if (t !== cardSrc) { cardSrc = t; try { cardMap = t ? JSON.parse(t) : {}; } catch (_) { cardMap = {}; } }
+    return cardMap;
+  };
+  on('mouseover', (e) => {
+    const row = e.target && e.target.closest && e.target.closest('.st-key-calgrid div[class*="st-key-er_"]');
+    if (!row) { cardRow = null; return; }
+    const m = row.className.match(/st-key-er_(\d{4}-\d{2}-\d{2}_\d+)/);
+    const c = m && cardsNow()[m[1]];
+    const have = row.querySelector(':scope > .cal-hc');
+    const src = c ? JSON.stringify(c) : '';
+    if (row === cardRow && have && have.getAttribute('data-src') === src) return;
+    cardRow = row;
+    if (have) have.remove();
+    if (!c) return;
+    const box = doc.createElement('div');
+    box.className = 'cal-hc st-key-' + c[0] + '_' + m[1];
+    box.setAttribute('data-src', src);
+    box.innerHTML = '<div data-testid="stMarkdownContainer">' + cardHtml(c) + '</div>';
+    row.appendChild(box);
+  }, true);
   const entOf = (el) => el && el.closest && el.closest('.st-key-calgrid div[class*="st-key-ent_"]');
   const clearMulti = () => doc.querySelectorAll('[data-jsmulti]').forEach(el => el.removeAttribute('data-jsmulti'));
   on('mousedown', (e) => {
@@ -1171,7 +1225,7 @@ KEYS_JS = r"""
 
 
 def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: bool, today: bool,
-              clip: dict | None, logs: pd.DataFrame, shown_cats: list[str]) -> None:
+              clip: dict | None, logs: pd.DataFrame, shown_cats: list[str], cards: dict) -> None:
     cell = col.container(border=True, key=f"cell_{d}")
     head, _ = _day_head(d, entries, holiday, today)
     # 날짜 버튼은 칸 전체를 덮음 → 칸 어디를 눌러도 선택/붙여넣기 (CSS 참고)
@@ -1212,7 +1266,8 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
             side = "r" if d.weekday() >= 4 else ""  # 오른쪽 칸은 카드를 왼쪽으로 펼침
             m0 = st.session_state.get("cal_month", d.replace(day=1))
             down = "v" if (d - (m0 - dt.timedelta(days=m0.weekday()))).days // 7 < 2 else ""  # 위쪽 두 줄은 아래로
-            row.container(key=f"card{side}{down}_{d}_{e['id']}").markdown(_card_html(d, [e]), unsafe_allow_html=True)
+            # 카드 내용은 화면에 한 번만 보내고, 마우스를 올린 줄에만 KEYS_JS 가 끼워 넣음 (2026-11-17 속도)
+            cards[f"{d}_{e['id']}"] = [f"card{side}{down}"] + _card_data(d, e)
             if not e["period"]:
                 row.button("", icon=":material/close:", key=f"x_{d}_{e['id']}", help="이 실적 삭제",
                            on_click=_click_x, args=(d, e))
@@ -1258,8 +1313,12 @@ def render(header: bool = True) -> None:
 
     weeks = calendar.Calendar(firstweekday=0).monthdatescalendar(month.year, month.month)
     hol = kr_holidays({weeks[0][0].year, weeks[-1][-1].year, today.year, today.year + 1})
-    daily = expand_daily(logs, cfg.get("alloc_mode", "spread"))
-    in_month = daily[(daily["day"] >= pd.Timestamp(weeks[0][0])) & (daily["day"] <= pd.Timestamp(weeks[-1][-1]))]
+    w0, w1 = pd.Timestamp(weeks[0][0]), pd.Timestamp(weeks[-1][-1])
+    # 보이는 6주에 걸친 실적만 날짜별로 나눔 (1년치 전부 나누지 않게; 한 실적의 날짜별 몫은 그대로)
+    near = logs[(logs["start_date"] <= w1) & (logs[["start_date", "end_date"]].max(axis=1) >= w0)
+                | logs["start_date"].isna()]
+    daily = expand_daily(near, cfg.get("alloc_mode", "spread"))
+    in_month = daily[(daily["day"] >= w0) & (daily["day"] <= w1)]
     by_day = _cell_entries(in_month, logs, eq)
     present = list(FIXED_CATS)
     shown = legend.pills("구분", present, selection_mode="multi", default=present, key=f"cal_cats2_{month}",
@@ -1337,6 +1396,7 @@ def render(header: bool = True) -> None:
     for i, w in enumerate(WEEKDAYS):
         cls = " sun" if i == 6 else (" sat" if i == 5 else "")
         head[i].markdown(f"<div class='cal-wk{cls}'>{w}</div>", unsafe_allow_html=True)
+    cards: dict[str, list] = {}
     for week in weeks:
         cols = grid.columns(7)
         for i, d in enumerate(week):
@@ -1344,7 +1404,10 @@ def render(header: bool = True) -> None:
                 cols[i].markdown(f"<div class='cal-out'>{d.day}</div>", unsafe_allow_html=True)
                 continue
             _day_cell(cols[i], d, by_day.get(d, []), selected=d == day, holiday=d in hol, today=d == today,
-                      clip=clip, logs=logs, shown_cats=shown_cats)
+                      clip=clip, logs=logs, shown_cats=shown_cats, cards=cards)
+    # 실적 줄마다 숨은 카드를 따로 그리면 요소가 몇백 개 늘어 처음 열 때 느려져, 카드 내용만 한 곳에 모아 둠
+    st.markdown(f"<div class='cal-state cal-cards' data-cards=\"{html.escape(json.dumps(cards, ensure_ascii=False, separators=(",", ":")))}\"></div>",
+                unsafe_allow_html=True)
     card.markdown("<div class='cal-mobile-hint'>날짜를 누르면 그날 실적을 입력할 수 있어요.</div>",
                   unsafe_allow_html=True)
 
