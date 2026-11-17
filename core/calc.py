@@ -77,7 +77,7 @@ def kr_holidays(years) -> set[dt.date]:
         return set()
 
 
-@st.cache_data(ttl=300, max_entries=16, show_spinner=False)
+@st.cache_data(ttl=3600, max_entries=16, show_spinner=False)
 def expand_daily(logs: pd.DataFrame, mode: str = "spread", caps: dict | None = None) -> pd.DataFrame:
     """실적을 날짜별 시간으로 나눕니다.
 
@@ -197,7 +197,7 @@ def group_util(summary: pd.DataFrame, by: str) -> pd.DataFrame:
     return g.sort_values("가동률", ascending=False)
 
 
-@st.cache_data(ttl=300, max_entries=32, show_spinner=False)  # 같은 데이터·조건이면 다시 계산하지 않음
+@st.cache_data(ttl=3600, max_entries=32, show_spinner=False)  # 같은 데이터·조건이면 다시 계산하지 않음
 def monthly_matrix(daily: pd.DataFrame, equip: pd.DataFrame, end: dt.date, n: int, default_annual: float,
                    cutoff: dt.date | None, tree: pd.DataFrame | None = None) -> pd.DataFrame:
     """장비 × 최근 n개월 가동률 표 (행: equip_id, 열: 'yy.mm')."""
@@ -229,7 +229,8 @@ def available_hours(eq_row, s: dt.date, e: dt.date, default_annual: float) -> fl
     return annual * year_fraction(s2, e2)
 
 
-@st.cache_data(ttl=300, max_entries=128, show_spinner=False)  # 종합 현황에서 같은 기간을 여러 번 계산하지 않게
+# 2026-11-17: 캐시를 뺌. 표 세 개를 비교해 열쇠를 만드는 데(약 16ms) 그냥 계산하는 것(약 12ms)보다 더 걸렸음.
+# 여러 번 부르는 추이·월별 표(trend, monthly_matrix)는 그대로 캐시함.
 def equipment_summary(daily: pd.DataFrame, equip: pd.DataFrame, s: dt.date, e: dt.date,
                       default_annual: float, tree: pd.DataFrame | None = None) -> pd.DataFrame:
     """장비별 사용시간·가용시간·가동률.
@@ -318,7 +319,7 @@ def totals(summary: pd.DataFrame) -> dict:
     }
 
 
-@st.cache_data(ttl=300, max_entries=32, show_spinner=False)  # 같은 데이터·조건이면 다시 계산하지 않음
+@st.cache_data(ttl=3600, max_entries=32, show_spinner=False)  # 같은 데이터·조건이면 다시 계산하지 않음
 def trend(daily: pd.DataFrame, equip: pd.DataFrame, kind: str, ref: dt.date, n: int,
           default_annual: float, cutoff: dt.date | None, tree: pd.DataFrame | None = None) -> pd.DataFrame:
     out = []

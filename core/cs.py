@@ -31,7 +31,7 @@ def _ids(v) -> list[int]:
     return out
 
 
-@st.cache_data(ttl=120, show_spinner=False)
+@db.snap_cached  # 데이터가 바뀔 때만 다시 만듦
 def load() -> pd.DataFrame:
     df = db._tab(T)
     df = df[df["id"].astype(str).str.strip() != ""].copy()
