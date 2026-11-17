@@ -33,3 +33,5 @@ toolbarMode = "minimal"
 maxUploadSize = 20
 # 화면보호기·절전으로 연결이 끊겨도 12시간 동안은 같은 세션(입력 중인 값 포함)으로 다시 이어짐
 disconnectedSessionTTL = 43200
+# static/ 폴더(로고) 를 주소로 내보냄: 화면마다 그림을 글자로 다시 보내지 않게
+enableStaticServing = true
