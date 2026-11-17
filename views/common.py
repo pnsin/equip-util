@@ -364,11 +364,15 @@ def _as_text(cfg: dict) -> dict:
 
 def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_order: list[str], name_col: str,
                mask=None, height: int | None = None, can_add: bool = True, add_label: str = "새로 추가",
-               edit_order: list[str] | None = None) -> tuple[str | None, pd.DataFrame, list[str]]:
+               edit_order: list[str] | None = None, disabled: list[str] | None = None,
+               extra_actions: list[tuple[str, str, str]] | None = None,
+               extra_ui=None) -> tuple[str | None, pd.DataFrame, list[str]]:
     """평소에는 읽기만 되는 표. 맨 앞 '선택'을 체크한 줄만 아래 칸에서 고치고 [저장] / [삭제].
 
-    돌려주는 값: (누른 버튼 'save' · 'delete' · None, 반영한 전체 표, 지운 줄 이름).
+    돌려주는 값: (누른 버튼 'save' · 'delete' · extra_actions의 이름 · None, 반영한 전체 표, 지운 줄 이름).
     전체 표는 view 순서 그대로이고 새 줄은 맨 뒤에 붙습니다 (기존 save_* 함수에 그대로 넘기면 됨).
+    extra_actions = [(이름, 버튼 글자, 아이콘)]: 고른 줄이 있을 때 [삭제] 옆에 나오는 버튼.
+    누르면 반영한 표 자리에 '고른 줄'(view 그대로)을 돌려줍니다. extra_ui()는 그 버튼 줄 바로 위에 그림.
     """
     ss = st.session_state
     ver = ss.get(f"{key}_ver", 0)
@@ -392,12 +396,17 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
         with st.container(border=True, key=f"{key}_editbox"):
             ed = st.data_editor(part, key=f"{key}_edit_{ver}_{'_'.join(map(str, sel))}_{n_new}", hide_index=True,
                                 width="stretch", column_order=edit_order or [c for c in column_order if c in part.columns],
-                                column_config=column_config)
+                                column_config=column_config, disabled=disabled or False)
+            if sel and extra_ui:
+                extra_ui()
             with st.container(horizontal=True, gap="small"):
                 if st.button("저장", type="primary", icon=":material/save:", key=f"{key}_save_{ver}"):
                     action = "save"
                 if sel and st.button("삭제", icon=":material/delete:", key=f"{key}_del_{ver}"):
                     action = "delete"
+                for name, label, icon in (extra_actions or []) if sel else []:
+                    if st.button(label, icon=icon, key=f"{key}_{name}_{ver}"):
+                        action = name
                 if st.button("취소", type="tertiary", key=f"{key}_cancel_{ver}"):
                     ss[f"{key}_ver"] = ver + 1
                     st.rerun()
@@ -412,6 +421,8 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
         elif action == "delete":
             gone = [str(view.at[i, name_col]) for i in sel]
             out = view.drop(index=sel).reset_index(drop=True)
+        elif action:
+            out = view.loc[sel]
     if can_add and not (sel or n_new):
         if st.button(add_label, icon=":material/add:", key=f"{key}_add_{ver}", type="tertiary"):
             ss[f"{key}_new_{ver}"] = 1
