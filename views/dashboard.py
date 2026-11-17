@@ -61,10 +61,10 @@ CSS = """<style>
 .dbox {border: 1px solid #52617A; border-radius: 16px; padding: 14px 18px; height: 100%;}
 .dbox .bh {margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #F8FAFC; display: flex;
   justify-content: space-between;}
-.dml {display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 62px; gap: 10px; align-items: center;
+.dml {display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) var(--vw, 62px); gap: 10px; align-items: center;
   font-size: 14.5px; margin: 7px 0; color: #F8FAFC;}
 .dml span {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.dml b {text-align: right;}
+.dml b {text-align: right; white-space: nowrap;}
 .dtb {height: 8px; background: #52617A; border-radius: 99px; position: relative;}
 .dtb i {position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px;}
 .dpills {display: flex; gap: 8px; flex-wrap: wrap;}
@@ -151,7 +151,9 @@ def _mini_list(rows: list[tuple[str, float, str]], color: str, top: float | None
     if not rows:
         return '<div class="dnone">기록 없음</div>'
     top = top or max([v for _, v, _ in rows] + [1e-9])
-    return "".join(f'<div class="dml"><span title="{E(n)}">{E(n)}</span><div class="dtb"><i style="width:'
+    # 값 칸은 가장 긴 값에 맞춰 넓힘 (모든 줄 같은 폭이라 막대가 나란함, 숫자는 한 줄)
+    vw = f"max(62px, {max(len(t) for _, _, t in rows) * 0.62 + 0.4:.1f}em)"
+    return "".join(f'<div class="dml" style="--vw:{vw}"><span title="{E(n)}">{E(n)}</span><div class="dtb"><i style="width:'
                    f'{max(0.0, min(v / top, 1)) * 100:.1f}%;background:{color}"></i></div><b>{E(t)}</b></div>'
                    for n, v, t in rows)
 
@@ -360,9 +362,9 @@ def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, y
             _box(c2, "발행내역별 · 올해", '<div class="dnone">기록 없음</div>')
             return
         by_c = cur.groupby("company")["supply"].sum().sort_values(ascending=False).head(5)
-        _box(c1, "업체별 · 올해", _mini_list([(c, v, f"{_man(v)}만") for c, v in by_c.items()], TEAL[0]))
+        _box(c1, "업체별 · 올해", _mini_list([(c, v, f"{_man(v)}원") for c, v in by_c.items()], TEAL[0]))
         by_i = cur.groupby("item")["supply"].sum().sort_values(ascending=False).head(5)
-        _box(c2, "발행내역별 · 올해", _mini_list([(c, v, f"{_man(v)}만") for c, v in by_i.items()], TEAL[0]))
+        _box(c2, "발행내역별 · 올해", _mini_list([(c, v, f"{_man(v)}원") for c, v in by_i.items()], TEAL[0]))
 
 
 def _maint_section(year, cm, period, months, eq, eq_all, filtered: bool, today) -> None:
