@@ -542,7 +542,9 @@ _SLATE_CSS = """<style>
         color: #A5B4FC !important; }
   [data-testid="stSidebar"] .brand { border-bottom: 1px solid #1A2335 !important; margin-bottom: .2rem !important; }
   /* 2026-11-17 왼쪽 메뉴 머리글 (칩 아이콘 + 팀 이름 + 시스템 이름) */
-  [data-testid="stSidebar"] .cbtp-logo { width: 150px; display: block; margin: -.6rem 0 1rem .2rem; }
+  [data-testid="stSidebar"] .cbtp-foot-logo { border-top: 1px solid rgba(255,255,255,.08); margin-top: .6rem; padding: 1.1rem 0 .4rem;
+        display: flex; justify-content: center; }
+  [data-testid="stSidebar"] .cbtp-foot-logo img { width: 150px; display: block; }
   [data-testid="stSidebar"] .cbtp-header-equip { display: flex; align-items: center; gap: 12px; padding: 8px 4px 20px 4px; margin-bottom: 4px;
         border-bottom: 1px solid rgba(255,255,255,.08); }
   [data-testid="stSidebar"] .cbtp-icon-equip { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center;
@@ -748,14 +750,17 @@ _CHIP_SVG = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke
 
 
 def sidebar_brand():
-    """왼쪽 메뉴 맨 위 머리글 (2026-11-17 노신 시안): 칩 아이콘 + 'CBTP 배터리산업팀' + 시스템 이름."""
-    logo = ""
-    if os.environ.get("SIDEBAR_LOGO"):  # 미리보기용: 로고도 같이 둘 때
-        uri = _data_uri(LOGO_PATH)
-        logo = f'<img class="cbtp-logo" src="{uri}" alt="로고">' if uri else ""
-    st.markdown(f'{logo}<div class="cbtp-header-equip"><div class="cbtp-icon-equip">{_CHIP_SVG}</div>'
+    """왼쪽 메뉴 맨 위 머리글 (2026-11-17 노신 시안, 전극 공정 앱과 같은 모양): 칩 아이콘 + 팀 이름 + 시스템 이름."""
+    st.markdown(f'<div class="cbtp-header-equip"><div class="cbtp-icon-equip">{_CHIP_SVG}</div>'
                 '<div class="cbtp-text-group"><span class="cbtp-dept-label">CBTP 배터리산업팀</span>'
                 f'<span class="cbtp-sys-title">{html.escape(SYSTEM_TITLE)}</span></div></div>', unsafe_allow_html=True)
+
+
+def sidebar_logo():
+    """왼쪽 메뉴 맨 아래 가운데 CBTP 로고."""
+    uri = _data_uri(LOGO_PATH)
+    if uri:
+        st.markdown(f'<div class="cbtp-foot-logo"><img src="{uri}" alt="CBTP 배터리산업팀"></div>', unsafe_allow_html=True)
 
 
 def nav_group(name: str):
