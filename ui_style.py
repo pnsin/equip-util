@@ -551,7 +551,7 @@ _SLATE_CSS = """<style>
   [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.cbtp-foot-logo) { margin-top: auto; position: sticky; bottom: 0; z-index: 2;
         padding: 1.2rem 0 1rem; background: var(--side, #090D16); }
   [data-testid="stSidebar"] .cbtp-foot-logo { margin-top: 0; padding: 1rem 0 2.6rem; }
-  [data-testid="stSidebar"] .cbtp-header-equip { display: flex; align-items: center; gap: 12px; padding: 30px 4px 22px 4px; margin-bottom: 10px;
+  [data-testid="stSidebar"] .cbtp-header-equip { display: flex; align-items: center; gap: 12px; padding: 48px 4px 22px 4px; margin-bottom: 10px;
         border-bottom: 1px solid rgba(255,255,255,.08); }
   [data-testid="stSidebar"] .cbtp-icon-equip { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center;
         justify-content: center; background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.28); }
