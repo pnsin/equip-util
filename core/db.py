@@ -471,20 +471,68 @@ SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings", "channe
                  "rates", "quotes", "cs", "fee_ledger", "equip_history")
 
 
+# 2026-11-17 속도: 앱에서 쓴 탭은 그 탭만 다시 읽고(묶음 전체를 다시 읽지 않음),
+# 화면용 표(load_*)는 데이터 번호(_VER)가 바뀔 때만 새로 만듦 (예전처럼 5~10분마다 저절로 버리지 않음)
+_SNAP_LOCK = threading.Lock()
+_STALE: set[str] = set()  # 앱에서 쓴 뒤 아직 다시 읽지 않은 탭
+_VER = [0]  # 데이터가 바뀔 때마다 1씩 늘어남
+_RECENT = threading.local()  # 이 화면(스레드)에서 쓴 탭: 저장이 끝난 뒤 한 번 더 '다시 읽기'로 표시
+
+
+def _bump() -> None:
+    _VER[0] += 1
+
+
+def data_version() -> int:
+    """지금 데이터 번호 (묶음을 처음 읽거나 앱에서 쓰면 바뀜)."""
+    _snapshot()  # 30분이 지나 묶음을 새로 읽으면 번호도 바뀜
+    return _VER[0]
+
+
 # cache_resource: 꺼낼 때마다 통째로 복사하지 않음 (_tab 이 필요한 탭만 복사해 씀)
 @st.cache_resource(ttl=1800, show_spinner=False)
 def _snapshot() -> dict[str, pd.DataFrame]:
-    return get_store().read_many(list(SNAPSHOT_TABS))
+    with _SNAP_LOCK:
+        _STALE.difference_update(SNAPSHOT_TABS)
+    snap = get_store().read_many(list(SNAPSHOT_TABS))
+    _bump()
+    return snap
 
 
 def _dirty(t: str) -> None:
-    """묶음으로 읽어 둔 탭에 쓰면 그 묶음을 버려, 다음 화면에서 바뀐 내용을 읽게 함."""
+    """묶음으로 읽어 둔 탭에 쓰면 그 탭만 '다시 읽기'로 표시 (다음에 그 탭만 시트에서 새로 읽음)."""
     if t in SNAPSHOT_TABS:
-        _snapshot.clear()
+        with _SNAP_LOCK:
+            _STALE.add(t)
+            _bump()
+        rec = getattr(_RECENT, "tabs", None)
+        if rec is None:
+            rec = _RECENT.tabs = set()
+        rec.add(t)
+
+
+def snap_cached(fn):
+    """묶음 탭으로 만드는 화면용 표 캐시: 데이터 번호가 같으면 다시 만들지 않음 (시간이 지나도 버리지 않음)."""
+    def inner(ver, *a, **k):
+        return fn(*a, **k)
+    inner.__module__, inner.__qualname__ = fn.__module__, fn.__qualname__ + ".ver"
+    cached = st.cache_data(max_entries=6, show_spinner=False)(inner)
+
+    def outer(*a, **k):
+        return cached(data_version(), *a, **k)
+    outer.__doc__, outer.__name__, outer.__qualname__ = fn.__doc__, fn.__name__, fn.__qualname__
+    outer.clear = cached.clear
+    return outer
 
 
 def _tab(t: str) -> pd.DataFrame:
-    df = _snapshot()[t].copy()
+    snap = _snapshot()
+    if t in _STALE:
+        fresh = get_store().read(t)  # 앱에서 쓴 탭 하나만 다시 읽음
+        with _SNAP_LOCK:
+            snap[t] = fresh
+            _STALE.discard(t)
+    df = snap[t].copy()
     for c in cols(t) if t in TABLES else ():  # 시트에 아직 없는 새 열은 빈 칸으로 (앱 재시작 전)
         if c not in df.columns:
             df[c] = ""
@@ -492,8 +540,12 @@ def _tab(t: str) -> pd.DataFrame:
 
 
 def refresh_data() -> None:
-    """저장한 뒤: 화면용 데이터를 버려 다음 화면에서 시트를 새로 읽게 함 (요청 한 번)."""
-    _snapshot.clear()
+    """저장한 뒤: 이 화면에서 쓴 탭만 다음에 시트에서 새로 읽게 함 (다른 탭은 그대로 씀)."""
+    rec = getattr(_RECENT, "tabs", None) or set()
+    with _SNAP_LOCK:  # 쓰는 도중에 다른 사람이 먼저 읽어 갔어도, 다 쓴 뒤 한 번 더 새로 읽게
+        _STALE.update(rec)
+        _bump()
+    _RECENT.tabs = set()
     load_equipment.clear()
     load_companies.clear()
     load_staff.clear()
@@ -897,7 +949,7 @@ def _settings_raw(df: pd.DataFrame | None = None) -> dict[str, str]:
     return {to_str(k): str(v) for k, v in zip(df["key"], df["value"]) if to_str(k)}
 
 
-@st.cache_data(ttl=600)
+@snap_cached  # 2026-11-17: 데이터가 바뀔 때만 다시 만듦 (st.cache_data(ttl=600) 대신)
 def get_settings() -> dict:
     plain, chunks = {}, {}
     for k, v in _settings_raw(_tab("settings")).items():
@@ -1062,7 +1114,7 @@ def descendants(eq: pd.DataFrame) -> dict[int, list[int]]:
     return out
 
 
-@st.cache_data(ttl=600)
+@snap_cached  # 2026-11-17: 데이터가 바뀔 때만 다시 만듦 (st.cache_data(ttl=600) 대신)
 def load_equipment(full: bool = False) -> pd.DataFrame:
     """장비 목록. 기본은 묶음 이름뿐인 중간 장비(예: '5L 믹서')를 뺀 목록 (화면·실적·가동률 모두 이것을 씀).
 
@@ -1313,7 +1365,7 @@ def _purge_equip_refs(gone: set[int]) -> None:
 COMPANY_TEXT = ("name", "brn", "contact", "phone", "industry", "item", "sub_item", "note")
 
 
-@st.cache_data(ttl=600)
+@snap_cached  # 2026-11-17: 데이터가 바뀔 때만 다시 만듦 (st.cache_data(ttl=600) 대신)
 def load_companies() -> pd.DataFrame:
     df = _tab("companies")
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
@@ -1399,7 +1451,7 @@ def save_companies(edited: pd.DataFrame) -> None:
 STAFF_TEXT = ("name", "phone", "email", "role", "note", "dept", "team", "part", "title", "birthday")
 
 
-@st.cache_data(ttl=600)
+@snap_cached  # 2026-11-17: 데이터가 바뀔 때만 다시 만듦 (st.cache_data(ttl=600) 대신)
 def load_staff() -> pd.DataFrame:
     df = _tab("staff")
     df["id"] = pd.to_numeric(df["id"], errors="coerce")
@@ -1484,7 +1536,7 @@ def _rename_refs(t: str, out: list[dict], refs: list[tuple[str, str]], label: st
 CHARGER_DAY_MAX = 8  # 충방전기는 챔버·채널이 여러 개라도 하루 최대 8시간으로 셈 (주말·공휴일 제외)
 
 
-@st.cache_data(ttl=600)
+@snap_cached  # 2026-11-17: 데이터가 바뀔 때만 다시 만듦 (st.cache_data(ttl=600) 대신)
 def load_channels() -> pd.DataFrame:
     df = _tab("channels")
     for c in ("id", "equip_id", "ch_count", "order"):
@@ -1646,7 +1698,7 @@ def _usage_frame(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-@st.cache_data(ttl=600)
+@snap_cached  # 2026-11-17: 데이터가 바뀔 때만 다시 만듦 (st.cache_data(ttl=600) 대신)
 def load_logs() -> pd.DataFrame:
     df = _usage_frame(_tab("usage")).drop(columns=["equip_ref"])
     # 2026-11-10 사업자번호·업종·품목은 업체 목록 값을 씀 (업체 목록을 고치면 실적·i-Tube 파일도 같이 바뀜)
@@ -1672,7 +1724,8 @@ def load_logs() -> pd.DataFrame:
     tid = df["equip_id"].map(lambda v: it.get(int(v)) if pd.notna(v) else None)
     # ITUBE번호 없는 장비가 섞이면 tid 가 숫자+NaN 이 되므로 None 대신 notna 로 확인
     for col, key in (("itube_name", "name"), ("itube_code", "code"), ("itube_kind", "kind")):
-        df[col] = tid.map(lambda t, k=key: by_id.at[int(t), k] if pd.notna(t) and int(t) in by_id.index else "")
+        val = dict(zip(by_id.index, by_id[key]))  # 행마다 .at 대신 dict (실적이 많을 때 빠르게)
+        df[col] = tid.map(lambda t, v=val: v.get(int(t), "") if pd.notna(t) else "")
     return df.sort_values(["start_date", "id"], ascending=False).reset_index(drop=True)
 
 
@@ -1915,7 +1968,7 @@ def _restore_bytes(data: bytes) -> dict:
 RATE_TEXT = ("name", "spec", "unit", "note")
 
 
-@st.cache_data(ttl=120)
+@snap_cached  # 2026-11-17: 데이터가 바뀔 때만 다시 만듦 (st.cache_data(ttl=120) 대신)
 def load_rates() -> pd.DataFrame:
     """장비 단가. 장비ID 가 있으면 장비 목록의 장비, 없으면 시험·기타 항목."""
     df = _tab("rates")
@@ -1959,7 +2012,7 @@ def save_rates(rows: list[dict]) -> None:
     load_rates.clear()
 
 
-@st.cache_data(ttl=120)
+@snap_cached  # 2026-11-17: 데이터가 바뀔 때만 다시 만듦 (st.cache_data(ttl=120) 대신)
 def load_quotes() -> pd.DataFrame:
     df = _tab("quotes")
     df["id"] = df["id"].map(to_str)
