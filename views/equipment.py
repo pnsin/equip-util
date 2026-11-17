@@ -126,6 +126,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
         center = center_pick("equip_center")
         st.space("stretch")
         sub = st.toggle("세부장비도 보기", key="equip_subs")
+        add_at = st.container(width="content")
         excel_box("equip_xl", xl_eq, xl_heads, "장비", lambda m: _apply_excel(m, rates, extras_now),
                   extra_sheet=("시험·기타 항목(참고용)", extras_now[["장비명(한글)"] + list(RATE.values()) + ["비고"]]))
     # 2026-11-10 주장비를 골라 그 아래 세부장비를 펼쳐 봄 (표 안에서 바로 펼치기는 Streamlit 표가 지원하지 않음)
@@ -158,7 +159,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     cats = list(dict.fromkeys(["단독장비", "시스템장비", "시스템시설", "단독장비(복수구매)"] + [c for c in eq["category"] if c]))
     uses = list(dict.fromkeys(list(seed.PURPOSES) + ["제조"] + [u for u in eq["use"] if u]))
     action, out, gone = pick_table(
-        view, "equip_tbl", mask=mask, name_col="장비명(한글)", add_label="장비 추가",
+        view, "equip_tbl", mask=mask, name_col="장비명(한글)", add_label="장비 추가", add_at=add_at,
         height=min(640, 38 + 35 * (int(mask.sum()) + 1)),
         column_order=BASIC + list(RATE.values()) + ["비고"], edit_order=BASIC + list(RATE.values()) + ["모델명", "제조사", "구매처", "자산번호",
                                                                           "국가연구시설장비번호", "연간기준시간", "도입일",

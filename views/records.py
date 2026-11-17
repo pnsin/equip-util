@@ -49,47 +49,6 @@ def _fee_log(v) -> list[dict]:
         return []
 
 
-def _payments(df: pd.DataFrame, label_of: dict) -> None:
-    """수수료를 나눠 받거나 늦게 받은 시험: 받은 날 · 금액을 여러 번 적으면 합계가 사용료(수수료)로 들어감."""
-    paid = df[df["company"].fillna("") != ""]
-    if paid.empty:
-        return
-    with st.expander("나눠 받거나 늦게 받은 수수료 적기", icon=":material/payments:"):
-        opts = {int(r["id"]): f"{r['start_date']:%m/%d} {label_of.get(r['equip_id'], '?')} · {r['company']}"
-                + (f" · {r['fee']:,.0f}원" if r["fee"] else "") for r in paid.to_dict("records")}
-        lid = st.selectbox("시험", list(opts), format_func=opts.get, index=None, placeholder="시험 고르기",
-                           key="fee_pick")
-        if lid is None:
-            return
-        row = paid[paid["id"] == lid].iloc[0]
-        rows = _fee_log(row.get("fee_log"))
-        if not rows and row["fee"]:
-            rows = [{"date": "", "amount": int(row["fee"]), "memo": "이전에 넣은 금액"}]
-        base = pd.DataFrame(rows, columns=["date", "amount", "memo"])
-        base["date"] = pd.to_datetime(base["date"], errors="coerce").dt.date
-        base["amount"] = pd.to_numeric(base["amount"], errors="coerce")
-        base["memo"] = base["memo"].astype("string")
-        ed = st.data_editor(base, key=f"fee_rows_{lid}", num_rows="dynamic", hide_index=True, width="stretch",
-                            column_config={
-                                "date": st.column_config.DateColumn("받은 날", format="YYYY-MM-DD",
-                                                                    default=dt.date.today()),
-                                "amount": st.column_config.NumberColumn("금액(원)", min_value=0, step=10000,
-                                                                        format="localized"),
-                                "memo": st.column_config.TextColumn("메모", width="large")})
-        ed = ed[ed["amount"].fillna(0) > 0]
-        total = int(ed["amount"].sum())
-        c1, c2 = st.columns([1, 2], vertical_alignment="center")
-        c2.caption(f"합계 {total:,}원 · 저장하면 이 시험의 수수료가 합계로 바뀌고, 실적 내려받기에 그대로 들어가요.")
-        if c1.button("받은 내역 저장", type="primary", key=f"fee_save_{lid}", width="stretch"):
-            log = [{"date": d.isoformat() if pd.notna(d) and d else "", "amount": int(a), "memo": db.to_str(m)}
-                   for d, a, m in zip(ed["date"], ed["amount"], ed["memo"])]
-            with db.undo_group("수수료 받은 내역 저장"):
-                db.update_logs({lid: {"fee": total, "fee_log": json.dumps(log, ensure_ascii=False)}})
-            st.session_state.records_saved = f"수수료 {total:,}원을 저장했어요."
-            st.session_state.pop(f"fee_rows_{lid}", None)
-            st.rerun()
-
-
 def render() -> None:
     page_header("수수료 입력", "실적")
     t1, t2 = st.tabs(["실적별 수수료", "재무팀 매출장"])
@@ -168,8 +127,8 @@ def _by_logs() -> None:
     top_of = dict(zip(tops["short"], tops["id"]))
     if any(x not in top_of for x in st.session_state.get("rec_eq", [])):
         st.session_state.rec_eq = [x for x in st.session_state.rec_eq if x in top_of]
-    # 2026-11-17 거르기 줄: 상자·제목 없이 한 줄 (기간 · 장비 · 담당자 · 보이는 열)
-    c1, c2, c4, c5 = st.columns([1.5, 2.6, 1.2, 1], gap="small", vertical_alignment="center")
+    # 2026-11-17 거르기 줄: 상자·제목 없이 한 줄 (기간 · 장비 · 담당자)
+    c1, c2, c4 = st.columns([1.5, 2.6, 1.2], gap="small", vertical_alignment="center")
     rng = c1.date_input("사용시작일 범위", format="YYYY-MM-DD", key="rec_range", label_visibility="collapsed")
     sel_eq = c2.multiselect("장비", list(top_of), placeholder="장비 전체", key="rec_eq", label_visibility="collapsed")
     writers = sorted(w for w in logs["created_by"].unique() if w)
@@ -194,7 +153,7 @@ def _by_logs() -> None:
         empty_state("조건에 맞는 실적이 없습니다", icon="⌕")
         return
 
-    _payments(df, label_of)
+
 
     view = df.copy()
     view["equip_label"] = view["equip_id"].map(label_of)
@@ -205,15 +164,7 @@ def _by_logs() -> None:
     view["사용목적"] = view["사용목적"].map(seed.purpose_label)  # 달력과 같은 이름 (제조·지원)
     view.insert(0, ID, view.index.astype("int64"))  # 저장·삭제·복제는 ID로 (화면엔 안 보임)
     view = view.reset_index(drop=True)
-    all_cols = list(FIELDS) + ["수정자"]
-    st.session_state.setdefault("rec_cols", DEFAULT_COLS)
-    st.session_state.rec_cols = [c for c in st.session_state.rec_cols if c in list(FIELDS) + ["수정자"]]
-    with c5.popover("보이는 열", icon=":material/view_column:", width="stretch"):
-        shown = st.multiselect("보이는 열", all_cols, key="rec_cols", label_visibility="collapsed")
-        st.button("기본값으로", key="rec_cols_reset", type="tertiary",
-                  on_click=lambda: st.session_state.update(rec_cols=DEFAULT_COLS))
-    shown = shown or DEFAULT_COLS
-    order = list(dict.fromkeys(c for c in DEFAULT_COLS + all_cols if c in shown))
+    order = DEFAULT_COLS  # 2026-11-17 보이는 열 고르기 없앰
 
     ed_key = f"records_tbl_{abs(hash((str(rng), tuple(sel_eq), comp_q, writer, no_fee))) % 10 ** 8}"
     view, _ = pin_table(ed_key, view)  # 고치는 중에 다른 분이 저장해도 칸이 엉뚱한 줄로 가지 않게 (저장은 ID로)

@@ -366,13 +366,14 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
                mask=None, height: int | None = None, can_add: bool = True, add_label: str = "새로 추가",
                edit_order: list[str] | None = None, disabled: list[str] | None = None,
                extra_actions: list[tuple[str, str, str]] | None = None,
-               extra_ui=None) -> tuple[str | None, pd.DataFrame, list[str]]:
+               extra_ui=None, add_at=None) -> tuple[str | None, pd.DataFrame, list[str]]:
     """평소에는 읽기만 되는 표. 맨 앞 '선택'을 체크한 줄만 아래 칸에서 고치고 [저장] / [삭제].
 
     돌려주는 값: (누른 버튼 'save' · 'delete' · extra_actions의 이름 · None, 반영한 전체 표, 지운 줄 이름).
     전체 표는 view 순서 그대로이고 새 줄은 맨 뒤에 붙습니다 (기존 save_* 함수에 그대로 넘기면 됨).
     extra_actions = [(이름, 버튼 글자, 아이콘)]: 고른 줄이 있을 때 [삭제] 옆에 나오는 버튼.
     누르면 반영한 표 자리에 '고른 줄'(view 그대로)을 돌려줍니다. extra_ui()는 그 버튼 줄 바로 위에 그림.
+    add_at: '새로 추가' 버튼을 놓을 자리 (표 위 줄에 미리 만든 st.container). 없으면 표 아래.
     """
     ss = st.session_state
     ver = ss.get(f"{key}_ver", 0)
@@ -424,7 +425,7 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
         elif action:
             out = view.loc[sel]
     if can_add and not (sel or n_new):
-        if st.button(add_label, icon=":material/add:", key=f"{key}_add_{ver}", type="tertiary"):
+        if (add_at or st).button(add_label, icon=":material/add:", key=f"{key}_add_{ver}", type="tertiary"):
             ss[f"{key}_new_{ver}"] = 1
             st.rerun()
     return action, out, gone
