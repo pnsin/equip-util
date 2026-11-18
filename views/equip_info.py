@@ -57,6 +57,13 @@ def _illust(key: str, size: int = 78) -> str:
             f"{body}</svg></div>")
 
 
+def _itube(code: str) -> str:
+    """아이튜브 번호 표시: 'i-Tube No.' 이름표 + 번호 (없으면 '없음')."""
+    code = (code or "").strip()
+    num = (f"<span class='itn'>{html.escape(code)}</span>" if code else "<span class='itn no'>없음</span>")
+    return f"<span class='it'>i-Tube No.</span>{num}"
+
+
 def _short_loc(loc: str) -> str:
     m = re.search(r"\(([^)]+)\)", loc or "")
     return m.group(1) if m else (loc or "")
@@ -80,8 +87,12 @@ CSS = """<style>
 .ic .bd {padding: .7rem .85rem .8rem;}
 .ic .nm {font-weight: 700; font-size: .95rem; line-height: 1.3; color: var(--ink); display: -webkit-box;
   -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.5em;}
-.ic .cd {font-size: .75rem; color: var(--accent); margin-top: .15rem; font-variant-numeric: tabular-nums;}
-.ic .cd.no {color: var(--dim);}
+.ic .cd {display: flex; align-items: center; gap: .4rem; margin-top: .3rem; font-size: .82rem; font-variant-numeric: tabular-nums;}
+/* 2026-11-18 사용자 요청: 이 번호가 아이튜브 번호인 걸 알 수 있게 'i-Tube No.' 이름표 + 더 밝은 글자색 */
+.it {flex: none; font-size: .68rem; font-weight: 700; padding: .08rem .45rem; border-radius: 6px; letter-spacing: .02em;
+  background: var(--accent-bg); color: var(--accent-hi);}
+.itn {font-weight: 700; letter-spacing: .03em; color: color-mix(in srgb, var(--accent-hi) 50%, var(--ink));}
+.itn.no {font-weight: 500; color: var(--muted);}
 .ic .wh {font-size: .75rem; color: var(--muted); margin-top: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .ic .bs {display: flex; gap: .3rem; margin-top: .55rem; flex-wrap: wrap;}
 .bdg {font-size: .7rem; padding: .12rem .55rem; border-radius: 999px; background: var(--panel2); color: var(--muted);}
@@ -89,11 +100,12 @@ CSS = """<style>
 .bdg.k {background: var(--accent-bg); color: var(--accent);}
 /* 장비 한 대 */
 .hero-n {font-size: 1.45rem; font-weight: 700; line-height: 1.3; color: var(--ink);}
-.hero-c {color: var(--accent); font-size: .85rem; margin: .2rem 0 .9rem;}
+.hero-c {color: var(--muted); font-size: .88rem; margin: .3rem 0 .9rem; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;}
+.hero-c .it {font-size: .72rem;}
 .hero-c .up {color: var(--muted);}
 .kv {display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .6rem 1.1rem; margin-bottom: .6rem;}
 .kv div {min-width: 0;} .kv span {display: block; font-size: .72rem; color: var(--muted);}
-.kv b {display: block; font-size: .88rem; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+.kv b {display: block; font-size: .88rem; font-weight: 600; color: var(--ink); word-break: keep-all; overflow-wrap: anywhere;}
 .bigph {border-radius: 14px; overflow: hidden; background: var(--panel2); aspect-ratio: 4 / 3;
   display: flex; align-items: center; justify-content: center;}
 .bigph img {width: 100%; height: 100%; object-fit: contain; background: #26334D;}
@@ -204,7 +216,7 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
     if view == "목록":
         tbl = pd.DataFrame({
             "id": df["id"].astype(int),
-            "장비명": df["name"], "ITUBE번호": df["code"], "대분류": df["group"],
+            "장비명": df["name"], "i-Tube No.": df["code"], "대분류": df["group"],
             "위치": df["location"].map(_short_loc), "관리자": df["manager"],
             "사진": df["id"].map(lambda i: cnt["equip_photos"].get(int(i), 0)),
             "사양": df["id"].map(lambda i: cnt["equip_specs"].get(int(i), 0)),
@@ -243,7 +255,7 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
             if not (n_doc or n_spec or img):
                 bs = "<span class='bdg e'>아직 비어 있어요</span>" + bs
             who = " · ".join(x for x in (_short_loc(r.location), r.manager) if x)
-            code = (f"<div class='cd'>{e(r.code)}</div>" if r.code else "<div class='cd no'>ITUBE번호 없음</div>")
+            code = f"<div class='cd'>{_itube(r.code)}</div>"
             with col, st.container(key=f"iccard_{eid}"):
                 st.markdown(f"<div class='ic'><div class='icph'>{ph}</div><div class='bd'><div class='nm' title='{e(r.name)}'>"
                             f"{e(r.name)}</div>{code}<div class='wh'>{e(who) or '&nbsp;'}</div><div class='bs'>{bs}</div>"
@@ -548,7 +560,7 @@ def _unit(eid: int, eq: pd.DataFrame, info: dict, in_list: bool = False) -> None
         with left:
             _photos(eid, r["name"], icon, info)
         with right:
-            sub = e(r["code"] or "ITUBE번호 없음")
+            sub = _itube(r["code"])
             if r["species"] and r["species"] != r["name"]:
                 sub += f" · {e(r['species'])}"
             if up is not None:
