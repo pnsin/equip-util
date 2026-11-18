@@ -277,6 +277,39 @@ def _call(fn, *args, **kw):
             raise StorageError(explain_error(e)) from e
 
 
+def _frame(t: str, values: list[list]) -> pd.DataFrame:
+    """시트 글자 → 표 (1행 = 열 제목, 빈 줄은 뺌)."""
+    n = len(cols(t))
+    rows = [([("" if c is None else str(c)) for c in r] + [""] * n)[:n]
+            for r in values[1:] if any(str(c).strip() for c in r if c is not None)]
+    return pd.DataFrame(rows, columns=cols(t))
+
+
+def _cell_value(v) -> dict:
+    """appendCells 용 칸 값 (values API 의 RAW 와 같게: 글자는 글자 그대로, 숫자는 숫자)."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return {"userEnteredValue": {"stringValue": "" if v is None else str(v)}}
+    return {"userEnteredValue": {"numberValue": v}}
+
+
+def _apply_append(t: str, df: pd.DataFrame, rows: list[list]) -> pd.DataFrame:
+    add = _frame(t, [heads(t)] + list(rows))
+    return pd.concat([df, add], ignore_index=True) if len(add) else df
+
+
+def _apply_update(t: str, df: pd.DataFrame, rows: dict[str, list]) -> pd.DataFrame:
+    if not rows:
+        return df
+    df = df.copy()
+    new = _frame(t, [heads(t)] + list(rows.values()))
+    pos = {str(v).strip(): i for i, v in enumerate(df["id"])}
+    for _, r in new.iterrows():
+        i = pos.get(str(r["id"]).strip())
+        if i is not None:
+            df.iloc[i] = r.values
+    return df
+
+
 class SheetStore:
     label = "구글 시트"
     persistent = True
@@ -291,6 +324,13 @@ class SheetStore:
             raise StorageError(explain_error(e)) from e
         existing = {w.title: w for w in _call(self.ss.worksheets)}
         self.ws = {}
+        # 2026-11-18 속도: 탭마다 1행을 따로 읽지 않고 요청 한 번으로 모든 탭의 1행을 읽음 (첫 접속 약 5초 → 1초 안쪽)
+        have = [title for t, (title, _) in TABLES.items() if title in existing]
+        firsts: dict[str, list] = {}
+        if have:
+            res = _call(self.ss.values_batch_get, ["'" + x.replace("'", "''") + "'!1:1" for x in have])
+            vrs = res.get("valueRanges", [])
+            firsts = {x: ((vrs[i].get("values") or [[]])[0] if i < len(vrs) else []) for i, x in enumerate(have)}
         for t, (title, _) in TABLES.items():
             head = heads(t)
             ws = existing.get(title)
@@ -302,7 +342,9 @@ class SheetStore:
                 except Exception:  # noqa: BLE001 - 고정은 필수가 아님
                     pass
             else:
-                first = [str(c).strip() for c in _call(ws.row_values, 1)]
+                first = [str(c).strip() for c in firsts.get(title, [])]
+                while first and not first[-1]:  # row_values 처럼 끝의 빈 칸은 뺌
+                    first.pop()
                 if not first:
                     _call(ws.update, values=[head], range_name="A1", value_input_option="RAW")
                 elif len(first) < len(head) and head[:len(first)] == first:
@@ -317,9 +359,13 @@ class SheetStore:
 
     @staticmethod
     def _frame(t: str, values: list[list]) -> pd.DataFrame:
-        n = len(cols(t))
-        rows = [(list(r) + [""] * n)[:n] for r in values[1:] if any(str(c).strip() for c in r)]
-        return pd.DataFrame(rows, columns=cols(t))
+        return _frame(t, values)
+
+    def read_rows(self, t: str) -> tuple[pd.DataFrame, dict[str, int]]:
+        """탭 내용과 ID → 행 번호를 요청 한 번으로 (지우기·고치기 전에 따로 두 번 읽지 않게)."""
+        values = _call(self.ws[t].get_all_values)
+        where = {str(r[0]).strip(): i for i, r in enumerate(values, start=1) if i > 1 and r and str(r[0]).strip()}
+        return _frame(t, values), where
 
     def read(self, t: str) -> pd.DataFrame:
         return self._frame(t, _call(self.ws[t].get_all_values))
@@ -332,12 +378,17 @@ class SheetStore:
         return {t: self._frame(t, (vrs[i].get("values", []) if i < len(vrs) else [])) for i, t in enumerate(ts)}
 
     def append(self, t: str, rows: list[list]) -> None:
-        _dirty(t)
+        tok = _dirty(t)
         if rows:
             _call(self.ws[t].append_rows, rows, value_input_option="RAW", table_range="A1")
+        _applied(t, tok, lambda df: _apply_append(t, df, rows))
 
     def rewrite(self, t: str, rows: list[list]) -> None:
-        _dirty(t)
+        tok = _dirty(t)
+        self._rewrite(t, rows)
+        _applied(t, tok, lambda df: _frame(t, [heads(t)] + rows))
+
+    def _rewrite(self, t: str, rows: list[list]) -> None:
         ws = self.ws[t]
         n = len(cols(t))
         old = len(_call(ws.col_values, 1))
@@ -352,27 +403,39 @@ class SheetStore:
         ids = _call(self.ws[t].col_values, 1)
         return {str(v).strip(): i for i, v in enumerate(ids, start=1) if i > 1 and str(v).strip()}
 
-    def update_rows(self, t: str, rows: dict[str, list]) -> int:
-        """ID가 같은 행만 고칩니다. 전체를 다시 쓰지 않으므로 동시에 입력한 다른 사람의 행이 지워지지 않습니다."""
-        _dirty(t)
+    def update_rows(self, t: str, rows: dict[str, list], where: dict[str, int] | None = None) -> int:
+        """ID가 같은 행만 고칩니다. 전체를 다시 쓰지 않으므로 동시에 입력한 다른 사람의 행이 지워지지 않습니다.
+        where = 방금 read_rows 로 읽은 행 번호 (주면 행 번호를 다시 읽지 않음)."""
+        tok = _dirty(t)
         from gspread.utils import rowcol_to_a1
-        where = self._row_numbers(t)
+        where = self._row_numbers(t) if where is None else where
         n = len(cols(t))
-        data = [{"range": f"A{where[rid]}:{rowcol_to_a1(where[rid], n)}", "values": [row]}
-                for rid, row in rows.items() if rid in where]
+        hit = {rid: row for rid, row in rows.items() if rid in where}
+        data = [{"range": f"A{where[rid]}:{rowcol_to_a1(where[rid], n)}", "values": [row]} for rid, row in hit.items()]
         if data:
             _call(self.ws[t].batch_update, data, value_input_option="RAW")
+        _applied(t, tok, lambda df: _apply_update(t, df, hit))
         return len(data)
 
-    def delete_ids(self, t: str, ids: list[str]) -> int:
-        _dirty(t)
-        where = self._row_numbers(t)
+    def delete_ids(self, t: str, ids: list[str], where: dict[str, int] | None = None,
+                   trash_rows: list[list] | None = None) -> int:
+        """ID 행 지우기. trash_rows 를 주면 휴지통에 넣는 것까지 구글 요청 한 번으로 (2026-11-18)."""
+        tok = _dirty(t)
+        where = self._row_numbers(t) if where is None else where
         nums = sorted({where[i] for i in ids if i in where}, reverse=True)  # 아래 행부터 지워야 번호가 안 밀림
+        reqs = []
+        if trash_rows:
+            _dirty("trash")
+            reqs.append({"appendCells": {"sheetId": self.ws["trash"].id, "fields": "userEnteredValue",
+                                         "rows": [{"values": [_cell_value(v) for v in r]} for r in trash_rows]}})
         if nums:
             sid = self.ws[t].id
-            reqs = [{"deleteDimension": {"range": {"sheetId": sid, "dimension": "ROWS",
-                                                   "startIndex": r - 1, "endIndex": r}}} for r in nums]
+            reqs += [{"deleteDimension": {"range": {"sheetId": sid, "dimension": "ROWS",
+                                                    "startIndex": r - 1, "endIndex": r}}} for r in nums]
+        if reqs:
             _call(self.ss.batch_update, {"requests": reqs})
+        gone = set(ids)
+        _applied(t, tok, lambda df: df[~df["id"].astype(str).str.strip().isin(gone)].reset_index(drop=True))
         return len(nums)
 
 
@@ -397,16 +460,21 @@ class CsvStore:
         return df.reindex(columns=cols(t), fill_value="")
 
     def append(self, t: str, rows: list[list]) -> None:
-        _dirty(t)
+        tok = _dirty(t)
         df = pd.concat([self.read(t), pd.DataFrame(rows, columns=cols(t)).astype(str)], ignore_index=True)
         df.to_csv(self._path(t), index=False)
+        _applied(t, tok, lambda d: _apply_append(t, d, rows))
 
     def rewrite(self, t: str, rows: list[list]) -> None:
-        _dirty(t)
+        tok = _dirty(t)
         pd.DataFrame(rows, columns=cols(t)).to_csv(self._path(t), index=False)
+        _applied(t, tok, lambda d: _frame(t, [heads(t)] + list(rows)))
 
-    def update_rows(self, t: str, rows: dict[str, list]) -> int:
-        _dirty(t)
+    def read_rows(self, t: str) -> tuple[pd.DataFrame, dict[str, int]]:
+        df = self.read(t)
+        return df, {str(v).strip(): i + 2 for i, v in enumerate(df["id"]) if str(v).strip()}
+
+    def update_rows(self, t: str, rows: dict[str, list], where: dict | None = None) -> int:
         df = self.read(t)
         n = 0
         for rid, row in rows.items():
@@ -417,8 +485,9 @@ class CsvStore:
         self.rewrite(t, df.values.tolist())
         return n
 
-    def delete_ids(self, t: str, ids: list[str]) -> int:
-        _dirty(t)
+    def delete_ids(self, t: str, ids: list[str], where: dict | None = None, trash_rows: list[list] | None = None) -> int:
+        if trash_rows:
+            self.append("trash", trash_rows)
         df = self.read(t)
         mask = df["id"].astype(str).str.strip().isin(set(ids))
         self.rewrite(t, df[~mask].values.tolist())
@@ -476,6 +545,9 @@ SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings", "channe
 _SNAP_LOCK = threading.Lock()
 _STALE: set[str] = set()  # 앱에서 쓴 뒤 아직 다시 읽지 않은 탭
 _VER = [0]  # 데이터가 바뀔 때마다 1씩 늘어남
+_GEN = [0]  # 묶음을 시트에서 새로 읽은 횟수
+_SNAP_REF: list = [None]  # 지금 묶음 (쓴 내용을 바로 반영할 곳)
+_READS: dict[str, int] = {}  # 탭을 하나만 다시 읽은 횟수
 _RECENT = threading.local()  # 이 화면(스레드)에서 쓴 탭: 저장이 끝난 뒤 한 번 더 '다시 읽기'로 표시
 
 
@@ -494,21 +566,49 @@ def data_version() -> int:
 def _snapshot() -> dict[str, pd.DataFrame]:
     with _SNAP_LOCK:
         _STALE.difference_update(SNAPSHOT_TABS)
+        _GEN[0] += 1
     snap = get_store().read_many(list(SNAPSHOT_TABS))
-    _bump()
+    with _SNAP_LOCK:
+        _SNAP_REF[0] = snap
+        _bump()
     return snap
 
 
-def _dirty(t: str) -> None:
-    """묶음으로 읽어 둔 탭에 쓰면 그 탭만 '다시 읽기'로 표시 (다음에 그 탭만 시트에서 새로 읽음)."""
-    if t in SNAPSHOT_TABS:
-        with _SNAP_LOCK:
-            _STALE.add(t)
-            _bump()
-        rec = getattr(_RECENT, "tabs", None)
-        if rec is None:
-            rec = _RECENT.tabs = set()
-        rec.add(t)
+def _dirty(t: str):
+    """쓰기 직전: 그 탭을 '다시 읽기'로 표시. 쓰기가 끝나면 _applied 가 쓴 내용을 묶음에 바로 반영해 표시를 거둠."""
+    if t not in SNAPSHOT_TABS:
+        return None
+    with _SNAP_LOCK:
+        tok = (_GEN[0], _READS.get(t, 0), t in _STALE)
+        _STALE.add(t)
+        _bump()
+    rec = getattr(_RECENT, "tabs", None)
+    if rec is None:
+        rec = _RECENT.tabs = set()
+    rec.add(t)
+    return tok
+
+
+def _applied(t: str, tok, mutate) -> None:
+    """2026-11-18 속도: 앱에서 쓴 내용을 묶음에 바로 반영 (저장 뒤 시트를 다시 읽지 않음).
+    쓰는 사이에 묶음을 새로 읽었거나 그 탭을 누가 다시 읽었으면, 겹칠 수 있으니 그냥 다음에 다시 읽게 둠."""
+    if tok is None:
+        return
+    gen, reads, was_stale = tok
+    with _SNAP_LOCK:
+        snap = _SNAP_REF[0]
+        if (was_stale or gen != _GEN[0] or reads != _READS.get(t, 0) or snap is None or t not in snap):
+            return
+        try:
+            new = mutate(snap[t])
+            snap[t] = _frame(t, [heads(t)] + new.values.tolist())  # 시트에서 읽은 것과 같은 모양(글자)으로
+        except Exception:  # noqa: BLE001 - 반영이 안 되면 다음에 시트에서 다시 읽음
+            return
+        _STALE.discard(t)
+        _bump()
+    rec = getattr(_RECENT, "tabs", None)
+    if rec:
+        rec.discard(t)
 
 
 def snap_cached(fn):
@@ -532,6 +632,7 @@ def _tab(t: str) -> pd.DataFrame:
         with _SNAP_LOCK:
             snap[t] = fresh
             _STALE.discard(t)
+            _READS[t] = _READS.get(t, 0) + 1
     df = snap[t].copy()
     for c in cols(t) if t in TABLES else ():  # 시트에 아직 없는 새 열은 빈 칸으로 (앱 재시작 전)
         if c not in df.columns:
@@ -558,6 +659,7 @@ def refresh_data() -> None:
 
 def clear_caches() -> None:
     _snapshot.clear()
+    _SNAP_REF[0] = None
     for f in ("load_rates", "load_quotes"):  # 아래(견적서)에 정의
         if f in globals():
             globals()[f].clear()
@@ -711,18 +813,38 @@ def _master_summary(t: str, r: dict) -> str:
     return f"ID {to_str(r.get('id'))}"
 
 
-def _to_trash(t: str, rows: list[dict]) -> list[str]:
-    """지운 행(원래 시트 글자 그대로)을 휴지통에 넣고 휴지통 ID를 돌려줍니다."""
+def _trash_rows(t: str, rows: list[dict]) -> tuple[list[str], list[list]]:
+    """휴지통에 넣을 행 (휴지통 ID, 시트에 쓸 행)."""
     if not rows:
-        return []
+        return [], []
     ids = _new_ids(len(rows))
     now = _now()
     recs = [{"id": i, "deleted_at": now, "deleted_by": who(), "table": t,
              "summary": _usage_summary(r) if t == "usage" else _master_summary(t, r),
              "data": json.dumps({k: ("" if k == "thumb" else str(v)) for k, v in r.items()}, ensure_ascii=False)}
             for i, r in zip(ids, rows)]  # 작은사진은 빼서 셀 한도 안에 (되살리면 큰 사진으로 대신 보임)
-    get_store().append("trash", _rows("trash", recs))
+    return ids, _rows("trash", recs)
+
+
+def trash_and_delete(t: str, keys: set[str]) -> tuple[pd.DataFrame, list[str], int]:
+    """ID 행을 휴지통에 넣고 지움. 구글 요청 2번 (읽기 1 + 휴지통·지우기 한 번에), 예전엔 4번 (2026-11-18).
+    돌려주는 값: (지운 행, 휴지통 ID, 지운 수)."""
+    store = get_store()
+    cur, where = store.read_rows(t)
+    cur = cur.astype(str)
+    gone = cur[cur["id"].str.strip().isin(keys)]
+    trash_ids, trash = _trash_rows(t, gone.to_dict("records"))
+    n = store.delete_ids(t, list(keys), where=where, trash_rows=trash)
     load_trash.clear()
+    return gone, trash_ids, n
+
+
+def _to_trash(t: str, rows: list[dict]) -> list[str]:
+    """지운 행(원래 시트 글자 그대로)을 휴지통에 넣고 휴지통 ID를 돌려줍니다."""
+    ids, recs = _trash_rows(t, rows)
+    if recs:
+        get_store().append("trash", recs)
+        load_trash.clear()
     return ids
 
 
@@ -1780,7 +1902,7 @@ def update_logs(changes: dict[int, dict]) -> int:
     if not changes:
         return 0
     store = get_store()
-    df = store.read("usage")
+    df, where = store.read_rows("usage")  # 내용과 행 번호를 한 번에 (예전엔 두 번 읽음)
     names = _equip_names()
     now = dt.datetime.now().replace(microsecond=0)
     ids = df["id"].astype(str).str.strip()
@@ -1800,7 +1922,7 @@ def update_logs(changes: dict[int, dict]) -> int:
             row["equip_ref"] = names.get(row["equip_id"], "")
         cur.update(row)
         out[key] = _rows("usage", [cur])[0]
-    n = store.update_rows("usage", out)
+    n = store.update_rows("usage", out, where=where)
     if n:
         _step(("put", "usage", before), f"실적 {n}건 수정")
         log("수정", "실적", f"{n}건: " + " / ".join(
@@ -1813,10 +1935,7 @@ def delete_logs(ids: list[int]) -> int:
     if not ids:
         return 0
     keys = {str(int(i)) for i in ids}
-    cur = _raw("usage")
-    gone = cur[cur["id"].str.strip().isin(keys)]
-    trash_ids = _to_trash("usage", gone.to_dict("records"))
-    n = get_store().delete_ids("usage", list(keys))
+    gone, trash_ids, n = trash_and_delete("usage", keys)
     if n:
         _step(("readd", "usage", gone.values.tolist(), trash_ids), f"실적 {n}건 삭제")
         log("삭제", "실적", f"{n}건: " + " / ".join(_usage_summary(r) for r in gone.to_dict("records")[:3])
