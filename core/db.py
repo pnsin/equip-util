@@ -544,7 +544,9 @@ SNAPSHOT_TABS = ("equipment", "companies", "staff", "usage", "settings", "channe
 # 화면용 표(load_*)는 데이터 번호(_VER)가 바뀔 때만 새로 만듦 (예전처럼 5~10분마다 저절로 버리지 않음)
 _SNAP_LOCK = threading.Lock()
 _STALE: set[str] = set()  # 앱에서 쓴 뒤 아직 다시 읽지 않은 탭
-_VER = [0]  # 데이터가 바뀔 때마다 1씩 늘어남
+# 2026-11-18: 시작값을 시각으로. 코드를 새로 배포하면 Streamlit 이 이 파일을 다시 불러와 번호가 0부터 다시 시작했는데,
+# 화면용 표 캐시(snap_cached)는 남아 있어서 예전 번호(예: 1)로 만든 '오래된 장비 목록'이 다시 쓰였음 (이름을 바꿔도 안 바뀌어 보임)
+_VER = [time.time_ns()]  # 데이터가 바뀔 때마다 1씩 늘어남
 _GEN = [0]  # 묶음을 시트에서 새로 읽은 횟수
 _SNAP_REF: list = [None]  # 지금 묶음 (쓴 내용을 바로 반영할 곳)
 _READS: dict[str, int] = {}  # 탭을 하나만 다시 읽은 횟수
