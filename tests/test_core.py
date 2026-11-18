@@ -476,3 +476,40 @@ def test_cs_activity_crud_undo_and_trash(store):
     s = cs.stats(cs.load(), D(2026, 11, 5))
     assert s["month"] == 1 and s["open"] == 1 and s["companies"] == 1
     assert cs.to_excel(cs.load())[:2] == b"PK"
+
+
+def _same(a, b):
+    k = lambda d: d.astype(str).sort_values("id").reset_index(drop=True)  # noqa: E731
+    return k(a).equals(k(b))
+
+
+def test_writes_update_snapshot_without_reread(store, monkeypatch):
+    """2026-11-18: 저장·수정·삭제한 내용이 시트를 다시 읽지 않고도 화면용 묶음에 그대로 반영되는지."""
+    db._snapshot()  # 화면이 한 번 읽어 둔 상태
+    reads = []
+    real = store.read
+    monkeypatch.setattr(store, "read", lambda t: (reads.append(t), real(t))[1])
+    rec = dict(equip_id=1, start_date=D(2026, 7, 1), end_date=D(2026, 7, 3), hours=2.5, purpose="시험",
+               usage_type="내부", company="업체A", fee=15000)
+    db.insert_logs([rec, dict(rec, hours=4)], "tester")
+    assert "usage" not in db._STALE
+    assert _same(db._snapshot()["usage"], real("usage"))
+    ids = list(real("usage")["id"])
+    db.update_logs({int(ids[0]): {"hours": 7, "company": "업체B"}})
+    assert "usage" not in db._STALE and _same(db._snapshot()["usage"], real("usage"))
+    db.delete_logs([int(ids[1])])
+    assert "usage" not in db._STALE and _same(db._snapshot()["usage"], real("usage"))
+    assert len(real("trash")) == 1
+    reads.clear()
+    logs = db.load_logs()
+    assert "usage" not in reads  # 저장 뒤 시트를 다시 읽지 않음
+    assert list(logs["hours"]) == [7]
+
+
+def test_write_during_other_read_falls_back_to_reread(store):
+    db._snapshot()
+    tok = db._dirty("usage")
+    db._tab("usage")  # 쓰는 도중에 다른 화면이 그 탭을 다시 읽음
+    db._applied("usage", tok, lambda d: d.iloc[0:0])
+    db.refresh_data()
+    assert "usage" in db._STALE  # 겹칠 수 있으니 반영하지 않고 다음에 다시 읽음

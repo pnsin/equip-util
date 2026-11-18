@@ -131,10 +131,7 @@ def delete(ids: list[str]) -> int:
     keys = {str(i) for i in ids}
     if not keys:
         return 0
-    cur = db._raw(T)
-    gone = cur[cur["id"].str.strip().isin(keys)]
-    trash_ids = db._to_trash(T, gone.to_dict("records"))
-    n = db.get_store().delete_ids(T, list(keys))
+    gone, trash_ids, n = db.trash_and_delete(T, keys)
     if n:
         db._step(("readd", T, gone.values.tolist(), trash_ids), f"CS활동 {n}건 삭제")
         db.log("삭제", "CS활동", f"{n}건: " + " / ".join(summary(r) for r in gone.to_dict("records")[:3]))
