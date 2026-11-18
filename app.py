@@ -205,6 +205,10 @@ if check_password():
     except db.StorageError as e:
         st.error(f"데이터 저장소(구글 시트)에 연결하지 못했습니다. 잠시 뒤 새로고침해 보세요.\n\n자세한 내용: {e}")
         st.stop()
+    if st.query_params.get("reload") == "1":
+        # 2026-11-18: 구글 시트를 직접 고친 뒤 앱에 바로 보이게 (주소 끝에 ?reload=1). 평소엔 30분마다 새로 읽음
+        db.clear_caches()
+        del st.query_params["reload"]
     local = db.is_local()
     sidebar(local)
     if local:
