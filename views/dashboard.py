@@ -44,7 +44,6 @@ CSS = """<style>
 .dtop .big {font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; margin: 10px 0 8px;}
 .dtop .big small {font-size: 30px; font-weight: 800;}
 .dtop .sub {font-size: 15px; color: #CBD5E1;} .dtop .sub b {font-weight: 700;}
-.dtop .note {font-size: 12.5px; color: #94A3B8; margin-top: 2px;}
 .dtop .mm {display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin-top: 12px; font-size: 11.5px;}
 .dtop .mm b {display: block; font-weight: 700; color: #E2E8F0;} .dtop .mm b.z {color: #475569;}
 .dtop .mm span {color: #94A3B8; font-size: 10.5px;}
@@ -364,9 +363,8 @@ def _top_row(year: int, y_tot: dict, kpi: dict, ref_day) -> None:
     by_m = mt.groupby(mt["date"].map(lambda d: d.month)).size().to_dict() if not mt.empty else {}
     mini = "".join(f'<div><b class="{"" if by_m.get(m) else "z"}">{by_m.get(m, 0)}</b><span>{m}월</span></div>'
                    for m in range(1, 13))
-    note = "" if len(mt) else '<div class="note">선택한 해에 유지보수 기록이 없어요</div>'
     c3 = (f'<div class="k c3"><div class="tt">유지보수 실적</div><div class="bdy">'
-          f'<div class="big" style="color:{AMBER[0]}">{len(mt)}<small>건</small></div>{note}'
+          f'<div class="big" style="color:{AMBER[0]}">{len(mt)}<small>건</small></div>'
           f'<div class="mm">{mini}</div></div></div>')
     # 04 종·대수 (센터별 + 합계)
     blocks, _ = count_summary(db.load_equipment(full=True))
