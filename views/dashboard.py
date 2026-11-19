@@ -133,7 +133,7 @@ CSS = """<style>
 .drep td.hit {color: #6EE7B7; font-weight: 700;}
 .drep tr.sum td {background: rgba(59,130,246,0.16) !important; font-weight: 700; font-size: 15px; border-bottom: 0 !important;}
 .drep.fee tr.sum td {background: rgba(16,185,129,0.16) !important;}
-.drep tr.goal td {color: #FBD38D; font-weight: 700; font-size: 15px; background: rgba(245,158,11,0.10) !important;}
+.drep tr.goal td {color: #A7F3D0; font-weight: 700; font-size: 15px; background: rgba(16,185,129,0.09) !important;}  /* 2026-11-19 주황 → 비치는 녹색 */
 .drep tr.rate td {font-weight: 700; font-size: 15px; color: #F8FAFC; border-bottom: 0 !important;}
 .drep tr.rate td.hit {color: #6EE7B7;}
 .drep tr.sum td:first-child {border-radius: 12px 0 0 12px;}
