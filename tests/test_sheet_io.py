@@ -49,7 +49,7 @@ def test_merge_edits_keeps_others_changes():
 
 
 def test_equipment_layout_roundtrip_with_summary_first():
-    """2026-11-19: 맨 앞 요약 시트 + No. 열 + 맨 뒤 ID 열이어도 다시 올리면 ID 로 맞춰 반영."""
+    """2026-11-19: 맨 앞 요약 시트 + 맨 앞 ID · 맨 뒤 소속 장비 ID 여도 다시 올리면 ID 로 맞춰 반영."""
     heads = {"name": "장비명(한글)", "parent_id": "소속 장비 ID", "qty": "대수"}
     df = pd.DataFrame({"id": [7, 3], "name": ["시스템", "세부"], "parent_id": [None, 7], "qty": [1, 2]})
     x = sheet_io.to_xlsx(df, heads, "장비", levels=[0, 1], id_last=("parent_id",))
@@ -57,8 +57,8 @@ def test_equipment_layout_roundtrip_with_summary_first():
     wb = openpyxl.load_workbook(io.BytesIO(x))
     assert wb.sheetnames[0] == "요약" and wb.active.title == "요약"
     ws = wb["장비"]
-    assert [c.value for c in ws[1]] == ["No.", "장비명(한글)", "대수", "ID", "소속 장비 ID"]
-    assert [ws.cell(r, 1).value for r in (2, 3)] == [1, 2]
+    assert [c.value for c in ws[1]] == ["ID", "장비명(한글)", "대수", "소속 장비 ID"]
+    assert [ws.cell(r, 1).value for r in (2, 3)] == [7, 3]
     assert sheet_io.merge(df, x, heads)[1:3] == (0, 0)  # 그대로 올리면 바뀐 것 없음
     ws["C3"] = 5
     buf = io.BytesIO()

@@ -120,8 +120,8 @@ def to_xlsx(df: pd.DataFrame, heads: dict[str, str], sheet: str, levels: list[in
             money: tuple[str, ...] = (), id_last: tuple[str, ...] = ()) -> bytes:
     """heads: 내부 열 → 엑셀 열 제목. 1행 = 제목 (다시 올릴 때 이 제목으로 읽음).
 
-    id_last 를 주면 (2026-11-19 장비 목록) 맨 앞은 1부터 차례 번호 'No.', 'ID' 와 id_last 열은 맨 뒤 회색 칸.
-    ID 는 실적·단가·이력이 장비를 가리키는 고정 번호라 바꾸지 않음.
+    id_last 를 주면 (2026-11-19 장비 목록) 맨 앞은 'ID', id_last 열(소속 장비 ID 등)은 맨 뒤 회색 칸.
+    (No. 차례 번호는 ID 와 헷갈려서 뺌 — 사용자 요청 2026-11-19, ID 가 1부터 차례대로라 그대로 씀)
     """
     from openpyxl import Workbook
 
@@ -130,10 +130,10 @@ def to_xlsx(df: pd.DataFrame, heads: dict[str, str], sheet: str, levels: list[in
     ws = wb.active
     ws.title = sheet
     if id_last or levels is not None:
-        tail = ["id"] + [c for c in id_last if c in heads]
-        ws.append([SEQ_HEAD] + [heads[c] for c in body] + [ID_HEAD] + [heads[c] for c in tail[1:]])
-        for n, r in enumerate(df.to_dict("records"), 1):
-            ws.append([n] + [_cell(r.get(c)) for c in body + tail])
+        tail = [c for c in id_last if c in heads]
+        ws.append([ID_HEAD] + [heads[c] for c in body] + [heads[c] for c in tail])
+        for r in df.to_dict("records"):
+            ws.append([_cell(r.get(c)) for c in ["id"] + body + tail])
         freeze = 2
     else:
         cols = ["id"] + body
