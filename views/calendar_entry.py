@@ -152,7 +152,7 @@ div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button[aria-checked="
 .st-key-calgrid {user-select: none; -webkit-user-select: none;}
 .st-key-calgrid div[class*="st-key-cell_"][data-drag] {background: rgba(45, 143, 213, 0.14) !important;
   border-color: var(--accent) !important;}
-.st-key-cal_cmd {display: none !important;}
+.st-key-cal_cmd, .st-key-cal_fast {display: none !important;}
 .st-key-calgrid div[class*="st-key-cell_"][data-jspick] {background: rgba(45, 143, 213, 0.12) !important;
   border: 2px solid var(--accent) !important; box-shadow: 0 0 0 3px rgba(45, 143, 213, .18) !important;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"])[data-jspick] button {box-shadow: 0 0 0 2px var(--accent) !important; background: rgba(85,154,230,0.16) !important;}
@@ -993,6 +993,49 @@ def _on_cmd() -> None:
         st.session_state.pop("cal_clip", None)
 
 
+def _sel_css() -> str:
+    """고른 날·고른 실적 테두리 (입력 카드가 열려 있으면 카드 쪽에서 그려, 카드만 다시 그려도 바로 바뀜)."""
+    day = st.session_state.get("cal_day")
+    month = st.session_state.get("cal_month")
+    if not day or not month:
+        return ""
+    css = ""
+    if not [d for d in _sel_days() if d.month == month.month]:  # 한 날만 선택해도 드래그 선택처럼 또렷하게
+        css += (f" .st-key-calgrid:not([data-js]) .st-key-cell_{day} {{background: rgba(45, 143, 213, 0.12) !important; border: 2px solid var(--accent) !important;"
+                " box-shadow: 0 0 0 3px rgba(45, 143, 213, .18) !important;}")
+    pick = st.session_state.get("cal_pick")
+    if pick and pick["day"].replace(day=1) == month:  # 선택한 실적: 파란 테두리
+        css += (f" .st-key-calgrid:not([data-js]) .st-key-ent_{pick['day']}_{pick['id']} button {{box-shadow: 0 0 0 2px var(--accent) !important;"
+                " background: rgba(85,154,230,0.16) !important;}")
+    return css
+
+
+def _on_fast() -> None:
+    """2026-11-19 속도: 입력 카드가 열린 채 날짜·실적·구분 줄을 누르면 카드만 다시 그림 (달력 전체를 다시 그리지 않음).
+    KEYS_JS 가 버튼 대신 카드 안 숨은 칸으로 'day|날짜', 'ent|날짜|ID', 'lane|구분|날짜' 를 보냄."""
+    parts = str(st.session_state.get("cal_fast") or "").split("|")
+    try:
+        cmd = parts[0]
+        if cmd == "day":
+            _click_day(dt.date.fromisoformat(parts[1]), None, None)
+        elif cmd == "lane":
+            cat = {v: k for k, v in CAT_KEY.items()}[parts[1]]
+            _click_lane(dt.date.fromisoformat(parts[2]), cat)
+        elif cmd == "ent":
+            d = dt.date.fromisoformat(parts[1])
+            e = (st.session_state.get("_cal_ents") or {}).get(f"{d}_{int(parts[2])}")
+            if e is None:
+                raise KeyError(parts[2])
+            _click_entry(d, e, None, None)
+        else:
+            raise ValueError(cmd)
+        m = st.session_state.get("cal_month")
+        if m and st.session_state.get("cal_day") and st.session_state.cal_day.replace(day=1) != m:
+            raise ValueError("month")
+    except Exception:  # noqa: BLE001 - 모르는 경우는 화면 전체를 다시 그림 (예전과 같게)
+        st.session_state["_cal_full"] = True
+
+
 def _clear_sel() -> None:
     st.session_state.pop("cal_sel", None)
     st.session_state.pop("cal_picks", None)
@@ -1065,6 +1108,32 @@ KEYS_JS = r"""
     inp.dispatchEvent(new win.Event('input', {bubbles: true}));
     inp.dispatchEvent(new win.KeyboardEvent('keydown', {key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true}));
   };
+  const sendTo = (inp, v) => {
+    const set = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set;
+    set.call(inp, v + '|' + Date.now());
+    inp.dispatchEvent(new win.Event('input', {bubbles: true}));
+    inp.dispatchEvent(new win.KeyboardEvent('keydown', {key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true}));
+  };
+  let noFast = 0;  // 끌어서 고르기·Ctrl+클릭 직후의 클릭은 건드리지 않음
+  // 2026-11-19 속도: 입력 카드가 열려 있으면 날짜·실적·구분 줄 클릭을 카드 안 숨은 칸으로 보내 카드만 다시 그림
+  on('click', (e) => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || Date.now() - noFast < 500) return;
+    const t = e.target;
+    if (!t || !t.closest || !t.closest('.st-key-calgrid')) return;
+    const fast = doc.querySelector('.st-key-cal_fast input');
+    if (!fast || doc.querySelector('.cal-state[data-multi], .cal-state[data-nofast]')) return;
+    if (t.closest('div[class*="st-key-x_"], div[class*="st-key-cf_"]')) return;
+    const ent = t.closest('div[class*="st-key-ent_"]');
+    const lane = t.closest('div[class*="st-key-lane_"]');
+    const dayb = t.closest('div[class*="st-key-day_"]');
+    let m, cmd = null;
+    if (ent && (m = ent.className.match(/st-key-ent_(\d{4}-\d{2}-\d{2})_(\d+)/))) cmd = 'ent|' + m[1] + '|' + m[2];
+    else if (lane && (m = lane.className.match(/st-key-lane_([a-z]+)_(\d{4}-\d{2}-\d{2})/))) cmd = 'lane|' + m[1] + '|' + m[2];
+    else if (dayb && (m = dayb.className.match(/st-key-day_(\d{4}-\d{2}-\d{2})/))) cmd = 'day|' + m[1];
+    if (!cmd) return;
+    e.preventDefault(); e.stopPropagation();
+    sendTo(fast, cmd);
+  }, true);
   const onCal = () => !!doc.querySelector('.st-key-calgrid');
   const typing = (el) => el && (el.closest('input, textarea, select, [contenteditable="true"]') ||
                                  el.closest('[data-testid="stDataFrame"], [data-testid="stDataEditor"], [role="dialog"]'));
@@ -1179,6 +1248,7 @@ KEYS_JS = r"""
     const ent = (e.ctrlKey || e.metaKey) && e.button === 0 && entOf(e.target);
     if (ent) {  // Ctrl+클릭: 실적을 하나씩 더하거나 뺌 (엑셀처럼)
       e.preventDefault(); e.stopPropagation();
+      noFast = Date.now();
       const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
       doc.addEventListener('click', swallow, {capture: true, once: true});
       setTimeout(() => doc.removeEventListener('click', swallow, true), 300);
@@ -1197,6 +1267,7 @@ KEYS_JS = r"""
     }
     if (start && dragging) {
       e.preventDefault(); e.stopPropagation();
+      noFast = Date.now();
       const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
       doc.addEventListener('click', swallow, {capture: true, once: true});
       setTimeout(() => doc.removeEventListener('click', swallow, true), 300);
@@ -1349,6 +1420,8 @@ def render(header: bool = True) -> None:
     picks = _picks()
     if sel_days or len(picks) > 1:  # 여러 날·여러 실적을 골라 둔 상태 (달력 밖을 누르면 풀림)
         st.markdown("<div class='cal-state' data-multi='1'></div>", unsafe_allow_html=True)
+    elif picks:  # Ctrl+클릭으로 하나 고른 상태: 카드만 다시 그리기(빠른 클릭)는 쓰지 않음
+        st.markdown("<div class='cal-state' data-nofast='1'></div>", unsafe_allow_html=True)
     ask = st.session_state.get("cal_delask")
     if ask:
         with st.container(key="cal_delbar", horizontal=True, vertical_alignment="center", gap="small"):
@@ -1371,9 +1444,8 @@ def render(header: bool = True) -> None:
                   for d in sel_days)
     sel += (f" .st-key-day_{today} button strong {{background: var(--accent) !important; color: #fff !important; "
             "box-shadow: 0 2px 6px rgba(45, 143, 213, .35);}")
-    if not sel_days:  # 한 날만 선택해도 드래그 선택처럼 또렷하게
-        sel += (f" .st-key-calgrid:not([data-js]) .st-key-cell_{day} {{background: rgba(45, 143, 213, 0.12) !important; border: 2px solid var(--accent) !important;"
-                " box-shadow: 0 0 0 3px rgba(45, 143, 213, .18) !important;}")
+    if not is_open:  # 카드가 열려 있으면 고른 날·실적 테두리는 카드(_entry_panel)가 그림
+        sel += _sel_css()
     for dd, ents in by_day.items():  # 실적 스티커 색 (구분별)
         if dd.month != month.month:
             continue
@@ -1385,9 +1457,6 @@ def render(header: bool = True) -> None:
     for p in picks:  # Ctrl+클릭으로 고른 실적들
         sel += (f" .st-key-ent_{p['day']}_{p['id']}:not([data-jsmulti='0']) button {{box-shadow: 0 0 0 2px var(--accent) !important;"
                 " background: rgba(85,154,230,0.16) !important;}")
-    if pick:  # 선택한 실적: 파란 테두리
-        sel += (f" .st-key-calgrid:not([data-js]) .st-key-ent_{pick['day']}_{pick['id']} button {{box-shadow: 0 0 0 2px var(--accent) !important;"
-                " background: rgba(85,154,230,0.16) !important;}")
     if clip:  # 복사한 실적: 엑셀처럼 움직이는 점선
         for kd, kid in clip["keys"]:
             sel += f" .st-key-ent_{kd}_{kid} button {{outline: 2px dashed var(--accent); outline-offset: 1px; animation: calAnts .9s linear infinite;}}"
@@ -1396,6 +1465,8 @@ def render(header: bool = True) -> None:
     for i, w in enumerate(WEEKDAYS):
         cls = " sun" if i == 6 else (" sat" if i == 5 else "")
         head[i].markdown(f"<div class='cal-wk{cls}'>{w}</div>", unsafe_allow_html=True)
+    # 카드만 다시 그릴 때(_on_fast) 누른 실적을 찾을 수 있게
+    st.session_state["_cal_ents"] = {f"{dd}_{e['id']}": e for dd, v in by_day.items() for e in v}
     cards: dict[str, list] = {}
     for week in weeks:
         cols = grid.columns(7)
@@ -1491,6 +1562,11 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
     카드 안에서 장비·업체 등을 고를 때 달력 전체를 다시 그리지 않도록 카드만 따로 다시 그립니다 (fragment).
     달력 모양이 바뀌어야 하는 버튼(닫기·새 실적·목록 선택·삭제·저장)은 st.rerun() 으로 화면 전체를 다시 그립니다.
     """
+    st.text_input("fast", key="cal_fast", on_change=_on_fast, label_visibility="collapsed")
+    if st.session_state.pop("_cal_full", False):
+        st.rerun()  # 카드만으로는 안 되는 경우: 화면 전체
+    day = st.session_state.get("cal_day", day)  # 카드만 다시 그릴 때는 고른 날을 여기서 읽음
+    st.markdown(f"<style>{_sel_css()}</style>", unsafe_allow_html=True)
     ts = pd.Timestamp(day)
     rows = _day_rows(logs, day)
     period = logs[(logs["start_date"] <= ts) & (logs["end_date"] >= ts)] if not logs.empty else logs
