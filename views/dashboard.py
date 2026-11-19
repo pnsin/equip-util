@@ -39,7 +39,7 @@ CSS = """<style>
   font-variant-numeric: tabular-nums;}
 .dtop .k.c1 {border-top: 2px solid #3B82F6;} .dtop .k.c2 {border-top: 2px solid #10B981;}
 .dtop .k.c3 {border-top: 2px solid #F59E0B;} .dtop .k.c4 {border-top: 2px solid #8B5CF6;}
-.dtop .tt {font-size: 19px; font-weight: 700; color: #F8FAFC; padding: 4px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.06);}
+.dtop .tt {font-size: 21px; font-weight: 700; color: #F8FAFC; padding: 4px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.06);}
 .dtop .bdy {flex: 1; display: flex; flex-direction: column; justify-content: center; padding-top: 6px;}
 .dtop .big {font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; margin: 10px 0 8px;}
 .dtop .big small {font-size: 30px; font-weight: 800;}
@@ -61,8 +61,7 @@ CSS = """<style>
 .dh {display: flex; align-items: center; gap: 14px; margin-bottom: 12px;}
 .dh .ic {width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
   font-size: 21px; font-weight: 700;}
-.dh .no {font-size: 14px; font-weight: 700; letter-spacing: .08em; line-height: 1.1;}
-.dh .tt {font-size: 19px; font-weight: 700; color: #F8FAFC; line-height: 1.3;}
+.dh .tt {font-size: 24px; font-weight: 700; color: #F8FAFC; line-height: 1.3;}
 .dper {font-size: 14px; color: #E2E8F0; border: 1px solid #475569; height: 38px; display: flex; align-items: center; padding: 0 16px; border-radius: 99px; white-space: nowrap;}
 .st-key-dash_pp > div, .st-key-dash_pp [data-testid="stElementContainer"] {margin: 0 !important;}
 .st-key-dash_pp [data-testid="stMarkdownContainer"] p, .st-key-dash_pp [data-testid="stMarkdownContainer"] {margin: 0;}
@@ -149,7 +148,7 @@ CSS = """<style>
 
 def _head(no: int, title: str, color: tuple, icon: str, period: str) -> None:
     st.markdown(f'<div class="dh"><div class="ic" style="background:{color[2]};color:{color[0]}">{icon}</div>'
-                f'<div><div class="no" style="color:{color[0]}">{no:02d}</div><div class="tt">{E(title)}</div></div>'
+                f'<div class="tt">{E(title)}</div>'
                 '</div>', unsafe_allow_html=True)
 
 
@@ -435,13 +434,13 @@ def _eok(v: float) -> str:
     return f"{v / 1e8:g}억 원" if v and v % 1e7 == 0 else f"{round(v):,}원"
 
 
-def _won_k(v: float) -> str:
-    return f"{round(v / 1000):,}" if v else "–"
+def _won(v: float) -> str:
+    return f"{round(v):,}" if v else "–"
 
 
 def _fee_section(year, cm, period, months, ref_day, kpi) -> None:
     """2026-11-05: 장비 수수료는 재무팀 매출장(세금일자 · 공급가) 기준. 실적별 수수료는 늦게·안 넣는 경우가 많아서.
-    2026-11-19: 아래 표는 주간업무보고와 같은 분류별 발행 (주간 · 월간 · 연간, 천 원) + 목표 대비 달성률."""
+    2026-11-19: 아래 표는 주간업무보고와 같은 분류별 발행 (월간 · 연간, 원) + 목표 대비 달성률."""
     from core import fee_ledger
     with st.container(key="dsec_fee"):
         _head(2, "장비 수수료", TEAL, "₩", period)
@@ -454,36 +453,33 @@ def _fee_section(year, cm, period, months, ref_day, kpi) -> None:
         goal = float(kpi["fee"] or 0)
         # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약은 뺌 (그래프 · 분류별 표만)
 
-        st.markdown('<div class="dct">월별 수수료 (원, 세금일자 · 공급가 기준)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="dct">월별 수수료 (원)</div>', unsafe_allow_html=True)
         vals = [fees.get(m, 0) if m <= cm or m in fees else None for m in range(1, 13)]
         _bars(vals, months, cm - 1, TEAL, lambda v: f"{v:,.0f}", "dash_fee_m",
               hover="%{x} 수수료 %{y:,.0f}원<extra></extra>", custom=list(range(1, 13)))
 
         # 분류별 발행 (주간업무보고 'I. 수수료현황'과 같은 모양)
-        wk_s = ref_day - dt.timedelta(days=ref_day.weekday())
-        wk_e = wk_s + dt.timedelta(days=6)
-        st.markdown(f'<div class="dct" style="margin:26px 0 12px">분류별 발행 (천 원)'
-                    f'<span class="dsub">주간 {wk_s:%m/%d}~{wk_e:%m/%d}</span></div>', unsafe_allow_html=True)
-        st.markdown(_fee_table(cur, year, cm, wk_s, wk_e, ref_day, goal), unsafe_allow_html=True)
+        # 2026-11-19 사용자: 단위는 원, 주간은 뺌 (월간 · 연간만)
+        st.markdown('<div class="dct" style="margin:26px 0 12px">분류별 발행 (원)</div>', unsafe_allow_html=True)
+        st.markdown(_fee_table(cur, cm, ref_day, goal), unsafe_allow_html=True)
 
 
-def _fee_table(cur: pd.DataFrame, year, cm, wk_s, wk_e, ref_day, goal) -> str:
+def _fee_table(cur: pd.DataFrame, cm, ref_day, goal) -> str:
     if cur.empty:
-        d = cur.assign(c=[], w=[], m=[], y=[])
+        d = cur.assign(c=[], m=[], y=[])
     else:
         d = cur.assign(c=report.ledger_cats(cur),
-                       w=[wk_s <= x <= wk_e for x in cur["tax_date"]],
                        m=[x.month == cm for x in cur["tax_date"]],
                        y=[x <= ref_day for x in cur["tax_date"]])
-    cols = [("주간", "w", goal / 52), ("월간", "m", goal / 12), ("연간", "y", goal)]
+    cols = [("월간", "m", goal / 12), ("연간", "y", goal)]
     sums = {k: (d[d[k]].groupby("c")["supply"].sum().to_dict() if len(d) else {}) for _, k, _ in cols}
     head = "".join(f"<th>{x}</th>" for x in ["구분"] + [c for c, _, _ in cols])
-    rows = '<tr class="goal"><td>목표</td>' + "".join(f"<td>{_won_k(g)}</td>" for _, _, g in cols) + "</tr>"
+    rows = '<tr class="goal"><td>목표</td>' + "".join(f"<td>{_won(g)}</td>" for _, _, g in cols) + "</tr>"
     for c in report.CATS:
         rows += f"<tr><td>{E(c)}</td>" + "".join(
-            f'<td class="{"v" if sums[k].get(c) else "z"}">{_won_k(sums[k].get(c, 0))}</td>' for _, k, _ in cols) + "</tr>"
+            f'<td class="{"v" if sums[k].get(c) else "z"}">{_won(sums[k].get(c, 0))}</td>' for _, k, _ in cols) + "</tr>"
     tot = {k: sum(sums[k].values()) for _, k, _ in cols}
-    rows += '<tr class="sum"><td>합계</td>' + "".join(f"<td>{_won_k(tot[k])}</td>" if tot[k] else '<td class="z">0</td>' for _, k, _ in cols) + "</tr>"
+    rows += '<tr class="sum"><td>합계</td>' + "".join(f"<td>{_won(tot[k])}</td>" if tot[k] else '<td class="z">0</td>' for _, k, _ in cols) + "</tr>"
     rows += '<tr class="rate"><td>달성률</td>' + "".join(
         (f'<td class="{"hit" if tot[k] >= g else ""}">{tot[k] / g * 100:.1f}%</td>' if tot[k] else '<td class="z">0.0%</td>')
         if g else '<td class="z">–</td>'
