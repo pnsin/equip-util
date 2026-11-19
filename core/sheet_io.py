@@ -30,7 +30,8 @@ WIDE_MAX = 46   # 이보다 긴 글은 줄바꿈
 NARROW = 8
 SEQ_HEAD = "No."  # 읽기용 차례 번호 (올릴 때는 쓰지 않음)
 LEFT_HEADS = {"장비명(한글)", "장비명", "주장비(종)", "시스템 구성", "비고", "모델명", "장비위치", "업체명", "주소"}
-MUTED_HEADS = {ID_HEAD, "소속 장비 ID"}
+MUTED_HEADS = {ID_HEAD, "소속", "소속 장비 ID"}
+HEAD_ALIAS = {"소속 장비 ID": "소속"}  # 예전 엑셀 열 제목 → 지금 제목 (예전에 받은 파일도 올릴 수 있게)
 
 
 def _text_width(v) -> float:
@@ -120,7 +121,7 @@ def to_xlsx(df: pd.DataFrame, heads: dict[str, str], sheet: str, levels: list[in
             money: tuple[str, ...] = (), id_last: tuple[str, ...] = ()) -> bytes:
     """heads: 내부 열 → 엑셀 열 제목. 1행 = 제목 (다시 올릴 때 이 제목으로 읽음).
 
-    id_last 를 주면 (2026-11-19 장비 목록) 맨 앞은 'ID', id_last 열(소속 장비 ID 등)은 맨 뒤 회색 칸.
+    id_last 를 주면 (2026-11-19 장비 목록) 맨 앞은 'ID', 바로 옆에 id_last 열(소속 등) 회색 칸.
     (No. 차례 번호는 ID 와 헷갈려서 뺌 — 사용자 요청 2026-11-19, ID 가 1부터 차례대로라 그대로 씀)
     """
     from openpyxl import Workbook
@@ -131,10 +132,10 @@ def to_xlsx(df: pd.DataFrame, heads: dict[str, str], sheet: str, levels: list[in
     ws.title = sheet
     if id_last or levels is not None:
         tail = [c for c in id_last if c in heads]
-        ws.append([ID_HEAD] + [heads[c] for c in body] + [heads[c] for c in tail])
+        ws.append([ID_HEAD] + [heads[c] for c in tail] + [heads[c] for c in body])
         for r in df.to_dict("records"):
-            ws.append([_cell(r.get(c)) for c in ["id"] + body + tail])
-        freeze = 2
+            ws.append([_cell(r.get(c)) for c in ["id"] + tail + body])
+        freeze = 2 + len(tail)  # ID · 소속 · 장비명까지 고정
     else:
         cols = ["id"] + body
         ws.append([ID_HEAD] + [heads[c] for c in body])
@@ -243,6 +244,7 @@ def merge(existing: pd.DataFrame, data: bytes, heads: dict[str, str]) -> tuple[p
     """올린 엑셀을 기존 목록에 합칩니다 → (합친 목록, 추가 수, 수정 수, 안내)."""
     up = _read_table(data)
     up.columns = [str(c).strip() for c in up.columns]
+    up = up.rename(columns={o: n for o, n in HEAD_ALIAS.items() if n not in up.columns})
     back = {v: k for k, v in heads.items()}
     if ID_HEAD not in up.columns:
         return existing, 0, 0, [f"맨 앞 '{ID_HEAD}' 열이 없어요. 이 화면에서 내려받은 엑셀에 고쳐서 올려 주세요."]
