@@ -96,7 +96,7 @@ def render() -> None:
     annual = float(cfg.get("annual_hours") or 2000)
     target = float(report.kpi(cfg, dt.date.today().year)["util_total"] or 0)  # 2026-11-19 설정 › KPI 목표
     if eq.empty:
-        empty_state("등록된 장비가 없습니다", "'기준 정보 › 장비'에서 먼저 장비를 추가하세요.")
+        empty_state("등록된 장비가 없습니다", "'정보 › 장비'에서 먼저 장비를 추가하세요.")
         return
 
     top_ids = set(eq.loc[eq["parent_id"].isna(), "id"].astype(int)) if "parent_id" in eq else set()

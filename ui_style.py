@@ -689,7 +689,7 @@ PH_ICONS = {
     "수수료 단가": "sell", "담당자": "group", "설정": "settings", "가져오기 · 백업": "cloud_sync", "휴지통 · 기록": "delete",
 }
 PH_COLORS = {"현황": ("#818CF8", "#A78BFA"), "실적": ("#E58BFF", "#F472B6"), "장비": ("#34D399", "#6CC4FF"),
-             "업체": ("#FFC266", "#FB923C"), "기준 정보": ("#6CC4FF", "#818CF8"), "관리": ("#94A3B8", "#64748B")}
+             "업체": ("#FFC266", "#FB923C"), "정보": ("#6CC4FF", "#818CF8"), "관리": ("#94A3B8", "#64748B")}
 PH_CSS = """<style>
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0');
 .ph2 {display: flex; align-items: center; gap: 16px; padding: 2px 0 14px; margin-bottom: 18px; position: relative;

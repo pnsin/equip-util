@@ -24,7 +24,7 @@ def render() -> None:
         team = c2.text_input("팀명", value=cfg.get("team_name") or _team_from(cfg))
         c1, c2 = st.columns(2)
         annual = c1.number_input("연간 기준 가용시간 (h)", min_value=1, step=100, value=int(cfg.get("annual_hours") or 2000),
-                                 help="장비별로 다르면 '기준 정보 › 장비'에서 장비마다 따로 지정할 수 있습니다.")
+                                 help="장비별로 다르면 '정보 › 장비'에서 장비마다 따로 지정할 수 있습니다.")
         st.markdown("**대시보드 보기**")
         c1, c2 = st.columns(2)
         kinds = ["주", "월", "분기", "반기", "연"]

@@ -270,7 +270,7 @@ def go_equipment(equip_id: int) -> None:
 
 
 def go_master_equipment(name: str) -> None:
-    """'기준 정보 › 장비' 표를 이 장비 이름으로 찾아 둔 채 엽니다."""
+    """'정보 › 장비' 표를 이 장비 이름으로 찾아 둔 채 엽니다."""
     st.session_state.equip_q = name
     _leave()
     if "equipment" in PAGES:

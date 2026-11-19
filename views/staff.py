@@ -13,7 +13,7 @@ TEXT = ("부서", "팀", "이름", "직급", "내선번호", "담당업무", "�
 
 
 def render() -> None:
-    page_header("담당자", "기준 정보")
+    page_header("담당자", "정보")
     msg = st.session_state.pop("staff_saved", None)
     if msg:
         st.toast(msg, icon=":material/check_circle:")
