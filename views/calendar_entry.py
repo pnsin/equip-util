@@ -1562,7 +1562,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
 
         st.session_state.pop("company_added", None)
         if eq.empty or not staff_opts:
-            st.warning("장비와 담당자를 먼저 '기준 정보'에서 등록하세요.")
+            st.warning("장비와 담당자를 먼저 '정보'에서 등록하세요.")
             return
 
         last_staff = st.session_state.get("last_staff") or st.session_state.get("me")

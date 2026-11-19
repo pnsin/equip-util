@@ -1,4 +1,4 @@
-"""기준 정보 › 장비 목록 및 수수료 단가: ① 장비 목록 ② 수수료 단가 (장비 단가 + 시험·기타 항목).
+"""정보 › 장비 목록 및 수수료 단가: ① 장비 목록 ② 수수료 단가 (장비 단가 + 시험·기타 항목).
 
 - 평소엔 표가 잠겨 있고, '선택'한 줄만 아래에서 고쳐 [저장] / [삭제] (2026-11-10).
 - '소속 장비'를 고르면 그 장비의 세부장비가 되고, 세부장비 시간은 소속 장비로 합산됩니다.
@@ -107,7 +107,7 @@ def count_summary(eq: pd.DataFrame) -> tuple[list[tuple[str, pd.DataFrame]], lis
 
 
 def _page(title: str) -> tuple[pd.DataFrame, dict]:
-    page_header(title, "기준 정보")
+    page_header(title, "정보")
     st.markdown(CSS, unsafe_allow_html=True)
     msg = st.session_state.pop("equip_saved", None)
     if msg:
@@ -116,7 +116,7 @@ def _page(title: str) -> tuple[pd.DataFrame, dict]:
 
 
 def render() -> None:
-    """기준 정보 › 장비 목록 (2026-11-10 수수료 단가는 따로 메뉴)."""
+    """정보 › 장비 목록 (2026-11-10 수수료 단가는 따로 메뉴)."""
     eq, cfg = _page("장비 목록")
     _devices(eq, cfg)
 

@@ -26,7 +26,7 @@ def render(header: bool = True) -> None:
     eq = db.load_equipment()
     logs = db.load_logs()
     if eq.empty:
-        empty_state("등록된 장비가 없습니다", "'기준 정보 › 장비'에서 먼저 장비를 추가하세요.")
+        empty_state("등록된 장비가 없습니다", "'정보 › 장비'에서 먼저 장비를 추가하세요.")
         return
     ver = st.session_state.setdefault("entry_ver", 0)
     staff_opts = db.staff_names()
@@ -34,7 +34,7 @@ def render(header: bool = True) -> None:
     user = st.selectbox("담당자", staff_opts, index=staff_opts.index(last) if last in staff_opts else None,
                         placeholder="담당자를 고르세요", key=f"entry_{ver}_staff") or ""
     if not staff_opts:
-        st.warning("등록된 담당자가 없습니다. '기준 정보 › 담당자'에서 먼저 담당자를 등록하세요.")
+        st.warning("등록된 담당자가 없습니다. '정보 › 담당자'에서 먼저 담당자를 등록하세요.")
 
     def k(name: str) -> str:
         return f"entry_{ver}_{name}"
@@ -57,7 +57,7 @@ def render(header: bool = True) -> None:
     if c1.button("목록에 없는 업체 등록", icon=":material/add_business:", type="tertiary", key=k("new_comp")):
         new_company_dialog()
     if not master:
-        c1.caption("등록된 업체가 없습니다. '기준 정보 › 업체'에서 먼저 업체를 등록하세요.")
+        c1.caption("등록된 업체가 없습니다. '정보 › 업체'에서 먼저 업체를 등록하세요.")
     company = company or ""
     prev: dict = {}
     if company and not recent.empty and (recent["company"] == company).any():
@@ -77,7 +77,7 @@ def render(header: bool = True) -> None:
     with st.expander(detail_label, expanded=False):
         c1, c2, c3 = st.columns(3)
         brn = c1.text_input("사업자등록번호", value=prev.get("brn", ""), key=k(f"brn_{pk}"),
-                            disabled=True, help="'기준 정보 › 업체'에서 고칩니다.")
+                            disabled=True, help="'정보 › 업체'에서 고칩니다.")
         dept = c2.text_input("내부부서명", value=prev.get("dept") or cfg.get("dept_default", ""), key=k(f"dept_{pk}"))
         product = c3.text_input("제품명", value=prev.get("product", ""), key=k(f"product_{pk}"))
 

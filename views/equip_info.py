@@ -1,6 +1,6 @@
 """장비 정보 › 장비 정보: 장비 한 대의 '프로필' — 사진 · 주요 사양 · 자료(링크) · 사용 시 주의 · A/S 연락처.
 
-- 기본 정보(이름 · 번호 · 위치 · 관리자 …)는 '기준 정보 › 장비' 값을 그대로 보여 줌 (두 곳에서 따로 고치지 않게).
+- 기본 정보(이름 · 번호 · 위치 · 관리자 …)는 '정보 › 장비' 값을 그대로 보여 줌 (두 곳에서 따로 고치지 않게).
 - 가동률 숫자는 '현황 › 장비 상세'에 있고, 여기서는 단추로 넘어감.
 - 사진은 앱에서 바로 올리면 작게 줄여 구글 시트(장비사진 탭)에 저장 (드라이브 연결 없음).
 - 사양 · 자료 표는 고치는 즉시 저장되고, 사이드바 '되돌리기'로 취소할 수 있음.
@@ -622,7 +622,7 @@ def _unit(eid: int, eq: pd.DataFrame, info: dict, in_list: bool = False) -> None
             if b[0].button(w("가동률 보기"), icon=":material/monitoring:", width="stretch", key="info_to_detail"):
                 common.go_equipment(eid)
             if b[1].button("기본 정보 고치기", icon=":material/edit:", width="stretch", key="info_to_master",
-                           help="'기준 정보 › 장비' 표에서 이 장비를 찾아 엽니다."):
+                           help="'정보 › 장비' 표에서 이 장비를 찾아 엽니다."):
                 common.go_master_equipment(r["name"])
             if show_up and b[2].button("소속 장비로", icon=":material/arrow_upward:", width="stretch",
                                               key="info_to_up"):
@@ -643,7 +643,7 @@ def render() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     eq = db.load_equipment()
     if eq.empty:
-        empty_state("등록된 장비가 없습니다", "'기준 정보 › 장비'에서 먼저 장비를 추가하세요.")
+        empty_state("등록된 장비가 없습니다", "'정보 › 장비'에서 먼저 장비를 추가하세요.")
         return
     info = db.load_info()
     want = st.session_state.pop("info_equip", None)
