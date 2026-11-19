@@ -165,7 +165,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     extras_now = view.iloc[n_dev:].copy()
 
     # 2026-11-19 엑셀 열 순서: 이름·구분·소속 → 분류 → 관리 → 제품 정보 → 단가 → 비고 (열 제목으로 읽으므로 순서는 자유)
-    xl_heads = {k: COLS[k] for k in ("name", "kind")} | {"parent_id": "소속 장비 ID"} | {
+    xl_heads = {k: COLS[k] for k in ("name", "kind")} | {"parent_id": "소속"} | {
         k: COLS[k] for k in ("code", "group", "report_cat", "species", "category", "qty", "manager", "location", "use", "model",
                              "maker", "vendor", "asset_no", "nfec", "system", "annual_hours", "acquired_on")} | {
         v: v for v in RATE.values()} | {"note": COLS["note"]}

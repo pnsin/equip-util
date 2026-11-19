@@ -49,18 +49,18 @@ def test_merge_edits_keeps_others_changes():
 
 
 def test_equipment_layout_roundtrip_with_summary_first():
-    """2026-11-19: 맨 앞 요약 시트 + 맨 앞 ID · 맨 뒤 소속 장비 ID 여도 다시 올리면 ID 로 맞춰 반영."""
-    heads = {"name": "장비명(한글)", "parent_id": "소속 장비 ID", "qty": "대수"}
+    """2026-11-19: 맨 앞 요약 시트 + 맨 앞 ID · 그 옆 소속이어도 다시 올리면 ID 로 맞춰 반영."""
+    heads = {"name": "장비명(한글)", "parent_id": "소속", "qty": "대수"}
     df = pd.DataFrame({"id": [7, 3], "name": ["시스템", "세부"], "parent_id": [None, 7], "qty": [1, 2]})
     x = sheet_io.to_xlsx(df, heads, "장비", levels=[0, 1], id_last=("parent_id",))
     x = sheet_io.add_summary(x, "요약", "제목", [("표", pd.DataFrame({"구분": ["합계"], "대수": [3]}))])
     wb = openpyxl.load_workbook(io.BytesIO(x))
     assert wb.sheetnames[0] == "요약" and wb.active.title == "요약"
     ws = wb["장비"]
-    assert [c.value for c in ws[1]] == ["ID", "장비명(한글)", "대수", "소속 장비 ID"]
+    assert [c.value for c in ws[1]] == ["ID", "소속", "장비명(한글)", "대수"]
     assert [ws.cell(r, 1).value for r in (2, 3)] == [7, 3]
     assert sheet_io.merge(df, x, heads)[1:3] == (0, 0)  # 그대로 올리면 바뀐 것 없음
-    ws["C3"] = 5
+    ws["D3"] = 5
     buf = io.BytesIO()
     wb.save(buf)
     merged, n_add, n_upd, _ = sheet_io.merge(df, buf.getvalue(), heads)
@@ -98,3 +98,19 @@ def test_retired_rate_items_hidden_from_quote_picker():
     dev, ex = quotes.rate_table(eq, rates)
     assert len(ex) == 2 and list(ex["retired"]) == ["Y", ""]
     assert set(quotes.pick_options(dev, ex)) == {"방폭룸"}
+
+
+def test_old_parent_header_still_uploads():
+    """예전에 받은 엑셀(열 제목 '소속 장비 ID', 맨 뒤)도 그대로 올라감."""
+    from openpyxl import Workbook
+    heads = {"name": "장비명(한글)", "parent_id": "소속"}
+    df = pd.DataFrame({"id": [7, 3], "name": ["시스템", "세부"], "parent_id": [None, 7]})
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["ID", "장비명(한글)", "소속 장비 ID"])
+    ws.append([7, "시스템", None])
+    ws.append([3, "세부", None])  # 소속을 뺌
+    buf = io.BytesIO()
+    wb.save(buf)
+    merged, n_add, n_upd, _ = sheet_io.merge(df, buf.getvalue(), heads)
+    assert (n_add, n_upd) == (0, 1) and merged.loc[1, "parent_id"] in ("", None)
