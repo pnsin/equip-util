@@ -193,8 +193,9 @@ def excel_box(key: str, df, heads: dict, sheet: str, apply, extra_sheet: tuple |
     with st.popover("엑셀로 한번에 고치기", icon=":material/table_view:"):
         def data(df=df, extra_sheet=extra_sheet):  # 엑셀 파일은 '엑셀 받기'를 누를 때만 만듦 (화면이 다시 그려질 때마다 만들지 않음)
             out = sheet_io.to_xlsx(df, heads, sheet, levels=levels, money=money, id_last=id_last)
-            if extra_sheet:  # 읽기용 참고 시트 (올려도 반영되지 않음)
-                out = sheet_io.add_sheet(out, *extra_sheet, money=money)
+            extras = extra_sheet if isinstance(extra_sheet, list) else [extra_sheet] if extra_sheet else []
+            for name, frame in extras:  # 읽기용 참고 시트 (올려도 반영되지 않음), 준 순서대로
+                out = sheet_io.add_sheet(out, name, frame, money=money)
             return finish(out) if finish else out
         c1, c2 = st.columns(2, gap="small")
         with c1.container(border=True, horizontal_alignment="center", gap="xsmall"):

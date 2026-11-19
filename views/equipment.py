@@ -174,7 +174,8 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
         sub = st.toggle("세부장비도 보기", key="equip_subs")
         add_at = st.container(width="content")
         excel_box("equip_xl", xl_eq, xl_heads, "장비", lambda m: _apply_excel(m, rates, extras_now),
-                  extra_sheet=("시험·기타 항목(참고용)", extras_now[["장비명(한글)"] + list(RATE.values()) + ["비고"]]),
+                  extra_sheet=[("불용", _retired_sheet(rates)),
+                               ("시험·기타 항목(참고용)", extras_now[["장비명(한글)"] + list(RATE.values()) + ["비고"]])],
                   levels=[int(d) for d in eq["depth"]], id_last=("parent_id",), money=(RATE["price_req"], RATE["price_self"]),
                   finish=lambda b: sheet_io.add_summary(b, "종·대수 요약", f"장비 종·대수 현황 ({dt.date.today():%Y-%m-%d} 기준)",
                                                         *count_summary(eq)))
@@ -266,6 +267,15 @@ def _save_table(out: pd.DataFrame, rates: pd.DataFrame, label_of: dict) -> list[
     if not errors:
         _save_rates_from(out, rates, extras)
     return errors
+
+
+def _retired_sheet(rates: pd.DataFrame) -> pd.DataFrame:
+    """2026-11-19: 불용 장비의 단가 항목 (단가 탭 '불용' = Y). 화면에서는 숨기지만 엑셀에서는 찾아볼 수 있게."""
+    r = rates[[pd.isna(e) and quotes.is_retired(x) for e, x in zip(rates["equip_id"], rates.to_dict("records"))]]
+    return pd.DataFrame({"항목명": r["name"].values, RATE["unit"]: r["unit"].values,
+                         RATE["price_req"]: pd.to_numeric(r["price_req"], errors="coerce").values,
+                         RATE["price_self"]: pd.to_numeric(r["price_self"], errors="coerce").values,
+                         "비고": r["note"].values})
 
 
 def _apply_excel(merged: pd.DataFrame, rates: pd.DataFrame, extras: pd.DataFrame) -> list[str]:
