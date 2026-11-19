@@ -118,3 +118,24 @@ def merge(new: pd.DataFrame) -> tuple[int, int, int]:
         db._save_master("fee_ledger", sorted(rows.values(), key=lambda x: int(x["id"])))
         load.clear()
     return add, upd, same
+
+
+def set_cats(changes: dict[int, str]) -> int:
+    """2026-11-19: 줄마다 보고 분류를 고침. 발행내역 자동 분류와 같으면 비워 둠 (규칙이 바뀌면 따라가게)."""
+    from core import report
+    cur = db.get_store().read("fee_ledger")
+    rows = cur.to_dict("records")
+    n = 0
+    for r in rows:
+        rid = db.to_num(r.get("id"))
+        if rid is None or int(rid) not in changes:
+            continue
+        cat = report.norm(changes[int(rid)])
+        want = "" if not cat or cat == report.fee_cat(r.get("item")) else cat
+        if str(r.get("report_cat") or "") != want:
+            r["report_cat"] = want
+            n += 1
+    if n:
+        db._save_master("fee_ledger", rows)
+        load.clear()
+    return n

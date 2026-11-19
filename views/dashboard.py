@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from core import calc, db
+from core import calc, db, report
 from core.terms import w
 from ui_style import CHART_CONFIG, T, chart_layout, empty_state, page_header
 from views.common import go_records, period_picker
@@ -90,6 +90,28 @@ CSS = """<style>
 .dcnt tr.sum td {border-bottom: 0 !important; background: rgba(230,160,85,0.14) !important; color: #FBD38D;}
 .dcnt tr.sum td:first-child {border-radius: 12px 0 0 12px;} .dcnt tr.sum td:last-child {border-radius: 0 12px 12px 0;}
 .dnone {font-size: 14.5px; color: #CBD5E1; padding: 4px 0;}
+.dsub {font-size: 13px; font-weight: 600; color: #CBD5E1; margin-left: 10px;}
+.drep {width: 100%; border-collapse: collapse; font-size: 15px; color: #F8FAFC; text-align: center; border: 0 !important;
+  font-variant-numeric: tabular-nums;}
+.drep tr, .drep thead, .drep tbody {border: 0 !important; background: transparent !important;}
+.drep th, .drep td {border: 0 !important; background: transparent !important; white-space: nowrap; text-align: center !important;}
+.drep th {font-size: 14px; font-weight: 600; color: #E2E8F0 !important; padding: 9px 8px !important;
+  border-bottom: 1.5px solid #64748B !important;}
+.drep td {padding: 8px 8px !important; border-bottom: 1px solid #52617A !important;}
+.drep td:first-child {font-weight: 600;}
+.drep td.g {color: #CBD5E1;}
+.drep td.na {color: #94A3B8;}
+.drep td.hit {color: #6EE7B7; font-weight: 700;}
+.drep tr.sum td {background: rgba(85,102,230,0.16) !important; font-weight: 700; border-bottom: 0 !important;}
+.drep.fee tr.sum td {background: rgba(85,230,204,0.14) !important;}
+.drep tr.goal td {color: #FBD38D; font-weight: 600; background: rgba(230,160,85,0.10) !important;}
+.drep tr.rate td {font-weight: 700; color: #F8FAFC; border-bottom: 0 !important;}
+.drep tr.rate td.hit {color: #6EE7B7;}
+.drep tr.sum td:first-child {border-radius: 12px 0 0 12px;}
+.drep tr.sum td:last-child {border-radius: 0 12px 12px 0;}
+@media (max-width: 640px) {.drep {font-size: 13px; table-layout: fixed;} .drep th {font-size: 12px;}
+  .drep th, .drep td {padding-left: 3px !important; padding-right: 3px !important;}
+  .drep th:first-child {width: 34%;} .drep td:first-child {white-space: normal; word-break: keep-all; font-size: 12px;}}
 </style>"""
 
 
@@ -212,12 +234,13 @@ def render() -> None:
     logs_all = db.load_logs()
     eq_all = db.load_equipment()
     annual = float(cfg.get("annual_hours") or 2000)
-    target = float(cfg.get("target_util") or 0)
     today = dt.date.today()
     years = sorted({d.year for d in logs_all["start_date"].dropna()} | {today.year}) if not logs_all.empty else [today.year]
-    centers = {i: SHORT_OF.get(c, "") for i, c in db.equip_centers(eq_all).items()}
 
     year, pick_m = _filters(years)
+    kpi = report.kpi(cfg, year)  # 2026-11-19 설정 › KPI 목표 (연도별)
+    target = float(kpi["util_total"] or 0)
+    cats = report.equip_cats(eq_all)
     eq, logs = eq_all, logs_all
     SHORT.clear()
     SHORT.update(zip(eq_all["id"].astype(int), eq_all["short"]))  # 같은 이름 장비는 'n호기'로
@@ -254,16 +277,17 @@ def render() -> None:
         s, e, _ = calc.period_bounds(kind, ref_day)
         e_eff = calc.effective_end(s, e, cutoff)
         ps, pe, _ = calc.compare_period(kind, s, e, e_eff, "직전")
-        return calc.totals(summ(s, e_eff)), calc.totals(summ(ps, pe))
+        cur = summ(s, e_eff)
+        return cur, calc.totals(cur), calc.totals(summ(ps, pe))
 
     m_ref = dt.date(year, cm, 1)
-    m_tot, pm_tot = cur_and_prev("월", m_ref)
-    q_tot, pq_tot = cur_and_prev("분기", m_ref)
+    m_sum, m_tot, pm_tot = cur_and_prev("월", m_ref)
+    q_sum, q_tot, pq_tot = cur_and_prev("분기", m_ref)
 
     _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
-                  year_sum, centers)
-    _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, year_sum, logs, ys, ye_eff, today,
-                 centers)
+                  (m_sum, q_sum, year_sum), cats, kpi)
+    ref_day = min(today, (pd.Timestamp(year, cm, 1) + pd.offsets.MonthEnd(0)).date())  # 주간·월간 표의 기준일
+    _fee_section(year, cm, period, months, ref_day, kpi)
     _maint_section(year, cm, period, months, eq, eq_all, len(eq) < len(eq_all), today)
     _count_section(today)
 
@@ -286,7 +310,7 @@ def _count_section(today) -> None:
 
 
 def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
-                  year_sum, centers) -> None:
+                  sums, cats, kpi) -> None:
     with st.container(key="dsec_util"):
         _head(1, w("가동률"), BLUE, "%", period)
         _stats([
@@ -330,27 +354,56 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
             else f'<div>{q}분기<b style="color:#E2E8F0">–</b></div>' for q in range(1, 5)) + '</div>',
             unsafe_allow_html=True)
 
-        # 센터별 주장비 (올해 누적, 산정 대상 장비 = 세부장비 시간 합산)
-        st.markdown('<div class="dct" style="margin:26px 0 12px">센터별 주장비 · 올해 누적</div>', unsafe_allow_html=True)
-        k = year_sum[year_sum["KPI"]].copy() if not year_sum.empty else year_sum
-        if k.empty:
-            st.markdown('<div class="dnone">산정 대상 장비가 없어요</div>', unsafe_allow_html=True)
-            return
-        k["c"] = [centers.get(int(i), "") or "기타(본원)" for i in k["equip_id"]]
-        groups = [c for c in CENTER_ORDER if c in set(k["c"])] + sorted(set(k["c"]) - set(CENTER_ORDER))
-        cols = st.columns(min(3, len(groups)) or 1)
-        for i, c in enumerate(groups):
-            g = k[k["c"] == c].sort_values("가동률", ascending=False, na_position="last")
-            used, avail = g["사용시간"].sum(), g["가용시간"].sum()
-            rows = [(SHORT.get(int(i), n), v if pd.notna(v) else 0, f"{v:.0f}%" if pd.notna(v) else "–")
-                    for i, n, v in zip(g["equip_id"], g["장비명"], g["가동률"])]
-            _box(cols[i % len(cols)], c, _mini_list(rows, BLUE[0], 100),
-                 f"{used / avail * 100:.0f}%" if avail else "–", BLUE[0])
+        # 2026-11-19 주간업무보고와 같은 분류별 표 (예전 '센터별 주장비' 목록 자리)
+        st.markdown(f'<div class="dct" style="margin:26px 0 12px">{E(w("분류별 가동률"))}</div>', unsafe_allow_html=True)
+        st.markdown(_util_table(sums, cats, kpi, (f"{cm}월", f"{cq}분기", f"{year}년"),
+                                (m_tot, q_tot, y_tot)), unsafe_allow_html=True)
 
 
-def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, year_sum, logs, ys, ye_eff,
-                 today, centers) -> None:
-    """2026-11-05: 장비 수수료는 재무팀 매출장(세금일자 · 공급가) 기준. 실적별 수수료는 늦게·안 넣는 경우가 많아서."""
+def _cat_util(summary: pd.DataFrame, cats: dict[int, str]) -> dict[str, float]:
+    """보고 분류 → 가동률(%). 산정 대상(KPI) 장비만, 세부장비 시간은 이미 주장비에 더해져 있음."""
+    if summary.empty:
+        return {}
+    k = summary[summary["KPI"]]
+    if k.empty:
+        return {}
+    g = k.assign(c=[cats.get(int(i), report.OTHER) for i in k["equip_id"]]).groupby("c")[["사용시간", "가용시간"]].sum()
+    return {c: r["사용시간"] / r["가용시간"] * 100 for c, r in g.iterrows() if r["가용시간"] > 0}
+
+
+def _pct(v, goal) -> str:
+    if v is None:
+        return '<td class="na">–</td>'
+    hit = " hit" if goal and v >= goal else ""
+    return f'<td class="v{hit}">{v:.1f}%</td>'
+
+
+def _util_table(sums, cats, kpi, labels, tots) -> str:
+    per = [_cat_util(sm, cats) for sm in sums]
+    shown = [c for c in report.CATS if c != report.OTHER or any(report.OTHER in p for p in per)]
+    head = "".join(f"<th>{E(x)}</th>" for x in ("구분", "목표") + labels)
+    goal = float(kpi["util_total"] or 0)
+    rows = (f'<tr class="sum"><td>전체</td><td class="g">{goal:.0f}%</td>'
+            + "".join(_pct(t["util"] if t["avail"] else None, goal) for t in tots) + "</tr>")
+    for c in shown:
+        gl = kpi["util"].get(c)
+        rows += (f'<tr><td>{E(c)}</td><td class="g">{f"{gl:.0f}%" if gl else "–"}</td>'
+                 + "".join(_pct(p.get(c), gl) for p in per) + "</tr>")
+    return f'<table class="drep"><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table>'
+
+
+def _eok(v: float) -> str:
+    """500000000 → '5억 원', 그 밖에는 '123,456,000원'."""
+    return f"{v / 1e8:g}억 원" if v and v % 1e7 == 0 else f"{round(v):,}원"
+
+
+def _won_k(v: float) -> str:
+    return f"{round(v / 1000):,}" if v else "–"
+
+
+def _fee_section(year, cm, period, months, ref_day, kpi) -> None:
+    """2026-11-05: 장비 수수료는 재무팀 매출장(세금일자 · 공급가) 기준. 실적별 수수료는 늦게·안 넣는 경우가 많아서.
+    2026-11-19: 아래 표는 주간업무보고와 같은 분류별 발행 (주간 · 월간 · 연간, 천 원) + 목표 대비 달성률."""
     from core import fee_ledger
     with st.container(key="dsec_fee"):
         _head(2, "장비 수수료", TEAL, "₩", period)
@@ -365,6 +418,7 @@ def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, y
         pm_fee = fl[(yr == pm[0]) & (mo == pm[1])]["supply"].sum() if not fl.empty else 0
         m_fee, y_fee, py_fee = fees.get(cm, 0), sum(fees.values()), prev["supply"].sum() if not prev.empty else 0
         unpaid = cur["unpaid"].fillna(0) if not cur.empty else pd.Series(dtype=float)
+        goal = float(kpi["fee"] or 0)
         _stats([
             (f"{cm}월", _man(m_fee), "원", _delta(m_fee - pm_fee, "원", "지난달"), False),
             (f"{year}년 누적", _man(y_fee), "원",
@@ -377,7 +431,8 @@ def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, y
             _lead("수수료 입력 › 재무팀 매출장에서 엑셀을 올리면 여기에 나와요.", TEAL)
         elif done and sum(done.values()) > 0:
             best = max(done, key=done.get)
-            _lead(f"올해 한 달 평균 <b>{_man(sum(done.values()) / cm)}원</b>이 발행됐어요. "
+            goal_txt = (f"연 목표 {_eok(goal)}의 <b>{y_fee / goal * 100:.1f}%</b>를 채웠어요. " if goal else "")
+            _lead(goal_txt + f"한 달 평균 <b>{_man(sum(done.values()) / cm)}원</b>이 발행됐고, "
                   f"{best}월이 <b>{_man(done[best])}원</b>으로 가장 많았어요.", TEAL)
         else:
             _lead("올해는 아직 발행된 수수료가 없어요.", TEAL)
@@ -387,15 +442,35 @@ def _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, y
         _bars(vals, months, cm - 1, TEAL, lambda v: f"{v:,.0f}", "dash_fee_m",
               hover="%{x} 수수료 %{y:,.0f}원<extra></extra>", custom=list(range(1, 13)))
 
-        c1, c2 = st.columns(2)
-        if cur.empty or cur["supply"].sum() <= 0:
-            _box(c1, "업체별 · 올해", '<div class="dnone">기록 없음</div>')
-            _box(c2, "발행내역별 · 올해", '<div class="dnone">기록 없음</div>')
-            return
-        by_c = cur.groupby("company")["supply"].sum().sort_values(ascending=False).head(5)
-        _box(c1, "업체별 · 올해", _mini_list([(c, v, f"{_man(v)}원") for c, v in by_c.items()], TEAL[0]))
-        by_i = cur.groupby("item")["supply"].sum().sort_values(ascending=False).head(5)
-        _box(c2, "발행내역별 · 올해", _mini_list([(c, v, f"{_man(v)}원") for c, v in by_i.items()], TEAL[0]))
+        # 분류별 발행 (주간업무보고 'I. 수수료현황'과 같은 모양)
+        wk_s = ref_day - dt.timedelta(days=ref_day.weekday())
+        wk_e = wk_s + dt.timedelta(days=6)
+        st.markdown(f'<div class="dct" style="margin:26px 0 12px">분류별 발행 (천 원)'
+                    f'<span class="dsub">주간 {wk_s:%m/%d}~{wk_e:%m/%d}</span></div>', unsafe_allow_html=True)
+        st.markdown(_fee_table(cur, year, cm, wk_s, wk_e, ref_day, goal), unsafe_allow_html=True)
+
+
+def _fee_table(cur: pd.DataFrame, year, cm, wk_s, wk_e, ref_day, goal) -> str:
+    if cur.empty:
+        d = cur.assign(c=[], w=[], m=[], y=[])
+    else:
+        d = cur.assign(c=report.ledger_cats(cur),
+                       w=[wk_s <= x <= wk_e for x in cur["tax_date"]],
+                       m=[x.month == cm for x in cur["tax_date"]],
+                       y=[x <= ref_day for x in cur["tax_date"]])
+    cols = [("주간", "w", goal / 52), ("월간", "m", goal / 12), ("연간", "y", goal)]
+    sums = {k: (d[d[k]].groupby("c")["supply"].sum().to_dict() if len(d) else {}) for _, k, _ in cols}
+    head = "".join(f"<th>{x}</th>" for x in ["구분"] + [c for c, _, _ in cols])
+    rows = '<tr class="goal"><td>목표</td>' + "".join(f"<td>{_won_k(g)}</td>" for _, _, g in cols) + "</tr>"
+    for c in report.CATS:
+        rows += f"<tr><td>{E(c)}</td>" + "".join(
+            f'<td class="v">{_won_k(sums[k].get(c, 0))}</td>' for _, k, _ in cols) + "</tr>"
+    tot = {k: sum(sums[k].values()) for _, k, _ in cols}
+    rows += '<tr class="sum"><td>합계</td>' + "".join(f"<td>{_won_k(tot[k]) if tot[k] else 0}</td>" for _, k, _ in cols) + "</tr>"
+    rows += '<tr class="rate"><td>달성률</td>' + "".join(
+        f'<td class="{"hit" if g and tot[k] >= g else ""}">{tot[k] / g * 100:.1f}%</td>' if g else "<td>–</td>"
+        for _, k, g in cols) + "</tr>"
+    return f'<table class="drep fee"><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table>'
 
 
 def _maint_section(year, cm, period, months, eq, eq_all, filtered: bool, today) -> None:
