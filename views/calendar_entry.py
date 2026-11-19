@@ -1278,7 +1278,7 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
 def render(header: bool = True) -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     if header:
-        page_header("장비 일정 등록", "실적")
+        page_header("장비 사용 등록", "실적")
     st.session_state.pop("cal_saved", None)  # 저장·삭제 알림은 띄우지 않음 (달력 칸에 바로 보임)
 
     cfg = db.get_settings()

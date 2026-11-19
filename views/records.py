@@ -213,7 +213,7 @@ def _by_logs() -> None:
             "사용시간": st.column_config.NumberColumn(format="%d"),
             "수수료": st.column_config.NumberColumn(
                 "수수료(원) ✎", min_value=0, step=1000, format="localized",
-                help="칸을 두 번 눌러 금액을 넣고 Enter를 누르면 바로 저장돼요. 다른 내용은 '장비 일정 등록'에서 고칩니다."),
+                help="칸을 두 번 눌러 금액을 넣고 Enter를 누르면 바로 저장돼요. 다른 내용은 '장비 사용 등록'에서 고칩니다."),
             "시료수": st.column_config.NumberColumn(format="%d"),
             "세부지원내용": st.column_config.TextColumn(width="large"),
         },
