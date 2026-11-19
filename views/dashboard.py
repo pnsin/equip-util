@@ -83,7 +83,9 @@ CSS = """<style>
   border-bottom: 1.5px solid #64748B !important;}
 .dcnt td {padding: 11px 8px !important; border-bottom: 1px solid #52617A !important;}
 @media (max-width: 640px) {.dcnt {font-size: 14px;} .dcnt th {font-size: 12.5px;} .dcnt td b {font-size: 17px;}
-  .dcnt th, .dcnt td {padding-left: 4px !important; padding-right: 4px !important;}}
+  .dcnt th, .dcnt td {padding-left: 4px !important; padding-right: 4px !important;}
+  .dcnt {table-layout: fixed;} .dcnt th:first-child {width: 40%;}
+  .dcnt th, .dcnt td:first-child {white-space: normal; word-break: break-all; font-size: 13px;}}
 .dcnt td b {font-size: 19px; font-weight: 700;}
 .dcnt tr.sum td {border-bottom: 0 !important; background: rgba(230,160,85,0.14) !important; color: #FBD38D;}
 .dcnt tr.sum td:first-child {border-radius: 12px 0 0 12px;} .dcnt tr.sum td:last-child {border-radius: 0 12px 12px 0;}
@@ -276,9 +278,8 @@ def _count_section(today) -> None:
         rows = ""
         for r in df.to_dict("records"):
             name = r["센터"]
-            short = name if name == "합계" else (SHORT_OF.get(name) or name)
             cls = ' class="sum"' if name == "합계" else ""
-            rows += (f'<tr{cls}><td>{E(short)}</td><td><b>{r["종"]}</b> 종</td><td><b>{r["대수"]}</b> 대</td>'
+            rows += (f'<tr{cls}><td>{E(name)}</td><td><b>{r["종"]}</b> 종</td><td><b>{r["대수"]}</b> 대</td>'
                      f'<td>{r["i-Tube 등록"]}</td></tr>')
         st.markdown(f'<table class="dcnt"><thead><tr><th>센터</th><th>종</th><th>대수</th><th>i-Tube 등록</th></tr>'
                     f'</thead><tbody>{rows}</tbody></table>', unsafe_allow_html=True)
