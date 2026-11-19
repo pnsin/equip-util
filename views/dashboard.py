@@ -153,10 +153,8 @@ CSS = """<style>
 .drep .gl {display: inline !important; margin-left: 6px;}
 /* 2026-11-19 사용자: 가동률 표와 수수료 표의 칸 위치를 똑같이 (구분 31% + 나머지 같은 폭) */
 .drep {table-layout: fixed;} .drep th:first-child {width: 31%;}
-/* 2026-11-19 사용자: 가동률 표 '전체' 줄도 수수료 표 '목표' 줄처럼 (비치는 파란색, 네모, 위아래 얇은 줄) */
-.drep:not(.fee) tr.sum td {background: rgba(59,130,246,0.09) !important; color: #BFDBFE; border-radius: 0 !important;
-  border-top: 1px solid #52617A !important; border-bottom: 1px solid #52617A !important;}
-.drep:not(.fee) tr.sum .gl {color: #93C5FD;}
+/* 2026-11-19 사용자: 가동률 표도 수수료 표처럼 맨 위 '목표' 줄 (비치는 파란색) · 아래 전체 · 달성률 */
+.drep:not(.fee) tr.goal td {color: #BFDBFE; background: rgba(59,130,246,0.09) !important;}
 [class*="st-key-dsec_"] [data-testid="stVerticalBlock"] {gap: .35rem;}
 </style>"""
 
@@ -438,10 +436,15 @@ def _util_table(sums, cats, kpi, labels, tots) -> str:
     shown = [c for c in report.CATS if c != report.OTHER or any(report.OTHER in p for p in per)]
     head = "".join(f"<th>{E(x)}</th>" for x in ("구분",) + labels)
     goal = float(kpi["util_total"] or 0)  # 목표는 전체 하나 (설정 › KPI 목표)
-    rows = (f'<tr class="sum"><td>전체 <span class="gl">목표 {goal:.0f}%</span></td>'
-            + "".join(_pct(t["util"] if t["avail"] else None, goal) for t in tots) + "</tr>")
+    # 2026-11-19 사용자: 수수료 표처럼 맨 위 목표 줄 → 분류별 → 전체 → 달성률
+    rows = '<tr class="goal"><td>목표</td>' + "".join(
+        f"<td>{goal:.0f}%</td>" if goal else '<td class="z">–</td>' for _ in tots) + "</tr>"
     for c in shown:
         rows += f'<tr><td>{E(c)}</td>' + "".join(_pct(p.get(c), None) for p in per) + "</tr>"
+    rows += '<tr class="sum"><td>전체</td>' + "".join(_pct(t["util"] if t["avail"] else None, None) for t in tots) + "</tr>"
+    rows += '<tr class="rate"><td>달성률</td>' + "".join(
+        f'<td class="{"hit" if t["util"] >= goal else ""}">{t["util"] / goal * 100:.1f}%</td>'
+        if goal and t["avail"] else '<td class="z">–</td>' for t in tots) + "</tr>"
     return f'<table class="drep"><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table>'
 
 
