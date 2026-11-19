@@ -21,21 +21,55 @@ CENTER_ORDER = ["문백", "제조검증", "MV"]
 SHORT: dict[int, str] = {}  # 장비 ID → 짧은 이름 (화면 그릴 때 채움)
 
 # 구역 색: (진한 색, 연한 막대, 바탕)
-BLUE = ("#5B6CFF", "rgba(85,102,230,0.16)", "rgba(85,102,230,0.16)")
-TEAL = ("#1F9D8B", "rgba(85,230,204,0.3)", "rgba(85,230,199,0.16)")
-PURPLE = ("#7E5BC2", "rgba(137,85,230,0.3)", "rgba(138,85,230,0.16)")
-GOAL = "#D9822B"
-AMBER = ("#D9822B", "rgba(230,160,85,0.3)", "rgba(230,160,85,0.16)")
+# 2026-11-19 리디자인: 01 파랑 · 02 초록 · 03 주황 · 04 보라 (색은 배지 · 막대 · 큰 숫자에만)
+BLUE = ("#3B82F6", "rgba(59,130,246,0.35)", "rgba(59,130,246,0.16)")
+TEAL = ("#10B981", "rgba(16,185,129,0.35)", "rgba(16,185,129,0.16)")
+AMBER = ("#F59E0B", "rgba(245,158,11,0.35)", "rgba(245,158,11,0.16)")
+PURPLE = ("#8B5CF6", "rgba(139,92,246,0.35)", "rgba(139,92,246,0.16)")
+GOAL = "#F59E0B"
 
 CSS = """<style>
-[class*="st-key-dsec_"] {background: var(--panel); border-radius: 24px; box-shadow: 0 4px 16px rgba(30,36,51,.04);
-  padding: 24px 28px 22px; margin-bottom: 12px; gap: .55rem; transition: all 0.25s ease; border: 1px solid #52617A;}
-[class*="st-key-dsec_"]:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(30,36,51,.08); border-color: #64748B; }
+[class*="st-key-dsec_"] {background: var(--panel); border-radius: 20px; padding: 22px 26px 20px; margin-bottom: 14px;
+  gap: .55rem; border: 1px solid rgba(255,255,255,0.08);}
+.st-key-dsec_util {border-top: 2px solid #3B82F6;} .st-key-dsec_fee {border-top: 2px solid #10B981;}
+/* 위 요약 4칸 (2026-11-19 사용자 시안: 가동률·수수료는 좁게, 유지보수·종대수는 넓게) */
+.dtop {display: grid; grid-template-columns: .85fr .85fr 1.3fr 1.6fr; gap: 14px; align-items: stretch; margin: 4px 0 16px;}
+.dtop .k {background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px 16px 14px;
+  text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 196px;
+  font-variant-numeric: tabular-nums;}
+.dtop .k.c1 {border-top: 2px solid #3B82F6;} .dtop .k.c2 {border-top: 2px solid #10B981;}
+.dtop .k.c3 {border-top: 2px solid #F59E0B;} .dtop .k.c4 {border-top: 2px solid #8B5CF6;}
+.dtop .no {font-size: 12px; font-weight: 700; letter-spacing: .08em; text-align: center; margin-bottom: 2px;}
+.dtop .tt {font-size: 19px; font-weight: 700; color: #F8FAFC;}
+.dtop .big {font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; margin: 10px 0 8px;}
+.dtop .big small {font-size: 30px; font-weight: 800;}
+.dtop .sub {font-size: 15px; color: #CBD5E1;} .dtop .sub b {font-weight: 700;}
+.dtop .hd {display: flex; align-items: center; gap: 10px; justify-content: center;}
+.dtop .hd .bd {width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700;}
+.dtop .hd .lab {text-align: left;} .dtop .hd .lab .no {margin: 0;}
+.dtop .pill {margin-left: auto; font-size: 15px; font-weight: 700; padding: 4px 12px; border-radius: 99px;
+  background: rgba(139,92,246,0.16); color: #C4B5FD;}
+.dtop .note {font-size: 12.5px; color: #94A3B8; margin-top: 2px;}
+.dtop .mm {display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin-top: 12px; font-size: 11.5px;}
+.dtop .mm b {display: block; font-weight: 700; color: #E2E8F0;} .dtop .mm b.z {color: #475569;}
+.dtop .mm span {color: #94A3B8; font-size: 10.5px;}
+.dtop table {width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; border: 0 !important;}
+.dtop th, .dtop td {padding: 6px 6px !important; text-align: center !important; border: 0 !important;
+  background: transparent !important; white-space: nowrap; color: #E2E8F0;}
+.dtop th {color: #94A3B8 !important; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.12) !important;}
+.dtop td {border-bottom: 1px solid rgba(255,255,255,0.06) !important;}
+.dtop tr, .dtop thead, .dtop tbody {border: 0 !important; background: transparent !important;}
+.dtop tr.sum td {background: rgba(245,158,11,0.14) !important; color: #FBD38D; font-weight: 700; border-bottom: 0 !important;}
+.dtop tr.sum td:first-child {border-radius: 10px 0 0 10px;} .dtop tr.sum td:last-child {border-radius: 0 10px 10px 0;}
+@media (max-width: 1200px) {.dtop {grid-template-columns: 1fr 1fr;}}
+@media (max-width: 640px) {.dtop {grid-template-columns: 1fr;} .dtop .k {min-height: 0;}
+  .dtop table {font-size: 12px;} .dtop th, .dtop td {padding: 5px 3px !important;}}
 .dh {display: flex; align-items: center; gap: 14px; margin-bottom: 12px;}
 .dh .ic {width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
   font-size: 21px; font-weight: 700;}
 .dh .no {font-size: 14px; font-weight: 700; letter-spacing: .08em; line-height: 1.1;}
-.dh .tt {font-size: 21px; font-weight: 700; color: #F8FAFC; line-height: 1.3;}
+.dh .tt {font-size: 19px; font-weight: 700; color: #F8FAFC; line-height: 1.3;}
 .dh .per {margin-left: auto; font-size: 14px; color: #E2E8F0; background: #52617A; padding: 5px 12px; border-radius: 99px;}
 .dst {border: 1px solid #52617A; border-radius: 20px; padding: 16px 20px; height: 100%; min-height: 134px; transition: all 0.25s ease; background: rgba(85,121,230,0.16);}
 .dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,36,51,.06); border-color: #64748B; background: var(--panel);}
@@ -101,12 +135,12 @@ CSS = """<style>
 .drep td:first-child {font-weight: 600;}
 .drep td.g {color: #CBD5E1;}
 .drep .gl {display: block; font-size: 12px; font-weight: 600; color: #FBD38D;}
-.drep td.na {color: #94A3B8;}
+.drep td.na, .drep td.z {color: #475569 !important; font-weight: 400 !important;}
 .drep td.hit {color: #6EE7B7; font-weight: 700;}
-.drep tr.sum td {background: rgba(85,102,230,0.16) !important; font-weight: 700; border-bottom: 0 !important;}
-.drep.fee tr.sum td {background: rgba(85,230,204,0.14) !important;}
-.drep tr.goal td {color: #FBD38D; font-weight: 600; background: rgba(230,160,85,0.10) !important;}
-.drep tr.rate td {font-weight: 700; color: #F8FAFC; border-bottom: 0 !important;}
+.drep tr.sum td {background: rgba(59,130,246,0.16) !important; font-weight: 700; font-size: 15px; border-bottom: 0 !important;}
+.drep.fee tr.sum td {background: rgba(16,185,129,0.16) !important;}
+.drep tr.goal td {color: #FBD38D; font-weight: 700; font-size: 15px; background: rgba(245,158,11,0.10) !important;}
+.drep tr.rate td {font-weight: 700; font-size: 15px; color: #F8FAFC; border-bottom: 0 !important;}
 .drep tr.rate td.hit {color: #6EE7B7;}
 .drep tr.sum td:first-child {border-radius: 12px 0 0 12px;}
 .drep tr.sum td:last-child {border-radius: 0 12px 12px 0;}
@@ -161,15 +195,15 @@ def _bars(values: list, labels: list[str], cur: int | None, color: tuple, fmt, k
     real = [v for v in values if v is not None and pd.notna(v)]
     top = top or max(real + [target or 0, 1e-9]) * 1.22
     ys = [(v if v is not None and pd.notna(v) else 0) for v in values]
-    colors = [color[0] if i == cur else (color[1] if values[i] is not None else "#52617A") for i in range(len(values))]
+    colors = [color[0] if values[i] is not None else "#334155" for i in range(len(values))]  # 2026-11-19 모든 달 진하게
     texts = [fmt(v) if v is not None and pd.notna(v) and (v > 0 or i <= (cur if cur is not None else 99)) else ""
              for i, v in enumerate(values)]
     fig = go.Figure(go.Bar(
         x=labels, y=ys, marker=dict(color=colors, cornerradius=6), text=texts, textposition="outside",
-        textfont=dict(size=12, color=["#F8FAFC" if i == cur else T["muted"] for i in range(len(values))]),
+        textfont=dict(size=12, color="#F8FAFC", weight=600),
         customdata=custom if custom is not None else labels, hovertemplate=hover or "%{x}<extra></extra>",
         cliponaxis=False))
-    if target:
+    if target and target <= top:
         fig.add_hline(y=target, line_dash="dash", line_color=GOAL, line_width=1.5,
                       annotation_text=f"목표 {target:.0f}%", annotation_position="top right",
                       annotation_font=dict(color=GOAL, size=12))
@@ -285,29 +319,63 @@ def render() -> None:
     m_sum, m_tot, pm_tot = cur_and_prev("월", m_ref)
     q_sum, q_tot, pq_tot = cur_and_prev("분기", m_ref)
 
+    ref_day = min(today, (pd.Timestamp(year, cm, 1) + pd.offsets.MonthEnd(0)).date())  # 주간·월간 표의 기준일
+    _top_row(year, y_tot, kpi, ref_day)
     _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
                   (m_sum, q_sum, year_sum), cats, kpi)
-    ref_day = min(today, (pd.Timestamp(year, cm, 1) + pd.offsets.MonthEnd(0)).date())  # 주간·월간 표의 기준일
     _fee_section(year, cm, period, months, ref_day, kpi)
-    _maint_section(year, cm, period, months, eq, eq_all, len(eq) < len(eq_all), today)
-    _count_section(today)
 
 
-def _count_section(today) -> None:
-    """2026-11-19: 장비 종·대수 (센터별 표). 세는 법은 장비 목록 엑셀의 '종·대수 요약'과 같음."""
+def _year_fee(year: int, upto) -> float:
+    """아래 '분류별 발행' 표의 연간 합계와 같은 값 (기준일까지)."""
+    from core import fee_ledger
+    fl = fee_ledger.load()
+    return float(sum(v for d, v in zip(fl["tax_date"], fl["supply"])
+                     if d and d.year == year and d <= upto and pd.notna(v))) if not fl.empty else 0.0
+
+
+def _won_short(v: float) -> str:
+    """756,331,036 → '7.56억 원', 12,340,000 → '1,234만 원'."""
+    if v >= 1e8:
+        return f"{v / 1e8:.2f}<small>억 원</small>"
+    return f"{v / 1e4:,.0f}<small>만 원</small>" if v else "0<small>원</small>"
+
+
+def _top_row(year: int, y_tot: dict, kpi: dict, ref_day) -> None:
+    """2026-11-19 사용자 시안: 맨 위 한 줄 요약 4칸 (01 연간 가동률 · 02 연간 수수료 · 03 유지보수 · 04 종·대수)."""
     from views.equipment import count_summary
-    with st.container(key="dsec_count"):
-        _head(4, "장비 종·대수", AMBER, "▦", f"{today:%Y-%m-%d} 기준")
-        blocks, _ = count_summary(db.load_equipment(full=True))
-        df = dict(blocks)["센터별"]
-        rows = ""
-        for r in df.to_dict("records"):
-            name = r["센터"]
-            cls = ' class="sum"' if name == "합계" else ""
-            rows += (f'<tr{cls}><td>{E(name)}</td><td><b>{r["종"]}</b> 종</td><td><b>{r["대수"]}</b> 대</td>'
-                     f'<td>{r["i-Tube 등록"]}</td></tr>')
-        st.markdown(f'<table class="dcnt"><thead><tr><th>센터</th><th>종</th><th>대수</th><th>i-Tube 등록</th></tr>'
-                    f'</thead><tbody>{rows}</tbody></table>', unsafe_allow_html=True)
+    goal_u, goal_f = float(kpi["util_total"] or 0), float(kpi["fee"] or 0)
+    fee = _year_fee(year, ref_day)
+    c1 = (f'<div class="k c1"><div class="no" style="color:{BLUE[0]}">01</div><div class="tt">{E(w("연간 가동률"))}</div>'
+          f'<div class="big" style="color:{BLUE[0]}">{y_tot["util"]:.1f}<small>%</small></div>'
+          f'<div class="sub">목표 {goal_u:.1f}%</div></div>')
+    rate = f'달성률 <b style="color:{TEAL[0]}">{fee / goal_f * 100:.1f}%</b>' if goal_f else "&nbsp;"
+    c2 = (f'<div class="k c2"><div class="no" style="color:{TEAL[0]}">02</div><div class="tt">연간 수수료</div>'
+          f'<div class="big" style="color:{TEAL[0]}">{_won_short(fee)}</div><div class="sub">{rate}</div></div>')
+    # 03 유지보수: 올해 건수 + 달마다 작은 숫자
+    mt = db.load_maint()
+    mt = mt[mt["date"].map(lambda d: bool(d) and d.year == year)] if not mt.empty else mt
+    by_m = mt.groupby(mt["date"].map(lambda d: d.month)).size().to_dict() if not mt.empty else {}
+    mini = "".join(f'<div><b class="{"" if by_m.get(m) else "z"}">{by_m.get(m, 0)}</b><span>{m}월</span></div>'
+                   for m in range(1, 13))
+    note = "" if len(mt) else '<div class="note">선택한 해에 유지보수 기록이 없어요</div>'
+    c3 = (f'<div class="k c3"><div class="hd"><div class="bd" style="background:{AMBER[2]};color:{AMBER[0]}">⚙</div>'
+          f'<div class="lab"><div class="no" style="color:{AMBER[0]}">03</div><div class="tt">유지보수 실적</div></div></div>'
+          f'<div class="big" style="color:{AMBER[0]}">{len(mt)}<small>건</small></div>{note}'
+          f'<div class="mm">{mini}</div></div>')
+    # 04 종·대수 (센터별 + 합계)
+    blocks, _ = count_summary(db.load_equipment(full=True))
+    df = dict(blocks)["센터별"]
+    tot = df.iloc[-1]
+    rows = "".join(
+        f'<tr{" class=sum" if r["센터"] == "합계" else ""}><td>{E(r["센터"])}</td><td>{r["종"]}종</td>'
+        f'<td>{r["대수"]}대</td><td>{r["i-Tube 등록"]}</td></tr>' for r in df.to_dict("records"))
+    c4 = (f'<div class="k c4"><div class="hd"><div class="bd" style="background:{PURPLE[2]};color:{PURPLE[0]}">▦</div>'
+          f'<div class="lab"><div class="no" style="color:{PURPLE[0]}">04</div><div class="tt">장비 종·대수</div></div>'
+          f'<span class="pill">{tot["종"]}종 / {tot["대수"]}대</span></div>'
+          f'<table><thead><tr><th>센터</th><th>종</th><th>대수</th><th>i-Tube</th></tr></thead><tbody>{rows}</tbody>'
+          f'</table></div>')
+    st.markdown(f'<div class="dtop">{c1}{c2}{c3}{c4}</div>', unsafe_allow_html=True)
 
 
 def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
@@ -316,15 +384,16 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
         _head(1, w("가동률"), BLUE, "%", period)
         # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약은 뺌 (그래프 · 분류별 표만)
 
-        st.markdown(f'<div class="dct">{E(w("월별 가동률"))}</div>', unsafe_allow_html=True)
+        with st.container(horizontal=True, vertical_alignment="center"):
+            st.markdown(f'<div class="dct" style="margin:0">{E(w("월별 가동률"))}</div>', unsafe_allow_html=True)
+            st.space("stretch")
+            # 2026-11-19: 목표선(64%) 때문에 막대가 납작해지지 않게 기본은 실적에 맞춰 확대
+            zoom = st.toggle("실적 확대", value=True, key="dash_util_zoom", help="끄면 목표선까지 보여요")
         vals = [m_of[m]["가동률"] if m in m_of else None for m in range(1, 13)]
-        top = max([v for v in vals if v is not None and pd.notna(v)] + [target, 10]) * 1.25
+        real = [v for v in vals if v is not None and pd.notna(v)]
+        top = (max(real + [1]) * 1.3) if zoom else max(real + [target, 10]) * 1.25
         _bars(vals, [f"{m}월" for m in range(1, 13)], cm - 1, BLUE, lambda v: f"{v:.1f}%", "dash_util_m",
               target=target or None, top=top, hover=w("%{x} 가동률 %{y:.1f}%<extra></extra>"))
-        st.markdown('<div class="dq">' + "".join(
-            f'<div>{q}분기<b>{q_of[q]["가동률"]:.1f}%</b></div>' if q in q_of and pd.notna(q_of[q]["가동률"])
-            else f'<div>{q}분기<b style="color:#E2E8F0">–</b></div>' for q in range(1, 5)) + '</div>',
-            unsafe_allow_html=True)
 
         # 2026-11-19 주간업무보고와 같은 분류별 표 (예전 '센터별 주장비' 목록 자리)
         st.markdown(f'<div class="dct" style="margin:26px 0 12px">{E(w("분류별 가동률"))}</div>', unsafe_allow_html=True)
@@ -346,6 +415,8 @@ def _cat_util(summary: pd.DataFrame, cats: dict[int, str]) -> dict[str, float]:
 def _pct(v, goal) -> str:
     if v is None:
         return '<td class="na">–</td>'
+    if round(v, 1) == 0:
+        return '<td class="z">0.0%</td>'
     hit = " hit" if goal and v >= goal else ""
     return f'<td class="v{hit}">{v:.1f}%</td>'
 
@@ -413,32 +484,11 @@ def _fee_table(cur: pd.DataFrame, year, cm, wk_s, wk_e, ref_day, goal) -> str:
     rows = '<tr class="goal"><td>목표</td>' + "".join(f"<td>{_won_k(g)}</td>" for _, _, g in cols) + "</tr>"
     for c in report.CATS:
         rows += f"<tr><td>{E(c)}</td>" + "".join(
-            f'<td class="v">{_won_k(sums[k].get(c, 0))}</td>' for _, k, _ in cols) + "</tr>"
+            f'<td class="{"v" if sums[k].get(c) else "z"}">{_won_k(sums[k].get(c, 0))}</td>' for _, k, _ in cols) + "</tr>"
     tot = {k: sum(sums[k].values()) for _, k, _ in cols}
-    rows += '<tr class="sum"><td>합계</td>' + "".join(f"<td>{_won_k(tot[k]) if tot[k] else 0}</td>" for _, k, _ in cols) + "</tr>"
+    rows += '<tr class="sum"><td>합계</td>' + "".join(f"<td>{_won_k(tot[k])}</td>" if tot[k] else '<td class="z">0</td>' for _, k, _ in cols) + "</tr>"
     rows += '<tr class="rate"><td>달성률</td>' + "".join(
-        f'<td class="{"hit" if g and tot[k] >= g else ""}">{tot[k] / g * 100:.1f}%</td>' if g else "<td>–</td>"
+        (f'<td class="{"hit" if tot[k] >= g else ""}">{tot[k] / g * 100:.1f}%</td>' if tot[k] else '<td class="z">0.0%</td>')
+        if g else '<td class="z">–</td>'
         for _, k, g in cols) + "</tr>"
     return f'<table class="drep fee"><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table>'
-
-
-def _maint_section(year, cm, period, months, eq, eq_all, filtered: bool, today) -> None:
-    with st.container(key="dsec_maint"):
-        _head(3, "유지보수 실적", PURPLE, "⚙", period)
-        df = db.load_maint()
-        df = df[df["date"].map(lambda d: bool(d) and d.year == year)] if not df.empty else df
-        if filtered and not df.empty:
-            df = df[df["equip_id"].isin(set(eq["id"].astype(int)))]
-        name = dict(zip(eq_all["id"].astype(int), eq_all["name"]))
-        root = dict(zip(eq_all["id"].astype(int), eq_all["root_id"]))
-        df = df.assign(m=[d.month for d in df["date"]],
-                       eqn=[name.get(int(root.get(int(i), i)), r) if pd.notna(i) else r
-                            for i, r in zip(df["equip_id"], df["equip_ref"])]) if not df.empty else df.assign(m=[], eqn=[])
-        by_m = df.groupby("m").size().to_dict() if not df.empty else {}
-        # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약 · 종류별 · 최근 기록은 뺌 (월별 그래프만)
-
-        st.markdown('<div class="dct">월별 유지보수 건수</div>', unsafe_allow_html=True)
-        last = cm if year == today.year else 12
-        vals = [by_m.get(m, 0) if m <= last else None for m in range(1, 13)]
-        _bars(vals, months, cm - 1, PURPLE, lambda v: f"{v:.0f}건", "dash_maint_m",
-              top=max([v or 0 for v in vals] + [3]) * 1.3, hover="%{x} 유지보수 %{y}건<extra></extra>")
