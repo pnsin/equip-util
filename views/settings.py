@@ -42,38 +42,33 @@ def render() -> None:
     _kpi(cfg)
 
 
-FEE_ROW = "수수료 연 목표 (천 원)"
-TOTAL_ROW = w("전체 가동률 목표 (%)")
-
-
 def _kpi(cfg: dict) -> None:
-    """2026-11-19: 주간업무보고 KPI 목표. 해마다 바뀌어서 연도별로 저장 (설정 키 'kpi' = {연도: {...}})."""
+    """2026-11-19: 연도별 KPI 목표 두 가지만 (수수료 연 목표 · 가동률 목표). 설정 키 'kpi' = {연도: {fee, util_total}}."""
     st.subheader("KPI 목표")
     this = dt.date.today().year
-    saved = {int(y) for y in (cfg.get("kpi") or {}) if str(y).isdigit()}
-    years = sorted(saved | {this - 1, this, this + 1}, reverse=True)
-    c1, _ = st.columns([1, 3])
-    year = c1.selectbox("연도", years, index=years.index(this), key="kpi_year", format_func=lambda y: f"{y}년")
-    k = report.kpi(cfg, year)
-    rows = [{"구분": FEE_ROW, "목표": k["fee"] / 1000}, {"구분": TOTAL_ROW, "목표": k["util_total"]}]
-    rows += [{"구분": c, "목표": k["util"].get(c)} for c in report.CATS if c != report.OTHER]
+    table = {int(y): v for y, v in (cfg.get("kpi") or {}).items() if str(y).isdigit()}
+    if this not in table:  # 올해가 없으면 2026 주간업무보고 값(또는 가장 가까운 해)으로 한 줄 미리 채움
+        table[this] = report.kpi(cfg, this)
+    rows = [{"연도": y, "수수료 목표 (천 원)": (table[y].get("fee") or 0) / 1000,
+             w("가동률 목표 (%)"): table[y].get("util_total")} for y in sorted(table, reverse=True)]
     with st.form("kpi_form"):
-        if not k["year_set"]:
-            st.caption(f"{year}년 목표가 아직 없어서 가장 가까운 해의 값을 보여 드려요. 고쳐서 저장하면 {year}년 목표가 돼요.")
-        ed = st.data_editor(pd.DataFrame(rows), key=f"kpi_tbl_{year}", hide_index=True, width="stretch",
-                            disabled=["구분"], height=38 + 35 * len(rows),
-                            column_config={"구분": st.column_config.TextColumn(w("구분 (분류별은 가동률 %)")),
-                                           "목표": st.column_config.NumberColumn(format="localized", min_value=0)})
-        st.caption("수수료 월·주 목표는 연 목표를 12달 · 52주로 나눠요.")
+        ed = st.data_editor(pd.DataFrame(rows), key="kpi_tbl", hide_index=True, width="stretch", num_rows="dynamic",
+                            column_config={
+                                "연도": st.column_config.NumberColumn(format="%d", min_value=2000, max_value=2100,
+                                                                    required=True),
+                                "수수료 목표 (천 원)": st.column_config.NumberColumn(format="localized", min_value=0),
+                                w("가동률 목표 (%)"): st.column_config.NumberColumn(min_value=0, max_value=1000)})
         if st.form_submit_button("KPI 저장", type="primary", icon=":material/save:"):
-            v = dict(zip(ed["구분"], ed["목표"]))
-            num = lambda x: None if x is None or pd.isna(x) else float(x)
-            rec = {"fee": int(round((num(v.get(FEE_ROW)) or 0) * 1000)), "util_total": num(v.get(TOTAL_ROW)) or 0.0,
-                   "util": {c: num(v.get(c)) for c in report.CATS if c != report.OTHER and num(v.get(c)) is not None}}
-            table = {str(y): x for y, x in (cfg.get("kpi") or {}).items()}
-            table[str(year)] = rec
-            db.save_settings(kpi=table)
-            st.session_state.settings_saved = f"{year}년 KPI 목표를 저장했습니다."
+            out = {}
+            for r in ed.to_dict("records"):
+                y = r.get("연도")
+                if y is None or pd.isna(y):
+                    continue
+                fee, util = r.get("수수료 목표 (천 원)"), r.get(w("가동률 목표 (%)"))
+                out[str(int(y))] = {"fee": int(round(float(fee) * 1000)) if fee is not None and pd.notna(fee) else 0,
+                                    "util_total": float(util) if util is not None and pd.notna(util) else 0.0}
+            db.save_settings(kpi=out)
+            st.session_state.settings_saved = "KPI 목표를 저장했습니다."
             st.rerun()
 
 

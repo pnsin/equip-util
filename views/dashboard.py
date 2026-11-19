@@ -100,6 +100,7 @@ CSS = """<style>
 .drep td {padding: 8px 8px !important; border-bottom: 1px solid #52617A !important;}
 .drep td:first-child {font-weight: 600;}
 .drep td.g {color: #CBD5E1;}
+.drep .gl {display: block; font-size: 12px; font-weight: 600; color: #FBD38D;}
 .drep td.na {color: #94A3B8;}
 .drep td.hit {color: #6EE7B7; font-weight: 700;}
 .drep tr.sum td {background: rgba(85,102,230,0.16) !important; font-weight: 700; border-bottom: 0 !important;}
@@ -381,14 +382,12 @@ def _pct(v, goal) -> str:
 def _util_table(sums, cats, kpi, labels, tots) -> str:
     per = [_cat_util(sm, cats) for sm in sums]
     shown = [c for c in report.CATS if c != report.OTHER or any(report.OTHER in p for p in per)]
-    head = "".join(f"<th>{E(x)}</th>" for x in ("구분", "목표") + labels)
-    goal = float(kpi["util_total"] or 0)
-    rows = (f'<tr class="sum"><td>전체</td><td class="g">{goal:.0f}%</td>'
+    head = "".join(f"<th>{E(x)}</th>" for x in ("구분",) + labels)
+    goal = float(kpi["util_total"] or 0)  # 목표는 전체 하나 (설정 › KPI 목표)
+    rows = (f'<tr class="sum"><td>전체 <span class="gl">목표 {goal:.0f}%</span></td>'
             + "".join(_pct(t["util"] if t["avail"] else None, goal) for t in tots) + "</tr>")
     for c in shown:
-        gl = kpi["util"].get(c)
-        rows += (f'<tr><td>{E(c)}</td><td class="g">{f"{gl:.0f}%" if gl else "–"}</td>'
-                 + "".join(_pct(p.get(c), gl) for p in per) + "</tr>")
+        rows += f'<tr><td>{E(c)}</td>' + "".join(_pct(p.get(c), None) for p in per) + "</tr>"
     return f'<table class="drep"><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table>'
 
 

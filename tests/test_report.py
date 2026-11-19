@@ -23,7 +23,7 @@ def test_fee_cat_rules():
 def test_kpi_fallback_and_year():
     k = report.kpi({}, 2026)
     assert k["fee"] == 500_000_000 and k["util_total"] == 64 and not k["year_set"]
-    cfg = {"kpi": {"2026": {"fee": 600_000_000, "util_total": 70, "util": {"SMT": 80}}}}
+    cfg = {"kpi": {"2026": {"fee": 600_000_000, "util_total": 70}}}
     k27 = report.kpi(cfg, 2027)
-    assert k27["fee"] == 600_000_000 and k27["util"]["SMT"] == 80 and not k27["year_set"]
+    assert k27["fee"] == 600_000_000 and k27["util_total"] == 70 and not k27["year_set"]
     assert report.kpi(cfg, 2026)["year_set"]

@@ -34,13 +34,8 @@ FEE_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("분석평가", ("CT", "SEM", "분석", "전기화학")),
 ]
 
-# 2026 주간업무보고 기준 (설정에 아무것도 없을 때 처음 채우는 값)
-DEFAULT_KPI = {
-    "fee": 500_000_000,  # 수수료 연 목표 (원)
-    "util_total": 64.0,  # 전체 가동률 목표 (%)
-    "util": {"5Ah 제조": 100, "50Ah 제조": 100, "배터리 모듈 제조": 50, "사용환경모사": 40, "방폭챔버": 60,
-             "충방전시험기": 70, "환경시험": 100, "진동시험": 100, "분석평가": 100, "워크인챔버": 100, "SMT": 100},
-}
+# 2026 주간업무보고 기준 (설정에 아무것도 없을 때 처음 채우는 값). 2026-11-19 사용자: 목표는 연도별 수수료·가동률 두 가지만
+DEFAULT_KPI = {"fee": 500_000_000, "util_total": 64.0}
 
 
 def norm(v) -> str:
@@ -103,15 +98,9 @@ def ledger_cats(df: pd.DataFrame) -> list[str]:
 
 
 def kpi(cfg: dict, year: int) -> dict:
-    """그 해 목표. 그 해가 없으면 가장 가까운 이전 해 → 2026 주간업무보고 기준값."""
-    table = cfg.get("kpi") or {}
-    have = sorted(int(y) for y in table if str(y).isdigit())
-    prev = [y for y in have if y <= year] or have
-    base = {"fee": DEFAULT_KPI["fee"], "util_total": DEFAULT_KPI["util_total"], "util": dict(DEFAULT_KPI["util"])}
-    if prev:
-        got = table[str(prev[-1])] if str(prev[-1]) in table else table[prev[-1]]
-        base["fee"] = got.get("fee", base["fee"])
-        base["util_total"] = got.get("util_total", base["util_total"])
-        base["util"] = {**base["util"], **(got.get("util") or {})}
-    base["year_set"] = year in have
-    return base
+    """그 해 목표 {fee(원), util_total(%)}. 그 해가 없으면 가장 가까운 이전 해 → 2026 주간업무보고 값."""
+    table = {int(y): v for y, v in (cfg.get("kpi") or {}).items() if str(y).isdigit()}
+    prev = [y for y in sorted(table) if y <= year] or sorted(table)
+    got = table[prev[-1]] if prev else {}
+    return {"fee": got.get("fee", DEFAULT_KPI["fee"]), "util_total": got.get("util_total", DEFAULT_KPI["util_total"]),
+            "year_set": year in table}
