@@ -79,11 +79,19 @@ def _ledger() -> None:
         empty_state("아직 올린 매출장이 없어요", "재무팀 매출장 엑셀을 올려 주세요.", icon="⇪")
         return
     years = sorted({d.year for d in df["tax_date"] if d}, reverse=True)
-    c1, c2 = st.columns([1, 3])
+    c1, c2, c3 = st.columns([1, 1.2, 2.8])
     yr = c1.selectbox("연도", ["전체"] + years, key="fl_year")
-    q = c2.text_input("업체·발행내역", placeholder="검색", key="fl_q")
     if yr != "전체":
         df = df[df["tax_date"].map(lambda d: bool(d) and d.year == yr)]
+    # 2026-11-19 사용자: 애매한 줄(기타)을 찾기 어려움 → 보고 분류로 골라 보기 (기타만 보고 바로 고침)
+    df = df.assign(report_cat=report.ledger_cats(df)) if not df.empty else df
+    cnt = df["report_cat"].value_counts().to_dict() if not df.empty else {}
+    cat = c2.selectbox("보고 분류", ["전체"] + [c for c in report.CATS if cnt.get(c)], key="fl_cat",
+                       format_func=lambda c: c if c == "전체" else f"{c} ({cnt.get(c, 0)}건)",
+                       help="'기타'를 고르면 분류가 애매한 줄만 보여요. 표의 '보고 분류' 칸을 눌러 바로 고칠 수 있어요.")
+    if cat != "전체":
+        df = df[df["report_cat"] == cat]
+    q = c3.text_input("업체·발행내역", placeholder="검색", key="fl_q")
     if q:
         hay = df["company"].astype(str) + " " + df["item"].astype(str)
         df = df[hay.str.contains(q, case=False, regex=False)]
@@ -91,20 +99,21 @@ def _ledger() -> None:
     m1.metric("건수", f"{len(df):,}")
     m2.metric("공급가 합계", f"{df['supply'].sum():,.0f} 원")
     m3.metric("미수금", f"{df['unpaid'].sum():,.0f} 원")
-    heads = {"tax_date": "세금일자", "company": "업체명", "item": "발행내역", "report_cat": "보고 분류", "supply": "공급가",
+    RC = "보고 분류 ✎"  # 이 칸만 고칠 수 있음
+    heads = {"tax_date": "세금일자", "company": "업체명", "item": "발행내역", "report_cat": RC, "supply": "공급가",
              "total": "합계", "paid1_date": "입금일(1차)", "paid1": "입금(1차)", "paid2_date": "입금일(2차)",
              "paid2": "입금(2차)", "unpaid": "미수금", "staff": "담당자", "team": "팀명"}
     # 2026-11-19 보고 분류: 발행내역으로 자동으로 정하고, 틀린 줄만 여기서 바로 고침 (장비 종합 현황 02 수수료 표에 씀)
-    view = df.assign(report_cat=report.ledger_cats(df))[["id"] + list(heads)].rename(columns=heads)
+    view = df[["id"] + list(heads)].rename(columns=heads)
     view = view.reset_index(drop=True)
-    ed = st.data_editor(view, key=f"fl_tbl_{yr}_{q}_{db.data_version()}", hide_index=True, width="stretch", column_order=list(heads.values()),
-                        disabled=[c for c in view.columns if c != "보고 분류"],
-                        column_config={"보고 분류": st.column_config.SelectboxColumn(
+    ed = st.data_editor(view, key=f"fl_tbl_{yr}_{cat}_{q}_{db.data_version()}", hide_index=True, width="stretch", column_order=list(heads.values()),
+                        disabled=[c for c in view.columns if c != RC],
+                        column_config={RC: st.column_config.SelectboxColumn(
                                            options=report.CATS, required=True, width=120,
                                            help="장비 종합 현황 수수료 표의 분류. 바꾸면 바로 저장되고, 같은 업체·같은 발행내역 줄(다음에 올릴 매출장 포함)도 같이 바뀌어요."),
                                        **{h: st.column_config.NumberColumn(format="localized")
                                           for h in ("공급가", "합계", "입금(1차)", "입금(2차)", "미수금")}})
-    changed = {int(i): c for i, c, o in zip(ed["id"], ed["보고 분류"], view["보고 분류"]) if c and c != o}
+    changed = {int(i): c for i, c, o in zip(ed["id"], ed[RC], view[RC]) if c and c != o}
     if changed:
         fl.set_cats(changed)
         st.toast(f"보고 분류 {len(changed)}건을 바꿨어요.", icon=":material/check_circle:")
