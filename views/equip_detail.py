@@ -168,28 +168,31 @@ def render() -> None:
                                       showgrid=False))
         st.plotly_chart(chart_layout(fig, 300), width="stretch", config=CFG)
 
+    rows = logs[(logs["start_date"] <= pd.Timestamp(e_eff)) & (logs["end_date"] >= pd.Timestamp(s))]
+    tbl_h = min(420, 38 + 35 * len(rows))  # 2026-11-19 사용자: 주요 업체 그래프를 옆 '이 기간 실적' 표와 같은 길이로
     c1, c2 = st.columns([1, 1.6])
     with c1:
         section_bar("주요 업체")
-        b = calc.breakdown(daily, logs, s, e_eff, "company").head(8)
+        b = calc.breakdown(daily, logs, s, e_eff, "company").head(12)
         if b.empty:
             st.caption("이 기간에 실적이 없습니다.")
         else:
             b = b.iloc[::-1]
             fig = go.Figure(go.Bar(x=b["사용시간"], y=b["company"], orientation="h", marker_color=T["accent"],
                                    hovertemplate="%{y}<br>%{x:,.0f} h<extra></extra>"))
-            chart_layout(fig, max(180, 32 * len(b) + 60), legend=False).update_layout(bargap=0.45)
+            chart_layout(fig, max(180, tbl_h), legend=False).update_layout(
+                bargap=0.35, margin=dict(t=4, b=4),  # 업체가 적어도 막대가 뚱뚱해지지 않게 8칸 기준, 위부터 채움
+                yaxis=dict(range=[len(b) - 0.5 - max(len(b), 8), len(b) - 0.5]))
             st.plotly_chart(fig, width="stretch", config=CFG)
     with c2:
         section_bar("이 기간 실적", sub="최근 순")
-        rows = logs[(logs["start_date"] <= pd.Timestamp(e_eff)) & (logs["end_date"] >= pd.Timestamp(s))]
         if rows.empty:
             st.caption("이 기간에 실적이 없습니다.")
         else:
             st.dataframe(rows[["start_date", "end_date", "company", "purpose", "hours", "fee", "created_by"]].rename(
                 columns={"start_date": "시작일", "end_date": "종료일", "company": "업체", "purpose": "목적",
                          "hours": "시간(h)", "fee": "수수료", "created_by": "담당자"}),
-                hide_index=True, width="stretch", height=min(420, 38 + 35 * len(rows)),
+                hide_index=True, width="stretch", height=tbl_h,
                 column_config={"시작일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                "종료일": st.column_config.DateColumn(format="YYYY-MM-DD"),
                                "수수료": st.column_config.NumberColumn(format="%d")})
