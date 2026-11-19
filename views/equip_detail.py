@@ -173,16 +173,14 @@ def render() -> None:
     c1, c2 = st.columns([1, 1.6])
     with c1:
         section_bar("주요 업체")
-        b = calc.breakdown(daily, logs, s, e_eff, "company").head(12)
+        b = calc.breakdown(daily, logs, s, e_eff, "company").head(8)
         if b.empty:
             st.caption("이 기간에 실적이 없습니다.")
         else:
             b = b.iloc[::-1]
             fig = go.Figure(go.Bar(x=b["사용시간"], y=b["company"], orientation="h", marker_color=T["accent"],
                                    hovertemplate="%{y}<br>%{x:,.0f} h<extra></extra>"))
-            chart_layout(fig, max(180, tbl_h), legend=False).update_layout(
-                bargap=0.35, margin=dict(t=4, b=4),  # 업체가 적어도 막대가 뚱뚱해지지 않게 8칸 기준, 위부터 채움
-                yaxis=dict(range=[len(b) - 0.5 - max(len(b), 8), len(b) - 0.5]))
+            chart_layout(fig, max(180, tbl_h), legend=False).update_layout(bargap=0.45, margin=dict(t=4, b=4))
             st.plotly_chart(fig, width="stretch", config=CFG)
     with c2:
         section_bar("이 기간 실적", sub="최근 순")
