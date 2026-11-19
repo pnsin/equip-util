@@ -101,7 +101,7 @@ def _ledger() -> None:
                         disabled=[c for c in view.columns if c != "보고 분류"],
                         column_config={"보고 분류": st.column_config.SelectboxColumn(
                                            options=report.CATS, required=True, width=120,
-                                           help="장비 종합 현황 수수료 표의 분류. 바꾸면 바로 저장돼요."),
+                                           help="장비 종합 현황 수수료 표의 분류. 바꾸면 바로 저장되고, 같은 업체·같은 발행내역 줄(다음에 올릴 매출장 포함)도 같이 바뀌어요."),
                                        **{h: st.column_config.NumberColumn(format="localized")
                                           for h in ("공급가", "합계", "입금(1차)", "입금(2차)", "미수금")}})
     changed = {int(i): c for i, c, o in zip(ed["id"], ed["보고 분류"], view["보고 분류"]) if c and c != o}

@@ -95,10 +95,18 @@ def add_companies(new: pd.DataFrame) -> int:
     return len(add)
 
 
+def _same(r: dict) -> str:
+    """같은 업체 · 같은 발행내역인지 보는 열쇠 (보고 분류를 한 번 고치면 같은 줄에 모두 따라가게)."""
+    brn = re.sub(r"\D", "", str(r.get("brn") or "")) or _nm(r.get("company"))
+    return brn + "|" + re.sub(r"\s", "", str(r.get("item") or ""))
+
+
 def merge(new: pd.DataFrame) -> tuple[int, int, int]:
-    """올린 줄을 저장된 매출장에 합침 → (새로 넣음, 입금 고침, 이미 있음)."""
+    """올린 줄을 저장된 매출장에 합침 → (새로 넣음, 입금 고침, 이미 있음).
+    2026-11-19: 예전에 보고 분류를 고친 적 있는 업체 · 발행내역이면 새 줄도 같은 분류로."""
     cur = db.get_store().read("fee_ledger")
     rows = {str(r["key"]): dict(r) for r in cur.to_dict("records")}
+    learned = {_same(r): r["report_cat"] for r in rows.values() if str(r.get("report_cat") or "").strip()}
     ids = pd.to_numeric(cur["id"], errors="coerce").dropna()
     nid = int(ids.max()) + 1 if len(ids) else 1
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -106,7 +114,7 @@ def merge(new: pd.DataFrame) -> tuple[int, int, int]:
     for r in new.to_dict("records"):
         old = rows.get(r["key"])
         if old is None:
-            rows[r["key"]] = r | {"id": nid, "imported_at": now}
+            rows[r["key"]] = r | {"id": nid, "imported_at": now, "report_cat": learned.get(_same(r), "")}
             nid += 1
             add += 1
         elif any(str(old.get(k, "")) != str(r[k]) for k in r):
@@ -121,16 +129,19 @@ def merge(new: pd.DataFrame) -> tuple[int, int, int]:
 
 
 def set_cats(changes: dict[int, str]) -> int:
-    """2026-11-19: 줄마다 보고 분류를 고침. 발행내역 자동 분류와 같으면 비워 둠 (규칙이 바뀌면 따라가게)."""
+    """2026-11-19: 줄마다 보고 분류를 고침. 같은 업체 · 같은 발행내역 줄도 함께 (다음에 올리는 매출장 줄도 따라감).
+    발행내역 자동 분류와 같으면 비워 둠 (규칙이 바뀌면 따라가게)."""
     from core import report
     cur = db.get_store().read("fee_ledger")
     rows = cur.to_dict("records")
+    by_id = {int(db.to_num(r["id"])): r for r in rows if db.to_num(r.get("id")) is not None}
+    want_of = {_same(by_id[i]): report.norm(c) for i, c in changes.items() if i in by_id}
     n = 0
     for r in rows:
-        rid = db.to_num(r.get("id"))
-        if rid is None or int(rid) not in changes:
+        k = _same(r)
+        if k not in want_of:
             continue
-        cat = report.norm(changes[int(rid)])
+        cat = want_of[k]
         want = "" if not cat or cat == report.fee_cat(r.get("item")) else cat
         if str(r.get("report_cat") or "") != want:
             r["report_cat"] = want
