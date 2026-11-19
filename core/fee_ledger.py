@@ -16,6 +16,19 @@ import streamlit as st
 from core import db
 
 TEAMS = ("차세대전지팀", "배터리산업팀")
+TEAM_NOW = "배터리산업팀"  # 2026-11-19 사용자: 차세대전지팀 → 배터리산업팀으로 이름만 바뀐 같은 팀 (두 이름 모두 우리 팀)
+
+
+def drop_name_dupes(df: pd.DataFrame) -> pd.DataFrame:
+    """재무팀 파일에 같은 줄(세금일자·업체·발행내역·공급가)이 옛 팀 이름과 새 팀 이름으로 두 번 있으면 한 번만 셈."""
+    if df.empty:
+        return df
+    base = df["key"].astype(str).str.replace(r"#\d+$", "", regex=True)
+    new_keys = set(base[df["team"].astype(str).str.strip() == TEAM_NOW])
+    old = df["team"].astype(str).str.strip() != TEAM_NOW
+    return df[~(old & base.isin(new_keys))]
+
+
 HEAD = {"세금일자": "tax_date", "팀명": "team", "담당자": "staff", "업체명": "company", "사업자번호": "brn",
         "발행내역": "item", "공급가": "supply", "부가세": "vat", "합계": "total", "입금일자(1차)": "paid1_date",
         "입금금액(1차)": "paid1", "입금일자(2차)": "paid2_date", "입금금액(2차)": "paid2", "미수금": "unpaid"}
@@ -68,6 +81,7 @@ def load() -> pd.DataFrame:
         df[c] = pd.to_numeric(df[c], errors="coerce")
     for c in DATES:
         df[c] = df[c].map(db.to_date)
+    df = drop_name_dupes(df)
     return df.sort_values("tax_date", key=lambda s: s.map(lambda d: d.toordinal() if d else 0),
                           ascending=False).reset_index(drop=True)
 
@@ -142,7 +156,7 @@ def set_cats(changes: dict[int, str]) -> int:
         if k not in want_of:
             continue
         cat = want_of[k]
-        want = "" if not cat or cat == report.fee_cat(r.get("item")) else cat
+        want = "" if not cat or cat == report.fee_cat(r.get("item"), r.get("staff")) else cat
         if str(r.get("report_cat") or "") != want:
             r["report_cat"] = want
             n += 1

@@ -18,6 +18,9 @@ def test_fee_cat_rules():
     assert report.fee_cat("충돌, 낙하 장비수수료(RG3)") == "사용환경모사"
     assert report.fee_cat("SMT사용료") == "SMT"
     assert report.fee_cat("") == "기타"
+    assert report.fee_cat("한국배터리안전연구원 주식회사", "이상헌") == "진동시험"
+    assert report.fee_cat("충방전기 시험수수료", "이상헌") == "충방전시험기"
+    assert report.fee_cat("배터리아카데미 6기(1)", "이상헌") == "기타"
 
 
 def test_kpi_fallback_and_year():
@@ -27,3 +30,11 @@ def test_kpi_fallback_and_year():
     k27 = report.kpi(cfg, 2027)
     assert k27["fee"] == 600_000_000 and k27["util_total"] == 70 and not k27["year_set"]
     assert report.kpi(cfg, 2026)["year_set"]
+
+
+def test_ledger_same_row_under_both_team_names_counts_once():
+    import pandas as pd
+    from core.fee_ledger import drop_name_dupes
+    df = pd.DataFrame({"key": ["a", "a#2", "b", "c", "c#2"],
+                       "team": ["차세대전지팀", "배터리산업팀", "차세대전지팀", "배터리산업팀", "배터리산업팀"]})
+    assert list(drop_name_dupes(df)["key"]) == ["a#2", "b", "c", "c#2"]
