@@ -32,10 +32,9 @@ def test_kpi_fallback_and_year():
     assert report.kpi(cfg, 2026)["year_set"]
 
 
-def test_ledger_team_rule():
-    import datetime as dt
-    from core.fee_ledger import ours
-    assert ours("배터리산업팀", dt.date(2026, 3, 1))
-    assert not ours("차세대전지팀", dt.date(2026, 9, 28))
-    assert ours("차세대전지팀", dt.date(2025, 7, 1))
-    assert not ours("다른팀", dt.date(2025, 7, 1))
+def test_ledger_same_row_under_both_team_names_counts_once():
+    import pandas as pd
+    from core.fee_ledger import drop_name_dupes
+    df = pd.DataFrame({"key": ["a", "a#2", "b", "c", "c#2"],
+                       "team": ["차세대전지팀", "배터리산업팀", "차세대전지팀", "배터리산업팀", "배터리산업팀"]})
+    assert list(drop_name_dupes(df)["key"]) == ["a#2", "b", "c", "c#2"]
