@@ -96,10 +96,20 @@ def _ledger() -> None:
     if q:
         hay = df["company"].astype(str) + " " + df["item"].astype(str)
         df = df[hay.str.contains(q, case=False, regex=False)]
-    m1, m2, m3 = st.columns(3)
-    m1.metric("건수", f"{len(df):,}")
-    m2.metric("공급가 합계", f"{df['supply'].sum():,.0f} 원")
-    m3.metric("미수금", f"{df['unpaid'].sum():,.0f} 원")
+    # 2026-11-19 사용자: 칸에 비해 글씨가 작음 → 크게, 칸마다 색
+    cards = [("건수", f"{len(df):,}<small>건</small>", "#818CF8"),
+             ("공급가 합계", f"{df['supply'].sum():,.0f}<small>원</small>", "#34D399"),
+             ("미수금", f"{df['unpaid'].sum():,.0f}<small>원</small>", "#FBBF24" if df["unpaid"].sum() else "#94A3B8")]
+    st.markdown(
+        '<style>.flk{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:6px 0 14px}'
+        '.flk>div{background:var(--panel,#1E293B);border:1px solid rgba(255,255,255,.08);border-radius:16px;'
+        'padding:16px 12px;text-align:center;font-variant-numeric:tabular-nums}'
+        '.flk .l{font-size:17px;font-weight:700;color:#E2E8F0;margin-bottom:6px}'
+        '.flk .v{font-size:34px;font-weight:800;line-height:1.2}.flk .v small{font-size:20px;margin-left:4px;font-weight:700}'
+        '@media(max-width:640px){.flk{grid-template-columns:1fr}.flk .v{font-size:28px}}</style>'
+        '<div class="flk">' + "".join(
+            f'<div style="border-top:3px solid {c}"><div class="l">{lab}</div><div class="v" style="color:{c}">{v}</div></div>'
+            for lab, v, c in cards) + '</div>', unsafe_allow_html=True)
     RC = "보고 분류 ✎"  # 이 칸만 고칠 수 있음
     heads = {"tax_date": "세금일자", "company": "업체명", "item": "발행내역", "report_cat": RC, "supply": "공급가",
              "total": "합계", "paid1_date": "입금일(1차)", "paid1": "입금(1차)", "paid2_date": "입금일(2차)",
