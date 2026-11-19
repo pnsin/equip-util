@@ -75,12 +75,16 @@ def count_summary(eq: pd.DataFrame) -> tuple[list[tuple[str, pd.DataFrame]], lis
     code = dict(zip(live["id"].astype(int), live["code"]))
     u["_center"] = [cen.get(int(i)) or "기타" for i in u["id"]]
     u["_group"] = [grp.get(int(i), "") for i in u["id"]]
+    spc = {int(i): (str(sp).strip() or str(n)) for i, sp, n in zip(live["id"], live["species"], live["name"])} \
+        if "species" in live else {}
+    u["_species"] = [spc.get(int(i), str(i)) for i in u["id"]]
     root = dict(zip(live["id"].astype(int), live["root_id"].astype(int))) if "root_id" in live else {}
     n_code = live.assign(_r=live["id"].astype(int).map(root))[live["code"] != ""].groupby("_r").size()
     u["_coded"] = [int(n_code.get(int(i), 0)) for i in u["id"]]
 
     def row(name, d):
-        return {"구분": name, "종": len(d), "대수": int(d["대수"].sum()), "i-Tube 등록": int(d["_coded"].sum())}
+        per = d.groupby("_species")["대수"].sum()  # 같은 주장비(종) = 1종, 대수 0인 종은 빼고
+        return {"구분": name, "종": int((per > 0).sum()), "대수": int(d["대수"].sum()), "i-Tube 등록": int(d["_coded"].sum())}
 
     def block(col, order):
         rows = [row(k, u[u[col] == k]) for k in order if (u[col] == k).any()]
@@ -90,7 +94,7 @@ def count_summary(eq: pd.DataFrame) -> tuple[list[tuple[str, pd.DataFrame]], lis
     by_center = block("_center", db.CENTERS + sorted(set(u["_center"]) - set(db.CENTERS)))
     by_group.columns = ["대분류"] + list(by_group.columns[1:])
     by_center.columns = ["센터"] + list(by_center.columns[1:])
-    notes = ["· 종 = 맨 위 장비 줄 수 (장비 목록 화면 위 '장비' 숫자와 같음)",
+    notes = ["· 종 = '주장비(종)' 수. 같은 주장비(종)에 묶인 장비는 1종 (예: 유연 방폭챔버 9대 = 1종 9대), 대수가 0이면 세지 않음",
              "· 대수 = 실제 장비 대수. 세부장비가 있으면 세부장비 '대수' 합, (양극)·(음극) 짝은 1대",
              "· 세부장비 대수가 모두 0이면 장비 자신의 '대수'로 셈",
              "· i-Tube 등록 = ITUBE번호가 있는 장비 수 (세부장비 포함, 방폭챔버 4대는 4)"]
