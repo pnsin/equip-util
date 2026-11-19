@@ -110,7 +110,7 @@ CSS = """<style>
 .itn {font-weight: 700; letter-spacing: .03em; color: color-mix(in srgb, var(--accent-hi) 50%, var(--ink));}
 .itn.no {font-weight: 500; color: var(--muted);}
 .ic .wh {font-size: .75rem; color: var(--muted); margin-top: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.ic .bs {display: flex; gap: .3rem; margin-top: .55rem; flex-wrap: wrap;}
+.ic .bs {display: flex; gap: .3rem; margin-top: .55rem; flex-wrap: wrap; min-height: 1.36rem;}  /* 2026-11-19 배지 없는 카드도 같은 높이 */
 .bdg {font-size: .7rem; padding: .12rem .55rem; border-radius: 999px; background: var(--panel2); color: var(--muted);}
 .bdg.e {background: var(--warn-bg); color: var(--warn);}
 .bdg.k {background: var(--accent-bg); color: var(--accent);}
