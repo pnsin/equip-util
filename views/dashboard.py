@@ -33,7 +33,7 @@ CSS = """<style>
   gap: .55rem; border: 1px solid rgba(255,255,255,0.08);}
 .st-key-dsec_util {border-top: 2px solid #3B82F6;} .st-key-dsec_fee {border-top: 2px solid #10B981;}
 /* 위 요약 4칸 (2026-11-19 사용자 시안: 가동률·수수료는 좁게, 유지보수·종대수는 넓게) */
-.dtop {display: grid; grid-template-columns: .85fr .85fr 1.3fr 1.6fr; gap: 14px; align-items: stretch; margin: 4px 0 16px;}
+.dtop {display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: stretch; margin: 4px 0 16px;}
 .dtop .k {background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px 16px 14px;
   text-align: center; display: flex; flex-direction: column; justify-content: flex-start; min-height: 196px;
   font-variant-numeric: tabular-nums;}
@@ -141,6 +141,16 @@ CSS = """<style>
 @media (max-width: 640px) {.drep {font-size: 13px; table-layout: fixed;} .drep th {font-size: 12px;}
   .drep th, .drep td {padding-left: 3px !important; padding-right: 3px !important;}
   .drep th:first-child {width: 34%;} .drep td:first-child {white-space: normal; word-break: keep-all; font-size: 12px;}}
+/* 2026-11-19 사용자: 한눈에 보이게 위아래 높이를 반 정도로 (그래프 낮게, 표 줄 촘촘하게) */
+[class*="st-key-dsec_"] {padding: 14px 22px 10px !important;}
+.dh {margin-bottom: 0 !important;} .dh .ic {width: 38px !important; height: 38px !important;}
+.dct {margin: 8px 0 4px !important;}
+.drep {font-size: 13.5px !important;}
+.drep th {font-size: 13px !important; padding: 4px 8px !important;}
+.drep td {padding: 3px 8px !important;}
+.drep tr.sum td, .drep tr.goal td, .drep tr.rate td {font-size: 14px !important;}
+.drep .gl {display: inline !important; margin-left: 6px;}
+[class*="st-key-dsec_"] [data-testid="stVerticalBlock"] {gap: .35rem;}
 </style>"""
 
 
@@ -205,7 +215,7 @@ def _bars(values: list, labels: list[str], cur: int | None, color: tuple, fmt, k
                       yaxis=dict(visible=False, range=[0, top], fixedrange=True),
                       xaxis=dict(type="category", showgrid=False, fixedrange=True,
                                  tickfont=dict(size=12, color=T["muted"])))
-    chart_layout(fig, 230, legend=False).update_layout(margin=dict(l=8, r=8, t=26, b=8))
+    chart_layout(fig, 140, legend=False).update_layout(margin=dict(l=8, r=8, t=22, b=4))  # 2026-11-19 높이 반으로
     return st.plotly_chart(fig, width="stretch", config=CFG, key=key,
                            **({"on_select": "rerun", "selection_mode": "points"} if custom is not None else {}))
 
@@ -383,7 +393,6 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
         _head(1, w("가동률"), BLUE, "%", period)
         # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약은 뺌 (그래프 · 분류별 표만)
 
-        st.markdown(f'<div class="dct">{E(w("월별 가동률"))}</div>', unsafe_allow_html=True)
         # 2026-11-19 사용자: 실적 확대 스위치 없앰 → 늘 실적에 맞춰 확대 (목표선은 화면 안에 들 때만)
         vals = [m_of[m]["가동률"] if m in m_of else None for m in range(1, 13)]
         real = [v for v in vals if v is not None and pd.notna(v)]
@@ -392,7 +401,7 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
               target=target or None, top=top, hover=w("%{x} 가동률 %{y:.1f}%<extra></extra>"))
 
         # 2026-11-19 주간업무보고와 같은 분류별 표 (예전 '센터별 주장비' 목록 자리)
-        st.markdown(f'<div class="dct" style="margin:26px 0 12px">{E(w("분류별 가동률"))}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="dct">{E(w("분류별 가동률"))}</div>', unsafe_allow_html=True)
         st.markdown(_util_table(sums, cats, kpi, (f"{cm}월", f"{cq}분기", f"{year}년"),
                                 (m_tot, q_tot, y_tot)), unsafe_allow_html=True)
 
@@ -453,25 +462,27 @@ def _fee_section(year, cm, period, months, ref_day, kpi) -> None:
         goal = float(kpi["fee"] or 0)
         # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약은 뺌 (그래프 · 분류별 표만)
 
-        st.markdown('<div class="dct">월별 수수료 (원)</div>', unsafe_allow_html=True)
         vals = [fees.get(m, 0) if m <= cm or m in fees else None for m in range(1, 13)]
-        _bars(vals, months, cm - 1, TEAL, lambda v: f"{v:,.0f}", "dash_fee_m",
+        _bars(vals, months, cm - 1, TEAL, lambda v: f"{v:,.0f}원", "dash_fee_m",
               hover="%{x} 수수료 %{y:,.0f}원<extra></extra>", custom=list(range(1, 13)))
 
         # 분류별 발행 (주간업무보고 'I. 수수료현황'과 같은 모양)
         # 2026-11-19 사용자: 단위는 원, 주간은 뺌 (월간 · 연간만)
-        st.markdown('<div class="dct" style="margin:26px 0 12px">분류별 발행 (원)</div>', unsafe_allow_html=True)
-        st.markdown(_fee_table(cur, cm, ref_day, goal), unsafe_allow_html=True)
+        st.markdown('<div class="dct">분류별 발행 (원)</div>', unsafe_allow_html=True)
+        st.markdown(_fee_table(cur, year, cm, ref_day, goal), unsafe_allow_html=True)
 
 
-def _fee_table(cur: pd.DataFrame, cm, ref_day, goal) -> str:
+def _fee_table(cur: pd.DataFrame, year, cm, ref_day, goal) -> str:
+    # 2026-11-19 사용자: 가동률 표처럼 '11월 · 4분기 · 2026년'
+    cq = (cm - 1) // 3 + 1
     if cur.empty:
-        d = cur.assign(c=[], m=[], y=[])
+        d = cur.assign(c=[], m=[], q=[], y=[])
     else:
         d = cur.assign(c=report.ledger_cats(cur),
                        m=[x.month == cm for x in cur["tax_date"]],
+                       q=[(x.month - 1) // 3 + 1 == cq and x <= ref_day for x in cur["tax_date"]],
                        y=[x <= ref_day for x in cur["tax_date"]])
-    cols = [("월간", "m", goal / 12), ("연간", "y", goal)]
+    cols = [(f"{cm}월", "m", goal / 12), (f"{cq}분기", "q", goal / 4), (f"{year}년", "y", goal)]
     sums = {k: (d[d[k]].groupby("c")["supply"].sum().to_dict() if len(d) else {}) for _, k, _ in cols}
     head = "".join(f"<th>{x}</th>" for x in ["구분"] + [c for c, _, _ in cols])
     rows = '<tr class="goal"><td>목표</td>' + "".join(f"<td>{_won(g)}</td>" for _, _, g in cols) + "</tr>"
