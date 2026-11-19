@@ -513,3 +513,15 @@ def test_write_during_other_read_falls_back_to_reread(store):
     db._applied("usage", tok, lambda d: d.iloc[0:0])
     db.refresh_data()
     assert "usage" in db._STALE  # 겹칠 수 있으니 반영하지 않고 다음에 다시 읽음
+
+
+def test_same_name_system_keeps_name_and_units_get_numbers():
+    """2026-11-19 방폭챔버 4대를 한 시스템으로: 시스템은 이름 그대로, 안의 장비만 i-Tube 번호 순 n호기."""
+    rows = [(10, "방폭챔버", "", None), (11, "방폭챔버", "2406-C-0013", 10), (12, "방폭챔버", "2406-C-0010", 10),
+            (13, "방폭챔버", "2406-C-0012", 10), (14, "방폭챔버", "2406-C-0011", 10)]
+    df = pd.DataFrame([{"id": i, "name": n, "code": c, "parent_id": p, "location": "센터(오창)", "kind": "주장비",
+                        "in_kpi": "N" if i == 10 else "Y"} for i, n, c, p in rows])
+    eq = db.add_pick_labels(db._equipment_frame(df))
+    short = dict(zip(eq["id"], eq["short"]))
+    assert short == {10: "방폭챔버", 12: "방폭챔버 1호기", 14: "방폭챔버 2호기", 13: "방폭챔버 3호기", 11: "방폭챔버 4호기"}
+    assert dict(zip(eq["id"], eq["itube_id"]))[11] == 11  # 각 호기는 자기 i-Tube 번호로 올라감

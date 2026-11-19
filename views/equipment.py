@@ -56,7 +56,9 @@ def _tree_mark(depth: int) -> str:
 def _summary(eq: pd.DataFrame) -> None:
     top = eq[eq["depth"] == 0]
     sub = eq[eq["depth"] > 0]
-    unreg = top[top["code"] == ""]
+    # 2026-11-19: 번호 없는 시스템이라도 안의 장비가 i-Tube 번호를 가지면 (예: 방폭챔버 4대 묶음) '번호 없음'에서 뺌
+    coded = set(eq.loc[eq["code"] != "", "root_id"].astype(int)) if "root_id" in eq else set()
+    unreg = top[(top["code"] == "") & ~top["id"].astype(int).isin(coded)]
     pills = [("a", "장비", len(top)), ("", "세부장비", len(sub)), ("w", "ITUBE번호 없음", len(unreg))]
     st.markdown("<div class='eq-sum'>" + "".join(
         f"<div class='p {c}'>{html.escape(t)}<b>{n:,}</b></div>" for c, t, n in pills) + "</div>",

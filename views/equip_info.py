@@ -57,11 +57,27 @@ def _illust(key: str, size: int = 78) -> str:
             f"{body}</svg></div>")
 
 
-def _itube(code: str) -> str:
-    """아이튜브 번호 표시: 'i-Tube No.' 이름표 + 번호 (없으면 '없음')."""
+def _itube(code: str, n_units: int = 0) -> str:
+    """아이튜브 번호 표시: 'i-Tube No.' 이름표 + 번호 (없으면 '없음').
+
+    2026-11-19: 번호 없는 시스템인데 안의 장비마다 번호가 있으면 (예: 방폭챔버 1~4호기) '호기별 n개'.
+    """
     code = (code or "").strip()
-    num = (f"<span class='itn'>{html.escape(code)}</span>" if code else "<span class='itn no'>없음</span>")
+    num = (f"<span class='itn'>{html.escape(code)}</span>" if code
+           else f"<span class='itn'>호기별 {n_units}개</span>" if n_units
+           else "<span class='itn no'>없음</span>")
     return f"<span class='it'>i-Tube No.</span>{num}"
+
+
+def _unit_codes(eq: pd.DataFrame) -> dict[int, int]:
+    """ITUBE번호가 없는 장비 → 그 아래 ITUBE번호가 있는 장비 수."""
+    out: dict[int, int] = {}
+    for top, ids in db.descendants(eq).items():
+        if not str(eq.loc[eq["id"] == top, "code"].iat[0]).strip():
+            n = int((eq["id"].isin([i for i in ids if i != top]) & (eq["code"] != "")).sum())
+            if n:
+                out[int(top)] = n
+    return out
 
 
 def _short_loc(loc: str) -> str:
@@ -213,10 +229,12 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
         empty_state("찾는 장비가 없어요", "검색어나 센터 선택을 바꿔 보세요.")
         return
 
+    units = _unit_codes(eq)
     if view == "목록":
         tbl = pd.DataFrame({
             "id": df["id"].astype(int),
-            "장비명": df["name"], "i-Tube No.": df["code"], "대분류": df["group"],
+            "장비명": df["name"], "i-Tube No.": [c or (f"호기별 {units[int(i)]}개" if int(i) in units else "")
+                                                for c, i in zip(df["code"], df["id"])], "대분류": df["group"],
             "위치": df["location"].map(_short_loc), "관리자": df["manager"],
             "사진": df["id"].map(lambda i: cnt["equip_photos"].get(int(i), 0)),
             "사양": df["id"].map(lambda i: cnt["equip_specs"].get(int(i), 0)),
@@ -255,7 +273,7 @@ def _gallery(eq: pd.DataFrame, info: dict) -> None:
             if not (n_doc or n_spec or img):
                 bs = "<span class='bdg e'>아직 비어 있어요</span>" + bs
             who = " · ".join(x for x in (_short_loc(r.location), r.manager) if x)
-            code = f"<div class='cd'>{_itube(r.code)}</div>"
+            code = f"<div class='cd'>{_itube(r.code, units.get(eid, 0))}</div>"
             with col, st.container(key=f"iccard_{eid}"):
                 st.markdown(f"<div class='ic'><div class='icph'>{ph}</div><div class='bd'><div class='nm' title='{e(r.name)}'>"
                             f"{e(r.name)}</div>{code}<div class='wh'>{e(who) or '&nbsp;'}</div><div class='bs'>{bs}</div>"
@@ -509,6 +527,22 @@ def _family(root: int, eq: pd.DataFrame) -> list[tuple[int, int]]:
     return out
 
 
+def _unit_names(eq: pd.DataFrame, root: int) -> dict[int, str]:
+    """장비 한 대 화면에서 쓰는 이름. 같은 이름 여러 대는 'n호기' (db.add_pick_labels 의 short).
+
+    2026-11-19: 시스템 안의 장비 이름이 시스템 이름으로 시작하면 앞부분을 빼고 짧게 (예: 방폭챔버 안 '1호기').
+    """
+    short = dict(zip(eq["id"].astype(int), eq["short"] if "short" in eq else eq["name"]))
+    top = str(dict(zip(eq["id"].astype(int), eq["name"])).get(int(root), ""))
+    out = {}
+    for i, n in short.items():
+        n = str(n)
+        if i != root and top and n.startswith(top + " ") and len(n) > len(top) + 1:
+            n = n[len(top) + 1:]
+        out[i] = n
+    return out
+
+
 def _root(eid: int, eq: pd.DataFrame) -> int:
     par = dict(zip(eq["id"].astype(int), eq["parent_id"]))
     seen = set()
@@ -528,7 +562,8 @@ def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
         _history([eid], eq)
         return
     # 세부장비가 많아도 짧게: 왼쪽은 이름 목록(검색), 오른쪽은 고른 하나만
-    name_of = dict(zip(eq["id"].astype(int), eq["name"]))
+    name_of = _unit_names(eq, eid)
+    code_of = dict(zip(eq["id"].astype(int), eq["code"]))
     key = f"info_unit_{eid}"
     cur = st.session_state.get(key, eid)
     nav, body = st.columns([1, 3.3], gap="medium")
@@ -541,7 +576,8 @@ def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
         with st.container(height=min(620, 60 + 36 * (len(ids) + 1)), border=False):
             sel = st.radio("세부장비", [eid] + ids, key=key, label_visibility="collapsed",
                            format_func=lambda i: "주장비 전체" if i == eid
-                           else "\u3000" * (depth.get(i, 1) - 1) + name_of.get(i, str(i)))
+                           else "\u3000" * (depth.get(i, 1) - 1) + name_of.get(i, str(i))
+                           + (f" · {code_of[i]}" if code_of.get(i) and name_of.get(i, "").endswith("호기") else ""))
     with body:
         _unit(sel, eq, info, in_list=True)
         _history([eid] + [i for i, _ in fam] if sel == eid else [sel], eq)
@@ -549,7 +585,8 @@ def _detail(eid: int, eq: pd.DataFrame, info: dict) -> None:
 
 def _unit(eid: int, eq: pd.DataFrame, info: dict, in_list: bool = False) -> None:
     r = eq[eq["id"] == eid].iloc[0]
-    label_of = dict(zip(eq["id"].astype(int), eq["name"]))
+    label_of = _unit_names(eq, _root(eid, eq))
+    full_of = dict(zip(eq["id"].astype(int), eq["short"] if "short" in eq else eq["name"]))
     kids = eq[eq["parent_id"] == eid]
     up = int(r["parent_id"]) if pd.notna(r["parent_id"]) else None
     icon = _icon_key(r["name"] + " " + " ".join(kids["name"]))
@@ -560,11 +597,11 @@ def _unit(eid: int, eq: pd.DataFrame, info: dict, in_list: bool = False) -> None
         with left:
             _photos(eid, r["name"], icon, info)
         with right:
-            sub = _itube(r["code"])
+            sub = _itube(r["code"], _unit_codes(eq).get(int(eid), 0))
             if r["species"] and r["species"] != r["name"]:
                 sub += f" · {e(r['species'])}"
             if up is not None:
-                sub += f" <span class='up'>· 소속 {e(label_of.get(up, ''))}</span>"
+                sub += f" <span class='up'>· 소속 {e(full_of.get(up, ''))}</span>"
             items = [("대분류", r["group"]), ("위치", r["location"]), ("관리자", r["manager"]), ("제조사", r["maker"]),
                      ("모델명", r["model"]), ("구매처", r["vendor"]), ("장비용도", r["use"]), ("구분", r["category"]),
                      ("자산번호", r["asset_no"]), ("국가연구시설장비번호", r["nfec"]),
@@ -572,7 +609,7 @@ def _unit(eid: int, eq: pd.DataFrame, info: dict, in_list: bool = False) -> None
                      ("불용일", f"{r['retired_on']:%Y-%m-%d}" if pd.notna(r["retired_on"]) else "")]
             kv = "".join(f"<div><span>{e(k)}</span><b title='{e(str(v))}'>{e(str(v))}</b></div>"
                          for k, v in items if str(v).strip() and str(v) not in ("모델없음", "모델명없음"))
-            st.markdown(f"<div class='hero-n'>{e(r['name'])}</div><div class='hero-c'>{sub}</div><div class='kv'>{kv}</div>",
+            st.markdown(f"<div class='hero-n'>{e(full_of.get(int(eid), r['name']))}</div><div class='hero-c'>{sub}</div><div class='kv'>{kv}</div>",
                         unsafe_allow_html=True)
             if r["system"]:
                 st.caption(f"시스템 구성 · {r['system']}")
