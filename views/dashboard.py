@@ -25,6 +25,7 @@ BLUE = ("#5B6CFF", "rgba(85,102,230,0.16)", "rgba(85,102,230,0.16)")
 TEAL = ("#1F9D8B", "rgba(85,230,204,0.3)", "rgba(85,230,199,0.16)")
 PURPLE = ("#7E5BC2", "rgba(137,85,230,0.3)", "rgba(138,85,230,0.16)")
 GOAL = "#D9822B"
+AMBER = ("#D9822B", "rgba(230,160,85,0.3)", "rgba(230,160,85,0.16)")
 
 CSS = """<style>
 [class*="st-key-dsec_"] {background: var(--panel); border-radius: 24px; box-shadow: 0 4px 16px rgba(30,36,51,.04);
@@ -76,6 +77,16 @@ CSS = """<style>
 .drec > span:first-child {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .drec .tag {font-size: 13px; padding: 2px 8px; border-radius: 99px; margin-right: 6px; font-weight: 600;
   background: rgba(138,85,230,0.16); color: #7E5BC2;}
+.dcnt {width: 100%; border-collapse: collapse; font-size: 15.5px; color: #F8FAFC; text-align: center; border: 0 !important;}
+.dcnt th, .dcnt td {border: 0 !important; background: transparent !important; white-space: nowrap;}
+.dcnt th {font-size: 14px; font-weight: 600; color: #E2E8F0 !important; padding: 9px 8px !important;
+  border-bottom: 1.5px solid #64748B !important;}
+.dcnt td {padding: 11px 8px !important; border-bottom: 1px solid #52617A !important;}
+@media (max-width: 640px) {.dcnt {font-size: 14px;} .dcnt th {font-size: 12.5px;} .dcnt td b {font-size: 17px;}
+  .dcnt th, .dcnt td {padding-left: 4px !important; padding-right: 4px !important;}}
+.dcnt td b {font-size: 19px; font-weight: 700;}
+.dcnt tr.sum td {border-bottom: 0 !important; background: rgba(230,160,85,0.14) !important; color: #FBD38D;}
+.dcnt tr.sum td:first-child {border-radius: 12px 0 0 12px;} .dcnt tr.sum td:last-child {border-radius: 0 12px 12px 0;}
 .dnone {font-size: 14.5px; color: #CBD5E1; padding: 4px 0;}
 </style>"""
 
@@ -252,6 +263,25 @@ def render() -> None:
     _fee_section(year, cm, period, months, m_of, m_tot, pm_tot, y_tot, py_tot, year_sum, logs, ys, ye_eff, today,
                  centers)
     _maint_section(year, cm, period, months, eq, eq_all, len(eq) < len(eq_all), today)
+    _count_section(today)
+
+
+def _count_section(today) -> None:
+    """2026-11-19: 장비 종·대수 (센터별 표). 세는 법은 장비 목록 엑셀의 '종·대수 요약'과 같음."""
+    from views.equipment import count_summary
+    with st.container(key="dsec_count"):
+        _head(4, "장비 종·대수", AMBER, "▦", f"{today:%Y-%m-%d} 기준")
+        blocks, _ = count_summary(db.load_equipment(full=True))
+        df = dict(blocks)["센터별"]
+        rows = ""
+        for r in df.to_dict("records"):
+            name = r["센터"]
+            short = name if name == "합계" else (SHORT_OF.get(name) or name)
+            cls = ' class="sum"' if name == "합계" else ""
+            rows += (f'<tr{cls}><td>{E(short)}</td><td><b>{r["종"]}</b> 종</td><td><b>{r["대수"]}</b> 대</td>'
+                     f'<td>{r["i-Tube 등록"]}</td></tr>')
+        st.markdown(f'<table class="dcnt"><thead><tr><th>센터</th><th>종</th><th>대수</th><th>i-Tube 등록</th></tr>'
+                    f'</thead><tbody>{rows}</tbody></table>', unsafe_allow_html=True)
 
 
 def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
