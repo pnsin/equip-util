@@ -359,7 +359,9 @@ def _top_row(year: int, y_tot: dict, kpi: dict, ref_day) -> None:
     c1 = (f'<div class="k c1"><div class="no" style="color:{BLUE[0]}">01</div><div class="tt">{E(w("연간 가동률"))}</div>'
           f'<div class="big" style="color:{BLUE[0]}">{y_tot["util"]:.1f}<small>%</small></div>'
           f'<div class="sub">목표 {goal_u:.1f}%</div></div>')
-    rate = f'달성률 <b style="color:{TEAL[0]}">{fee / goal_f * 100:.1f}%</b>' if goal_f else "&nbsp;"
+    # 2026-11-19 사용자: '목표 금액 (달성률 %)' 모양
+    rate = (f'목표 {_won_short(goal_f).replace("<small>", "").replace("</small>", "")} '
+            f'(<b style="color:{TEAL[0]}">{fee / goal_f * 100:.1f}%</b>)') if goal_f else "&nbsp;"
     c2 = (f'<div class="k c2"><div class="no" style="color:{TEAL[0]}">02</div><div class="tt">연간 수수료</div>'
           f'<div class="big" style="color:{TEAL[0]}">{_won_short(fee)}</div><div class="sub">{rate}</div></div>')
     # 03 유지보수: 올해 건수 + 달마다 작은 숫자
