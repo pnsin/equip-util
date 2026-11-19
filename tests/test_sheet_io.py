@@ -65,3 +65,22 @@ def test_equipment_layout_roundtrip_with_summary_first():
     wb.save(buf)
     merged, n_add, n_upd, _ = sheet_io.merge(df, buf.getvalue(), heads)
     assert (n_add, n_upd) == (0, 1) and merged.loc[1, "qty"] == 5
+
+
+def test_equip_count_matches_reference_6_15():
+    """사용자 기준표(문백 6종 15대): 양극·음극 짝 = 1대, 대수 0 은 빼고, 세부장비가 모두 0 이면 장비 자신."""
+    from core import equip_count
+    rows = [(1, "전극제조 시스템", "A", None, 1)] + [
+        (10 + i, f"{n}({s})", "", 1, 1) for i, (n, s) in enumerate(
+            [(n, s) for n in ("5L 믹서", "50L 믹서", "전극 코터", "롤프레스", "슬리터") for s in ("양극", "음극")])] + [
+        (30, "바인더믹서", "", 1, 0), (31, "건조오븐", "", 1, 0), (32, "초순수", "", 1, 0),
+        (2, "조립 시스템", "B", None, 1), (40, "전극 노칭기(양극)", "", 2, 1), (41, "전극 노칭기(음극)", "", 2, 1),
+        (42, "셀 조립장치", "", 2, 1), (43, "핫프레스", "", 2, 1), (44, "디개싱", "", 2, 1),
+        (3, "충방전기", "C", None, 1), (50, "활성화", "", 3, 1), (51, "셀 평가", "", 3, 1), (52, "에이징", "", 3, 1),
+        (4, "항온항습", "", None, 1), (60, "클린룸", "", 4, 0), (61, "드라이룸", "", 4, 0),
+        (5, "PV 챔버", "D", None, 1), (6, "ESS 챔버", "E", None, 1),
+        (7, "방폭챔버 묶음", "", None, 4), (70, "방폭챔버", "F", 7, 1), (71, "방폭챔버", "G", 7, 1)]
+    eq = pd.DataFrame(rows, columns=["id", "name", "code", "parent_id", "qty"])
+    u = equip_count.units(eq).set_index("id")["대수"]
+    assert dict(u[[1, 2, 3, 4, 5, 6]]) == {1: 5, 2: 4, 3: 3, 4: 1, 5: 1, 6: 1}  # 6종 15대
+    assert set(u.index) == {1, 2, 3, 4, 5, 6, 70, 71}  # 묶음 안 i-Tube 장비는 한 대씩 종
