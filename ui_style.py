@@ -578,7 +578,7 @@ _SLATE_CSS = """<style>
   /* 대시보드: 카드 12px · 위쪽 색 막대 · 숫자 크게/단위 작게 · 알약 배지 */
   [class*="st-key-dsec_"] { background: #1E293B !important; border: 1px solid #64748B !important; border-radius: 12px !important;
         box-shadow: none !important; transform: none !important; padding: 20px 24px !important; }
-  .st-key-dsec_util { border-top: 4px solid #6366F1 !important; } .st-key-dsec_fee { border-top: 4px solid #10B981 !important; }
+  .st-key-dsec_util { border-top: 4px solid #3B82F6 !important; } .st-key-dsec_fee { border-top: 4px solid #10B981 !important; }
   .st-key-dsec_maint { border-top: 4px solid #8B5CF6 !important; }
   .dst .sl, .dst.big .sl { font-size: 19px !important; font-weight: 700 !important; }
   .st-key-dsec_util .dst .sl, .st-key-dsec_util .dst.big .sl { color: #A5B4FC !important; } .st-key-dsec_fee .dst .sl, .st-key-dsec_fee .dst.big .sl { color: #6EE7B7 !important; }
