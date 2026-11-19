@@ -73,7 +73,6 @@ CSS = """<style>
 .dper {font-size: 14px; color: #E2E8F0; border: 1px solid #475569; height: 38px; display: flex; align-items: center; padding: 0 16px; border-radius: 99px; white-space: nowrap;}
 .st-key-dash_pp > div, .st-key-dash_pp [data-testid="stElementContainer"] {margin: 0 !important;}
 .st-key-dash_pp [data-testid="stMarkdownContainer"] p, .st-key-dash_pp [data-testid="stMarkdownContainer"] {margin: 0;}
-.st-key-dash_pp label[data-baseweb="checkbox"] {margin: 0; min-height: 38px; align-items: center;}
 .dst {border: 1px solid #52617A; border-radius: 20px; padding: 16px 20px; height: 100%; min-height: 134px; transition: all 0.25s ease; background: rgba(85,121,230,0.16);}
 .dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,36,51,.06); border-color: #64748B; background: var(--panel);}
 .dst.big {border: 0; background: linear-gradient(135deg, #5B6CFF 0%, #9B6CFF 60%, #D27CE0 100%); box-shadow: 0 8px 22px rgba(91,108,255,.28);}
@@ -260,11 +259,10 @@ def _filters(years: list[int]) -> tuple[int, int | None]:
     with c0:
         page_header("장비 종합 현황", "현황")
     today = dt.date.today()
-    # 2026-11-19 사용자: 실적 확대 · 기준일 표시는 표마다 말고 연도 칸 앞에 한 번만, '연도' 글자는 없앰
+    # 2026-11-19 사용자: 기준일 표시는 표마다 말고 연도 칸 앞에 한 번만, '연도' 글자는 없앰
     with c1, st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
                           gap="medium", key="dash_pp"):
         ys = sorted(set(years) | {today.year}, reverse=True)
-        st.toggle("실적 확대", value=True, key="dash_util_zoom", help="끄면 가동률 그래프에 목표선까지 보여요")
         y = st.session_state.get("dash_year", today.year)
         st.markdown(f'<div class="dper">{f"{y}년 · {today:%m/%d} 기준" if y == today.year else f"{y}년"}</div>',
                     unsafe_allow_html=True, width="content")
@@ -397,11 +395,10 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
         # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약은 뺌 (그래프 · 분류별 표만)
 
         st.markdown(f'<div class="dct">{E(w("월별 가동률"))}</div>', unsafe_allow_html=True)
-        # 2026-11-19: 목표선(64%) 때문에 막대가 납작해지지 않게 기본은 실적에 맞춰 확대 (스위치는 맨 위)
-        zoom = st.session_state.get("dash_util_zoom", True)
+        # 2026-11-19 사용자: 실적 확대 스위치 없앰 → 늘 실적에 맞춰 확대 (목표선은 화면 안에 들 때만)
         vals = [m_of[m]["가동률"] if m in m_of else None for m in range(1, 13)]
         real = [v for v in vals if v is not None and pd.notna(v)]
-        top = (max(real + [1]) * 1.3) if zoom else max(real + [target, 10]) * 1.25
+        top = max(real + [1]) * 1.3
         _bars(vals, [f"{m}월" for m in range(1, 13)], cm - 1, BLUE, lambda v: f"{v:.1f}%", "dash_util_m",
               target=target or None, top=top, hover=w("%{x} 가동률 %{y:.1f}%<extra></extra>"))
 
