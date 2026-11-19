@@ -392,7 +392,7 @@ def _top_row(year: int, y_tot: dict, kpi: dict, ref_day) -> None:
 def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
                   sums, cats, kpi) -> None:
     with st.container(key="dsec_util"):
-        _head(1, w("가동률"), BLUE, "%", period)
+        _head(1, w("장비 가동률"), BLUE, "%", period)
         # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약은 뺌 (그래프 · 분류별 표만)
 
         # 2026-11-19 사용자: 실적 확대 스위치 없앰 → 늘 실적에 맞춰 확대 (목표선은 화면 안에 들 때만)
