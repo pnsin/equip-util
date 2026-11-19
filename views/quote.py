@@ -19,6 +19,7 @@ import streamlit as st
 from core import db, quote_doc, quotes
 from core.quote_doc import DISC_LABELS, EXTRA_TITLE, FORMS, MAX_EXTRAS, MAX_LINES, UNITS
 from ui_style import page_header
+from views import common
 from views.common import excel_box
 
 STATUSES = ["예상견적", "시험의뢰", "기진행", "재견적"]
@@ -603,12 +604,88 @@ def _ledger() -> None:
         st.download_button("발급대장 엑셀", lambda cur=cur, year=year: _ledger_xlsx(cur, year), file_name=f"견적서_발급대장_{year}.xlsx",
                            icon=":material/download:", key="q_led_dl",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    view = cur[list(LEDGER)].rename(columns=LEDGER)
-    st.dataframe(view, hide_index=True, width="stretch", height=min(520, 38 + 35 * (len(view) + 1)),
-                 column_config={"발급일자": st.column_config.DateColumn(format="YYYY-MM-DD"),
-                                "계(VAT별도)": st.column_config.NumberColumn(format="localized"),
-                                "계(부가세 포함)": st.column_config.NumberColumn(format="localized")})
-    st.caption(f"{year}년 {len(view)}건 · 견적서를 다시 열려면 '견적서 작성'의 '저장한 견적서 불러오기'에서 고르세요.")
+    view = cur[list(LEDGER)].rename(columns=LEDGER).reset_index(drop=True)
+    recs = cur.to_dict("records")
+    tv = st.session_state.get("q_led_ver", 0)
+    styled = view.style.set_properties(subset=["견적번호"], **{"color": "#A5B4FC", "font-weight": "600"})
+    ev = st.dataframe(styled, hide_index=True, width="stretch", height=min(520, 38 + 35 * (len(view) + 1)),
+                      on_select="rerun", selection_mode="single-cell", key=f"q_led_tbl_{year}_{tv}",
+                      column_config={"발급일자": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                                     "계(VAT별도)": st.column_config.NumberColumn(format="localized"),
+                                     "계(부가세 포함)": st.column_config.NumberColumn(format="localized")})
+    cells = (ev.selection or {}).get("cells") or [] if ev else []
+    if cells:
+        row = cells[0][0] if isinstance(cells[0], (list, tuple)) else cells[0].get("row")
+        # 표의 선택을 비워 둬야 창을 닫은 뒤 같은 칸을 다시 눌러도 열림
+        st.session_state.q_led_ver = tv + 1
+        if row is not None and 0 <= int(row) < len(recs):
+            r = recs[int(row)]
+            title = " · ".join(x for x in (quotes._s(r.get("no")), quotes._s(r.get("company"))) if x) or "견적서"
+            st.dialog(title, width="large", on_dismiss="rerun")(_show_quote)(r)
+
+
+@st.cache_data(show_spinner=False, max_entries=40)
+def _quote_files(data: str) -> dict:
+    """저장한 견적서 내용으로 발급 때와 같은 엑셀·PDF·미리보기를 만듦 (같은 내용이면 다시 안 만듦)."""
+    d = json.loads(data)
+    out = {"xlsx": quote_doc.fill_xlsx(copy.deepcopy(d)), "pdfs": [], "pages": [], "error": ""}
+    parts = [("customer", "PDF 받기 (업체용)"), ("internal", "PDF 받기 (내부보관용)")] \
+        if d.get("form") == "시험" else [("all", "PDF 받기")]
+    try:
+        for part, label in parts:
+            pdf = quote_doc.to_pdf(quote_doc.fill_xlsx(copy.deepcopy(d), part))
+            out["pdfs"].append((label, pdf, quote_doc.file_name(d, "pdf", part)))
+        out["pages"] = _pages(out["pdfs"][0][1])
+    except quote_doc.PdfError as e:
+        out["error"] = f"{e} 엑셀로 받아서 보세요."
+    return out
+
+
+def _pages(pdf: bytes) -> list[bytes]:
+    """PDF 모든 쪽 그림 (pdftoppm 이 있을 때만)."""
+    import glob
+    import shutil
+    import subprocess
+    import tempfile
+    exe = shutil.which("pdftoppm")
+    if not exe:
+        return []
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(f"{tmp}/q.pdf", "wb") as f:
+            f.write(pdf)
+        try:
+            subprocess.run([exe, "-png", "-r", "110", f"{tmp}/q.pdf", f"{tmp}/p"], check=True, capture_output=True,
+                           timeout=60)
+        except Exception:  # noqa: BLE001 - 미리보기는 없어도 됨
+            return []
+        out = []
+        for name in sorted(glob.glob(f"{tmp}/p*.png")):
+            with open(name, "rb") as f:
+                out.append(f.read())
+        return out
+
+
+def _show_quote(rec: dict) -> None:
+    """발급대장에서 견적번호를 누르면: 발급한 그대로의 견적서 + 내려받기 + 고치기."""
+    d = _load_saved(rec, copy=False)
+    d["lines"] = [ln for ln in d["lines"] if not quote_doc.is_blank_line(ln)]
+    with st.spinner("견적서 여는 중…"):
+        files = _quote_files(json.dumps(d, ensure_ascii=False, default=str))
+    with st.container(horizontal=True, key="q_led_btns"):
+        for label, data, name in files["pdfs"]:
+            st.download_button(label, data=data, file_name=name, mime="application/pdf",
+                               icon=":material/download:", key=f"q_led_pdf_{name}", on_click="ignore")
+        st.download_button("엑셀로 받기", data=files["xlsx"], file_name=quote_doc.file_name(d, "xlsx"),
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                           icon=":material/download:", key="q_led_xlsx", on_click="ignore")
+        if st.button("견적서 작성에서 고치기", icon=":material/edit:", key="q_led_edit"):
+            _reset(_load_saved(rec, copy=False))
+            st.switch_page(common.PAGES["quote"])
+    if files["error"]:
+        st.caption(f":red[{files['error']}]")
+    for png in files["pages"]:
+        st.image(png, width="stretch")
+
 
 def _changed(new: list[dict], edited: list[dict]) -> bool:
     """정리한 줄이 표에 보이는 값과 달라졌는지 (달라졌으면 표를 다시 그려야 함)."""
