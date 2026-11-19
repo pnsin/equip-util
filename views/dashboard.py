@@ -314,36 +314,7 @@ def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot
                   sums, cats, kpi) -> None:
     with st.container(key="dsec_util"):
         _head(1, w("가동률"), BLUE, "%", period)
-        _stats([
-            (f"{cm}월", f"{m_tot['util']:.1f}", "%",
-             _delta(m_tot["util"] - pm_tot["util"], "%p", "지난달", "{:.1f}") if pm_tot["avail"] else "", False),
-            (f"{cq}분기", f"{q_tot['util']:.1f}", "%",
-             _delta(q_tot["util"] - pq_tot["util"], "%p", f"{cq - 1 if cq > 1 else 4}분기", "{:.1f}")
-             if pq_tot["avail"] else "", False),
-            (f"{year}년 누적", f"{y_tot['util']:.1f}", "%",
-             _delta(y_tot["util"] - py_tot["util"], "%p", "작년", "{:.1f}") if py_tot["avail"] else "", True),
-        ])
-        # 한 줄 요약
-        done = {m: r["가동률"] for m, r in m_of.items() if pd.notna(r["가동률"])}
-        parts = [w(f"올해 가동률은 <b>{y_tot['util']:.1f}%</b>")]
-        if target:
-            parts[0] += f"로 목표 {target:.0f}%의 <b>{y_tot['util'] / target * 100:.0f}%</b>를 채웠어요."
-        else:
-            parts[0] += "예요."
-        if len(done) >= 2 and any(v > 0 for v in done.values()):
-            best = max(done, key=done.get)
-            rank = sorted(done.values(), reverse=True).index(done.get(cm, -1)) + 1 if cm in done else 0
-            if best == cm:
-                parts.append(f"{cm}월이 올해 가장 높은 달이에요.")
-            elif rank == 2:
-                parts.append(f"{cm}월이 올해 두 번째로 높은 달이에요.")
-            else:
-                parts.append(f"올해 가장 높은 달은 <b>{best}월({done[best]:.1f}%)</b>이에요.")
-        if target and y_tot["avail"]:
-            need = target / 100 * y_tot["avail"] - y_tot["used"]
-            if need > 0:
-                parts.append(f"목표를 채우려면 지금까지 기준으로 <b>{need:,.0f}시간</b>을 더 써야 해요.")
-        _lead(" ".join(parts), BLUE)
+        # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약은 뺌 (그래프 · 분류별 표만)
 
         st.markdown(f'<div class="dct">{E(w("월별 가동률"))}</div>', unsafe_allow_html=True)
         vals = [m_of[m]["가동률"] if m in m_of else None for m in range(1, 13)]
@@ -411,30 +382,9 @@ def _fee_section(year, cm, period, months, ref_day, kpi) -> None:
         yr = fl["tax_date"].map(lambda d: d.year) if not fl.empty else pd.Series(dtype=int)
         mo = fl["tax_date"].map(lambda d: d.month) if not fl.empty else pd.Series(dtype=int)
         cur = fl[yr == year] if not fl.empty else fl
-        prev = fl[(yr == year - 1) & (mo <= cm)] if not fl.empty else fl  # 작년 같은 기간
         fees = cur.groupby(mo[yr == year])["supply"].sum().to_dict() if not cur.empty else {}
-        pm = (year, cm - 1) if cm > 1 else (year - 1, 12)
-        pm_fee = fl[(yr == pm[0]) & (mo == pm[1])]["supply"].sum() if not fl.empty else 0
-        m_fee, y_fee, py_fee = fees.get(cm, 0), sum(fees.values()), prev["supply"].sum() if not prev.empty else 0
-        unpaid = cur["unpaid"].fillna(0) if not cur.empty else pd.Series(dtype=float)
         goal = float(kpi["fee"] or 0)
-        _stats([
-            (f"{cm}월", _man(m_fee), "원", _delta(m_fee - pm_fee, "원", "지난달"), False),
-            (f"{year}년 누적", _man(y_fee), "원",
-             _delta((y_fee / py_fee - 1) * 100, "%", "작년") if py_fee else "", True),
-            ("미수금 · 올해", _man(unpaid.sum()), "원",
-             _chip(f"{int((unpaid > 0).sum())}건 남았어요", "r") if unpaid.sum() > 0 else _chip("모두 받았어요", "g"), False),
-        ])
-        done = {m: v for m, v in fees.items() if m <= cm}
-        if fl.empty:
-            _lead("수수료 입력 › 재무팀 매출장에서 엑셀을 올리면 여기에 나와요.", TEAL)
-        elif done and sum(done.values()) > 0:
-            best = max(done, key=done.get)
-            goal_txt = (f"연 목표 {_eok(goal)}의 <b>{y_fee / goal * 100:.1f}%</b>를 채웠어요. " if goal else "")
-            _lead(goal_txt + f"한 달 평균 <b>{_man(sum(done.values()) / cm)}원</b>이 발행됐고, "
-                  f"{best}월이 <b>{_man(done[best])}원</b>으로 가장 많았어요.", TEAL)
-        else:
-            _lead("올해는 아직 발행된 수수료가 없어요.", TEAL)
+        # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약은 뺌 (그래프 · 분류별 표만)
 
         st.markdown('<div class="dct">월별 수수료 (원, 세금일자 · 공급가 기준)</div>', unsafe_allow_html=True)
         vals = [fees.get(m, 0) if m <= cm or m in fees else None for m in range(1, 13)]
@@ -485,35 +435,10 @@ def _maint_section(year, cm, period, months, eq, eq_all, filtered: bool, today) 
                        eqn=[name.get(int(root.get(int(i), i)), r) if pd.notna(i) else r
                             for i, r in zip(df["equip_id"], df["equip_ref"])]) if not df.empty else df.assign(m=[], eqn=[])
         by_m = df.groupby("m").size().to_dict() if not df.empty else {}
-        n_cur, n_prev = by_m.get(cm, 0), by_m.get(cm - 1, 0) if cm > 1 else None
-        top_eq = df[df["eqn"] != ""]["eqn"].value_counts() if not df.empty else pd.Series(dtype=int)
-        _stats([
-            (f"{cm}월", f"{n_cur}", "건",
-             _delta(n_cur - n_prev, "건", "지난달", up_good=False) if n_prev is not None else "", False),
-            (f"{year}년 누적", f"{len(df)}", "건", "", True),
-            ("가장 많은 장비", top_eq.index[0] if len(top_eq) else "–", "",
-             _chip(f"올해 {top_eq.iloc[0]}건", "n") if len(top_eq) else "", False),
-        ])
-        kinds = df[df["kind"] != ""]["kind"].value_counts() if not df.empty else pd.Series(dtype=int)
-        if len(df):
-            _lead(f"올해 유지보수 <b>{len(df)}건</b>" + (f" 중 <b>{E(kinds.index[0])} {kinds.iloc[0]}건</b>이 가장 많아요."
-                                                     if len(kinds) else "을 기록했어요."), PURPLE)
-        else:
-            _lead("올해는 아직 유지보수 기록이 없어요.", PURPLE)
+        # 2026-11-19 사용자 요청: 큰 숫자 3칸 · 한 줄 요약 · 종류별 · 최근 기록은 뺌 (월별 그래프만)
 
         st.markdown('<div class="dct">월별 유지보수 건수</div>', unsafe_allow_html=True)
         last = cm if year == today.year else 12
         vals = [by_m.get(m, 0) if m <= last else None for m in range(1, 13)]
         _bars(vals, months, cm - 1, PURPLE, lambda v: f"{v:.0f}건", "dash_maint_m",
               top=max([v or 0 for v in vals] + [3]) * 1.3, hover="%{x} 유지보수 %{y}건<extra></extra>")
-
-        c1, c2 = st.columns(2)
-        order = [k for k in db.MAINT_KINDS if k in kinds.index] + [k for k in kinds.index if k not in db.MAINT_KINDS]
-        pills = "".join(f"<span>{E(k)}<b>{kinds[k]}</b></span>" for k in order)
-        _box(c1, "종류별 · 올해", f'<div class="dpills">{pills}</div>' if pills else '<div class="dnone">기록 없음</div>')
-        recent = df.head(4) if not df.empty else df
-        rec = "".join(
-            f'<div class="drec"><span>{f"<span class=tag>{E(r.kind)}</span>" if r.kind else ""}'
-            f'{E(r.eqn)}{" · " + E(r.content) if r.content else ""}</span>'
-            f'<span style="color:#E2E8F0;flex:none">{r.date:%m/%d}</span></div>' for r in recent.itertuples())
-        _box(c2, "최근 기록", rec or '<div class="dnone">기록 없음</div>')
