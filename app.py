@@ -139,7 +139,8 @@ PAGES = {
     ],
 }
 common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1], "input": PAGES["실적"][0],
-                     "equipment": PAGES["기준 정보"][0], "equip_info": PAGES["장비"][0]})
+                     "equipment": PAGES["기준 정보"][0], "equip_info": PAGES["장비"][0],
+                     "quote": PAGES["업체"][1]})
 
 # 예전 주소(/dashboard, /calendar …)로 들어와도 "Page not found" 없이 해당 화면이 열리게 하는 숨은 주소
 ALIASES = [
