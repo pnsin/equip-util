@@ -27,3 +27,12 @@ def test_kpi_fallback_and_year():
     k27 = report.kpi(cfg, 2027)
     assert k27["fee"] == 600_000_000 and k27["util_total"] == 70 and not k27["year_set"]
     assert report.kpi(cfg, 2026)["year_set"]
+
+
+def test_ledger_team_rule():
+    import datetime as dt
+    from core.fee_ledger import ours
+    assert ours("배터리산업팀", dt.date(2026, 3, 1))
+    assert not ours("차세대전지팀", dt.date(2026, 9, 28))
+    assert ours("차세대전지팀", dt.date(2025, 7, 1))
+    assert not ours("다른팀", dt.date(2025, 7, 1))

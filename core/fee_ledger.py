@@ -16,6 +16,16 @@ import streamlit as st
 from core import db
 
 TEAMS = ("차세대전지팀", "배터리산업팀")
+TEAM_NOW = "배터리산업팀"
+RENAMED = dt.date(2026, 1, 1)  # 2026-11-19 사용자: 배터리산업팀 수수료만. 2025년까지는 같은 팀이 '차세대전지팀' 이름이었음
+
+
+def ours(team, tax_date) -> bool:
+    """우리 팀 줄인지: 2026년부터는 배터리산업팀만 (차세대전지팀 줄은 빼고), 그 전에는 옛 이름 차세대전지팀도."""
+    team = str(team or "").strip()
+    if team == TEAM_NOW:
+        return True
+    return team in TEAMS and bool(tax_date) and tax_date < RENAMED
 HEAD = {"세금일자": "tax_date", "팀명": "team", "담당자": "staff", "업체명": "company", "사업자번호": "brn",
         "발행내역": "item", "공급가": "supply", "부가세": "vat", "합계": "total", "입금일자(1차)": "paid1_date",
         "입금금액(1차)": "paid1", "입금일자(2차)": "paid2_date", "입금금액(2차)": "paid2", "미수금": "unpaid"}
@@ -68,6 +78,7 @@ def load() -> pd.DataFrame:
         df[c] = pd.to_numeric(df[c], errors="coerce")
     for c in DATES:
         df[c] = df[c].map(db.to_date)
+    df = df[[ours(t, d) for t, d in zip(df["team"], df["tax_date"])]] if len(df) else df
     return df.sort_values("tax_date", key=lambda s: s.map(lambda d: d.toordinal() if d else 0),
                           ascending=False).reset_index(drop=True)
 
