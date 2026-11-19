@@ -224,11 +224,11 @@ def _download_body(key: str) -> None:
                        type="primary", width="stretch", icon=":material/download:", key=f"{key}_btn")
 
 
-@st.dialog("i-Tube 제출 파일", width="large")
+@st.dialog("i-Tube 제출", width="large")
 def download_dialog() -> None:
     _download_body("dl")
 
 
 def render_download() -> None:
-    page_header("i-Tube 제출 파일", "실적")
+    page_header("i-Tube 제출", "실적")
     _download_body("dlpage")

@@ -114,9 +114,9 @@ PAGES = {
         st.Page(charger_board.render, title="충방전기 현황", url_path="chargers"),
     ],
     "실적": [
-        st.Page(input_page.render, title="장비 일정 등록", url_path="input"),
+        st.Page(input_page.render, title="장비 사용 등록", url_path="input"),
         st.Page(records.render, title="수수료 입력", url_path="records"),
-        st.Page(export.render_download, title="i-Tube 제출 파일", url_path="download"),
+        st.Page(export.render_download, title="i-Tube 제출", url_path="download"),
     ],
     "장비": [
         st.Page(equip_info.render, title="장비 정보", url_path="equip-info"),
@@ -147,8 +147,8 @@ ALIASES = [
     st.Page(equipment.render_prices, title="수수료 단가", url_path="rates"),  # 예전 주소
     st.Page(equipment.render_prices, title="수수료 단가 ", url_path="prices"),  # 예전 주소
     st.Page(dashboard.render, title="장비 KPI 현황", url_path="dashboard"),
-    st.Page(input_page.render, title="장비 일정 등록", url_path="calendar"),
-    st.Page(input_page.render, title="장비 일정 등록", url_path="entry"),
+    st.Page(input_page.render, title="장비 사용 등록", url_path="calendar"),
+    st.Page(input_page.render, title="장비 사용 등록", url_path="entry"),
     st.Page(export.render_itube, title="i-Tube 장비일지", url_path="export"),
     # 메뉴에서 뺀 화면 (2026-11-04). 주소로는 계속 열리고, 메뉴에 다시 넣으려면 PAGES 로 옮기면 됨.
     st.Page(export.render_itube, title="i-Tube 장비일지", url_path="itube"),
@@ -159,7 +159,7 @@ ALIASES = [
 # 왼쪽 메뉴 아이콘 · 묶음별 파스텔 색 (2026-11-06 디자인 통일)
 NAV_ICONS = {
     "장비 KPI 현황": ":material/space_dashboard:", "장비별 가동률": ":material/speed:", "충방전기 현황": ":material/battery_charging_full:",
-    "장비 일정 등록": ":material/edit_calendar:", "수수료 입력": ":material/payments:", "i-Tube 제출 파일": ":material/upload_file:",
+    "장비 사용 등록": ":material/edit_calendar:", "수수료 입력": ":material/payments:", "i-Tube 제출": ":material/upload_file:",
     "장비 정보": ":material/precision_manufacturing:", "유지보수": ":material/build:",
     "CS활동": ":material/handshake:", "견적서 작성": ":material/request_quote:", "업체 목록": ":material/apartment:",
     "장비 목록": ":material/inventory_2:", "수수료 단가": ":material/sell:", "담당자": ":material/group:",

@@ -683,7 +683,7 @@ def _preload_editors():
 # 쪽 제목 (2026-11-10 A안): 메뉴 묶음 색의 둥근 아이콘 타일 + 색 알약 + 짧은 색 밑줄
 PH_ICONS = {
     "장비 KPI 현황": "space_dashboard", "장비별 가동률": "speed", "충방전기 현황": "battery_charging_full",
-    "장비 일정 등록": "edit_calendar", "기간 실적 입력": "date_range", "수수료 입력": "payments", "i-Tube 제출 파일": "upload_file",
+    "장비 사용 등록": "edit_calendar", "기간 실적 입력": "date_range", "수수료 입력": "payments", "i-Tube 제출": "upload_file",
     "장비 정보": "precision_manufacturing", "유지보수": "build", "CS활동": "handshake", "견적서 작성": "request_quote",
     "견적서 발급대장": "receipt_long", "업체 목록": "apartment", "장비 목록": "inventory_2", "장비 단가": "sell",
     "수수료 단가": "sell", "담당자": "group", "설정": "settings", "가져오기 · 백업": "cloud_sync", "휴지통 · 기록": "delete",
