@@ -84,6 +84,7 @@ CSS = """<style>
 .dlead {border-radius: 12px; padding: 12px 16px; font-size: 15.5px; line-height: 1.6; color: #F8FAFC; margin-top: 12px;}
 .dct {font-size: 15px !important; font-weight: 800; color: #F1F5F9 !important; margin: 22px 0 12px; padding-left: 9px;
   border-left: 3px solid #6366F1; line-height: 1.2; letter-spacing: -.01em;}
+.st-key-dsec_util .dct {border-left-color: #3B82F6;} .st-key-dsec_fee .dct {border-left-color: #10B981;}  /* 2026-11-19 섹션 색에 맞춤 */
 .dq {display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px; margin: -10px 8px 14px;}
 .dq div {border-top: 1.5px solid #64748B; text-align: center; font-size: 14px; color: #E2E8F0; padding-top: 6px;}
 .dq b {color: #F8FAFC; margin-left: 4px;}
