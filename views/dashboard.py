@@ -35,21 +35,15 @@ CSS = """<style>
 /* 위 요약 4칸 (2026-11-19 사용자 시안: 가동률·수수료는 좁게, 유지보수·종대수는 넓게) */
 .dtop {display: grid; grid-template-columns: .85fr .85fr 1.3fr 1.6fr; gap: 14px; align-items: stretch; margin: 4px 0 16px;}
 .dtop .k {background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px 16px 14px;
-  text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 196px;
+  text-align: center; display: flex; flex-direction: column; justify-content: flex-start; min-height: 196px;
   font-variant-numeric: tabular-nums;}
 .dtop .k.c1 {border-top: 2px solid #3B82F6;} .dtop .k.c2 {border-top: 2px solid #10B981;}
 .dtop .k.c3 {border-top: 2px solid #F59E0B;} .dtop .k.c4 {border-top: 2px solid #8B5CF6;}
-.dtop .no {font-size: 12px; font-weight: 700; letter-spacing: .08em; text-align: center; margin-bottom: 2px;}
-.dtop .tt {font-size: 19px; font-weight: 700; color: #F8FAFC;}
+.dtop .tt {font-size: 19px; font-weight: 700; color: #F8FAFC; padding: 4px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.06);}
+.dtop .bdy {flex: 1; display: flex; flex-direction: column; justify-content: center; padding-top: 6px;}
 .dtop .big {font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; margin: 10px 0 8px;}
 .dtop .big small {font-size: 30px; font-weight: 800;}
 .dtop .sub {font-size: 15px; color: #CBD5E1;} .dtop .sub b {font-weight: 700;}
-.dtop .hd {display: flex; align-items: center; gap: 10px; justify-content: center;}
-.dtop .hd .bd {width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 700;}
-.dtop .hd .lab {text-align: left;} .dtop .hd .lab .no {margin: 0;}
-.dtop .pill {margin-left: auto; font-size: 15px; font-weight: 700; padding: 4px 12px; border-radius: 99px;
-  background: rgba(139,92,246,0.16); color: #C4B5FD;}
 .dtop .note {font-size: 12.5px; color: #94A3B8; margin-top: 2px;}
 .dtop .mm {display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin-top: 12px; font-size: 11.5px;}
 .dtop .mm b {display: block; font-weight: 700; color: #E2E8F0;} .dtop .mm b.z {color: #475569;}
@@ -356,14 +350,14 @@ def _top_row(year: int, y_tot: dict, kpi: dict, ref_day) -> None:
     from views.equipment import count_summary
     goal_u, goal_f = float(kpi["util_total"] or 0), float(kpi["fee"] or 0)
     fee = _year_fee(year, ref_day)
-    c1 = (f'<div class="k c1"><div class="no" style="color:{BLUE[0]}">01</div><div class="tt">{E(w("연간 가동률"))}</div>'
+    c1 = (f'<div class="k c1"><div class="tt">{E(w("연간 가동률"))}</div><div class="bdy">'
           f'<div class="big" style="color:{BLUE[0]}">{y_tot["util"]:.1f}<small>%</small></div>'
-          f'<div class="sub">목표 {goal_u:.1f}%</div></div>')
+          f'<div class="sub">목표 {goal_u:.1f}%</div></div></div>')
     # 2026-11-19 사용자: '목표 금액 (달성률 %)' 모양
     rate = (f'목표 {_won_short(goal_f).replace("<small>", "").replace("</small>", "")} '
             f'(<b style="color:{TEAL[0]}">{fee / goal_f * 100:.1f}%</b>)') if goal_f else "&nbsp;"
-    c2 = (f'<div class="k c2"><div class="no" style="color:{TEAL[0]}">02</div><div class="tt">연간 수수료</div>'
-          f'<div class="big" style="color:{TEAL[0]}">{_won_short(fee)}</div><div class="sub">{rate}</div></div>')
+    c2 = (f'<div class="k c2"><div class="tt">연간 수수료</div><div class="bdy">'
+          f'<div class="big" style="color:{TEAL[0]}">{_won_short(fee)}</div><div class="sub">{rate}</div></div></div>')
     # 03 유지보수: 올해 건수 + 달마다 작은 숫자
     mt = db.load_maint()
     mt = mt[mt["date"].map(lambda d: bool(d) and d.year == year)] if not mt.empty else mt
@@ -371,22 +365,18 @@ def _top_row(year: int, y_tot: dict, kpi: dict, ref_day) -> None:
     mini = "".join(f'<div><b class="{"" if by_m.get(m) else "z"}">{by_m.get(m, 0)}</b><span>{m}월</span></div>'
                    for m in range(1, 13))
     note = "" if len(mt) else '<div class="note">선택한 해에 유지보수 기록이 없어요</div>'
-    c3 = (f'<div class="k c3"><div class="hd"><div class="bd" style="background:{AMBER[2]};color:{AMBER[0]}">⚙</div>'
-          f'<div class="lab"><div class="no" style="color:{AMBER[0]}">03</div><div class="tt">유지보수 실적</div></div></div>'
+    c3 = (f'<div class="k c3"><div class="tt">유지보수 실적</div><div class="bdy">'
           f'<div class="big" style="color:{AMBER[0]}">{len(mt)}<small>건</small></div>{note}'
-          f'<div class="mm">{mini}</div></div>')
+          f'<div class="mm">{mini}</div></div></div>')
     # 04 종·대수 (센터별 + 합계)
     blocks, _ = count_summary(db.load_equipment(full=True))
     df = dict(blocks)["센터별"]
-    tot = df.iloc[-1]
     rows = "".join(
         f'<tr{" class=sum" if r["센터"] == "합계" else ""}><td>{E(r["센터"])}</td><td>{r["종"]}종</td>'
         f'<td>{r["대수"]}대</td><td>{r["i-Tube 등록"]}</td></tr>' for r in df.to_dict("records"))
-    c4 = (f'<div class="k c4"><div class="hd"><div class="bd" style="background:{PURPLE[2]};color:{PURPLE[0]}">▦</div>'
-          f'<div class="lab"><div class="no" style="color:{PURPLE[0]}">04</div><div class="tt">장비 종·대수</div></div>'
-          f'<span class="pill">{tot["종"]}종 / {tot["대수"]}대</span></div>'
+    c4 = (f'<div class="k c4"><div class="tt">장비 종·대수</div><div class="bdy">'
           f'<table><thead><tr><th>센터</th><th>종</th><th>대수</th><th>i-Tube 등록</th></tr></thead><tbody>{rows}</tbody>'
-          f'</table></div>')
+          f'</table></div></div>')
     st.markdown(f'<div class="dtop">{c1}{c2}{c3}{c4}</div>', unsafe_allow_html=True)
 
 
