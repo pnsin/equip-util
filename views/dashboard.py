@@ -475,7 +475,10 @@ def _fee_table(cur: pd.DataFrame, cm, ref_day, goal) -> str:
     sums = {k: (d[d[k]].groupby("c")["supply"].sum().to_dict() if len(d) else {}) for _, k, _ in cols}
     head = "".join(f"<th>{x}</th>" for x in ["구분"] + [c for c, _, _ in cols])
     rows = '<tr class="goal"><td>목표</td>' + "".join(f"<td>{_won(g)}</td>" for _, _, g in cols) + "</tr>"
-    for c in report.CATS:
+    # 확인 필요(자동 분류 못 한 줄)는 있을 때만 한 줄로 보여서 합계가 맞게
+    for c in report.CATS + [report.CHECK]:
+        if c == report.CHECK and not any(sums[k].get(c) for _, k, _ in cols):
+            continue
         rows += f"<tr><td>{E(c)}</td>" + "".join(
             f'<td class="{"v" if sums[k].get(c) else "z"}">{_won(sums[k].get(c, 0))}</td>' for _, k, _ in cols) + "</tr>"
     tot = {k: sum(sums[k].values()) for _, k, _ in cols}
