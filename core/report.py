@@ -81,20 +81,27 @@ def equip_cats(eq: pd.DataFrame) -> dict[int, str]:
     return out
 
 
-def fee_cat(item) -> str:
+# 2026-11-19 사용자: 발행내역으로 모를 때 담당자로 (이상헌 = 보통 진동장비 수수료)
+STAFF_RULES = {"이상헌": "진동시험"}
+
+
+def fee_cat(item, staff="") -> str:
     s = re.sub(r"\s", "", str(item or ""))
     up = s.upper()
     for cat, words in FEE_RULES:
         for w in words:
             if (w.upper() in up) if w.isascii() else (w in s):
+                if cat == OTHER and words == FEE_RULES[0][1]:
+                    return OTHER  # 교육·현장실습은 담당자와 상관없이 기타
                 return cat
-    return OTHER
+    return STAFF_RULES.get(str(staff or "").strip(), OTHER)
 
 
 def ledger_cats(df: pd.DataFrame) -> list[str]:
     """매출장 줄마다 보고 분류 (직접 고친 값이 있으면 그것)."""
     over = df["report_cat"] if "report_cat" in df else pd.Series([""] * len(df), index=df.index)
-    return [norm(o) or fee_cat(i) for o, i in zip(over, df["item"])]
+    staff = df["staff"] if "staff" in df else pd.Series([""] * len(df), index=df.index)
+    return [norm(o) or fee_cat(i, st) for o, i, st in zip(over, df["item"], staff)]
 
 
 def kpi(cfg: dict, year: int) -> dict:

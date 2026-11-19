@@ -153,7 +153,7 @@ def set_cats(changes: dict[int, str]) -> int:
         if k not in want_of:
             continue
         cat = want_of[k]
-        want = "" if not cat or cat == report.fee_cat(r.get("item")) else cat
+        want = "" if not cat or cat == report.fee_cat(r.get("item"), r.get("staff")) else cat
         if str(r.get("report_cat") or "") != want:
             r["report_cat"] = want
             n += 1

@@ -18,6 +18,9 @@ def test_fee_cat_rules():
     assert report.fee_cat("충돌, 낙하 장비수수료(RG3)") == "사용환경모사"
     assert report.fee_cat("SMT사용료") == "SMT"
     assert report.fee_cat("") == "기타"
+    assert report.fee_cat("한국배터리안전연구원 주식회사", "이상헌") == "진동시험"
+    assert report.fee_cat("충방전기 시험수수료", "이상헌") == "충방전시험기"
+    assert report.fee_cat("배터리아카데미 6기(1)", "이상헌") == "기타"
 
 
 def test_kpi_fallback_and_year():
