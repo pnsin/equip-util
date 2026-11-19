@@ -4,12 +4,13 @@
 - '소속 장비'를 고르면 그 장비의 세부장비가 되고, 세부장비 시간은 소속 장비로 합산됩니다.
 - 쓰지 않는 장비는 지우지 말고 불용일을 넣습니다 (실적이 있는 장비는 지워지지 않음).
 """
+import datetime as dt
 import html
 
 import pandas as pd
 import streamlit as st
 
-from core import db, quotes, seed
+from core import db, quotes, seed, sheet_io
 from core.quote_doc import UNITS
 from core.terms import w
 from ui_style import page_header
@@ -63,6 +64,40 @@ def _summary(eq: pd.DataFrame) -> None:
     st.markdown("<div class='eq-sum'>" + "".join(
         f"<div class='p {c}'>{html.escape(t)}<b>{n:,}</b></div>" for c, t, n in pills) + "</div>",
         unsafe_allow_html=True)
+
+
+def count_summary(eq: pd.DataFrame) -> tuple[list[tuple[str, pd.DataFrame]], list[str]]:
+    """엑셀 '종·대수 요약' 시트: 대분류별 · 센터별 종 / 장비 / 세부장비 / i-Tube 등록 / 대수 (불용 장비 제외)."""
+    live = eq[eq["retired_on"].isna()].copy() if "retired_on" in eq else eq.copy()
+    ids = live["id"].astype(int)
+    has_kids = {int(p) for p in live["parent_id"].dropna()}
+    qty = pd.to_numeric(live["qty"], errors="coerce").fillna(1)
+    live["_leaf_qty"] = [0 if i in has_kids else q for i, q in zip(ids, qty)]
+    cen = db.equip_centers(eq)
+    live["_center"] = [cen.get(int(i)) or "기타" for i in ids]
+    live["_group"] = live["group"].replace("", "(대분류 없음)")
+
+    def row(name, d):
+        return {"구분": name, "종": d.loc[d["species"] != "", "species"].nunique(),
+                "장비": int((d["depth"] == 0).sum()), "세부장비": int((d["depth"] > 0).sum()),
+                "i-Tube 등록": int((d["code"] != "").sum()), "대수": int(d["_leaf_qty"].sum())}
+
+    def block(col, order):
+        rows = [row(k, live[live[col] == k]) for k in order if (live[col] == k).any()]
+        return pd.DataFrame(rows + [row("합계", live)])
+
+    by_group = block("_group", list(dict.fromkeys(live["_group"])))
+    by_center = block("_center", db.CENTERS + sorted(set(live["_center"]) - set(db.CENTERS)))
+    by_group.columns = ["대분류"] + list(by_group.columns[1:])
+    by_center.columns = ["센터"] + list(by_center.columns[1:])
+    notes = ["· 종 = 서로 다른 '주장비(종)' 수 (합계는 겹치는 것을 한 번만 셈)",
+             "· 장비 = 맨 위 장비 줄 수 (화면의 '장비' 숫자), 세부장비 = 그 아래 줄 수",
+             "· i-Tube 등록 = ITUBE번호가 있는 장비 수",
+             "· 대수 = 실제 장비 대수 ('대수' 열 합계, 세부장비가 있는 장비는 세부장비 대수로 셈)"]
+    n_ret = len(eq) - len(live)
+    if n_ret:
+        notes.append(f"· 불용일이 있는 {n_ret}대는 빼고 셌어요.")
+    return [("대분류별", by_group), ("센터별", by_center)], notes
 
 
 def _page(title: str) -> tuple[pd.DataFrame, dict]:
@@ -122,15 +157,22 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
         xl_eq[v] = list(view[v][:n_dev])
     extras_now = view.iloc[n_dev:].copy()
 
-    xl_heads = {"parent_id": "소속 장비 ID"} | {k: v for k, v in COLS.items()
-                                               if k not in ("id", "retired_on", "in_kpi")} | {v: v for v in RATE.values()}
+    # 2026-11-19 엑셀 열 순서: 이름·구분·소속 → 분류 → 관리 → 제품 정보 → 단가 → 비고 (열 제목으로 읽으므로 순서는 자유)
+    xl_heads = {k: COLS[k] for k in ("name", "kind")} | {"parent_id": "소속 장비 ID"} | {
+        k: COLS[k] for k in ("code", "group", "species", "category", "qty", "manager", "location", "use", "model",
+                             "maker", "vendor", "asset_no", "nfec", "system", "annual_hours", "acquired_on")} | {
+        v: v for v in RATE.values()} | {"note": COLS["note"]}
+    assert set(xl_heads) >= set(COLS) - {"id", "retired_on", "in_kpi"}
     with st.container(horizontal=True, vertical_alignment="center"):
         center = center_pick("equip_center")
         st.space("stretch")
         sub = st.toggle("세부장비도 보기", key="equip_subs")
         add_at = st.container(width="content")
         excel_box("equip_xl", xl_eq, xl_heads, "장비", lambda m: _apply_excel(m, rates, extras_now),
-                  extra_sheet=("시험·기타 항목(참고용)", extras_now[["장비명(한글)"] + list(RATE.values()) + ["비고"]]))
+                  extra_sheet=("시험·기타 항목(참고용)", extras_now[["장비명(한글)"] + list(RATE.values()) + ["비고"]]),
+                  levels=[int(d) for d in eq["depth"]], id_last=("parent_id",), money=(RATE["price_req"], RATE["price_self"]),
+                  finish=lambda b: sheet_io.add_summary(b, "종·대수 요약", f"장비 종·대수 현황 ({dt.date.today():%Y-%m-%d} 기준)",
+                                                        *count_summary(eq)))
     # 2026-11-10 주장비를 골라 그 아래 세부장비를 펼쳐 봄 (표 안에서 바로 펼치기는 Streamlit 표가 지원하지 않음)
     pid = {int(i): int(p) for i, p in zip(eq["id"], eq["parent_id"]) if pd.notna(p)}
     has_kids = set(pid.values())
