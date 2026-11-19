@@ -73,6 +73,7 @@ TABLES = {
     "rates": ("장비단가", [
         ("id", "ID"), ("equip_id", "장비ID"), ("name", "견적서 장비명"), ("spec", "용량"), ("unit", "단위"),
         ("price_req", "의뢰 단가"), ("price_self", "직접 단가"), ("note", "비고"), ("order", "순서"),
+        ("retired", "불용"),  # 2026-11-19: Y = 불용 장비의 시험·기타 단가 (견적서·장비 목록에서 숨김, 기록은 남김)
     ]),
     # 발급한 견적서 (발급대장 한 줄 = 한 행). data = 견적서 내용 전체(JSON) — 다시 열거나 PDF 를 다시 만들 때 씀
     "quotes": ("견적서", [
@@ -2090,7 +2091,7 @@ def _restore_bytes(data: bytes) -> dict:
 
 # ── 견적서 · 장비 단가 ──────────────────────────────────────────
 
-RATE_TEXT = ("name", "spec", "unit", "note")
+RATE_TEXT = ("name", "spec", "unit", "note", "retired")
 
 
 @snap_cached  # 2026-11-17: 데이터가 바뀔 때만 다시 만듦 (st.cache_data(ttl=120) 대신)

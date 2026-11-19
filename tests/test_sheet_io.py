@@ -84,3 +84,17 @@ def test_equip_count_matches_reference_6_15():
     u = equip_count.units(eq).set_index("id")["대수"]
     assert dict(u[[1, 2, 3, 4, 5, 6]]) == {1: 5, 2: 4, 3: 3, 4: 1, 5: 1, 6: 1}  # 6종 15대
     assert set(u.index) == {1, 2, 3, 4, 5, 6, 7} and u[7] == 2  # 묶음은 1종, 대수는 안의 장비 수
+
+
+def test_retired_rate_items_hidden_from_quote_picker():
+    import pandas as pd
+    from core import quotes
+    rates = pd.DataFrame([
+        {"id": 1, "equip_id": None, "name": "열충격시험기", "spec": "", "unit": "hr", "price_req": 12000,
+         "price_self": None, "note": "", "retired": "Y"},
+        {"id": 2, "equip_id": None, "name": "방폭룸", "spec": "", "unit": "hr", "price_req": 220000,
+         "price_self": None, "note": "", "retired": ""}])
+    eq = pd.DataFrame(columns=["id", "name", "short", "group"])
+    dev, ex = quotes.rate_table(eq, rates)
+    assert len(ex) == 2 and list(ex["retired"]) == ["Y", ""]
+    assert set(quotes.pick_options(dev, ex)) == {"방폭룸"}

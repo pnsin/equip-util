@@ -147,6 +147,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     view["_x"] = None
     known = set(ids)
     ex = rates[rates["equip_id"].isna() | ~rates["equip_id"].fillna(-1).astype(int).isin(known)]
+    ex = ex[[not quotes.is_retired(r) for r in ex.to_dict("records")]]  # 불용 항목은 숨김 (저장할 때 그대로 남김)
     n_dev = len(view)
     if not ex.empty:
         view = pd.concat([view, pd.DataFrame({
@@ -307,4 +308,6 @@ def _save_rates_from(out: pd.DataFrame, rates: pd.DataFrame, extras: pd.DataFram
             rows.append({"id": int(rid) if rid is not None else None, "equip_id": None, "name": nm,
                          "spec": r.get(RATE["spec"]), "unit": r.get(RATE["unit"]), "price_req": r.get(RATE["price_req"]),
                          "price_self": r.get(RATE["price_self"]), "note": r.get("비고")})
+    rows += [r for r in rates.to_dict("records")  # 화면에 안 보이는 불용 항목은 그대로 남김
+             if pd.isna(r["equip_id"]) and quotes.is_retired(r)]
     db.save_rates(rows)

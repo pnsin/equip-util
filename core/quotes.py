@@ -103,9 +103,14 @@ def rate_table(eq: pd.DataFrame, rates: pd.DataFrame, chargers: set | None = Non
                             "name": _s(r.get("name")) or f"장비 #{_s(r.get('equip_id'))}",
                             "spec": _s(r.get("spec")), "unit": _s(r.get("unit")) or "hr",
                             "price_req": _n(r.get("price_req")), "price_self": _n(r.get("price_self")),
-                            "note": _s(r.get("note"))} for r in ex],
-                          columns=["id", "equip_id", "name", "spec", "unit", "price_req", "price_self", "note"])
+                            "note": _s(r.get("note")), "retired": _s(r.get("retired"))} for r in ex],
+                          columns=["id", "equip_id", "name", "spec", "unit", "price_req", "price_self", "note", "retired"])
     return devices, extras
+
+
+def is_retired(row: dict) -> bool:
+    """불용 장비의 단가 항목 (단가 탭 '불용' 칸이 Y)."""
+    return _s(row.get("retired")).upper() in ("Y", "불용")
 
 
 def is_missing(row: dict) -> bool:
@@ -122,7 +127,7 @@ def pick_options(devices: pd.DataFrame, extras: pd.DataFrame) -> dict[str, dict]
                            "price_req": r["price_req"], "price_self": r["price_self"]}
     for r in extras.to_dict("records"):
         label = r["name"]
-        if not label:
+        if not label or is_retired(r):  # 불용 항목은 견적서에서 고르지 않음
             continue
         if label in out:
             label = f"{label} (항목)"
