@@ -4,10 +4,9 @@ import json
 import pandas as pd
 import streamlit as st
 
-from core import db, report, rules, seed
+from core import db, report, seed
 from core.calc import period_bounds
 from ui_style import empty_state, page_header
-from views.common import pick_done, pick_table, pin_table, unpin
 
 ID = "_id"
 
@@ -80,7 +79,9 @@ def _ledger() -> None:
         return
     years = sorted({d.year for d in df["tax_date"] if d}, reverse=True)
     c1, c2, c3 = st.columns([1, 1.2, 2.8])
-    yr = c1.selectbox("연도", ["전체"] + years, key="fl_year")
+    opts = ["전체"] + years  # 2026-11-19 사용자: 기본은 올해
+    yr = c1.selectbox("연도", opts, key="fl_year",
+                      index=opts.index(dt.date.today().year) if dt.date.today().year in opts else 0)
     if yr != "전체":
         df = df[df["tax_date"].map(lambda d: bool(d) and d.year == yr)]
     # 2026-11-19 사용자: 애매한 줄(기타)을 찾기 어려움 → 보고 분류로 골라 보기 (기타만 보고 바로 고침)
@@ -131,8 +132,6 @@ def _by_logs() -> None:
 
     logs = db.load_logs()
     eq = db.load_equipment()
-    comp = db.load_companies()
-    master = {r["name"]: r for r in comp.to_dict("records")}
     label_of = dict(zip(eq["id"], eq["label"]))
     id_of = dict(zip(eq["label"], eq["id"]))
 
@@ -191,97 +190,29 @@ def _by_logs() -> None:
     view = view.reset_index(drop=True)
     order = DEFAULT_COLS  # 2026-11-17 보이는 열 고르기 없앰
 
-    ed_key = f"records_tbl_{abs(hash((str(rng), tuple(sel_eq), comp_q, writer, no_fee))) % 10 ** 8}"
-    view, _ = pin_table(ed_key, view)  # 고치는 중에 다른 분이 저장해도 칸이 엉뚱한 줄로 가지 않게 (저장은 ID로)
-
-    def copy_day():
-        st.date_input("복제할 시작일", value=dt.date.today(), format="YYYY-MM-DD", key="rec_copy_day", width=220,
-                      help="'복제'를 누르면 고른 행을 이 날부터 시작하도록 복사합니다 (기간 실적은 같은 길이).")
-
-    action, out, _ = pick_table(
-        view, ed_key, name_col="장비", can_add=False, column_order=order,
-        disabled=["사업자번호", "업종", "품목", "세부품목", "수정자"],
-        extra_actions=[("copy", "복제", ":material/content_copy:")], extra_ui=copy_day,
+    # 2026-11-19 사용자: 여기서는 수수료만 넣음 → '선택' 없이 수수료(원) 칸을 바로 고치면 자동 저장
+    ed_key = f"records_tbl_{abs(hash((str(rng), tuple(sel_eq), comp_q, writer))) % 10 ** 8}_{db.data_version()}"
+    ed = st.data_editor(
+        view, key=ed_key, hide_index=True, width="stretch", column_order=order,
+        disabled=[c for c in view.columns if c != "수수료"],
         column_config={
             "수정자": st.column_config.TextColumn("마지막 수정", help="이 실적을 마지막으로 고친 사람"),
-            "담당자": st.column_config.SelectboxColumn(options=db.staff_names(list(df["created_by"])), required=True),
-            "장비": st.column_config.SelectboxColumn(options=list(eq["label"]), width="large", required=True),
-            "사용목적": st.column_config.SelectboxColumn(options=list(dict.fromkeys(seed.purpose_label(p) for p in seed.PURPOSES)),
-                                                     required=True),
-            "활용유형": st.column_config.SelectboxColumn(options=seed.USAGE_TYPES, required=True),
-            "업체": st.column_config.SelectboxColumn(
-                options=list(master) + sorted({c for c in view["업체"] if c and c not in master}),
-                help="'기준 정보 › 업체'에 등록된 업체만 고를 수 있습니다. 사업자번호는 업체 목록에서 자동으로 채워집니다."),
-            "사업자번호": st.column_config.TextColumn(help="'기준 정보 › 업체'에서 고칩니다."),
-            "업종": st.column_config.TextColumn(help="'기준 정보 › 업체 목록'에서 고칩니다."),
-            "품목": st.column_config.TextColumn(help="'기준 정보 › 업체 목록'에서 고칩니다."),
-            "세부품목": st.column_config.TextColumn(help="'기준 정보 › 업체 목록'에서 고칩니다."),
-            "공개": st.column_config.SelectboxColumn(options=seed.YN, width="small"),
-            "휴무포함": st.column_config.SelectboxColumn(options=seed.YN, width="small"),
-            "시작일": st.column_config.DateColumn(format="YYYY-MM-DD", required=True),
-            "종료일": st.column_config.DateColumn(format="YYYY-MM-DD", required=True),
-            "사용시간": st.column_config.NumberColumn(min_value=0, step=1, format="%d", required=True),
-            "수수료": st.column_config.NumberColumn("수수료(원)", min_value=0, step=1000, format="localized",
-                                                help="시험이 끝난 뒤 매긴 수수료."),
-            "시료수": st.column_config.NumberColumn(min_value=0, step=1, format="%d"),
+            "장비": st.column_config.TextColumn(width="large"),
+            "시작일": st.column_config.DateColumn(format="YYYY-MM-DD"),
+            "종료일": st.column_config.DateColumn(format="YYYY-MM-DD"),
+            "사용시간": st.column_config.NumberColumn(format="%d"),
+            "수수료": st.column_config.NumberColumn(
+                "수수료(원) ✎", min_value=0, step=1000, format="localized",
+                help="칸을 두 번 눌러 금액을 넣고 Enter를 누르면 바로 저장돼요. 다른 내용은 '장비 일정 등록'에서 고칩니다."),
+            "시료수": st.column_config.NumberColumn(format="%d"),
             "세부지원내용": st.column_config.TextColumn(width="large"),
         },
     )
-
-    def done(msg):
-        st.session_state.records_saved = msg
-        pick_done(ed_key)
-        unpin(ed_key)
+    changed = {int(i): {"fee": int(round(float(n or 0)))}
+               for i, n, o in zip(view[ID], ed["수수료"], view["수수료"])
+               if (0 if pd.isna(n) else float(n)) != (0 if pd.isna(o) else float(o))}
+    if changed:
+        with db.undo_group(f"수수료 입력 ({len(changed)}건)"):
+            n_up = db.update_logs(changed)
+        st.session_state.records_saved = f"수수료 {n_up}건을 저장했어요."
         st.rerun()
-
-    if action == "save":
-        errors, updates = [], {}
-        for i in range(len(view)):
-            row = out.loc[i]
-            if row.drop(ID).astype(str).equals(view.loc[i].drop(ID).astype(str)):
-                continue
-            rec = {FIELDS[col]: row[col] for col in FIELDS if col != "장비"}
-            rec["equip_id"] = id_of.get(row["장비"])
-            rec["purpose"] = {v: k for k, v in seed.PURPOSE_LABEL.items()}.get(rec.get("purpose"), rec.get("purpose"))
-            rec["company"] = db.to_str(rec.get("company"))
-            m = master.get(rec["company"])
-            if m is not None:  # 사업자번호는 항상 업체 목록 기준
-                rec["brn"] = m["brn"]
-            elif not rec["company"]:
-                rec["brn"] = ""
-            errs = rules.validate(rec)
-            if rec["equip_id"] is None:
-                errs.append("장비를 선택하세요.")
-            if errs:
-                errors += [f"[{row['시작일']} {row['장비']}] {e}" for e in errs]
-            else:
-                updates[int(row[ID])] = rec
-        for e in errors:
-            st.error(e)
-        if not errors:
-            with db.undo_group(f"수수료 입력 저장 (수정 {len(updates)})"):
-                n_up = db.update_logs(updates) if updates else 0
-            done(f"{n_up}건을 고쳤습니다.")
-    elif action == "delete":
-        ids = [int(i) for i in set(view[ID]) - set(out[ID])]
-        with db.undo_group(f"수수료 입력 삭제 ({len(ids)})"):
-            n_del = db.delete_logs(ids)
-        done(f"{n_del}건을 지웠습니다.")
-    elif action == "copy":
-        new_start = st.session_state.get("rec_copy_day") or dt.date.today()
-        errors, recs = [], []
-        for i in out[ID]:
-            src = df[df["id"] == i].iloc[0].to_dict()
-            length = (src["end_date"] - src["start_date"]).days
-            rec = {k: src.get(k) for k in db.LOG_FIELDS}
-            rec.update(start_date=new_start, end_date=new_start + dt.timedelta(days=length),
-                       created_by=st.session_state.get("me") or src.get("created_by"))
-            errs = rules.validate(rec)
-            errors += [f"[{label_of.get(src['equip_id'], '')}] {e}" for e in errs]
-            recs.append(rec)
-        for e in errors:
-            st.error(e)
-        if not errors:
-            with db.undo_group(f"실적 {len(recs)}건 복제 ({new_start:%m/%d})"):
-                n = db.insert_logs(recs)
-            done(f"{n}건을 {new_start:%m/%d}로 복제했습니다. '장비 일정 등록' 달력에서도 바로 보여요.")
