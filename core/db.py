@@ -1335,7 +1335,11 @@ def add_pick_labels(df: pd.DataFrame) -> pd.DataFrame:
                     out[k] = f"{n} · {ex[k]}"
                 break
         else:  # 같은 이름 여러 대 → i-Tube 번호 순으로 1호기, 2호기 … (2026-11-10: 번호 대신 짧게)
-            for no, k in enumerate(sorted(ks, key=lambda k: (tube[k] or "~", k)), start=1):
+            # 2026-11-19: 같은 이름의 시스템(세부장비가 있는 장비, 예: 방폭챔버 4대 묶음)은 이름 그대로, 안의 장비만 n호기
+            units = [k for k in ks if df["leaf"].iat[k]]
+            if len(units) < 2:
+                units = ks
+            for no, k in enumerate(sorted(units, key=lambda k: (tube[k] or "~", k)), start=1):
                 out[k] = f"{n} {no}호기"
     cnt: dict = {}
     for o in out:
