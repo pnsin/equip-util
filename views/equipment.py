@@ -60,7 +60,9 @@ def _summary(eq: pd.DataFrame) -> None:
     # 2026-11-19: 번호 없는 시스템이라도 안의 장비가 i-Tube 번호를 가지면 (예: 방폭챔버 4대 묶음) '번호 없음'에서 뺌
     coded = set(eq.loc[eq["code"] != "", "root_id"].astype(int)) if "root_id" in eq else set()
     unreg = top[(top["code"] == "") & ~top["id"].astype(int).isin(coded)]
-    pills = [("a", "장비", len(top)), ("", "세부장비", len(sub)), ("w", "ITUBE번호 없음", len(unreg))]
+    # 2026-11-19: 줄 수(장비 37·세부장비 85) 대신 종·대수 (종합 현황·엑셀 요약과 같은 세는 법)
+    tot = dict(count_summary(eq)[0])["센터별"].iloc[-1]
+    pills = [("a", "종", int(tot["종"])), ("a", "대수", int(tot["대수"])), ("w", "ITUBE번호 없음", len(unreg))]
     st.markdown("<div class='eq-sum'>" + "".join(
         f"<div class='p {c}'>{html.escape(t)}<b>{n:,}</b></div>" for c, t, n in pills) + "</div>",
         unsafe_allow_html=True)
@@ -147,7 +149,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     view["_x"] = None
     known = set(ids)
     ex = rates[rates["equip_id"].isna() | ~rates["equip_id"].fillna(-1).astype(int).isin(known)]
-    ex = ex[[not quotes.is_retired(r) for r in ex.to_dict("records")]]  # 불용 항목은 숨김 (저장할 때 그대로 남김)
+    ex = ex[pd.Series([not quotes.is_retired(r) for r in ex.to_dict("records")], index=ex.index, dtype=bool)]  # 불용 항목은 숨김 (저장할 때 그대로 남김)
     n_dev = len(view)
     if not ex.empty:
         view = pd.concat([view, pd.DataFrame({
@@ -271,7 +273,9 @@ def _save_table(out: pd.DataFrame, rates: pd.DataFrame, label_of: dict) -> list[
 
 def _retired_sheet(rates: pd.DataFrame) -> pd.DataFrame:
     """2026-11-19: 불용 장비의 단가 항목 (단가 탭 '불용' = Y). 화면에서는 숨기지만 엑셀에서는 찾아볼 수 있게."""
-    r = rates[[pd.isna(e) and quotes.is_retired(x) for e, x in zip(rates["equip_id"], rates.to_dict("records"))]]
+    keep = pd.Series([pd.isna(e) and quotes.is_retired(x) for e, x in zip(rates["equip_id"], rates.to_dict("records"))],
+                     index=rates.index, dtype=bool)
+    r = rates[keep]
     return pd.DataFrame({"항목명": r["name"].values, RATE["unit"]: r["unit"].values,
                          RATE["price_req"]: pd.to_numeric(r["price_req"], errors="coerce").values,
                          RATE["price_self"]: pd.to_numeric(r["price_self"], errors="coerce").values,
