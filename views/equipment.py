@@ -10,7 +10,7 @@ import html
 import pandas as pd
 import streamlit as st
 
-from core import db, quotes, seed, sheet_io
+from core import db, equip_count, quotes, seed, sheet_io
 from core.quote_doc import UNITS
 from core.terms import w
 from ui_style import page_header
@@ -67,33 +67,33 @@ def _summary(eq: pd.DataFrame) -> None:
 
 
 def count_summary(eq: pd.DataFrame) -> tuple[list[tuple[str, pd.DataFrame]], list[str]]:
-    """엑셀 '종·대수 요약' 시트: 대분류별 · 센터별 종 / 장비 / 세부장비 / i-Tube 등록 / 대수 (불용 장비 제외)."""
+    """엑셀 '종·대수 요약' 시트: 대분류별 · 센터별 종 / 대수 / i-Tube 등록 (불용 장비 제외). 세는 규칙은 core.equip_count."""
     live = eq[eq["retired_on"].isna()].copy() if "retired_on" in eq else eq.copy()
-    ids = live["id"].astype(int)
-    has_kids = {int(p) for p in live["parent_id"].dropna()}
-    qty = pd.to_numeric(live["qty"], errors="coerce").fillna(1)
-    live["_leaf_qty"] = [0 if i in has_kids else q for i, q in zip(ids, qty)]
+    u = equip_count.units(live)
     cen = db.equip_centers(eq)
-    live["_center"] = [cen.get(int(i)) or "기타" for i in ids]
-    live["_group"] = live["group"].replace("", "(대분류 없음)")
+    grp = dict(zip(live["id"].astype(int), live["group"].replace("", "(대분류 없음)")))
+    code = dict(zip(live["id"].astype(int), live["code"]))
+    u["_center"] = [cen.get(int(i)) or "기타" for i in u["id"]]
+    u["_group"] = [grp.get(int(i), "") for i in u["id"]]
+    root = dict(zip(live["id"].astype(int), live["root_id"].astype(int))) if "root_id" in live else {}
+    n_code = live.assign(_r=live["id"].astype(int).map(root))[live["code"] != ""].groupby("_r").size()
+    u["_coded"] = [int(n_code.get(int(i), 0)) for i in u["id"]]
 
     def row(name, d):
-        return {"구분": name, "종": d.loc[d["species"] != "", "species"].nunique(),
-                "장비": int((d["depth"] == 0).sum()), "세부장비": int((d["depth"] > 0).sum()),
-                "i-Tube 등록": int((d["code"] != "").sum()), "대수": int(d["_leaf_qty"].sum())}
+        return {"구분": name, "종": len(d), "대수": int(d["대수"].sum()), "i-Tube 등록": int(d["_coded"].sum())}
 
     def block(col, order):
-        rows = [row(k, live[live[col] == k]) for k in order if (live[col] == k).any()]
-        return pd.DataFrame(rows + [row("합계", live)])
+        rows = [row(k, u[u[col] == k]) for k in order if (u[col] == k).any()]
+        return pd.DataFrame(rows + [row("합계", u)])
 
-    by_group = block("_group", list(dict.fromkeys(live["_group"])))
-    by_center = block("_center", db.CENTERS + sorted(set(live["_center"]) - set(db.CENTERS)))
+    by_group = block("_group", list(dict.fromkeys(u["_group"])))
+    by_center = block("_center", db.CENTERS + sorted(set(u["_center"]) - set(db.CENTERS)))
     by_group.columns = ["대분류"] + list(by_group.columns[1:])
     by_center.columns = ["센터"] + list(by_center.columns[1:])
-    notes = ["· 종 = 서로 다른 '주장비(종)' 수 (합계는 겹치는 것을 한 번만 셈)",
-             "· 장비 = 맨 위 장비 줄 수 (화면의 '장비' 숫자), 세부장비 = 그 아래 줄 수",
-             "· i-Tube 등록 = ITUBE번호가 있는 장비 수",
-             "· 대수 = 실제 장비 대수 ('대수' 열 합계, 세부장비가 있는 장비는 세부장비 대수로 셈)"]
+    notes = ["· 종 = 맨 위 장비 줄 수 (장비 목록 화면 위 '장비' 숫자와 같음)",
+             "· 대수 = 실제 장비 대수. 세부장비가 있으면 세부장비 '대수' 합, (양극)·(음극) 짝은 1대",
+             "· 세부장비 대수가 모두 0이면 장비 자신의 '대수'로 셈",
+             "· i-Tube 등록 = ITUBE번호가 있는 장비 수 (세부장비 포함, 방폭챔버 4대는 4)"]
     n_ret = len(eq) - len(live)
     if n_ret:
         notes.append(f"· 불용일이 있는 {n_ret}대는 빼고 셌어요.")
