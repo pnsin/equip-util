@@ -35,7 +35,12 @@ for _m in (ui_style, seed, db, photos, calc, period, chargers, rules, itube, per
            equipment, export, records, settings, staff, trash):
     _mt = os.path.getmtime(_m.__file__)
     if getattr(_m, "_src_mtime", None) != _mt:
-        _m = importlib.reload(sys.modules[_m.__name__])
+        # 2026-11-19: Streamlit 이 바뀐 파일의 모듈을 sys.modules 에서 먼저 빼 두는 일이 있어 (KeyError),
+        # 그때는 지금 쓰는 모듈을 다시 넣고 그 자리에서 다시 읽음 (다른 파일이 가진 참조도 함께 새 코드가 됨)
+        sys.modules.setdefault(_m.__name__, _m)
+        if sys.modules[_m.__name__] is not _m:
+            _m = sys.modules[_m.__name__]
+        _m = importlib.reload(_m)
         _m._src_mtime = _mt
 
 ui_style.apply_style()
