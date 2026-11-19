@@ -225,7 +225,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
             "대분류": st.column_config.TextColumn(width="small"),
             "보고 분류": st.column_config.SelectboxColumn(
                 options=report.CATS, width=120,
-                help="주간업무보고·장비 종합 현황의 분류. 비워 두면 소속 장비 → 대분류를 따라가요."),
+                help="주간업무보고·장비 KPI 현황의 분류. 비워 두면 소속 장비 → 대분류를 따라가요."),
             "주장비(종)": st.column_config.TextColumn(width="medium"),
             "ITUBE번호": st.column_config.TextColumn(width="small", help="비우면 i-Tube 제출 파일에서 빠집니다."),
             "장비구분": st.column_config.SelectboxColumn(options=kinds, width="small",

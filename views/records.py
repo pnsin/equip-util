@@ -114,7 +114,7 @@ def _ledger() -> None:
     heads = {"tax_date": "세금일자", "company": "업체명", "item": "발행내역", "report_cat": RC, "supply": "공급가",
              "total": "합계", "paid1_date": "입금일(1차)", "paid1": "입금(1차)", "paid2_date": "입금일(2차)",
              "paid2": "입금(2차)", "unpaid": "미수금", "staff": "담당자", "team": "팀명"}
-    # 2026-11-19 보고 분류: 발행내역으로 자동으로 정하고, 틀린 줄만 여기서 바로 고침 (장비 종합 현황 02 수수료 표에 씀)
+    # 2026-11-19 보고 분류: 발행내역으로 자동으로 정하고, 틀린 줄만 여기서 바로 고침 (장비 KPI 현황 02 수수료 표에 씀)
     view = df[["id"] + list(heads)].rename(columns=heads)
     # 2026-11-19 사용자: '확인 필요' 줄은 맨 위로, 빨간 글씨로 (기타와 헷갈리지 않게)
     view = view.assign(_k=(view[RC] != report.CHECK)).sort_values("_k", kind="stable").drop(columns="_k")
@@ -125,7 +125,7 @@ def _ledger() -> None:
                         disabled=[c for c in view.columns if c != RC],
                         column_config={RC: st.column_config.SelectboxColumn(
                                            options=[MARK] + report.CATS, required=True, width=120,
-                                           help="장비 종합 현황 수수료 표의 분류. 바꾸면 바로 저장되고, 같은 업체·같은 발행내역 줄(다음에 올릴 매출장 포함)도 같이 바뀌어요."),
+                                           help="장비 KPI 현황 수수료 표의 분류. 바꾸면 바로 저장되고, 같은 업체·같은 발행내역 줄(다음에 올릴 매출장 포함)도 같이 바뀌어요."),
                                        **{h: st.column_config.NumberColumn(format="localized")
                                           for h in ("공급가", "합계", "입금(1차)", "입금(2차)", "미수금")}})
     changed = {int(i): (report.CHECK if c == MARK else c) for i, c, o in zip(ed["id"], ed[RC], view[RC]) if c and c != o}

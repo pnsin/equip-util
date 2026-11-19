@@ -264,7 +264,7 @@ def _filters(years: list[int]) -> tuple[int, int | None]:
     """2026-11-19 사용자: 기간 단위(월/연)는 필요 없음 → 연도만 고름."""
     c0, c1 = st.columns([1, 1.5], vertical_alignment="bottom")
     with c0:
-        page_header("장비 종합 현황", "현황")
+        page_header("장비 KPI 현황", "현황")
     today = dt.date.today()
     # 2026-11-19 사용자: 기준일 표시는 표마다 말고 연도 칸 앞에 한 번만, '연도' 글자는 없앰
     with c1, st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
