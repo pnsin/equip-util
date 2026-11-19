@@ -83,4 +83,4 @@ def test_equip_count_matches_reference_6_15():
     eq = pd.DataFrame(rows, columns=["id", "name", "code", "parent_id", "qty"])
     u = equip_count.units(eq).set_index("id")["대수"]
     assert dict(u[[1, 2, 3, 4, 5, 6]]) == {1: 5, 2: 4, 3: 3, 4: 1, 5: 1, 6: 1}  # 6종 15대
-    assert set(u.index) == {1, 2, 3, 4, 5, 6, 70, 71}  # 묶음 안 i-Tube 장비는 한 대씩 종
+    assert set(u.index) == {1, 2, 3, 4, 5, 6, 7} and u[7] == 2  # 묶음은 1종, 대수는 안의 장비 수
