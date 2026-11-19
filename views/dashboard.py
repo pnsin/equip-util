@@ -12,7 +12,7 @@ import streamlit as st
 from core import calc, db, report
 from core.terms import w
 from ui_style import CHART_CONFIG, T, chart_layout, empty_state, page_header
-from views.common import go_records, period_picker
+from views.common import go_records
 
 CFG = CHART_CONFIG
 E = html.escape
@@ -252,13 +252,15 @@ def _pick(event):
 # ── 필터 ─────────────────────────────────────────────────────
 
 def _filters(years: list[int]) -> tuple[int, int | None]:
-    """2026-11-10: 센터·용도 필터는 없애고 장비별 가동률과 같은 기간 고르기 (연 / 월)."""
+    """2026-11-19 사용자: 기간 단위(월/연)는 필요 없음 → 연도만 고름."""
     c0, c1 = st.columns([1, 1.5], vertical_alignment="bottom")
     with c0:
         page_header("장비 종합 현황", "현황")
-    with c1:
-        s, _, _, kind = period_picker("dash", ["월", "연"], "연", years=years, align="right")
-    return s.year, (s.month if kind == "월" else None)
+    with c1, st.container(horizontal=True, horizontal_alignment="right", key="dash_pp"):
+        ys = sorted(set(years) | {dt.date.today().year}, reverse=True)
+        year = st.selectbox("연도", ys, index=ys.index(dt.date.today().year), key="dash_year",
+                            format_func=lambda v: f"{v}년", width=130)
+    return year, None
 
 
 # ── 화면 ─────────────────────────────────────────────────────
