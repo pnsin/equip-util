@@ -383,7 +383,7 @@ def _top_row(year: int, y_tot: dict, kpi: dict, ref_day) -> None:
     c4 = (f'<div class="k c4"><div class="hd"><div class="bd" style="background:{PURPLE[2]};color:{PURPLE[0]}">▦</div>'
           f'<div class="lab"><div class="no" style="color:{PURPLE[0]}">04</div><div class="tt">장비 종·대수</div></div>'
           f'<span class="pill">{tot["종"]}종 / {tot["대수"]}대</span></div>'
-          f'<table><thead><tr><th>센터</th><th>종</th><th>대수</th><th>i-Tube</th></tr></thead><tbody>{rows}</tbody>'
+          f'<table><thead><tr><th>센터</th><th>종</th><th>대수</th><th>i-Tube 등록</th></tr></thead><tbody>{rows}</tbody>'
           f'</table></div>')
     st.markdown(f'<div class="dtop">{c1}{c2}{c3}{c4}</div>', unsafe_allow_html=True)
 
