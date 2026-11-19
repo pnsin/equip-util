@@ -10,7 +10,7 @@ import html
 import pandas as pd
 import streamlit as st
 
-from core import db, equip_count, quotes, seed, sheet_io
+from core import db, equip_count, quotes, report, seed, sheet_io
 from core.quote_doc import UNITS
 from core.terms import w
 from ui_style import page_header
@@ -28,9 +28,9 @@ COLS = {
     "kind": "장비구분", "category": "구분", "qty": "대수", "manager": "관리자", "location": "장비위치", "use": "장비용도",
     "model": "모델명", "maker": "제조사", "vendor": "구매처", "asset_no": "자산번호", "nfec": "국가연구시설장비번호",
     "system": "시스템 구성", "annual_hours": "연간기준시간", "acquired_on": "도입일", "retired_on": "불용일",
-    "in_kpi": KPI_COL, "note": "비고",
+    "in_kpi": KPI_COL, "note": "비고", "report_cat": "보고 분류",
 }
-BASIC = ["장비명(한글)", "대분류", "주장비(종)", PARENT, "ITUBE번호", "장비구분", "대수", "관리자", "장비위치",
+BASIC = ["장비명(한글)", "대분류", "보고 분류", "주장비(종)", PARENT, "ITUBE번호", "장비구분", "대수", "관리자", "장비위치",
          "장비용도"]
 # 2026-11-05 장비 단가를 장비 목록에 합침: '단가' 를 켜면 이 열들이 보이고, 저장하면 단가 탭에 같이 저장
 RATE = {"spec": "견적 용량", "unit": "단위", "price_req": "의뢰 단가", "price_self": "직접 단가"}
@@ -166,7 +166,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
 
     # 2026-11-19 엑셀 열 순서: 이름·구분·소속 → 분류 → 관리 → 제품 정보 → 단가 → 비고 (열 제목으로 읽으므로 순서는 자유)
     xl_heads = {k: COLS[k] for k in ("name", "kind")} | {"parent_id": "소속 장비 ID"} | {
-        k: COLS[k] for k in ("code", "group", "species", "category", "qty", "manager", "location", "use", "model",
+        k: COLS[k] for k in ("code", "group", "report_cat", "species", "category", "qty", "manager", "location", "use", "model",
                              "maker", "vendor", "asset_no", "nfec", "system", "annual_hours", "acquired_on")} | {
         v: v for v in RATE.values()} | {"note": COLS["note"]}
     assert set(xl_heads) >= set(COLS) - {"id", "retired_on", "in_kpi"}
@@ -223,6 +223,9 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
                 options=[NO_PARENT] + list(label_of.values()), width="medium", default=NO_PARENT,
                 help="고르면 그 장비의 세부장비가 되고, 사용시간이 그 장비로 합산됩니다."),
             "대분류": st.column_config.TextColumn(width="small"),
+            "보고 분류": st.column_config.SelectboxColumn(
+                options=report.CATS, width=120,
+                help="주간업무보고·장비 종합 현황의 분류. 비워 두면 소속 장비 → 대분류를 따라가요."),
             "주장비(종)": st.column_config.TextColumn(width="medium"),
             "ITUBE번호": st.column_config.TextColumn(width="small", help="비우면 i-Tube 제출 파일에서 빠집니다."),
             "장비구분": st.column_config.SelectboxColumn(options=kinds, width="small",

@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from core import calc, db, itube, rules, seed
+from core import calc, db, itube, report, rules, seed
 from views.common import period_picker
 from ui_style import empty_state, page_header, section_bar
 from core.terms import w
@@ -119,7 +119,7 @@ def render_itube() -> None:
 def render_report() -> None:
     cfg, logs, eq, s, e, label = _common(w("가동률 분석 보고서"), "report")
     annual = float(cfg.get("annual_hours") or 2000)
-    target = float(cfg.get("target_util") or 0)
+    target = float(report.kpi(cfg, s.year)["util_total"] or 0)  # 2026-11-19 설정 › KPI 목표
     cutoff = dt.date.today()
     daily = calc.expand_daily(logs, cfg.get("alloc_mode", "spread"), db.charger_caps())
     e_eff = calc.effective_end(s, e, cutoff)

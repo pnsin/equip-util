@@ -33,6 +33,8 @@ TABLES = {
         ("parent_id", "상위장비ID"), ("group", "대분류"), ("species", "주장비(종)"), ("category", "구분"),
         ("asset_no", "자산번호"), ("qty", "대수"), ("maker", "제조사"), ("vendor", "구매처"),
         ("system", "시스템 구성"), ("order", "순서"),
+        # 2026-11-19 주간업무보고 분류 (비우면 소속 장비 → 대분류를 따름, core/report.py)
+        ("report_cat", "보고분류"),
     ]),
     "companies": ("업체", [
         ("id", "ID"), ("name", "기업명"), ("brn", "사업자등록번호"), ("contact", "담당자"),
@@ -103,6 +105,7 @@ TABLES = {
         ("company", "업체명"), ("brn", "사업자번호"), ("item", "발행내역"), ("supply", "공급가"), ("vat", "부가세"),
         ("total", "합계"), ("paid1_date", "입금일자(1차)"), ("paid1", "입금금액(1차)"), ("paid2_date", "입금일자(2차)"),
         ("paid2", "입금금액(2차)"), ("unpaid", "미수금"), ("imported_at", "올린시각"),
+        ("report_cat", "보고분류"),  # 2026-11-19 비우면 발행내역으로 자동 분류 (core/report.py)
     ]),
     # 지운 행을 보관했다가 '관리 › 휴지통 · 기록'에서 되살림 (data = 원래 행, JSON)
     "trash": ("휴지통", [
@@ -1114,7 +1117,7 @@ def save_settings(**kv) -> None:
 # ── 장비 ────────────────────────────────────────────────────────
 
 EQUIP_TEXT = ("name", "code", "kind", "manager", "note", "nfec", "model", "location", "use",
-              "group", "species", "category", "asset_no", "maker", "vendor", "system")
+              "group", "species", "category", "asset_no", "maker", "vendor", "system", "report_cat")
 
 
 def _equipment_frame_raw() -> pd.DataFrame:
@@ -1407,6 +1410,7 @@ def _equip_record(r: dict) -> dict:
         "vendor": to_str(r.get("vendor")),
         "system": to_str(r.get("system")),
         "order": to_num(r.get("order")),
+        "report_cat": to_str(r.get("report_cat")),
     }
 
 

@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import streamlit as st
 
-from core import db, rules, seed
+from core import db, report, rules, seed
 from core.calc import period_bounds
 from ui_style import empty_state, page_header
 from views.common import pick_done, pick_table, pin_table, unpin
@@ -91,12 +91,24 @@ def _ledger() -> None:
     m1.metric("건수", f"{len(df):,}")
     m2.metric("공급가 합계", f"{df['supply'].sum():,.0f} 원")
     m3.metric("미수금", f"{df['unpaid'].sum():,.0f} 원")
-    heads = {"tax_date": "세금일자", "company": "업체명", "item": "발행내역", "supply": "공급가", "total": "합계",
-             "paid1_date": "입금일(1차)", "paid1": "입금(1차)", "paid2_date": "입금일(2차)", "paid2": "입금(2차)",
-             "unpaid": "미수금", "staff": "담당자", "team": "팀명"}
-    st.dataframe(df[list(heads)].rename(columns=heads), hide_index=True, width="stretch",
-                 column_config={h: st.column_config.NumberColumn(format="localized")
-                                for h in ("공급가", "합계", "입금(1차)", "입금(2차)", "미수금")})
+    heads = {"tax_date": "세금일자", "company": "업체명", "item": "발행내역", "report_cat": "보고 분류", "supply": "공급가",
+             "total": "합계", "paid1_date": "입금일(1차)", "paid1": "입금(1차)", "paid2_date": "입금일(2차)",
+             "paid2": "입금(2차)", "unpaid": "미수금", "staff": "담당자", "team": "팀명"}
+    # 2026-11-19 보고 분류: 발행내역으로 자동으로 정하고, 틀린 줄만 여기서 바로 고침 (장비 종합 현황 02 수수료 표에 씀)
+    view = df.assign(report_cat=report.ledger_cats(df))[["id"] + list(heads)].rename(columns=heads)
+    view = view.reset_index(drop=True)
+    ed = st.data_editor(view, key=f"fl_tbl_{yr}_{q}_{db.data_version()}", hide_index=True, width="stretch", column_order=list(heads.values()),
+                        disabled=[c for c in view.columns if c != "보고 분류"],
+                        column_config={"보고 분류": st.column_config.SelectboxColumn(
+                                           options=report.CATS, required=True, width=120,
+                                           help="장비 종합 현황 수수료 표의 분류. 바꾸면 바로 저장돼요."),
+                                       **{h: st.column_config.NumberColumn(format="localized")
+                                          for h in ("공급가", "합계", "입금(1차)", "입금(2차)", "미수금")}})
+    changed = {int(i): c for i, c, o in zip(ed["id"], ed["보고 분류"], view["보고 분류"]) if c and c != o}
+    if changed:
+        fl.set_cats(changed)
+        st.toast(f"보고 분류 {len(changed)}건을 바꿨어요.", icon=":material/check_circle:")
+        st.rerun()
 
 
 def _by_logs() -> None:

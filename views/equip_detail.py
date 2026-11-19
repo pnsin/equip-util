@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from core import calc, db
+from core import calc, db, report
 from core.terms import w
 from ui_style import CHART_CONFIG, T, chart_layout, nice_step, empty_state, page_header, section_bar
 from views.common import period_picker
@@ -94,7 +94,7 @@ def render() -> None:
     eq = db.load_equipment()
     logs_all = db.load_logs()
     annual = float(cfg.get("annual_hours") or 2000)
-    target = float(cfg.get("target_util") or 0)
+    target = float(report.kpi(cfg, dt.date.today().year)["util_total"] or 0)  # 2026-11-19 설정 › KPI 목표
     if eq.empty:
         empty_state("등록된 장비가 없습니다", "'기준 정보 › 장비'에서 먼저 장비를 추가하세요.")
         return
