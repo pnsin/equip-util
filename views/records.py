@@ -86,9 +86,9 @@ def _ledger() -> None:
     # 2026-11-19 사용자: 애매한 줄(기타)을 찾기 어려움 → 보고 분류로 골라 보기 (기타만 보고 바로 고침)
     df = df.assign(report_cat=report.ledger_cats(df)) if not df.empty else df
     cnt = df["report_cat"].value_counts().to_dict() if not df.empty else {}
-    cat = c2.selectbox("보고 분류", ["전체"] + [c for c in report.CATS if cnt.get(c)], key="fl_cat",
-                       format_func=lambda c: c if c == "전체" else f"{c} ({cnt.get(c, 0)}건)",
-                       help="'기타'를 고르면 분류가 애매한 줄만 보여요. 표의 '보고 분류' 칸을 눌러 바로 고칠 수 있어요.")
+    cat = c2.selectbox("보고 분류", ["전체"] + [c for c in [report.CHECK] + report.CATS if cnt.get(c)], key="fl_cat",
+                       format_func=lambda c: c if c == "전체" else f"{'🔴 ' if c == report.CHECK else ''}{c} ({cnt.get(c, 0)}건)",
+                       help="'확인 필요'를 고르면 자동으로 분류하지 못한 줄만 보여요. 표의 '보고 분류' 칸을 눌러 바로 고칠 수 있어요.")
     if cat != "전체":
         df = df[df["report_cat"] == cat]
     q = c3.text_input("업체·발행내역", placeholder="검색", key="fl_q")
@@ -105,15 +105,19 @@ def _ledger() -> None:
              "paid2": "입금(2차)", "unpaid": "미수금", "staff": "담당자", "team": "팀명"}
     # 2026-11-19 보고 분류: 발행내역으로 자동으로 정하고, 틀린 줄만 여기서 바로 고침 (장비 종합 현황 02 수수료 표에 씀)
     view = df[["id"] + list(heads)].rename(columns=heads)
+    # 2026-11-19 사용자: '확인 필요' 줄은 맨 위로, 빨간 글씨로 (기타와 헷갈리지 않게)
+    view = view.assign(_k=(view[RC] != report.CHECK)).sort_values("_k", kind="stable").drop(columns="_k")
     view = view.reset_index(drop=True)
+    MARK = "🔴 " + report.CHECK  # 표 칸은 글자색을 못 바꿔서 빨간 점으로 표시
+    view[RC] = view[RC].replace({report.CHECK: MARK})
     ed = st.data_editor(view, key=f"fl_tbl_{yr}_{cat}_{q}_{db.data_version()}", hide_index=True, width="stretch", column_order=list(heads.values()),
                         disabled=[c for c in view.columns if c != RC],
                         column_config={RC: st.column_config.SelectboxColumn(
-                                           options=report.CATS, required=True, width=120,
+                                           options=[MARK] + report.CATS, required=True, width=120,
                                            help="장비 종합 현황 수수료 표의 분류. 바꾸면 바로 저장되고, 같은 업체·같은 발행내역 줄(다음에 올릴 매출장 포함)도 같이 바뀌어요."),
                                        **{h: st.column_config.NumberColumn(format="localized")
                                           for h in ("공급가", "합계", "입금(1차)", "입금(2차)", "미수금")}})
-    changed = {int(i): c for i, c, o in zip(ed["id"], ed[RC], view[RC]) if c and c != o}
+    changed = {int(i): (report.CHECK if c == MARK else c) for i, c, o in zip(ed["id"], ed[RC], view[RC]) if c and c != o}
     if changed:
         fl.set_cats(changed)
         st.toast(f"보고 분류 {len(changed)}건을 바꿨어요.", icon=":material/check_circle:")

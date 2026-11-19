@@ -13,6 +13,8 @@ import pandas as pd
 CATS = ["5Ah 제조", "50Ah 제조", "배터리 모듈 제조", "사용환경모사", "방폭챔버", "충방전시험기", "환경시험", "진동시험",
         "분석평가", "워크인챔버", "SMT", "기타"]
 OTHER = "기타"
+# 2026-11-19 사용자: 발행내역·담당자로 알 수 없는 줄은 '기타'가 아니라 '확인 필요' → 사람이 보고 분류를 고름
+CHECK = "확인 필요"
 # 대분류 이름이 보고 분류와 다른 것만
 GROUP_MAP = {"5Ah 생산": "5Ah 제조", "50Ah 생산": "50Ah 제조", "배터리 시제품 생산": "배터리 모듈 제조",
              "분석평가장비": "분석평가", "Lab-scale 장비": OTHER}
@@ -94,7 +96,7 @@ def fee_cat(item, staff="") -> str:
                 if cat == OTHER and words == FEE_RULES[0][1]:
                     return OTHER  # 교육·현장실습은 담당자와 상관없이 기타
                 return cat
-    return STAFF_RULES.get(str(staff or "").strip(), OTHER)
+    return STAFF_RULES.get(str(staff or "").strip(), CHECK)
 
 
 def ledger_cats(df: pd.DataFrame) -> list[str]:
