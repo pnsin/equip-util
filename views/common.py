@@ -190,7 +190,8 @@ def excel_box(key: str, df, heads: dict, sheet: str, apply, extra_sheet: tuple |
     finish(bytes) → bytes: 요약 시트 같은 것을 더 붙일 때.
     """
     from core import sheet_io
-    with st.popover("엑셀로 한번에 고치기", icon=":material/table_view:"):
+    # 2026-11-19 사용자 요청: '엑셀로 한번에 고치기' → '<목록> 내려받기&올리기' (장비·업체·담당자 같은 이름 꼴)
+    with st.popover(f"{sheet} 목록 내려받기&올리기", icon=":material/table_view:"):
         def data(df=df, extra_sheet=extra_sheet):  # 엑셀 파일은 '엑셀 받기'를 누를 때만 만듦 (화면이 다시 그려질 때마다 만들지 않음)
             out = sheet_io.to_xlsx(df, heads, sheet, levels=levels, money=money, id_last=id_last)
             extras = extra_sheet if isinstance(extra_sheet, list) else [extra_sheet] if extra_sheet else []
