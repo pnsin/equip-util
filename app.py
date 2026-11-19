@@ -109,7 +109,7 @@ def keep_choices() -> None:
 
 PAGES = {
     "현황": [
-        st.Page(dashboard.render, title="장비 종합 현황", url_path="home", default=True),
+        st.Page(dashboard.render, title="장비 KPI 현황", url_path="home", default=True),
         st.Page(equip_detail.render, title="장비별 가동률", url_path="equip"),
         st.Page(charger_board.render, title="충방전기 현황", url_path="chargers"),
     ],
@@ -146,7 +146,7 @@ common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1],
 ALIASES = [
     st.Page(equipment.render_prices, title="수수료 단가", url_path="rates"),  # 예전 주소
     st.Page(equipment.render_prices, title="수수료 단가 ", url_path="prices"),  # 예전 주소
-    st.Page(dashboard.render, title="장비 종합 현황", url_path="dashboard"),
+    st.Page(dashboard.render, title="장비 KPI 현황", url_path="dashboard"),
     st.Page(input_page.render, title="장비 일정 등록", url_path="calendar"),
     st.Page(input_page.render, title="장비 일정 등록", url_path="entry"),
     st.Page(export.render_itube, title="i-Tube 장비일지", url_path="export"),
@@ -158,7 +158,7 @@ ALIASES = [
 
 # 왼쪽 메뉴 아이콘 · 묶음별 파스텔 색 (2026-11-06 디자인 통일)
 NAV_ICONS = {
-    "장비 종합 현황": ":material/space_dashboard:", "장비별 가동률": ":material/speed:", "충방전기 현황": ":material/battery_charging_full:",
+    "장비 KPI 현황": ":material/space_dashboard:", "장비별 가동률": ":material/speed:", "충방전기 현황": ":material/battery_charging_full:",
     "장비 일정 등록": ":material/edit_calendar:", "수수료 입력": ":material/payments:", "i-Tube 제출 파일": ":material/upload_file:",
     "장비 정보": ":material/precision_manufacturing:", "유지보수": ":material/build:",
     "CS활동": ":material/handshake:", "견적서 작성": ":material/request_quote:", "업체 목록": ":material/apartment:",
