@@ -413,7 +413,12 @@ def render_new() -> None:
 
     # 1. 장비사용료
     with st.container(border=True, key="q_lines_box"):
-        st.markdown('<div class="q-sub">1. 장비사용료</div>', unsafe_allow_html=True)
+        with st.container(horizontal=True, vertical_alignment="center", gap="small"):
+            st.markdown('<div class="q-sub" style="margin:0">1. 장비사용료</div>', unsafe_allow_html=True, width="content")
+            if st.button("줄 추가", icon=":material/add:", type="tertiary", key=f"q_addline_{ver}"):
+                d["lines"] = d["lines"] + [quotes.new_line(form)]
+                _bump(d)
+                st.rerun()
         has_ch = any(str(ln.get("unit") or "") == "ch" or db.to_num(ln.get("ch")) for ln in d["lines"]) or any(
             str((options.get(ln.get("pick") or "") or {}).get("unit") or "") == "ch" for ln in d["lines"])
         order, cfg = _line_columns(form, list(options), has_ch)
@@ -422,17 +427,14 @@ def render_new() -> None:
                           ("key", "pick", "mode", "name", "spec", "note", "unit"))
         # 보이는 칸 순서대로 열을 둠 (숨긴 열이 사이에 있으면 표에서 고친 값이 다른 열로 들어가는 문제가 있음)
         lines_df = lines_df[order + [c for c in lines_df.columns if c not in order]]
-        ed = st.data_editor(lines_df, key=f"q_lines_{ver}", hide_index=True, width="stretch", num_rows="fixed",
+        # 맨 아래 빈 줄에 바로 쓰면 줄이 생기고, 줄 왼쪽을 눌러 고른 뒤 Delete 키(또는 휴지통)로 지움
+        ed = st.data_editor(lines_df, key=f"q_lines_{ver}", hide_index=True, width="stretch", num_rows="dynamic",
                             column_order=order, column_config=cfg,
-                            height=38 + 35 * (len(lines_df) + 1))
-        if st.button("줄 추가", icon=":material/add:", type="tertiary", key=f"q_addline_{ver}"):
-            d["lines"] = d["lines"] + [quotes.new_line(form)]
-            _bump(d)
-            st.rerun()
+                            height=38 + 35 * (len(lines_df) + 1) + 2)
         new_lines = quotes.apply_line_edits(form, d["lines"], _records(ed), options)
         if len(new_lines) > MAX_LINES[form]:
             st.caption(f":orange[양식에는 {MAX_LINES[form]}줄까지 들어가요. 그 아래 줄은 PDF에 빠져요.]")
-        if _changed(new_lines, _records(ed)):
+        if _redraw(new_lines, _records(ed), d["lines_base"]):
             d["lines"] = new_lines
             _bump(d)
             st.rerun()
@@ -456,7 +458,13 @@ def render_new() -> None:
 
     # 2. 재료비 / 기술료
     with st.container(border=True, key="q_extra_box"):
-        st.markdown(f'<div class="q-sub">2. {EXTRA_TITLE[form]}</div>', unsafe_allow_html=True)
+        with st.container(horizontal=True, vertical_alignment="center", gap="small"):
+            st.markdown(f'<div class="q-sub" style="margin:0">2. {EXTRA_TITLE[form]}</div>', unsafe_allow_html=True, width="content")
+            if st.button("줄 추가", icon=":material/add:", type="tertiary", key=f"q_addex_{ver}"):
+                d["extras"] = d["extras"] + [{"key": uuid.uuid4().hex[:8], "name": "", "qty": None, "unit": "",
+                                              "price": None, "amount": None, "manual": False}]
+                _bump(d)
+                st.rerun()
         ex_df = _frame(d.setdefault("extras_base", d["extras"]),
                        ["key", "name", "qty", "unit", "price", "amount", "manual"], ("key", "name", "unit"))
         ex_cfg = {"name": st.column_config.TextColumn("재료명" if form == "제조" else "항목", width="large"),
@@ -468,17 +476,12 @@ def render_new() -> None:
         ex_order = ["name", "qty", "unit", "price", "amount"] if form == "제조" else ["name", "qty", "price", "amount"]
         ex_df = ex_df[ex_order + [c for c in ex_df.columns if c not in ex_order]]
         ed2 = st.data_editor(ex_df, key=f"q_ex_{ver}", hide_index=True, width="stretch",
-                             num_rows="fixed",
-                             column_order=ex_order, column_config=ex_cfg, height=38 + 35 * (len(ex_df) + 1))
-        if form == "제조" and st.button("줄 추가", icon=":material/add:", type="tertiary", key=f"q_addex_{ver}"):
-            d["extras"] = d["extras"] + [{"key": uuid.uuid4().hex[:8], "name": "", "qty": None, "unit": "", "price": None,
-                                          "amount": None, "manual": False}]
-            _bump(d)
-            st.rerun()
+                             num_rows="dynamic",
+                             column_order=ex_order, column_config=ex_cfg, height=38 + 35 * (len(ex_df) + 1) + 2)
         new_ex = quotes.apply_extra_edits(d["extras"], _records(ed2))
         if len(new_ex) > MAX_EXTRAS[form]:
             st.caption(f":orange[양식에는 {MAX_EXTRAS[form]}줄까지 들어가요.]")
-        if _changed(new_ex, _records(ed2)):
+        if _redraw(new_ex, _records(ed2), d["extras_base"]):
             d["extras"] = new_ex
             _bump(d)
             st.rerun()
@@ -685,6 +688,18 @@ def _show_quote(rec: dict) -> None:
         st.caption(f":red[{files['error']}]")
     for png in files["pages"]:
         st.image(png, width="stretch")
+
+
+def _redraw(new: list[dict], edited: list[dict], base: list[dict]) -> bool:
+    """표를 다시 그려야 하는지. 맨 아래 빈 줄을 눌러 막 생긴 빈 줄은 다시 그리지 않음
+    (다시 그리면 그 칸에 치던 글자가 사라짐). 줄을 지웠으면 다시 그림."""
+    _s = quotes._s
+    keys = {_s(e.get("key")) for e in edited}
+    if any(_s(b.get("key")) not in keys for b in base):
+        return True
+    keep = [i for i, e in enumerate(edited)
+            if _s(e.get("key")) or _s(e.get("pick")) or not quote_doc.is_blank_line(e)]
+    return _changed([new[i] for i in keep], [edited[i] for i in keep])
 
 
 def _changed(new: list[dict], edited: list[dict]) -> bool:
