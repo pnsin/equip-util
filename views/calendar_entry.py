@@ -291,6 +291,8 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 .st-key-calgrid div[class*="st-key-more_"] p {font-size: 0.7rem; color: #94A3B8; margin: 0 0 0 4px;}
 /* 휴대폰: 7칸을 한 줄에 유지한 작은 달력 (날짜·건수만, 누르면 아래에 그날 실적) */
 .cal-mobile-hint {display: none;}
+.cal-mini, .cal-agenda {display: none;}
+[data-testid="stElementContainer"]:has(> div .cal-mini) {display: none; pointer-events: none;}
 @media (max-width: 640px) {
   .st-key-calgrid div[class*="st-key-card"] {display: none !important;}
   .st-key-calgrid [data-testid="stHorizontalBlock"] {flex-wrap: nowrap !important; gap: 3px !important;}
@@ -307,6 +309,26 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .st-key-calgrid div[class*="st-key-day_"] button div[data-testid="stMarkdownContainer"] {text-align: center;}
   .st-key-calnav .cal-title {min-width: 0; font-size: 1.05rem;}
   .cal-mobile-hint {display: block; font-size: .8rem; color: var(--muted); margin: .2rem 0 .4rem;}
+  /* 칸: 구분별 색 점 + 건수 */
+  .st-key-calgrid div[class*="st-key-cell_"] {position: relative;}
+  .st-key-calgrid div[class*="st-key-cell_"]:has(.cal-mini) {min-height: 66px !important;}
+  .st-key-calgrid [data-testid="stElementContainer"]:has(> div .cal-mini) {display: block !important; position: absolute !important; left: 0; right: 0;
+    top: 45px; width: auto !important; z-index: 1;}
+  .cal-mini {display: flex; flex-wrap: wrap; justify-content: center; gap: 1px 4px; line-height: 1;}
+  .cal-mini span {display: inline-flex; align-items: center; gap: 2px; font-size: .55rem; font-weight: 700; color: #CBD5E1;}
+  .cal-mini i {width: 5px; height: 5px; border-radius: 50%; display: block;}
+  /* 달력 아래 이달 실적 목록 */
+  .cal-agenda {display: block; margin-top: .3rem; border-top: 1px solid var(--line, #334155); padding-top: .5rem;}
+  .cal-agenda .ag-h {font-size: .8rem; font-weight: 800; color: #CBD5E1; margin-bottom: .3rem;}
+  .cal-agenda .ag-none {font-size: .78rem; color: #94A3B8; text-align: center;}
+  .cal-agenda .ag-r {display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 1px solid rgba(51,65,85,.6);}
+  .cal-agenda .ag-r:last-child {border-bottom: none;}
+  .cal-agenda .ag-r > i {flex: none; width: 7px; height: 7px; border-radius: 50%;}
+  .cal-agenda .ag-d {flex: none; width: 76px; font-size: .72rem; font-weight: 700; color: #94A3B8; text-align: left;}
+  .cal-agenda .ag-m {flex: 1; min-width: 0; text-align: left;}
+  .cal-agenda .ag-m b, .cal-agenda .ag-m small {display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+  .cal-agenda .ag-m b {font-size: .8rem; color: #F1F5F9;}
+  .cal-agenda .ag-m small {font-size: .7rem; color: #94A3B8;}
 }
 /* ===== v3: 작은 달력 카드 + 작은 입력 카드 ===== */
 .st-key-calcard {background: var(--panel); border-radius: 22px; padding: 16px 16px 14px;
@@ -1326,6 +1348,13 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
     # 날짜 버튼은 칸 전체를 덮음 → 칸 어디를 눌러도 선택/붙여넣기 (CSS 참고)
     cell.button(head, key=f"day_{d}", type="tertiary", width="stretch",
                 on_click=_click_day, args=(d, clip, logs))
+    if entries:  # 휴대폰에서만 보이는 구분별 건수 (색 점 + 건수)
+        cnt = {}
+        for e in entries:
+            cnt[e["cat"]] = cnt.get(e["cat"], 0) + 1
+        cell.markdown("<div class='cal-mini'>" + "".join(
+            f"<span><i style='background:{CATS[c][1]}'></i>{n}</span>" for c, n in cnt.items()) + "</div>",
+            unsafe_allow_html=True)
     # 구역: 시험·제조·분석은 비어 있어도 항상, 교육·지원은 실적이 있을 때만
     cats = [c for c in shown_cats if c in LANE_CATS or any(e["cat"] == c for e in entries)]
     for c in cats:
@@ -1505,10 +1534,35 @@ def render(header: bool = True) -> None:
                 unsafe_allow_html=True)
     card.markdown("<div class='cal-mobile-hint'>날짜를 누르면 그날 실적을 입력할 수 있어요.</div>",
                   unsafe_allow_html=True)
+    card.markdown(_month_agenda(month, by_day), unsafe_allow_html=True)
 
     if right is not None:
         with right:
             _entry_panel(day, logs, eq, comp, cfg)
+
+
+def _month_agenda(month: dt.date, by_day: dict) -> str:
+    """휴대폰: 달력 아래 이달 실적 목록 (기간 실적은 한 줄로). 누르지 않아도 무엇을 언제 했는지 보이게 (2026-11-20)."""
+    rows: dict = {}
+    for d in sorted(by_day):
+        if d.month != month.month:
+            continue
+        for e in by_day[d]:
+            k = db.to_str(e["rec"].get("series")) or e["id"]
+            r = rows.setdefault(k, {"a": d, "b": d, "h": 0.0, "e": e})
+            r["b"] = d
+            r["h"] += e["hours"]
+    if not rows:
+        return "<div class='cal-agenda'><div class='ag-none'>이달 실적이 없어요.</div></div>"
+    e_ = html.escape
+    out = []
+    for r in sorted(rows.values(), key=lambda r: (r["a"], CAT_ORDER.index(r["e"]["cat"]), -r["h"])):
+        e, a, b = r["e"], r["a"], r["b"]
+        when = f"{a.month}/{a.day}" + (f"~{b.month}/{b.day}" if b != a else f" ({WEEKDAYS[a.weekday()]})")
+        amount = f"{e['ch_n']}ch" if e.get("ch_n") else _hours(r["h"])
+        out.append(f"<div class='ag-r'><i style='background:{CATS[e['cat']][1]}'></i><span class='ag-d'>{when}</span>"
+                   f"<span class='ag-m'><b>{e_(e['equip'])}</b><small>{e_(e['company'])} · {amount}</small></span></div>")
+    return f"<div class='cal-agenda'><div class='ag-h'>{month.month}월 실적 {len(rows)}건</div>{''.join(out)}</div>"
 
 
 def _set_end(key: str, start: dt.date, days: int) -> None:
