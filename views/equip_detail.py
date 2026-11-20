@@ -69,6 +69,11 @@ def render() -> None:
     .eq-info div {display: flex; flex-direction: column; gap: .1rem; min-width: 0;}
     .eq-info span {font-size: .75rem; color: var(--muted);}
     .eq-info b {font-size: .92rem; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+    @media (max-width: 640px) {  /* 2026-11-20 휴대폰: 한 줄에 2칸씩, 긴 이름은 줄바꿈 */
+      .eq-info {grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem .6rem; padding: .7rem .6rem;}
+      .eq-info span {font-size: .68rem;}
+      .eq-info b {font-size: .82rem; white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3;}
+    }
     .sb {background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: .5rem .9rem; margin-bottom: .6rem;}
     .sb-r {display: grid; grid-template-columns: minmax(150px, 1.6fr) minmax(90px, 2fr) 64px 76px 48px; gap: .7rem;
       align-items: center; padding: .42rem 0; border-bottom: 1px dashed var(--line); font-size: .88rem;}
