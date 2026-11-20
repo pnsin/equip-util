@@ -167,8 +167,9 @@ POS = "_pos"
 def center_pick(key: str) -> str | None:
     """전체 / 센터 셋 중 고르기. 전체면 None."""
     from core import db
+    # 2026-11-20 사용자: 긴 센터 이름이 휴대폰에서 줄이 엇갈려 → 짧은 이름 (제조검증 · MV · 문백)
     c = st.segmented_control("센터", ["전체"] + db.CENTERS + ["기타"], default="전체", key=key,
-                             label_visibility="collapsed")
+                             format_func=db.center_short, label_visibility="collapsed")
     return None if c in (None, "전체") else c
 
 

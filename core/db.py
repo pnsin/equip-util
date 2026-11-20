@@ -1271,6 +1271,12 @@ def load_equipment(full: bool = False) -> pd.DataFrame:
 
 CENTERS = ["배터리제조검증지원센터", "MV배터리안전성평가센터", "배터리연구지원센터"]
 CENTER_SHORT = {"제조검증": CENTERS[0], "MV": CENTERS[1], "문백": CENTERS[2]}  # 충방전기 현황표의 건물 이름
+_SHORT_OF = {v: k for k, v in CENTER_SHORT.items()}
+
+
+def center_short(name: str) -> str:
+    """센터 전체 이름 → 버튼에 쓰는 짧은 이름 (배터리제조검증지원센터 → 제조검증). 모르는 이름은 그대로."""
+    return _SHORT_OF.get(name, name)
 
 
 def center_name(text: str) -> str:

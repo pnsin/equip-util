@@ -23,6 +23,8 @@ CSS = """<style>
 .cs-stat {display: flex; align-items: center; justify-content: center; gap: 18px; background: var(--panel); border-radius: 18px;
   padding: 16px 28px; min-width: 300px;
   box-shadow: 0 4px 16px rgba(30, 36, 51, .04); border: 1px solid var(--line); transition: all 0.25s ease;}
+@media (max-width: 640px) {.cs-stats {display: grid; grid-template-columns: 1fr 1fr; gap: 8px;}
+  .cs-stat {min-width: 0; padding: 10px 8px; gap: 8px; border-radius: 14px;} .cs-stat span {font-size: .8rem;} .cs-stat b {font-size: 1.3rem;}}
 .cs-stat:hover {transform: translateY(-2px); box-shadow: 0 12px 24px rgba(30, 36, 51, .08); border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
 .cs-stat b {display: block; order: 2; font-size: 2rem; font-weight: 800; line-height: 1.15; color: var(--ink);
   font-variant-numeric: tabular-nums;}

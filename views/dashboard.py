@@ -56,7 +56,10 @@ CSS = """<style>
 .dtop tr.sum td {background: rgba(245,158,11,0.14) !important; color: #FBD38D; font-weight: 700; border-bottom: 0 !important;}
 .dtop tr.sum td:first-child {border-radius: 10px 0 0 10px;} .dtop tr.sum td:last-child {border-radius: 0 10px 10px 0;}
 @media (max-width: 1200px) {.dtop {grid-template-columns: 1fr 1fr;}}
-@media (max-width: 640px) {.dtop {grid-template-columns: 1fr;} .dtop .k {min-height: 0;}
+@media (max-width: 640px) {.dtop {grid-template-columns: 1fr 1fr; gap: 8px;} .dtop .k {min-height: 0; padding: 10px 8px !important;}
+  .dtop .k.c3, .dtop .k:last-child {grid-column: 1 / -1;}
+  .dtop .tt {font-size: 15px; padding: 2px 0 6px;} .dtop .big {font-size: 28px; margin: 6px 0 4px;} .dtop .big small {font-size: 20px;}
+  .dtop .sub {font-size: 12.5px;}
   .dtop table {font-size: 12px;} .dtop th, .dtop td {padding: 5px 3px !important;}}
 .dh {display: flex; align-items: center; gap: 14px; margin-bottom: 12px;}
 .dh .ic {width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;

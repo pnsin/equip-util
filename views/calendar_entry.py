@@ -526,6 +526,10 @@ div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button[aria-pressed="t
   .st-key-calgrid .cal-wk {font-size: .7rem !important; padding-bottom: 2px !important;}
   .st-key-calnav .cal-title {font-size: 1.05rem !important; min-width: 0 !important;}
   .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) {left: 12px !important; right: 12px !important; width: auto !important;}
+  /* 입력 카드 목록: 장비 이름 한 줄 + 기간·업체 한 줄 (잘리지 않게) */
+  .st-key-ep_list button div[data-testid="stMarkdownContainer"] {display: block !important;}
+  .st-key-ep_list button p {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+  .st-key-ep_list button p:last-child {font-size: .7rem !important; margin-top: 1px !important;}
 }
 </style>"""
 
@@ -1727,7 +1731,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                         cens = [c for c in db.CENTERS if c in cen_of.values()]
                         cur_cen = cen_of.get(int(cur["equip_id"])) if cur is not None else None
                         if len(cens) > 1:
-                            cen = st.pills("센터", cens, default=cur_cen if cur_cen in cens else None,
+                            cen = st.pills("센터", cens, default=cur_cen if cur_cen in cens else None, format_func=db.center_short,
                                            key=f"ep_cen_{k}", label_visibility="collapsed")
                             if cen:
                                 in_g = [i for i in in_g if cen_of.get(i) == cen]

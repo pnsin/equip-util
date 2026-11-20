@@ -86,7 +86,16 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-sum td {background: linear-gradient(rgba(85,143,230,0.16), rgba(85,143,230,0.16)), var(--panel); font-weight: 700; color: var(--muted);}
 .cb-foot {display: flex; flex-wrap: wrap; gap: 14px; font-size: .74rem; color: var(--muted); margin-top: 8px;}
 .cb-foot i {display: inline-block; width: 11px; height: 11px; border-radius: 4px; margin-right: 5px; vertical-align: -1px;}
-@media (max-width: 600px) {.cb-kpis {grid-template-columns: 1fr;}}
+/* 2026-11-20 휴대폰: 숫자 3칸은 한 줄로 작게, 표는 '장비'만 왼쪽에 고정하고 옆으로 밀어 일정 보기 */
+@media (max-width: 640px) {.cb-kpis {grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;}
+  .cb-k {padding: 8px 4px; border-radius: 12px;} .cb-k span {font-size: .7rem;} .cb-k b {font-size: .95rem;}
+  .cb-t {font-size: .72rem;} .cb-t th {font-size: .66rem; padding: 6px 4px;} .cb-t td {padding: 0 4px;}
+  .cb-t .s0 {position: sticky !important; left: 0; width: 104px; min-width: 104px; max-width: 104px; white-space: normal !important;
+    word-break: keep-all; line-height: 1.25; font-size: .7rem; box-shadow: inset -1px 0 0 #64748B;}
+  .cb-t .s1, .cb-t .s2, .cb-t .s3 {width: 64px; min-width: 64px; max-width: 64px;}
+  .cb-t .s4 {width: 110px; min-width: 110px; max-width: 110px;} .cb-t .s5 {width: 92px; min-width: 92px; max-width: 92px;}
+  .cb-t td.s0[colspan] {width: 232px; max-width: 232px;} .cb-t td.s4[colspan] {width: 202px; max-width: 202px;}
+  .cb-t td.co, .cb-t td.pd {font-size: .72rem;} .cb-foot {gap: 8px; font-size: .68rem;}}
 </style>"""
 
 
@@ -218,9 +227,10 @@ def render() -> None:
     with st.container(key="cb_top", horizontal=True, gap="small", vertical_alignment="center"):
         center = None
         if centers:
+            # 현황표 건물 칸은 짧은 이름(제조검증·MV·문백)으로 저장됨 → 그대로 짧게 보여 줌
             order = [k for k in db.CENTER_SHORT if k in centers] + [c for c in centers if c not in db.CENTER_SHORT]
             center = st.segmented_control("건물", ["전체"] + order, default="전체", key="cb_center",
-                                          format_func=lambda c: db.CENTER_SHORT.get(c, c),
+                                          format_func=db.center_short,
                                           label_visibility="collapsed") or "전체"
         d0 = today.replace(day=1)
         d1 = ((d0 + dt.timedelta(days=95)).replace(day=1)) - dt.timedelta(days=1)  # 이번 달 + 2개월
@@ -310,7 +320,7 @@ def render() -> None:
             rows.append(_chan_rows(r, list(all_bk.get(int(r["id"]), pd.DataFrame()).to_dict("records")), w0, w1, today,
                                    grid, now_line, tlw))
             show_css.append(f"tr.cbr:has(#ck{int(r['id'])}:checked) ~ tr.g{int(r['id'])}{{visibility:visible;}}")
-        rows.append(f"<tr class='cb-sum'><td colspan='3' class='s0'>{html.escape(db.CENTER_SHORT.get(center, center))} 합계</td><td class='s3'>{total} ch</td>"
+        rows.append(f"<tr class='cb-sum'><td colspan='3' class='s0'>{html.escape(db.center_short(center))} 합계</td><td class='s3'>{total} ch</td>"
                     f"<td colspan='2' class='s4'>사용 중 {used} · 비어 있음 {total - used}</td><td></td></tr>")
         st.markdown(
             "<style>" + "".join(show_css) + "</style>"
