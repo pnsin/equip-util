@@ -45,7 +45,25 @@ def itube_selection(logs: pd.DataFrame, s: dt.date, e: dt.date, *, start_only: b
     no_code = sel[sel["itube_code"] == ""]
     sel = sel[sel["itube_code"] != ""].copy()
     sel["equip_name"], sel["equip_code"], sel["equip_kind"] = sel["itube_name"], sel["itube_code"], sel["itube_kind"]
-    return sel, no_code
+    return fill_from_companies(sel, db.load_companies()), no_code
+
+
+def fill_from_companies(sel: pd.DataFrame, comp: pd.DataFrame) -> pd.DataFrame:
+    """실적에 비어 있는 사업자등록번호·업종·품목을 업체 목록(같은 이름)에서 채움.
+
+    실적을 먼저 넣고 업체 번호를 나중에 알게 된 경우에도 i-Tube 파일에 번호가 들어가게 (2026-11-20).
+    """
+    if sel.empty or comp.empty:
+        return sel
+    by_name = {db.to_str(r["name"]): r for r in comp.to_dict("records") if db.to_str(r.get("name"))}
+    sel = sel.copy()
+    for col in ("brn", "industry", "item", "sub_item"):
+        if col not in sel or col not in comp:
+            continue
+        cur = sel[col].map(db.to_str)
+        sel[col] = [c if c else db.to_str(by_name.get(db.to_str(n), {}).get(col))
+                    for c, n in zip(cur, sel["company"])]
+    return sel
 
 
 def _itube_filename(cfg: dict, s: dt.date, e: dt.date) -> str:
