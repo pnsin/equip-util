@@ -64,6 +64,14 @@ CSS = """<style>
 .st-key-ep_form {gap: .45rem !important;}
 .st-key-ep_form [data-testid="stWidgetLabel"] {margin-bottom: 0; min-height: 0;}
 .st-key-ep_head {align-items: flex-start !important;}
+/* 2026-11-20 카드 안을 내려도 날짜·닫기 줄은 위에 붙어 있게 (글자가 카드 끝에서 잘려 보이지 않게) */
+[data-testid="stLayoutWrapper"]:has(> .st-key-ep_head), .st-key-ep_panel > [data-testid="stElementContainer"]:has(.st-key-ep_head),
+.st-key-ep_head {position: sticky !important; top: -16px; z-index: 30; background: var(--panel);}
+.st-key-ep_head {padding: 4px 0 8px !important; box-shadow: 0 -16px 0 var(--panel), 0 6px 10px -8px rgba(0,0,0,.5);}
+.st-key-ep_long details {border: none !important; background: rgba(15,23,42,.35); border-radius: 12px !important;}
+.st-key-ep_long summary {padding: 8px 12px !important; min-height: 0 !important;}
+.st-key-ep_long summary p {font-size: .82rem !important; font-weight: 700; color: #CBD5E1;}
+.st-key-ep_long [data-testid="stExpanderDetails"] {padding: 0 8px 8px !important;}
 .ep-h {line-height: 1.25;}
 .ep-d {font-family: 'Nunito', 'Pretendard Variable', 'Pretendard', sans-serif; font-size: 1.3rem; font-weight: 900; color: var(--ink);}
 .ep-d em {font-style: normal; font-size: .95rem; color: #94A3B8; font-weight: 700; margin-left: 4px;}
@@ -72,19 +80,19 @@ CSS = """<style>
 .st-key-ep_new button {border: none !important; background: var(--accent) !important; color: #fff !important; border-radius: 12px !important;
   font-weight: 700; padding: 0 14px; height: 38px; box-shadow: 0 3px 10px rgba(45, 143, 213, .3);}
 .st-key-ep_new button p {color: #fff !important; font-weight: 700;}
-.st-key-ep_list {gap: 6px !important;}
-.st-key-ep_list button {justify-content: flex-start; text-align: left; padding: 8px 12px 8px 30px; border-radius: 12px;
+div[class*="st-key-ep_list"] {gap: 6px !important;}
+div[class*="st-key-ep_list"] button {justify-content: flex-start; text-align: left; padding: 8px 12px 8px 30px; border-radius: 12px;
   border: none !important; background: rgba(85,143,230,0.16); position: relative; min-height: 0;}
-.st-key-ep_list button::before {content: ''; position: absolute; left: 12px; top: 50%; width: 10px; height: 10px; margin-top: -5px;
+div[class*="st-key-ep_list"] button::before {content: ''; position: absolute; left: 12px; top: 50%; width: 10px; height: 10px; margin-top: -5px;
   border-radius: 50%; background: var(--chip-fg, #334155);}
-.st-key-ep_list button:hover {background: rgba(85,143,230,0.16);}
-.st-key-ep_list button div[data-testid="stMarkdownContainer"] {text-align: left; width: 100%;}
-.st-key-ep_list button p {margin: 0; font-size: .8rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #94A3B8;}
-.st-key-ep_list button p:first-child {font-weight: 700; font-size: .88rem; color: #F8FAFC;}
-.st-key-ep_list button > div {justify-content: flex-start !important; width: 100%; min-width: 0;}
-.st-key-ep_list button[data-testid="stBaseButton-primary"] {background: rgba(85,154,230,0.16) !important; box-shadow: inset 0 0 0 2px var(--accent);}
-.st-key-ep_list button[data-testid="stBaseButton-primary"] p {color: #94A3B8 !important;}
-.st-key-ep_list button[data-testid="stBaseButton-primary"] p:first-child {color: #F8FAFC !important;}
+div[class*="st-key-ep_list"] button:hover {background: rgba(85,143,230,0.16);}
+div[class*="st-key-ep_list"] button div[data-testid="stMarkdownContainer"] {text-align: left; width: 100%;}
+div[class*="st-key-ep_list"] button p {margin: 0; font-size: .8rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #94A3B8;}
+div[class*="st-key-ep_list"] button p:first-child {font-weight: 700; font-size: .88rem; color: #F8FAFC;}
+div[class*="st-key-ep_list"] button > div {justify-content: flex-start !important; width: 100%; min-width: 0;}
+div[class*="st-key-ep_list"] button[data-testid="stBaseButton-primary"] {background: rgba(85,154,230,0.16) !important; box-shadow: inset 0 0 0 2px var(--accent);}
+div[class*="st-key-ep_list"] button[data-testid="stBaseButton-primary"] p {color: #94A3B8 !important;}
+div[class*="st-key-ep_list"] button[data-testid="stBaseButton-primary"] p:first-child {color: #F8FAFC !important;}
 .st-key-ep_panel [data-testid="stMarkdownContainer"]:has(.ep-t, .ep-h, .ep-empty) {margin-bottom: 0 !important;}
 .ep-empty {font-size: .85rem; color: #94A3B8; background: rgba(85,143,230,0.16); border-radius: 12px; padding: 12px; text-align: center;}
 div[class*="st-key-ep_row_test_"] button {--chip-fg: #FF8DA1;} div[class*="st-key-ep_row_chg_"] button {--chip-fg: #E58BFF;} div[class*="st-key-ep_row_make_"] button {--chip-fg: #5EE0A8;}
@@ -413,13 +421,13 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
 .ep-n {font-size: .75rem !important;}
 .st-key-ep_new button {height: 32px !important; padding: 0 11px !important; font-size: .8rem; border-radius: 10px !important;}
 .st-key-ep_close button {height: 32px !important; width: 32px !important; border-radius: 10px !important;}
-.st-key-ep_list {gap: 4px !important;}
-.st-key-ep_list button {padding: 6px 10px 6px 24px !important; border-radius: 10px !important;}
-.st-key-ep_list button::before {left: 10px !important; width: 8px !important; height: 8px !important; margin-top: -4px !important;}
-.st-key-ep_list button div[data-testid="stMarkdownContainer"] {display: flex; align-items: center; gap: 6px;}
-.st-key-ep_list button p {font-size: .76rem !important;}
-.st-key-ep_list button p:first-child {flex: 1; min-width: 0; font-size: .8rem !important;}
-.st-key-ep_list button p:last-child {flex: none;}
+div[class*="st-key-ep_list"] {gap: 4px !important;}
+div[class*="st-key-ep_list"] button {padding: 6px 10px 6px 24px !important; border-radius: 10px !important;}
+div[class*="st-key-ep_list"] button::before {left: 10px !important; width: 8px !important; height: 8px !important; margin-top: -4px !important;}
+div[class*="st-key-ep_list"] button div[data-testid="stMarkdownContainer"] {display: flex; align-items: center; gap: 6px;}
+div[class*="st-key-ep_list"] button p {font-size: .76rem !important;}
+div[class*="st-key-ep_list"] button p:first-child {flex: 1; min-width: 0; font-size: .8rem !important;}
+div[class*="st-key-ep_list"] button p:last-child {flex: none;}
 .ep-empty {padding: 9px !important; font-size: .8rem !important;}
 .st-key-ep_form {border-top: 1px dashed #26334D !important; padding-top: 10px !important; gap: .5rem !important;}
 .ep-t {font-size: .92rem !important;}
@@ -531,7 +539,7 @@ div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button[aria-pressed="t
 .st-key-calwrap [data-testid="stHorizontalBlock"]:has(.st-key-ep_panel) {flex-wrap: nowrap !important;}
 .st-key-calwrap [data-testid="stColumn"]:not(:has(.st-key-ep_panel)) {min-width: 0 !important;}
 .st-key-calgrid [data-testid="stColumn"], .st-key-calgrid div[class*="st-key-cell_"] {min-width: 0 !important;}
-.st-key-ep_list:not(:has(button)) {display: none !important;}
+div[class*="st-key-ep_list"]:not(:has(button)) {display: none !important;}
 /* 구역을 칸 안에 고르게: 시험/제조/분석이 처음부터 같은 높이로 나뉨 */
 .st-key-calgrid div[class*="st-key-cell_"] {min-height: 240px !important;}
 .st-key-calgrid div[class*="st-key-cell_"] > [data-testid="stLayoutWrapper"]:has(> div[class*="st-key-sec_"]),
@@ -567,9 +575,9 @@ div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button[aria-pressed="t
   .st-key-calnav .cal-title {font-size: 1.05rem !important; min-width: 0 !important;}
   .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) {left: 12px !important; right: 12px !important; width: auto !important;}
   /* 입력 카드 목록: 장비 이름 한 줄 + 기간·업체 한 줄 (잘리지 않게) */
-  .st-key-ep_list button div[data-testid="stMarkdownContainer"] {display: block !important;}
-  .st-key-ep_list button p {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-  .st-key-ep_list button p:last-child {font-size: .7rem !important; margin-top: 1px !important;}
+  div[class*="st-key-ep_list"] button div[data-testid="stMarkdownContainer"] {display: block !important;}
+  div[class*="st-key-ep_list"] button p {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+  div[class*="st-key-ep_list"] button p:last-child {font-size: .7rem !important; margin-top: 1px !important;}
 }
 </style>"""
 
@@ -1771,18 +1779,22 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                              type="primary" if rid == edit_id else "secondary"):
                     _pick_row(day, e)
                     st.rerun()
-            # 2026-11-20 사용자(휴대폰): 날짜를 누르면 그날 걸쳐 있는 장기(기간) 실적·예약도 목록에 바로 보이게
-            for r in (period.sort_values(["start_date", "id"]).to_dict("records") if not period.empty else []):
-                rid = int(r["id"])
-                c = _log_cat(r["purpose"], int(r["equip_id"]) in chg_fam)
-                comp_name = db.to_str(r["company"]) or "내부"
-                if st.button(f"{_md(name_of.get(r['equip_id'], '?'))}\n\n"
-                             f"{r['start_date']:%m/%d}~{r['end_date']:%m/%d} · {_md(comp_name)}",
-                             key=f"ep_row_{CAT_KEY[c]}_p{rid}", width="stretch",
-                             type="primary" if not series.empty and rid in set(series["id"].astype(int)) else "secondary"):
-                    st.session_state.cal_pick = {"day": day, "id": rid, "rec": r, "period": True,
-                                                 "label": f"{short_of.get(r['equip_id'], '?')} · {comp_name}"}
-                    st.rerun()
+        # 그날 걸쳐 있는 장기(기간) 실적은 한 줄로 접어 둠 (2026-11-20 사용자: 입력이 주가 되게)
+        if not period.empty:
+            picked_long = not series.empty and bool(set(series["id"].astype(int)) & set(period["id"].astype(int)))
+            with st.expander(f"진행 중인 장기 실적 {len(period)}건", expanded=picked_long, key="ep_long"):
+                with st.container(key="ep_list_long", gap="small"):
+                    for r in period.sort_values(["end_date", "id"]).to_dict("records"):
+                        rid = int(r["id"])
+                        c = _log_cat(r["purpose"], int(r["equip_id"]) in chg_fam)
+                        comp_name = db.to_str(r["company"]) or "내부"
+                        if st.button(f"{_md(short_of.get(r['equip_id'], '?'))}\n\n"
+                                     f"{r['start_date']:%m/%d}~{r['end_date']:%m/%d} · {_md(comp_name)}",
+                                     key=f"ep_row_{CAT_KEY[c]}_p{rid}", width="stretch",
+                                     type="primary" if not series.empty and rid in set(series["id"].astype(int)) else "secondary"):
+                            st.session_state.cal_pick = {"day": day, "id": rid, "rec": r, "period": True,
+                                                         "label": f"{short_of.get(r['equip_id'], '?')} · {comp_name}"}
+                            st.rerun()
 
         st.session_state.pop("company_added", None)
         if eq.empty or not staff_opts:
