@@ -1603,7 +1603,7 @@ def _month_agenda(month: dt.date, by_day: dict) -> str:
         recs = [r for v in eqs.values() for r in v]
         fg = CATS[c][1]
         inner = []
-        for name, v in sorted(eqs.items(), key=lambda kv: (-sum(r["h"] for r in kv[1]), kv[0]))  # 많이 쓴 장비부터:
+        for name, v in sorted(eqs.items(), key=lambda kv: (-sum(r["h"] for r in kv[1]), kv[0])):  # 많이 쓴 장비부터
             v.sort(key=lambda r: (r["a"], r["e"]["company"]))
             lines = []
             for r in v:
