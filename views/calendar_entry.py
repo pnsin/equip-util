@@ -573,7 +573,13 @@ div[class*="st-key-ep_list"]:not(:has(button)) {display: none !important;}
   .st-key-calgrid .cal-tot {display: none;}
   .st-key-calgrid .cal-wk {font-size: .7rem !important; padding-bottom: 2px !important;}
   .st-key-calnav .cal-title {font-size: 1.05rem !important; min-width: 0 !important;}
-  .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) {left: 12px !important; right: 12px !important; width: auto !important;}
+  /* 휴대폰: 입력 카드는 화면을 덮지 않고 달력 위에 놓임 (아래 달력·이달 목록도 스크롤로 다 보임) */
+  .st-key-calwrap [data-testid="stHorizontalBlock"]:has(.st-key-ep_panel) {flex-wrap: wrap !important; gap: 12px !important;}
+  .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) {position: static !important; order: -1;
+    width: 100% !important; flex: 1 1 100% !important; min-width: 0 !important; z-index: auto;}
+  .st-key-ep_panel {position: relative !important; top: 0 !important; max-height: none !important; overflow: visible !important;
+    box-shadow: none !important; scroll-margin-top: 3.6rem;}
+  .st-key-ep_head {position: static !important;}
   /* 입력 카드 목록: 장비 이름 한 줄 + 기간·업체 한 줄 (잘리지 않게) */
   div[class*="st-key-ep_list"] button div[data-testid="stMarkdownContainer"] {display: block !important;}
   div[class*="st-key-ep_list"] button p {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
@@ -1686,6 +1692,7 @@ def _ch_toggle(key: str, opts: list) -> None:
 def _close_panel() -> None:
     st.session_state.cal_open = False
     st.session_state.pop("cal_pick", None)
+    st.session_state.pop("_ep_scrolled", None)
 
 
 def _new_entry() -> None:
@@ -1755,6 +1762,12 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
     cur = series.iloc[0].to_dict() if not series.empty else (orig.get(edit_id) if edit_id else None)
 
     panel = st.container(key="ep_panel")
+    if st.session_state.get("_ep_scrolled") != str(day):  # 휴대폰: 날짜를 새로 열면 카드로 스크롤
+        st.session_state["_ep_scrolled"] = str(day)
+        import streamlit.components.v1 as components
+        components.html("<script>/*" + str(day) + "*/setTimeout(function(){var d=window.parent.document;"
+                        "if(window.parent.innerWidth>640)return;var p=d.querySelector('.st-key-ep_panel');"
+                        "if(p)p.scrollIntoView({behavior:'smooth',block:'start'});},250);</script>", height=0)
     with panel:
         total = float(rows["hours"].sum()) if not rows.empty else 0
         with st.container(key="ep_head", horizontal=True, vertical_alignment="top"):
