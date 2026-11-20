@@ -346,6 +346,26 @@ _CSS = """
     .login-logo-center { width: 150px; }
     .login-head .t { font-size: 1.5rem; }
   }
+  /* 휴대폰 접속 화면 (2026-11-20): 카드를 작게, 화면 가운데에 */
+  @media (max-width: 640px) {
+    .stApp:has(.login-preview-bg) [data-testid="stMainBlockContainer"] {
+      padding: 0 24px 72px !important; min-height: 100svh; display: flex; flex-direction: column; }
+    .stApp:has(.login-preview-bg) [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] { justify-content: center; }
+    .login-gap { display: none; }
+    .st-key-login_card { box-sizing: border-box; width: 100%; max-width: 330px; margin: 0 auto !important;
+      padding: 26px 22px 24px; border-radius: 22px; }
+    .login-logo-wrap { margin: 0 0 12px 0; }
+    .login-logo-center { width: 118px; transform: translateX(-8px); }
+    .login-head .t { font-size: 1.3rem; margin-bottom: .3rem; }
+    .login-head .d { font-size: .82rem; margin-bottom: 1.2rem; }
+    .st-key-login_card [data-testid="stTextInputRootElement"] { min-height: 2.8rem; border-radius: 10px; }
+    .st-key-login_card [data-testid="stTextInputRootElement"] input { font-size: 1rem; }
+    .st-key-login_card [data-testid="stFormSubmitButton"] button { min-height: 2.8rem; border-radius: 10px; margin-top: .2rem; }
+    .st-key-login_card [data-testid="stFormSubmitButton"] button p { font-size: 1rem; }
+    .login-foot { margin-top: 1rem; }
+    .login-foot span { font-size: .72rem; padding: .3rem .8rem; }
+    .login-foot svg { width: 12px; height: 12px; }
+  }
   /* 견적서 (2026-11-04) */
   .q-tile { background: var(--panel); border-radius: 14px; box-shadow: var(--card-shadow); padding: .8rem 1rem; margin-bottom: .6rem; }
   [data-testid="stElementContainer"]:has([data-testid="stPlotlyChart"]) [data-testid="stElementToolbar"] { display: none !important; }
@@ -462,6 +482,18 @@ _CLEAN_CSS = """<style>
 _SLATE_CSS = """<style>
   .block-container { max-width: 1600px !important; }
   .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stMainBlockContainer"] { padding: 2rem 2.5rem 4rem !important; }
+  /* 2026-11-20 휴대폰: 양옆 여백을 줄여 화면을 넓게 */
+  @media (max-width: 640px) {
+    .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stMainBlockContainer"] { padding: 3.2rem .85rem 3rem !important; }
+    /* 숫자 카드(metric)만 나란한 줄은 한 줄에 2개씩 */
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]) {
+      flex-wrap: wrap !important; gap: .5rem !important; }
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]) > [data-testid="stColumn"] {
+      flex: 1 1 calc(50% - .5rem) !important; min-width: calc(50% - .5rem) !important; width: auto !important; }
+    [data-testid="stMetric"] { min-height: 0 !important; }
+    /* 센터 고르기 같은 버튼 묶음: 화면 밖으로 잘리지 않게 다음 줄로 */
+    [data-testid="stButtonGroup"] > div { flex-wrap: wrap !important; row-gap: 4px; }
+  }
   [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         font-variant-numeric: tabular-nums; }
   [data-testid="stSidebar"] .brand-ic { background: #6366F1 !important; color: #fff !important; }

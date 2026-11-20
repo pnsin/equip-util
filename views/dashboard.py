@@ -144,6 +144,10 @@ CSS = """<style>
   .drep th:first-child {width: 34%;} .drep td:first-child {white-space: normal; word-break: keep-all; font-size: 12px;}}
 /* 2026-11-19 사용자: 한눈에 보이게 위아래 높이를 반 정도로 (그래프 낮게, 표 줄 촘촘하게) */
 [class*="st-key-dsec_"] {padding: 14px 22px 10px !important;}
+@media (max-width: 640px) {[class*="st-key-dsec_"] {padding: 12px 10px 8px !important;}
+  .drep {font-size: 11.5px !important;} .drep th {font-size: 11px !important; padding: 4px 2px !important;}
+  .drep th:first-child {width: 27%;} .drep td {padding-left: 2px !important; padding-right: 2px !important;}
+  .drep tr.goal td, .drep tr.sum td, .drep tr.rate td {font-size: 12px !important;}}
 .dh {margin-bottom: 0 !important;} .dh .ic {width: 38px !important; height: 38px !important;}
 .dct {margin: 8px 0 4px !important;}
 .drep {font-size: 13.5px !important;}
