@@ -838,7 +838,7 @@ def login_foot():
 
 
 # 그래프 오른쪽 위 버튼: 그림으로 저장(보고서 붙여넣기용)만 남김
-CHART_CONFIG = {"displayModeBar": False, "displaylogo": False, "toImageButtonOptions": {"format": "png", "scale": 2},
+CHART_CONFIG = {"displayModeBar": False, "displaylogo": False, "scrollZoom": False, "doubleClick": False, "toImageButtonOptions": {"format": "png", "scale": 2},
                 "modeBarButtonsToRemove": ["zoom2d", "pan2d", "select2d", "lasso2d", "zoomIn2d", "zoomOut2d",
                                            "autoScale2d", "resetScale2d", "toggleSpikelines",
                                            "hoverClosestCartesian", "hoverCompareCartesian"]}
@@ -860,10 +860,11 @@ def chart_layout(fig, height: int, legend: bool = True):
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor=T["panel2"], bordercolor=T["line2"], font=dict(color=T["ink"], family=CHART_FONT["family"])),
         showlegend=legend,
+        dragmode=False,  # 2026-11-20 사용자: 휴대폰에서 그래프를 잘못 누르면 확대돼 방해 → 확대·이동 막음 (값 보기는 그대로)
     )
-    fig.update_xaxes(gridcolor=CHART_GRID, zerolinecolor=CHART_GRID, linecolor=T["line"], tickfont=dict(color=T["muted"]),
+    fig.update_xaxes(fixedrange=True, gridcolor=CHART_GRID, zerolinecolor=CHART_GRID, linecolor=T["line"], tickfont=dict(color=T["muted"]),
                      title_font=dict(color=T["muted"], size=12))
-    fig.update_yaxes(gridcolor=CHART_GRID, zerolinecolor=CHART_GRID, linecolor=T["line"], tickfont=dict(color=T["muted"]),
+    fig.update_yaxes(fixedrange=True, gridcolor=CHART_GRID, zerolinecolor=CHART_GRID, linecolor=T["line"], tickfont=dict(color=T["muted"]),
                      title_font=dict(color=T["muted"], size=12))
     return fig
 
