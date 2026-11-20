@@ -1638,7 +1638,8 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
         with st.container(key="ep_head", horizontal=True, vertical_alignment="top"):
             st.markdown(f"<div class='ep-h'><span class='ep-d'>{day.month}월 {day.day}일"
                         f"<em>{WEEKDAYS[day.weekday()]}요일</em></span>"
-                        f"<span class='ep-n'>실적 {len(rows)}건 · {_hours(total)}</span></div>",
+                        f"<span class='ep-n'>실적 {len(rows)}건 · {_hours(total)}"
+                        + (f" · 장기 {len(period)}건" if not period.empty else "") + "</span></div>",
                         unsafe_allow_html=True, width="stretch")
             if st.button("", icon=":material/close:", key="ep_close", help="닫기"):
                 _close_panel()
@@ -1654,6 +1655,18 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                              key=f"ep_row_{CAT_KEY[c]}_{rid}", width="stretch",
                              type="primary" if rid == edit_id else "secondary"):
                     _pick_row(day, e)
+                    st.rerun()
+            # 2026-11-20 사용자(휴대폰): 날짜를 누르면 그날 걸쳐 있는 장기(기간) 실적·예약도 목록에 바로 보이게
+            for r in (period.sort_values(["start_date", "id"]).to_dict("records") if not period.empty else []):
+                rid = int(r["id"])
+                c = _log_cat(r["purpose"], int(r["equip_id"]) in db.charger_ids(eq))
+                comp_name = db.to_str(r["company"]) or "내부"
+                if st.button(f"{_md(name_of.get(r['equip_id'], '?'))}\n\n"
+                             f"{r['start_date']:%m/%d}~{r['end_date']:%m/%d} · {_md(comp_name)}",
+                             key=f"ep_row_{CAT_KEY[c]}_p{rid}", width="stretch",
+                             type="primary" if not series.empty and rid in set(series["id"].astype(int)) else "secondary"):
+                    st.session_state.cal_pick = {"day": day, "id": rid, "rec": r, "period": True,
+                                                 "label": f"{short_of.get(r['equip_id'], '?')} · {comp_name}"}
                     st.rerun()
 
         st.session_state.pop("company_added", None)
@@ -1907,19 +1920,3 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                                               + ("고쳤습니다" if cur is not None else "추가했습니다"))
                 st.rerun()
 
-        if not period.empty:
-            with st.expander(f"이 날이 포함된 기간 실적 {len(period)}건", expanded=False):
-                pv = period.reset_index(drop=True)
-                ev = st.dataframe(pd.DataFrame({
-                    "장비": pv["equip_id"].map(short_of), "업체": pv["company"].replace("", "(내부)"),
-                    "기간": [f"{a:%m/%d}~{b:%m/%d}" for a, b in zip(pv["start_date"], pv["end_date"])],
-                    "시간": pv["hours"].astype(int),
-                }), hide_index=True, width="stretch", on_select="rerun", selection_mode="single-row",
-                    key=f"cal_period_{day}_{ver}_{st.session_state.get('cal_pnonce', 0)}")
-                picked = ev.selection.rows if ev else []
-                if picked:  # 고른 기간 실적을 위 카드에서 고침
-                    r = pv.iloc[picked[0]]
-                    st.session_state.cal_pick = {"day": day, "id": int(r["id"]), "rec": r.to_dict(), "period": True,
-                                                 "label": f"{short_of.get(r['equip_id'], '?')} · {db.to_str(r['company']) or '내부'}"}
-                    st.session_state.cal_pnonce = st.session_state.get("cal_pnonce", 0) + 1
-                    st.rerun()
