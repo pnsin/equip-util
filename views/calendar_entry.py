@@ -319,7 +319,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .st-key-calgrid [data-testid="stElementContainer"]:has(> div .cal-mini) {display: block !important; position: absolute !important;
     left: 0; right: 0; top: 27px; width: auto !important; z-index: 1;}
   .cal-mini {display: block; text-align: center; line-height: 1.2;}
-  .cal-mini div {font-size: .5rem; font-weight: 600; color: #CBD5E1; white-space: nowrap; letter-spacing: -.02em;}
+  .cal-mini div {font-size: .5rem; font-weight: 600; color: #CBD5E1; white-space: nowrap; letter-spacing: -.04em;}
   .cal-mini b {font-weight: 800;}
   /* 달력 아래 이달 실적 목록 */
   .cal-agenda {display: block; margin-top: .3rem; border-top: 1px solid var(--line, #334155); padding-top: .5rem;}
@@ -1359,10 +1359,8 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
             ents = [e for e in entries if e["cat"] == c]
             if not ents:
                 continue
-            chg = [e for e in ents if e.get("charger")]
-            h = sum(e["hours"] for e in ents if not e.get("charger")) + (0 if d.weekday() >= 5 else sum(
-                min(db.CHARGER_DAY_MAX, sum(e["hours"] for e in chg if e["root"] == i)) for i in {e["root"] for e in chg}))
-            hs = f"{h:.0f}h" if h >= 10 else _hours(h)
+            h = sum(e.get("kpi_h", e["hours"]) for e in ents)
+            hs = _hours(h)  # 반올림하지 않음 (합계가 가동률과 맞게)
             lines.append(f"<div><b style='color:{CATS[c][1]}'>{MINI_LABEL.get(c, c)}</b> {len(ents)}건"
                          f"{' ' + hs if h else ''}</div>")
         cell.markdown(f"<div class='cal-mini l{len(lines)}'>{''.join(lines)}</div>", unsafe_allow_html=True)
@@ -1371,8 +1369,7 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
     for c in cats:
         ents = [e for e in entries if e["cat"] == c]
         chg = [e for e in ents if e.get("charger")]  # 충방전기도 다른 실적처럼 한 건씩 (누르면 입력 카드)
-        chg_h = 0 if d.weekday() >= 5 else sum(  # 주장비마다 하루 최대 8h
-            min(db.CHARGER_DAY_MAX, sum(e["hours"] for e in chg if e["root"] == i)) for i in {e["root"] for e in chg})
+        chg_h = sum(e.get("kpi_h", e["hours"]) for e in chg)  # 가동률과 같은 계산 (주장비마다 하루 최대·주말·공휴일 0)
         sec = cell.container(key=f"sec_{CAT_KEY[c]}_{d}")
         hours = _hours(sum(e["hours"] for e in ents if not e.get("charger")) + chg_h) if ents else ""
         if ents and c == CHARGER_GROUP:  # 충방전 구역은 시간 대신 쓰는 채널 수
@@ -1455,6 +1452,12 @@ def render(header: bool = True) -> None:
     daily = expand_daily(near, cfg.get("alloc_mode", "spread"))
     in_month = daily[(daily["day"] >= w0) & (daily["day"] <= w1)]
     by_day = _cell_entries(in_month, logs, eq)
+    # 칸에 보이는 시간 = 가동률(장비 KPI 현황)과 같은 계산 (충방전기 하루 최대·주말·공휴일 0) (2026-11-20 정확성)
+    capped = expand_daily(near, cfg.get("alloc_mode", "spread"), db.charger_caps())
+    kpi_h = {(int(i), d.date()): float(h) for i, d, h in zip(capped["log_id"], capped["day"], capped["hours"])}
+    for dd, v in by_day.items():
+        for e in v:
+            e["kpi_h"] = kpi_h.get((e["id"], dd), e["hours"])
     present = list(FIXED_CATS)
     # 구분 버튼 숫자 = 이달 실적 건수 (기간 실적은 하루하루가 아니라 한 건으로; 2026-11-20 아래 목록 건수와 같게)
     n_rec: dict[str, int] = {}
