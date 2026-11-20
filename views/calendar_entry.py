@@ -507,6 +507,26 @@ div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button[aria-pressed="t
 /* 2026-11-17 숨은 카드 칸을 없앤 대신 그 칸이 만들던 줄 간격(3px)을 그대로 둠 */
 .st-key-calgrid div[class*="st-key-er_"] {padding-bottom: 3px;}
 [data-testid="stElementContainer"]:has(> div .cal-state), [data-testid="stMarkdown"]:has(.cal-state) {display: none !important;}
+/* 2026-11-20 휴대폰: 구역·스티커는 숨기고 날짜 + 색 점 + 시간만 (누르면 입력 카드) */
+@media (max-width: 640px) {
+  .st-key-calcard {padding: 10px 8px 10px !important; border-radius: 16px !important;}
+  .st-key-calgrid [data-testid="stHorizontalBlock"] {gap: 3px !important;}
+  .st-key-calgrid div[class*="st-key-cell_"], .st-key-calgrid .cal-out {min-height: 58px !important; padding: 2px 1px 3px !important;
+    border-radius: 9px !important; gap: 0 !important;}
+  .st-key-calgrid .cal-out {font-size: .8rem !important; padding: 6px 0 0 !important; text-align: center;}
+  .st-key-calgrid div[class*="st-key-sec_"], .st-key-calgrid div[class*="st-key-cell_"] > [data-testid="stLayoutWrapper"]:has(> div[class*="st-key-sec_"]),
+  .st-key-calgrid div[class*="st-key-lane_"], .st-key-calgrid div[class*="st-key-x_"] {display: none !important;}
+  .st-key-calgrid div[class*="st-key-day_"] button {padding: 3px 0 0 !important; min-height: 0 !important; border-radius: 8px !important;}
+  .st-key-calgrid div[class*="st-key-day_"] button p {font-size: .55rem !important; line-height: 1.2 !important;}
+  .st-key-calgrid div[class*="st-key-day_"] button strong {font-size: .82rem !important; min-width: 0 !important; height: 20px !important;}
+  .st-key-calgrid [data-testid="stElementContainer"]:has(> div .cal-dh) {position: static !important; width: 100% !important;}
+  .st-key-calgrid .cal-dh {justify-content: center; height: 12px; gap: 0;}
+  .st-key-calgrid .cal-dots i {width: 5px; height: 5px;}
+  .st-key-calgrid .cal-tot {display: none;}
+  .st-key-calgrid .cal-wk {font-size: .7rem !important; padding-bottom: 2px !important;}
+  .st-key-calnav .cal-title {font-size: 1.05rem !important; min-width: 0 !important;}
+  .st-key-calwrap [data-testid="stColumn"]:has(.st-key-ep_panel) {left: 12px !important; right: 12px !important; width: auto !important;}
+}
 </style>"""
 
 
