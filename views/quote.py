@@ -414,11 +414,12 @@ def render_new() -> None:
     # 1. 장비사용료
     with st.container(border=True, key="q_lines_box"):
         with st.container(horizontal=True, vertical_alignment="center", gap="small"):
-            st.markdown('<div class="q-sub" style="margin:0">1. 장비사용료</div>', unsafe_allow_html=True, width="content")
-            if st.button("줄 추가", icon=":material/add:", type="tertiary", key=f"q_addline_{ver}"):
-                d["lines"] = d["lines"] + [quotes.new_line(form)]
-                _bump(d)
-                st.rerun()
+            st.markdown('<div class="q-sub" style="margin:0 0 1rem 0;line-height:36px">1. 장비사용료</div>', unsafe_allow_html=True, width="stretch")
+            act = _row_buttons(f"q_lbtn_{ver}", "q_lines_box")
+        if act.add:
+            d["lines"] = d["lines"] + [quotes.new_line(form)]
+            _bump(d)
+            st.rerun()
         has_ch = any(str(ln.get("unit") or "") == "ch" or db.to_num(ln.get("ch")) for ln in d["lines"]) or any(
             str((options.get(ln.get("pick") or "") or {}).get("unit") or "") == "ch" for ln in d["lines"])
         order, cfg = _line_columns(form, list(options), has_ch)
@@ -427,14 +428,15 @@ def render_new() -> None:
                           ("key", "pick", "mode", "name", "spec", "note", "unit"))
         # 보이는 칸 순서대로 열을 둠 (숨긴 열이 사이에 있으면 표에서 고친 값이 다른 열로 들어가는 문제가 있음)
         lines_df = lines_df[order + [c for c in lines_df.columns if c not in order]]
-        # 맨 아래 빈 줄에 바로 쓰면 줄이 생기고, 줄 왼쪽을 눌러 고른 뒤 Delete 키(또는 휴지통)로 지움
-        ed = st.data_editor(lines_df, key=f"q_lines_{ver}", hide_index=True, width="stretch", num_rows="dynamic",
+        # 맨 아래 빈 줄에 바로 쓰면 줄이 생김. 지우기: 줄을 눌러 고르고 위 [삭제]
+        ed = st.data_editor(lines_df, key=f"q_lines_{ver}", hide_index=True, width="stretch", num_rows="add",
                             column_order=order, column_config=cfg,
                             height=38 + 35 * (len(lines_df) + 1) + 2)
         new_lines = quotes.apply_line_edits(form, d["lines"], _records(ed), options)
         if len(new_lines) > MAX_LINES[form]:
             st.caption(f":orange[양식에는 {MAX_LINES[form]}줄까지 들어가요. 그 아래 줄은 PDF에 빠져요.]")
-        if _redraw(new_lines, _records(ed), d["lines_base"]):
+        gone = _drop_row(new_lines, act.row)
+        if gone or _redraw(new_lines, _records(ed), d["lines_base"]):
             d["lines"] = new_lines
             _bump(d)
             st.rerun()
@@ -459,12 +461,14 @@ def render_new() -> None:
     # 2. 재료비 / 기술료
     with st.container(border=True, key="q_extra_box"):
         with st.container(horizontal=True, vertical_alignment="center", gap="small"):
-            st.markdown(f'<div class="q-sub" style="margin:0">2. {EXTRA_TITLE[form]}</div>', unsafe_allow_html=True, width="content")
-            if st.button("줄 추가", icon=":material/add:", type="tertiary", key=f"q_addex_{ver}"):
-                d["extras"] = d["extras"] + [{"key": uuid.uuid4().hex[:8], "name": "", "qty": None, "unit": "",
-                                              "price": None, "amount": None, "manual": False}]
-                _bump(d)
-                st.rerun()
+            st.markdown(f'<div class="q-sub" style="margin:0 0 1rem 0;line-height:36px">2. {EXTRA_TITLE[form]}</div>', unsafe_allow_html=True,
+                        width="stretch")
+            act2 = _row_buttons(f"q_xbtn_{ver}", "q_extra_box")
+        if act2.add:
+            d["extras"] = d["extras"] + [{"key": uuid.uuid4().hex[:8], "name": "", "qty": None, "unit": "",
+                                          "price": None, "amount": None, "manual": False}]
+            _bump(d)
+            st.rerun()
         ex_df = _frame(d.setdefault("extras_base", d["extras"]),
                        ["key", "name", "qty", "unit", "price", "amount", "manual"], ("key", "name", "unit"))
         ex_cfg = {"name": st.column_config.TextColumn("재료명" if form == "제조" else "항목", width="large"),
@@ -476,12 +480,13 @@ def render_new() -> None:
         ex_order = ["name", "qty", "unit", "price", "amount"] if form == "제조" else ["name", "qty", "price", "amount"]
         ex_df = ex_df[ex_order + [c for c in ex_df.columns if c not in ex_order]]
         ed2 = st.data_editor(ex_df, key=f"q_ex_{ver}", hide_index=True, width="stretch",
-                             num_rows="dynamic",
+                             num_rows="add",
                              column_order=ex_order, column_config=ex_cfg, height=38 + 35 * (len(ex_df) + 1) + 2)
         new_ex = quotes.apply_extra_edits(d["extras"], _records(ed2))
         if len(new_ex) > MAX_EXTRAS[form]:
             st.caption(f":orange[양식에는 {MAX_EXTRAS[form]}줄까지 들어가요.]")
-        if _redraw(new_ex, _records(ed2), d["extras_base"]):
+        gone = _drop_row(new_ex, act2.row)
+        if gone or _redraw(new_ex, _records(ed2), d["extras_base"]):
             d["extras"] = new_ex
             _bump(d)
             st.rerun()
@@ -688,6 +693,56 @@ def _show_quote(rec: dict) -> None:
         st.caption(f":red[{files['error']}]")
     for png in files["pages"]:
         st.image(png, width="stretch")
+
+
+# 표 제목 줄 맨 오른쪽 [추가] [삭제] (2026-11-20). [삭제]는 표에서 마지막으로 누른 줄을 지움
+# (누른 줄은 core/grid_patch.py 가 window.__gridLast 에 적어 둠). 줄을 고르지 않았으면 흐리게.
+_ROW_BTNS = st.components.v2.component(
+    "q_row_buttons",
+    html="""<div class="rowbtns"><button data-a="add"><svg viewBox="0 0 24 24"><path d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z"/></svg>추가</button>
+<button data-a="del" class="off"><svg viewBox="0 0 24 24"><path d="M7 21q-.8 0-1.4-.6T5 19V6H4V4h5V3h6v1h5v2h-1v13q0 .8-.6 1.4T17 21zm2-4h2V8H9zm4 0h2V8h-2z"/></svg>삭제</button></div>""",
+    css="""
+.rowbtns { display:flex; gap:.25rem; justify-content:flex-end; align-items:center; }
+.rowbtns button { display:inline-flex; align-items:center; gap:.3rem; height:2.25rem; padding:0 .6rem; border:0;
+  border-radius:.5rem; background:transparent; color:var(--st-text-color, #E2E8F0); font:inherit; font-size:.95rem; cursor:pointer; }
+.rowbtns button:hover { background:rgba(99,102,241,.16); color:#A5B4FC; }
+.rowbtns button svg { width:1.1rem; height:1.1rem; fill:currentColor; }
+.rowbtns button.off { opacity:.4; cursor:default; }
+.rowbtns button.off:hover { background:transparent; color:var(--st-text-color, #E2E8F0); }
+""",
+    js="""
+export default function({ data, parentElement, setTriggerValue }) {
+  const root = parentElement.querySelector('.rowbtns');
+  const del = root.querySelector('[data-a=del]');
+  const picked = () => {
+    const last = window.__gridLast, box = document.querySelector('.st-key-' + data.box);
+    return last && box && box.contains(last.wrap) ? last.row : null;
+  };
+  const sync = () => del.classList.toggle('off', picked() === null);
+  root.querySelector('[data-a=add]').onclick = () => setTriggerValue('add', Date.now());
+  del.onclick = () => { const r = picked(); if (r !== null) setTriggerValue('row', r); };
+  document.addEventListener('gridpick', sync);
+  sync();
+  return () => document.removeEventListener('gridpick', sync);
+}
+""",
+)
+
+
+def _row_buttons(key: str, box: str):
+    return _ROW_BTNS(key=key, data={"box": box}, width="content",
+                     on_add_change=lambda: None, on_row_change=lambda: None)
+
+
+def _drop_row(rows: list[dict], idx) -> bool:
+    """[삭제]로 고른 줄을 뺌. 맨 아래 빈 입력 줄 등 없는 줄이면 그대로."""
+    if idx is None:
+        return False
+    i = int(idx)
+    if 0 <= i < len(rows):
+        del rows[i]
+        return True
+    return False
 
 
 def _redraw(new: list[dict], edited: list[dict], base: list[dict]) -> bool:
