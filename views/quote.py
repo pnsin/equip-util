@@ -390,7 +390,7 @@ def render_new() -> None:
                 st.rerun()
             c1, c2, c3 = st.columns([1.2, 1, 1])
             d["title"] = c1.text_input("제목", value=d["title"], key=f"q_title_{ver}", placeholder="예: 전극 장비 사용")
-            d["contact"] = c2.text_input("담당자", value=d["contact"], key=f"q_contact_{ver}", placeholder="예: 홍길동 대리님")
+            d["contact"] = c2.text_input("업체 담당자", value=d["contact"], key=f"q_contact_{ver}", placeholder="예: 홍길동 대리님")
             d["phone"] = c3.text_input("전화번호", value=d["phone"], key=f"q_phone_{ver}")
             c1, c2, c3 = st.columns([1.2, 1, 1])
             wnames = list(staff)
