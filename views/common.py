@@ -230,7 +230,11 @@ def excel_box(key: str, df, heads: dict, sheet: str, apply, extra_sheet: tuple |
                 st.rerun()
 
 
-def search_box(key: str, placeholder: str) -> str:
+def search_box(key: str, placeholder: str, short: str = "") -> str:
+    """검색 칸. 휴대폰에서는 안내 글이 잘리지 않게 짧은 글(short)을 씀 (2026-11-20)."""
+    import ui_style
+    if short and ui_style.is_phone():
+        placeholder = short
     return st.text_input("검색", placeholder=placeholder, key=key, label_visibility="collapsed",
                          icon=":material/search:")
 

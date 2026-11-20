@@ -196,7 +196,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
             if i in open_ids:
                 return True
         return False
-    q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호·비고·장비구분")
+    q = search_box("equip_q", "장비명·ITUBE번호·관리자·자산번호·비고·장비구분", "장비명·ITUBE번호·관리자로 찾기")
     mask = pd.Series(True, index=view.index)
     if q:
         hay = view[["장비명(한글)", "ITUBE번호", "관리자", "자산번호", "주장비(종)", "모델명", "비고", "장비구분"]].fillna("").astype(str).agg(" ".join, axis=1)

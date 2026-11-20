@@ -888,6 +888,15 @@ def chart_layout(fig, height: int, legend: bool = True):
     return fig
 
 
+def is_phone() -> bool:
+    """휴대폰으로 들어왔는지 (브라우저가 보낸 User-Agent의 'Mobi'). 표 열 너비처럼 CSS로 못 바꾸는 것에만 씀."""
+    try:
+        ua = st.context.headers.get("User-Agent", "") or ""
+    except Exception:
+        return False
+    return "Mobi" in ua
+
+
 # 2026-11-06: 모든 표의 빈 칸 None 제거 및 모든 컬럼 기본 가운데 정렬(center) 적용
 def _blank_none(fn):
     import functools
@@ -914,6 +923,10 @@ def _blank_none(fn):
                                     setattr(target, "alignment", "center")
                     else:
                         cfg[col] = st.column_config.Column(alignment="center")
+                if is_phone():  # 2026-11-20 휴대폰: 'large' 열 하나가 화면을 다 차지해 다른 열이 안 보임 → 보통 너비로
+                    for col, target in list(cfg.items()):
+                        if isinstance(target, dict) and target.get("width") == "large":
+                            cfg[col] = {**target, "width": "medium"}
                 k["column_config"] = cfg
         except Exception:
             pass
