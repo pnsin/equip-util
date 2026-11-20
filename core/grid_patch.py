@@ -82,13 +82,19 @@ RUNTIME_JS = """
     var wrap = e.target && e.target.closest && e.target.closest(GRID);
     var cv = wrap && wrap.querySelector('canvas');
     if (!wrap){
-      if (sel){ sel.bar.remove(); sel = null; }
+      // 표 위 [삭제] 버튼을 누를 때는 고른 줄을 기억해 둠 (2026-11-20)
+      var keep = (e.composedPath ? e.composedPath() : []).some(function(n){ return n.classList && n.classList.contains('rowbtns'); });
+      if (!keep){
+        if (sel){ sel.bar.remove(); sel = null; }
+        W.__gridLast = null; document.dispatchEvent(new Event('gridpick'));
+      }
       return;
     }
     var y = e.clientY - cv.getBoundingClientRect().top;
     if (y < RH) return;  // 머리글
     var sc = wrap.querySelector('.dvn-scroller');
     var row = Math.floor((y - RH + (sc ? sc.scrollTop : 0)) / RH);
+    W.__gridLast = {wrap: wrap, row: row}; document.dispatchEvent(new Event('gridpick'));
     if (sel && sel.wrap !== wrap){ sel.bar.remove(); sel = null; }
     if (!sel){
       var host = cv.parentElement;
