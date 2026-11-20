@@ -1710,6 +1710,26 @@ def charger_ids(eq: pd.DataFrame | None = None, ch: pd.DataFrame | None = None) 
     return ids
 
 
+def charger_family(eq: pd.DataFrame | None = None, ch: pd.DataFrame | None = None) -> set[int]:
+    """충방전기 + 충방전기를 세부장비로 둔 상위 장비 (예: 'MV급 배터리 구동시험 시스템', '이동형 충방전기').
+
+    2026-11-20: 시험파트 자료처럼 어느 충방전기인지 모르고 상위 장비에 넣은 실적도 달력에서 '시험(충방전)'으로 보이게.
+    입력 카드의 장비 고르기·가동률 계산은 charger_ids 를 그대로 씀.
+    """
+    eq = load_equipment() if eq is None else eq
+    ids = charger_ids(eq, ch)
+    parent = ({int(i): int(p) for i, p in zip(eq["id"], eq["parent_id"]) if pd.notna(p)}
+              if "parent_id" in eq else {})
+    out = set(ids)
+    for i in ids:
+        cur, seen = parent.get(i), set()
+        while cur is not None and cur not in seen:
+            out.add(cur)
+            seen.add(cur)
+            cur = parent.get(cur)
+    return out
+
+
 def charger_caps() -> dict[int, tuple[float, int]]:
     """가동률 계산용: 충방전기 장비 ID → (하루 최대 시간, 묶음 = 맨 위 주장비 ID).
 

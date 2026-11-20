@@ -650,7 +650,7 @@ def _cell_entries(in_month: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame) 
             tot += len(u)
             parts.append(f"{ch_name.get(cid, '')} {chg.fmt(u).replace('-', '~')}".strip())
         return tot, ", ".join(parts)
-    chg_ids = db.charger_ids(eq, chans)
+    chg_ids = db.charger_family(eq, chans)  # 상위 장비에 넣은 충방전기 실적도 충방전 구역으로
     root_of = dict(zip(eq["id"].astype(int), eq["root_id"])) if "root_id" in eq else {}
     out: dict[dt.date, list[dict]] = {}
     for r in in_month.itertuples(index=False):
@@ -1649,10 +1649,11 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                 _close_panel()
                 st.rerun()
         # 그날 실적 목록 (누르면 아래 칸에서 고침)
+        chg_fam = db.charger_family(eq, chans)
         with st.container(key="ep_list", gap="small"):
             for r in rows.sort_values("id").to_dict("records"):
                 rid = int(r["id"])
-                c = _log_cat(r["purpose"], int(r["equip_id"]) in db.charger_ids(eq))
+                c = _log_cat(r["purpose"], int(r["equip_id"]) in chg_fam)
                 e = {"id": rid, "rec": r, "period": "", "equip": name_of.get(r["equip_id"], "?"),
                      "company": db.to_str(r["company"]) or "내부", "hours": float(r["hours"])}
                 if st.button(f"{_md(e['equip'])}\n\n{_hours(e['hours'])} · {_md(e['company'])}",
@@ -1663,7 +1664,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             # 2026-11-20 사용자(휴대폰): 날짜를 누르면 그날 걸쳐 있는 장기(기간) 실적·예약도 목록에 바로 보이게
             for r in (period.sort_values(["start_date", "id"]).to_dict("records") if not period.empty else []):
                 rid = int(r["id"])
-                c = _log_cat(r["purpose"], int(r["equip_id"]) in db.charger_ids(eq))
+                c = _log_cat(r["purpose"], int(r["equip_id"]) in chg_fam)
                 comp_name = db.to_str(r["company"]) or "내부"
                 if st.button(f"{_md(name_of.get(r['equip_id'], '?'))}\n\n"
                              f"{r['start_date']:%m/%d}~{r['end_date']:%m/%d} · {_md(comp_name)}",
