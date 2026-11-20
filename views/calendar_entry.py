@@ -326,17 +326,27 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .cal-mini b {font-weight: 800; text-align: left;}
   .cal-mini span {text-align: left;}
   /* 달력 아래 이달 실적 목록 */
-  .cal-agenda {display: block; margin-top: .3rem; border-top: 1px solid var(--line, #334155); padding-top: .5rem;}
-  .cal-agenda .ag-h {font-size: .8rem; font-weight: 800; color: #CBD5E1; margin-bottom: .3rem;}
+  .cal-agenda {display: block; margin-top: .3rem; border-top: 1px solid var(--line, #334155); padding-top: .5rem; text-align: left;}
+  .cal-agenda .ag-h {display: flex; align-items: baseline; gap: 8px; font-size: .82rem; font-weight: 800; color: #E2E8F0; margin-bottom: .35rem;}
+  .cal-agenda .ag-h small {margin-left: auto; font-size: .66rem; font-weight: 600; color: #64748B;}
   .cal-agenda .ag-none {font-size: .78rem; color: #94A3B8; text-align: center;}
-  .cal-agenda .ag-r {display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 1px solid rgba(51,65,85,.6);}
-  .cal-agenda .ag-r:last-child {border-bottom: none;}
-  .cal-agenda .ag-r > i {flex: none; width: 7px; height: 7px; border-radius: 50%;}
-  .cal-agenda .ag-d {flex: none; width: 76px; font-size: .72rem; font-weight: 700; color: #94A3B8; text-align: left;}
-  .cal-agenda .ag-m {flex: 1; min-width: 0; text-align: left;}
-  .cal-agenda .ag-m b, .cal-agenda .ag-m small {display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-  .cal-agenda .ag-m b {font-size: .8rem; color: #F1F5F9;}
-  .cal-agenda .ag-m small {font-size: .7rem; color: #94A3B8;}
+  .cal-agenda summary {list-style: none; cursor: pointer; display: flex; align-items: center; gap: 7px;}
+  .cal-agenda summary::-webkit-details-marker {display: none;}
+  .cal-agenda summary::after {content: '›'; margin-left: 4px; color: #64748B; font-weight: 700; transition: transform .15s;}
+  .cal-agenda details[open] > summary::after {transform: rotate(90deg);}
+  .cal-agenda summary span {margin-left: auto; flex: none; font-size: .72rem; font-weight: 700; color: #94A3B8;}
+  .cal-agenda .ag-cat {margin-bottom: 6px; border-radius: 10px; background: rgba(15,23,42,.35);}
+  .cal-agenda .ag-cat > summary {padding: 8px 10px; font-size: .82rem;}
+  .cal-agenda .ag-cat > summary i {width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none;}
+  .cal-agenda .ag-cat > summary b {color: var(--c);}
+  .cal-agenda .ag-eq {border-top: 1px solid rgba(51,65,85,.6); margin: 0 10px;}
+  .cal-agenda .ag-eq > summary {padding: 7px 0; font-size: .78rem;}
+  .cal-agenda .ag-eq > summary b {min-width: 0; color: #F1F5F9; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+  .cal-agenda .ag-r {display: flex; align-items: center; gap: 8px; padding: 3px 0 3px 10px; font-size: .72rem; color: #94A3B8;}
+  .cal-agenda .ag-r:last-child {padding-bottom: 8px;}
+  .cal-agenda .ag-d {flex: none; width: 72px; font-weight: 700;}
+  .cal-agenda .ag-c {flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+  .cal-agenda .ag-hr {flex: none; font-weight: 700; color: #CBD5E1;}
 }
 /* ===== v3: 작은 달력 카드 + 작은 입력 카드 ===== */
 .st-key-calcard {background: var(--panel); border-radius: 22px; padding: 16px 16px 14px;
@@ -1565,7 +1575,10 @@ def render(header: bool = True) -> None:
 
 
 def _month_agenda(month: dt.date, by_day: dict) -> str:
-    """휴대폰: 달력 아래 이달 실적 목록 (기간 실적은 한 줄로). 누르지 않아도 무엇을 언제 했는지 보이게 (2026-11-20)."""
+    """휴대폰: 달력 아래 이달 실적 (2026-11-20). 구분별로 접고, 그 안은 장비별로 묶어 길어져도 보기 쉽게.
+
+    시간은 달력 칸과 같은 가동률 계산(kpi_h)의 이달 몫이라 구분 합계가 장비 KPI 현황과 맞음.
+    """
     rows: dict = {}
     for d in sorted(by_day):
         if d.month != month.month:
@@ -1574,18 +1587,38 @@ def _month_agenda(month: dt.date, by_day: dict) -> str:
             k = db.to_str(e["rec"].get("series")) or e["id"]
             r = rows.setdefault(k, {"a": d, "b": d, "h": 0.0, "e": e})
             r["b"] = d
-            r["h"] += e["hours"]
+            r["h"] += e.get("kpi_h", e["hours"])
     if not rows:
         return "<div class='cal-agenda'><div class='ag-none'>이달 실적이 없어요.</div></div>"
     e_ = html.escape
+    by_cat: dict = {}
+    for r in rows.values():
+        name = r["e"]["equip"].split(" · ")[0].strip()  # 챔버 이름은 빼고 장비 하나로 묶음
+        by_cat.setdefault(r["e"]["cat"], {}).setdefault(name, []).append(r)
     out = []
-    for r in sorted(rows.values(), key=lambda r: (r["a"], CAT_ORDER.index(r["e"]["cat"]), -r["h"])):
-        e, a, b = r["e"], r["a"], r["b"]
-        when = f"{a.month}/{a.day}" + (f"~{b.month}/{b.day}" if b != a else f" ({WEEKDAYS[a.weekday()]})")
-        amount = f"{e['ch_n']}ch" if e.get("ch_n") else _hours(r["h"])
-        out.append(f"<div class='ag-r'><i style='background:{CATS[e['cat']][1]}'></i><span class='ag-d'>{when}</span>"
-                   f"<span class='ag-m'><b>{e_(e['equip'])}</b><small>{e_(e['company'])} · {amount}</small></span></div>")
-    return f"<div class='cal-agenda'><div class='ag-h'>{month.month}월 실적 {len(rows)}건</div>{''.join(out)}</div>"
+    for c in CAT_ORDER:
+        if c not in by_cat:
+            continue
+        eqs = by_cat[c]
+        recs = [r for v in eqs.values() for r in v]
+        fg = CATS[c][1]
+        inner = []
+        for name, v in sorted(eqs.items(), key=lambda kv: (-sum(r["h"] for r in kv[1]), kv[0])):  # 많이 쓴 장비부터
+            v.sort(key=lambda r: (r["a"], r["e"]["company"]))
+            lines = []
+            for r in v:
+                e, a, b = r["e"], r["a"], r["b"]
+                when = f"{a.month}/{a.day}" + (f"~{b.month}/{b.day}" if b != a else f" ({WEEKDAYS[a.weekday()]})")
+                amount = (f"{e['ch_n']}ch · " if e.get("ch_n") else "") + _hours(r["h"])
+                lines.append(f"<div class='ag-r'><span class='ag-d'>{when}</span><span class='ag-c'>{e_(e['company'])}</span>"
+                             f"<span class='ag-hr'>{amount}</span></div>")
+            inner.append(f"<details class='ag-eq'><summary><b>{e_(name)}</b><span>{len(v)}건 · {_hours(sum(r['h'] for r in v))}</span>"
+                         f"</summary>{''.join(lines)}</details>")
+        out.append(f"<details class='ag-cat' open><summary style='--c:{fg}'><i></i><b>{GROUP_LABEL.get(c, c)}</b>"
+                   f"<span>{len(recs)}건 · {_hours(sum(r['h'] for r in recs))}</span></summary>{''.join(inner)}</details>")
+    total = sum(r["h"] for r in rows.values())
+    return (f"<div class='cal-agenda'><div class='ag-h'>{month.month}월 실적 {len(rows)}건 · {_hours(total)}"
+            f"<small>장비를 누르면 펼쳐져요</small></div>{''.join(out)}</div>")
 
 
 def _set_end(key: str, start: dt.date, days: int) -> None:
