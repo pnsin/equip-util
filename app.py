@@ -23,16 +23,18 @@ from views import (calendar_entry, charger_board, coming_soon, companies, common
                    records, settings, staff, trash)
 from core import cs as cs_core  # noqa: E402
 from views import cs as cs_view  # noqa: E402
+from core import health  # noqa: E402
+from views import health as health_view  # noqa: E402
 from core.terms import w  # noqa: E402
 
 # 새 코드가 배포된 직후 Streamlit Cloud가 일부 파일만 새로 읽고 나머지는 옛 버전을 쓰는 일이 있어
 # (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
-for _m in (ui_style, seed, db, photos, calc, period, chargers, rules, itube, perf_export, quote_doc, quotes, cs_core, common,
+for _m in (ui_style, seed, db, photos, calc, period, chargers, rules, itube, perf_export, quote_doc, quotes, cs_core, health, common,
            calendar_entry, charger_board,
            coming_soon, entry, input_page, maintenance, quote, companies, dashboard,
            equip_detail, equip_info, cs_view,
-           equipment, export, records, settings, staff, trash):
+           equipment, export, records, settings, staff, trash, health_view):
     _mt = os.path.getmtime(_m.__file__)
     if getattr(_m, "_src_mtime", None) != _mt:
         # 2026-11-19: Streamlit 이 바뀐 파일의 모듈을 sys.modules 에서 먼저 빼 두는 일이 있어 (KeyError),
@@ -136,6 +138,7 @@ PAGES = {
         st.Page(settings.render, title="설정", url_path="settings"),
         st.Page(settings.render_data, title="가져오기 · 백업", url_path="data"),
         st.Page(trash.render, title="휴지통 · 기록", url_path="trash"),
+        st.Page(health_view.render, title="데이터 점검", url_path="check"),
     ],
 }
 common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1], "input": PAGES["실적"][0],
@@ -163,7 +166,7 @@ NAV_ICONS = {
     "장비 정보": ":material/precision_manufacturing:", "유지보수": ":material/build:",
     "CS활동": ":material/handshake:", "견적서 작성": ":material/request_quote:", "업체 목록": ":material/apartment:",
     "장비 목록": ":material/inventory_2:", "수수료 단가": ":material/sell:", "담당자": ":material/group:",
-    "설정": ":material/settings:", "가져오기 · 백업": ":material/cloud_sync:", "휴지통 · 기록": ":material/delete:",
+    "설정": ":material/settings:", "가져오기 · 백업": ":material/cloud_sync:", "휴지통 · 기록": ":material/delete:", "데이터 점검": ":material/fact_check:",
 }
 NAV_COLORS = [("#5B6CFF", "#E9EBFF"), ("#E0628F", "#FDE8F0"), ("#17936A", "#DFF5EC"),
               ("#D9821A", "#FDEFD9"), ("#8B5CF6", "#EFE8FE"), ("#5F6B85", "#ECEFF5")]
@@ -177,7 +180,14 @@ def sidebar(local: bool) -> None:
             fg, bg = NAV_COLORS[gi % len(NAV_COLORS)]
             ui_style.nav_group(group)
             for p in pages:
-                st.page_link(p, label=p.title)  # 2026-11-10 아이콘 없이 글자만 (깔끔하게)
+                label = p.title
+                if p.url_path == "check":  # 확인할 실적이 있으면 메뉴에 건수 (2026-11-20)
+                    try:
+                        n_chk = health.summary(health_view.findings())[0]
+                        label += f" ({n_chk})" if n_chk else ""
+                    except Exception:  # noqa: BLE001 - 점검이 실패해도 메뉴는 그대로
+                        pass
+                st.page_link(p, label=label)  # 2026-11-10 아이콘 없이 글자만 (깔끔하게)
                 css.append(f'[data-testid="stSidebar"] a[href="{p.url_path}"] {{--nc:{fg};--nb:{bg};}}')
         # 지금 화면 메뉴 강조 (Streamlit 은 aria-current 를 달지 않아 주소로 고름)
         cur = "" if getattr(pg, "_default", False) else pg.url_path

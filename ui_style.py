@@ -685,7 +685,7 @@ PH_ICONS = {
     "장비 사용 등록": "edit_calendar", "기간 실적 입력": "date_range", "수수료 입력": "payments", "i-Tube 제출": "upload_file",
     "장비 정보": "precision_manufacturing", "유지보수": "build", "CS활동": "handshake", "견적서 작성": "request_quote",
     "견적서 발급대장": "receipt_long", "업체 목록": "apartment", "장비 목록": "inventory_2", "장비 단가": "sell",
-    "수수료 단가": "sell", "담당자": "group", "설정": "settings", "가져오기 · 백업": "cloud_sync", "휴지통 · 기록": "delete",
+    "수수료 단가": "sell", "담당자": "group", "설정": "settings", "가져오기 · 백업": "cloud_sync", "휴지통 · 기록": "delete", "데이터 점검": "fact_check",
 }
 PH_COLORS = {"현황": ("#818CF8", "#A78BFA"), "실적": ("#E58BFF", "#F472B6"), "장비": ("#34D399", "#6CC4FF"),
              "업체": ("#FFC266", "#FB923C"), "정보": ("#6CC4FF", "#818CF8"), "관리": ("#94A3B8", "#64748B")}
