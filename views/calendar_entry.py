@@ -309,14 +309,18 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .st-key-calgrid div[class*="st-key-day_"] button div[data-testid="stMarkdownContainer"] {text-align: center;}
   .st-key-calnav .cal-title {min-width: 0; font-size: 1.05rem;}
   .cal-mobile-hint {display: block; font-size: .8rem; color: var(--muted); margin: .2rem 0 .4rem;}
-  /* 칸: 구분별 색 점 + 건수 */
+  /* 칸: 날짜 아래 구분별 "제조 1건 2h" (총 건수·시간 글자는 숨김) */
   .st-key-calgrid div[class*="st-key-cell_"] {position: relative;}
-  .st-key-calgrid div[class*="st-key-cell_"]:has(.cal-mini) {min-height: 66px !important;}
-  .st-key-calgrid [data-testid="stElementContainer"]:has(> div .cal-mini) {display: block !important; position: absolute !important; left: 0; right: 0;
-    top: 45px; width: auto !important; z-index: 1;}
-  .cal-mini {display: flex; flex-wrap: wrap; justify-content: center; gap: 1px 4px; line-height: 1;}
-  .cal-mini span {display: inline-flex; align-items: center; gap: 2px; font-size: .55rem; font-weight: 700; color: #CBD5E1;}
-  .cal-mini i {width: 5px; height: 5px; border-radius: 50%; display: block;}
+  .st-key-calgrid div[class*="st-key-cell_"] div[class*="st-key-day_"] button p {font-size: 0 !important;}
+  .st-key-calgrid div[class*="st-key-cell_"]:has(.cal-mini.l2) {min-height: 64px !important;}
+  .st-key-calgrid div[class*="st-key-cell_"]:has(.cal-mini.l3) {min-height: 76px !important;}
+  .st-key-calgrid div[class*="st-key-cell_"]:has(.cal-mini.l4) {min-height: 88px !important;}
+  .st-key-calgrid div[class*="st-key-cell_"]:has(.cal-mini.l5) {min-height: 100px !important;}
+  .st-key-calgrid [data-testid="stElementContainer"]:has(> div .cal-mini) {display: block !important; position: absolute !important;
+    left: 0; right: 0; top: 27px; width: auto !important; z-index: 1;}
+  .cal-mini {display: block; text-align: center; line-height: 1.2;}
+  .cal-mini div {font-size: .5rem; font-weight: 600; color: #CBD5E1; white-space: nowrap; letter-spacing: -.02em;}
+  .cal-mini b {font-weight: 800;}
   /* 달력 아래 이달 실적 목록 */
   .cal-agenda {display: block; margin-top: .3rem; border-top: 1px solid var(--line, #334155); padding-top: .5rem;}
   .cal-agenda .ag-h {font-size: .8rem; font-weight: 800; color: #CBD5E1; margin-bottom: .3rem;}
@@ -726,7 +730,8 @@ CATS = {"시험": ("rgba(230,85,114,0.16)", "#FF8DA1"), CHARGER_GROUP: ("rgba(21
 CAT_ORDER = list(CATS)
 FIXED_CATS = ["시험", CHARGER_GROUP, "제조", "분석", "교육", "지원"]
 LANE_CATS = ["시험", CHARGER_GROUP, "제조", "분석"]  # 칸마다 비어 있어도 보이는 구역 (2026-11-10 시험을 환경·충방전으로 나눔)
-GROUP_LABEL = {"시험": "시험(환경)", CHARGER_GROUP: "시험(충방전)"}  # 입력 카드 구분 버튼에 보이는 이름
+GROUP_LABEL = {"시험": "시험(환경)", CHARGER_GROUP: "시험(충방전)"}
+MINI_LABEL = {"시험": "환경", CHARGER_GROUP: "충방"}  # 휴대폰 달력 칸의 짧은 이름  # 입력 카드 구분 버튼에 보이는 이름
 CARD_GROUPS = ["시험", CHARGER_GROUP, "제조", "분석"]  # 입력 카드 장비 구분 (시험 = 충방전기 뺀 시험 장비)
 CAT_KEY = {"시험": "test", CHARGER_GROUP: "chg", "제조": "make", "분석": "anal", "교육": "edu", "지원": "sup", "기타": "etc"}
 PURPOSE_CAT = {"시험": "시험", "생산": "제조", "분석": "분석", "계측": "분석", "교육": "교육", "기타": "지원"}
@@ -1348,13 +1353,19 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
     # 날짜 버튼은 칸 전체를 덮음 → 칸 어디를 눌러도 선택/붙여넣기 (CSS 참고)
     cell.button(head, key=f"day_{d}", type="tertiary", width="stretch",
                 on_click=_click_day, args=(d, clip, logs))
-    if entries:  # 휴대폰에서만 보이는 구분별 건수 (색 점 + 건수)
-        cnt = {}
-        for e in entries:
-            cnt[e["cat"]] = cnt.get(e["cat"], 0) + 1
-        cell.markdown("<div class='cal-mini'>" + "".join(
-            f"<span><i style='background:{CATS[c][1]}'></i>{n}</span>" for c, n in cnt.items()) + "</div>",
-            unsafe_allow_html=True)
+    if entries:  # 휴대폰에서만 보이는 구분별 "제조 1건 2h" (2026-11-20 사용자: 색 점·총계는 알아보기 어려움)
+        lines = []
+        for c in CAT_ORDER:
+            ents = [e for e in entries if e["cat"] == c]
+            if not ents:
+                continue
+            chg = [e for e in ents if e.get("charger")]
+            h = sum(e["hours"] for e in ents if not e.get("charger")) + (0 if d.weekday() >= 5 else sum(
+                min(db.CHARGER_DAY_MAX, sum(e["hours"] for e in chg if e["root"] == i)) for i in {e["root"] for e in chg}))
+            hs = f"{h:.0f}h" if h >= 10 else _hours(h)
+            lines.append(f"<div><b style='color:{CATS[c][1]}'>{MINI_LABEL.get(c, c)}</b> {len(ents)}건"
+                         f"{' ' + hs if h else ''}</div>")
+        cell.markdown(f"<div class='cal-mini l{len(lines)}'>{''.join(lines)}</div>", unsafe_allow_html=True)
     # 구역: 시험·제조·분석은 비어 있어도 항상, 교육·지원은 실적이 있을 때만
     cats = [c for c in shown_cats if c in LANE_CATS or any(e["cat"] == c for e in entries)]
     for c in cats:
@@ -1445,9 +1456,14 @@ def render(header: bool = True) -> None:
     in_month = daily[(daily["day"] >= w0) & (daily["day"] <= w1)]
     by_day = _cell_entries(in_month, logs, eq)
     present = list(FIXED_CATS)
+    # 구분 버튼 숫자 = 이달 실적 건수 (기간 실적은 하루하루가 아니라 한 건으로; 2026-11-20 아래 목록 건수와 같게)
+    n_rec: dict[str, int] = {}
+    for c, k in {(e["cat"], db.to_str(e["rec"].get("series")) or e["id"])
+                 for dd, v in by_day.items() if dd.month == month.month for e in v}:
+        n_rec[c] = n_rec.get(c, 0) + 1
     shown = legend.pills("구분", present, selection_mode="multi", default=present, key=f"cal_cats2_{month}",
                      label_visibility="collapsed",
-                     format_func=lambda c: f"{GROUP_LABEL.get(c, c)} {sum(e['cat'] == c for dd, v in by_day.items() if dd.month == month.month for e in v)}")
+                     format_func=lambda c: f"{GROUP_LABEL.get(c, c)} {n_rec.get(c, 0)}")
     pill_css = ""
     for i, c in enumerate(present, start=1):
         bg, fg = CATS[c]
