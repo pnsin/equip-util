@@ -318,9 +318,13 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .st-key-calgrid div[class*="st-key-cell_"]:has(.cal-mini.l5) {min-height: 100px !important;}
   .st-key-calgrid [data-testid="stElementContainer"]:has(> div .cal-mini) {display: block !important; position: absolute !important;
     left: 0; right: 0; top: 27px; width: auto !important; z-index: 1;}
-  .cal-mini {display: block; text-align: center; line-height: 1.2;}
-  .cal-mini div {font-size: .5rem; font-weight: 600; color: #CBD5E1; white-space: nowrap; letter-spacing: -.04em;}
-  .cal-mini b {font-weight: 800;}
+  /* 구분·건수·시간이 줄마다 같은 자리에 오게 왼쪽 정렬 표 (2026-11-20) */
+  .cal-mini {display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 2px;
+    padding: 0 3px; line-height: 1.25; font-size: .47rem; font-weight: 600; color: #CBD5E1; white-space: nowrap;}
+  .cal-mini b, .cal-mini span {letter-spacing: -.05em;}
+  .cal-mini div {display: contents;}
+  .cal-mini b {font-weight: 800; text-align: left;}
+  .cal-mini span {text-align: left;}
   /* 달력 아래 이달 실적 목록 */
   .cal-agenda {display: block; margin-top: .3rem; border-top: 1px solid var(--line, #334155); padding-top: .5rem;}
   .cal-agenda .ag-h {font-size: .8rem; font-weight: 800; color: #CBD5E1; margin-bottom: .3rem;}
@@ -1361,8 +1365,8 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
                 continue
             h = sum(e.get("kpi_h", e["hours"]) for e in ents)
             hs = _hours(h)  # 반올림하지 않음 (합계가 가동률과 맞게)
-            lines.append(f"<div><b style='color:{CATS[c][1]}'>{MINI_LABEL.get(c, c)}</b> {len(ents)}건"
-                         f"{' ' + hs if h else ''}</div>")
+            lines.append(f"<div><b style='color:{CATS[c][1]}'>{MINI_LABEL.get(c, c)}</b><span>{len(ents)}건</span>"
+                         f"<span>{hs if h else ''}</span></div>")
         cell.markdown(f"<div class='cal-mini l{len(lines)}'>{''.join(lines)}</div>", unsafe_allow_html=True)
     # 구역: 시험·제조·분석은 비어 있어도 항상, 교육·지원은 실적이 있을 때만
     cats = [c for c in shown_cats if c in LANE_CATS or any(e["cat"] == c for e in entries)]
