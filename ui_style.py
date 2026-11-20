@@ -490,9 +490,28 @@ _SLATE_CSS = """<style>
       flex-wrap: wrap !important; gap: .5rem !important; }
     [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]) > [data-testid="stColumn"] {
       flex: 1 1 calc(50% - .5rem) !important; min-width: calc(50% - .5rem) !important; width: auto !important; }
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(3):last-child [data-testid="stMetric"]) > [data-testid="stColumn"] {
+      flex: 1 1 calc(33% - .5rem) !important; min-width: calc(33% - .5rem) !important; }
     [data-testid="stMetric"] { min-height: 0 !important; }
     /* 센터 고르기 같은 버튼 묶음: 화면 밖으로 잘리지 않게 다음 줄로 */
     [data-testid="stButtonGroup"] > div { flex-wrap: wrap !important; row-gap: 4px; }
+    /* 2026-11-20 휴대폰 2차 (앱 디자이너 관점) */
+    /* ① 위쪽 빈 공간: 눈에 안 보이는 스타일·스크립트 칸이 만들던 줄 간격을 없앰 (스타일은 그대로 적용됨) */
+    [data-testid="stElementContainer"]:has([data-testid="stMarkdownContainer"] > style:only-child),
+    [data-testid="stElementContainer"]:has(> [data-testid="stHtml"] > script:only-child) { display: none !important; }
+    .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stMainBlockContainer"] { padding-top: 3.9rem !important; }
+    /* ② 위 막대: 내용이 비쳐 겹쳐 보이지 않게 바탕을 칠함 */
+    .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stHeader"] { background: rgba(15,23,42,.94) !important;
+      backdrop-filter: blur(6px); height: 3rem; min-height: 3rem; }
+    /* ③ 쪽 제목: 아이콘·글자 작게, 아래 여백 줄임 */
+    .ph2 { gap: 12px !important; padding-bottom: 10px !important; margin-bottom: 12px !important; }
+    .ph2 .ic { width: 38px !important; height: 38px !important; border-radius: 12px !important; }
+    .ph2 .ic span { font-size: 22px !important; }
+    .ph2 .t2 { font-size: 1.2rem !important; }
+    .ph2 .eb2 { font-size: .64rem !important; padding: 1px 7px !important; }
+    /* ④ 글자·칸 크기: 입력칸 높이와 라벨을 휴대폰에 맞게 */
+    [data-testid="stWidgetLabel"] p { font-size: .82rem !important; }
+    [data-testid="stVerticalBlock"] { gap: .75rem; }
   }
   [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         font-variant-numeric: tabular-nums; }

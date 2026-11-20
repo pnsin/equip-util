@@ -159,7 +159,9 @@ a.doc:hover .t b {color: var(--accent);}
 .nodoc {font-size: .82rem; color: var(--dim); padding: .5rem 0 .2rem;}
 [class*="st-key-info_caution_"] textarea {background: rgba(230,194,85,0.16) !important; border-color: rgba(230,193,85,0.3) !important; line-height: 1.6;}
 [class*="st-key-info_contact_"] textarea {line-height: 1.6;}
-@media (max-width: 640px) {.ic .icph {height: 104px;}}
+/* 2026-11-20 휴대폰: 카드를 가로형(왼쪽 작은 그림 + 오른쪽 글)으로 → 한 화면에 여러 대 */
+@media (max-width: 640px) {.ic {display: flex; align-items: stretch;} .ic .icph {height: auto; width: 84px; min-height: 84px; flex: none;}
+  .ic .icph svg {width: 44px; height: 44px;} .ic .bd {padding: .55rem .7rem; min-width: 0; flex: 1;} .ic .bs {min-height: 0; margin-top: .35rem;}}
 </style>"""
 
 
