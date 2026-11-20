@@ -275,6 +275,12 @@ def render() -> None:
         mh = "".join(f"<span style='left:{edges[i]:.2f}%;width:{edges[i + 1] - edges[i]:.2f}%'>{x.month}월</span>"
                      for i, x in enumerate(months))
         rows, prev_u, prev_c, show_css = [], None, None, []
+        # 2026-11-20 사용자: 빈 챔버 줄이 위에 몰려 있어 실적이 없는 줄 알았음 → 보이는 기간에 예약·실적이 있는 충방전기를 위로
+        if not bk.empty and not g.empty:
+            seen = bk[(bk["end"] >= w0) & (bk["start"] <= w1)]
+            busy_ids = set(pd.to_numeric(seen["chamber_id"], errors="coerce").dropna().astype(int))
+            busy_units = {u for u, i in zip(g["unit"], g["id"]) if int(i) in busy_ids}
+            g = g.assign(_idle=[u not in busy_units for u in g["unit"]]).sort_values("_idle", kind="stable").drop(columns="_idle")
         recs = g.to_dict("records")
         span_u = {}  # 같은 충방전기 줄 수 (장비 칸 셀 병합)
         start = 0
