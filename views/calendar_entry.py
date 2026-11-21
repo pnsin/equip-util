@@ -333,6 +333,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .cal-mini div {display: contents;}
   .cal-mini b {font-weight: 800; text-align: left;}
   .cal-mini span {text-align: left;}
+  .cal-mini span i {font-style: normal; color: #64748B;}
   /* 달력 아래 이달 실적 목록 */
   .cal-agenda {display: block; margin-top: .3rem; border-top: 1px solid var(--line, #334155); padding-top: .5rem; text-align: left;}
   .cal-agenda .ag-h {display: flex; align-items: baseline; gap: 8px; font-size: .82rem; font-weight: 800; color: #E2E8F0; margin-bottom: .35rem;}
@@ -1390,7 +1391,7 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
             h = sum(e.get("kpi_h", e["hours"]) for e in ents)
             hs = _hours(h)  # 반올림하지 않음 (합계가 가동률과 맞게)
             lines.append(f"<div><b style='color:{CATS[c][1]}'>{MINI_LABEL.get(c, c)}</b><span>{len(ents)}건</span>"
-                         f"<span>{hs if h else ''}</span></div>")
+                         f"<span>{hs if h else '<i>0h</i>'}</span></div>")  # 주말·공휴일이라 가동률에 안 세는 날은 흐리게
         cell.markdown(f"<div class='cal-mini l{len(lines)}'>{''.join(lines)}</div>", unsafe_allow_html=True)
     # 구역: 시험·제조·분석은 비어 있어도 항상, 교육·지원은 실적이 있을 때만
     cats = [c for c in shown_cats if c in LANE_CATS or any(e["cat"] == c for e in entries)]
@@ -1477,7 +1478,7 @@ def render(header: bool = True) -> None:
     # 보이는 6주에 걸친 실적만 날짜별로 나눔 (1년치 전부 나누지 않게; 한 실적의 날짜별 몫은 그대로)
     near = logs[(logs["start_date"] <= w1) & (logs[["start_date", "end_date"]].max(axis=1) >= w0)
                 | logs["start_date"].isna()]
-    daily = expand_daily(near, cfg.get("alloc_mode", "spread"))
+    daily = _with_off_days(expand_daily(near, cfg.get("alloc_mode", "spread")), near, cfg.get("alloc_mode", "spread"))
     in_month = daily[(daily["day"] >= w0) & (daily["day"] <= w1)]
     by_day = _cell_entries(in_month, logs, eq)
     # 칸에 보이는 시간 = 가동률(장비 KPI 현황)과 같은 계산 (충방전기 하루 최대·주말·공휴일 0) (2026-11-20 정확성)
@@ -1579,13 +1580,35 @@ def render(header: bool = True) -> None:
     # 실적 줄마다 숨은 카드를 따로 그리면 요소가 몇백 개 늘어 처음 열 때 느려져, 카드 내용만 한 곳에 모아 둠
     st.markdown(f"<div class='cal-state cal-cards' data-cards=\"{html.escape(json.dumps(cards, ensure_ascii=False, separators=(",", ":")))}\"></div>",
                 unsafe_allow_html=True)
-    card.markdown("<div class='cal-mobile-hint'>날짜를 누르면 그날 실적을 입력할 수 있어요.</div>",
+    card.markdown("<div class='cal-mobile-hint'>날짜를 누르면 그날 실적을 입력할 수 있어요. 흐린 0h는 진행 중이지만 주말·공휴일이라 가동률에 세지 않는 날이에요.</div>",
                   unsafe_allow_html=True)
     card.markdown(_month_agenda(month, by_day), unsafe_allow_html=True)
 
     if right is not None:
         with right:
             _entry_panel(day, logs, eq, comp, cfg)
+
+
+def _with_off_days(daily: pd.DataFrame, logs: pd.DataFrame, mode: str) -> pd.DataFrame:
+    """'휴무일 제외' 기간 실적(충방전기 등)의 주말·공휴일도 0시간으로 달력 칸에 보이게.
+
+    2026-11-20 사용자: 토요일 칸에 장기 충방전 시험이 안 보여 목록과 달라 보임. 시험은 계속 돌고 있으니 칸에는
+    '충방 3건'으로 보이고, 시간은 가동률 규칙대로 0 (주말 제외)이라 합계는 그대로.
+    """
+    if mode == "start" or logs.empty or daily.empty:
+        return daily
+    have = set(zip(daily["log_id"], daily["day"].dt.normalize()))
+    add = []
+    for r in logs.itertuples(index=False):
+        if db.to_str(getattr(r, "include_holidays", "")) != "N" or pd.isna(r.start_date) or pd.isna(r.end_date):
+            continue
+        for d in pd.date_range(r.start_date.normalize(), r.end_date.normalize()):
+            if (r.id, d) not in have:
+                add.append((r.id, r.equip_id, d, 0.0, 0.0))
+    if not add:
+        return daily
+    extra = pd.DataFrame(add, columns=["log_id", "equip_id", "day", "hours", "fee"])
+    return pd.concat([daily, extra], ignore_index=True)
 
 
 def _month_agenda(month: dt.date, by_day: dict) -> str:
