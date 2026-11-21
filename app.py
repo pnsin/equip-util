@@ -16,9 +16,9 @@ import importlib  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
 
-from core import calc, chargers, db, photos, itube, perf_export, period, quote_doc, quotes, rules, seed  # noqa: E402
+from core import calc, chargers, db, status, photos, itube, perf_export, period, quote_doc, quotes, rules, seed  # noqa: E402
 from views import (calendar_entry, charger_board, coming_soon, companies, common, dashboard, entry, equip_detail,  # noqa: E402
-                   equip_info, equipment, export,
+                   equip_info, equip_status, equipment, export,
                    input_page, maintenance, quote,
                    records, settings, staff, trash)
 from core import cs as cs_core  # noqa: E402
@@ -30,8 +30,8 @@ from core.terms import w  # noqa: E402
 # 새 코드가 배포된 직후 Streamlit Cloud가 일부 파일만 새로 읽고 나머지는 옛 버전을 쓰는 일이 있어
 # (예: "module 'core.db' has no attribute 'load_companies'"), 파일이 바뀐 모듈은 다시 읽어 옴.
 # core 를 먼저, 그것을 쓰는 views 를 나중에 읽어야 views 가 새 core 함수를 가리킴.
-for _m in (ui_style, seed, db, photos, calc, period, chargers, rules, itube, perf_export, quote_doc, quotes, cs_core, health, common,
-           calendar_entry, charger_board,
+for _m in (ui_style, seed, db, photos, calc, period, chargers, status, rules, itube, perf_export, quote_doc, quotes, cs_core, health, common,
+           calendar_entry, charger_board, equip_status,
            coming_soon, entry, input_page, maintenance, quote, companies, dashboard,
            equip_detail, equip_info, cs_view,
            equipment, export, records, settings, staff, trash, health_view):
@@ -96,7 +96,7 @@ def _undo() -> None:
 # 다른 메뉴에 다녀와도 기간·필터 선택이 그대로 남도록 (Streamlit은 안 보이는 화면의 선택값을 지움)
 KEEP_SUFFIX = ("_kind", "_year", "_month", "_q", "_h", "_week", "_range", "_from", "_to")
 KEEP_KEYS = {"dash_to_today", "dash_loc", "dash_use", "dash_kind_eq", "dash_cmp", "dash_only_kpi", "dash_base",
-             "rec_eq", "rec_comp", "rec_writer", "rec_cols", "detail_sel", "input_mode"}
+             "rec_eq", "rec_comp", "rec_writer", "rec_cols", "detail_sel", "input_mode", "es_cat", "cb_center"}
 
 
 def keep_choices() -> None:
@@ -113,7 +113,7 @@ PAGES = {
     "현황": [
         st.Page(dashboard.render, title="장비 KPI 현황", url_path="home", default=True),
         st.Page(equip_detail.render, title="장비별 가동률", url_path="equip"),
-        st.Page(charger_board.render, title="충방전기 현황", url_path="chargers"),
+        st.Page(equip_status.render, title="장비 가동 현황", url_path="status"),
     ],
     "실적": [
         st.Page(input_page.render, title="장비 사용 등록", url_path="input"),
@@ -141,7 +141,7 @@ PAGES = {
         st.Page(health_view.render, title="데이터 점검", url_path="check"),
     ],
 }
-common.PAGES.update({"equip": PAGES["현황"][1], "records": PAGES["실적"][1], "input": PAGES["실적"][0],
+common.PAGES.update({"equip": PAGES["현황"][1], "status": PAGES["현황"][2], "records": PAGES["실적"][1], "input": PAGES["실적"][0],
                      "equipment": PAGES["정보"][0], "equip_info": PAGES["장비"][0],
                      "quote": PAGES["업체"][1]})
 
@@ -150,6 +150,7 @@ ALIASES = [
     st.Page(equipment.render_prices, title="수수료 단가", url_path="rates"),  # 예전 주소
     st.Page(equipment.render_prices, title="수수료 단가 ", url_path="prices"),  # 예전 주소
     st.Page(dashboard.render, title="장비 KPI 현황", url_path="dashboard"),
+    st.Page(equip_status.render_chargers, title="장비 가동 현황 ", url_path="chargers"),  # 2026-11-21 충방전기 현황 → 장비 가동 현황
     st.Page(input_page.render, title="장비 사용 등록", url_path="calendar"),
     st.Page(input_page.render, title="장비 사용 등록", url_path="entry"),
     st.Page(export.render_itube, title="i-Tube 장비일지", url_path="export"),
@@ -161,7 +162,7 @@ ALIASES = [
 
 # 왼쪽 메뉴 아이콘 · 묶음별 파스텔 색 (2026-11-06 디자인 통일)
 NAV_ICONS = {
-    "장비 KPI 현황": ":material/space_dashboard:", "장비별 가동률": ":material/speed:", "충방전기 현황": ":material/battery_charging_full:",
+    "장비 KPI 현황": ":material/space_dashboard:", "장비별 가동률": ":material/speed:", "장비 가동 현황": ":material/monitor_heart:",
     "장비 사용 등록": ":material/edit_calendar:", "수수료 입력": ":material/payments:", "i-Tube 제출": ":material/upload_file:",
     "장비 정보": ":material/precision_manufacturing:", "유지보수": ":material/build:",
     "CS활동": ":material/handshake:", "견적서 작성": ":material/request_quote:", "업체 목록": ":material/apartment:",

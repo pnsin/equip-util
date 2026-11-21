@@ -9,6 +9,7 @@ from views.export import fill_from_companies
 EQ = pd.DataFrame({
     "id": [1, 2, 3, 4], "parent_id": [None, 1, None, None], "in_kpi": [True, False, False, True],
     "category": ["", "", "", "시스템시설"], "acquired_on": [None] * 4, "retired_on": [None] * 4,
+    "use": ["시험", "시험", "시험", "제조"],
 })
 CH = pd.DataFrame({"id": [10], "equip_id": [2]})
 COMP = pd.DataFrame({"name": ["가업체", "나업체"], "brn": ["1234567890", ""]})
@@ -71,3 +72,9 @@ def test_export_fills_brn_from_company_list():
                         "item": ["", ""], "sub_item": ["", ""]})
     out = fill_from_companies(sel, COMP.assign(industry="", item="", sub_item=""))
     assert list(out["brn"]) == ["1234567890", "999"]
+
+
+def test_device_without_use_is_hidden_from_status_board():
+    eq = EQ.assign(use=["시험", "시험", "시험", ""])
+    got = {f["key"] for f in health.run(pd.DataFrame([_log(1, 4)]), eq, CH, COMP, {2}, today=dt.date(2026, 11, 20))}
+    assert "no_group" in got
