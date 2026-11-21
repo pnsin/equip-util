@@ -489,10 +489,11 @@ _SLATE_CSS = """<style>
     [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]) {
       flex-wrap: wrap !important; gap: .5rem !important; }
     [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]) > [data-testid="stColumn"] {
-      flex: 1 1 calc(50% - .5rem) !important; min-width: calc(50% - .5rem) !important; width: auto !important; }
+      flex: 0 0 calc(50% - .25rem) !important; min-width: calc(50% - .25rem) !important; max-width: calc(50% - .25rem) !important; width: auto !important; }
     [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(3):last-child [data-testid="stMetric"]) > [data-testid="stColumn"] {
-      flex: 1 1 calc(33% - .5rem) !important; min-width: calc(33% - .5rem) !important; }
-    [data-testid="stMetric"] { min-height: 0 !important; }
+      flex: 0 0 calc(33.33% - .34rem) !important; min-width: calc(33.33% - .34rem) !important; max-width: calc(33.33% - .34rem) !important; }
+    /* 2026-11-21 사용자: 네모칸 크기는 다 같게 (변화량 줄이 있는 칸만 커지거나 마지막 칸만 넓어지지 않게) */
+    [data-testid="stMetric"] { min-height: 0 !important; height: 8rem !important; display: flex; flex-direction: column; justify-content: center; }
     /* 센터 고르기 같은 버튼 묶음: 화면 밖으로 잘리지 않게 다음 줄로 */
     [data-testid="stButtonGroup"] > div { flex-wrap: wrap !important; row-gap: 4px; }
     /* 2026-11-20 휴대폰 2차 (앱 디자이너 관점) */
