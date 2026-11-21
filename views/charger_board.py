@@ -59,7 +59,7 @@ CSS = """<style>
 .cb-bar {position: absolute; top: 5px; height: 21px; border-radius: 8px; font-size: .7rem; font-weight: 700; padding: 0 8px;
   display: flex; align-items: center; overflow: hidden; white-space: nowrap; border-left: 4px solid var(--fg);
   background: var(--bg); color: var(--fg); z-index: 1;}
-.cb-bar.soon {border: 1.5px dashed #E8B04B; background: rgba(230,182,85,0.16); color: #B5650B;}
+.cb-bar.cb-soon {border: 1.5px dashed #E8B04B; background: rgba(230,182,85,0.16); color: #B5650B;}
 .cb-mini {display: inline-block; width: 22px; height: 6px; border-radius: 3px; background: rgba(85,230,158,0.16); margin: 0 4px 1px 5px;
   vertical-align: middle; overflow: hidden;}
 .cb-mini i {display: block; height: 100%; background: #E35D78; border-radius: 3px;}
@@ -156,7 +156,7 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, soon: bool, lane: int = 0) -> str:
     done = min(max((dt.date.today() - b["start"]).days + 1, 0), total)
     text = f"{done}/{total}"
     tip = f"{b['company']} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b["staff"] else "")
-    return (f"<div class='cb-bar{' soon' if soon else ''}' title='{html.escape(tip)}' "
+    return (f"<div class='cb-bar{' cb-soon' if soon else ''}' title='{html.escape(tip)}' "
             f"style='left:{left:.2f}%;width:{width:.2f}%;top:{5 + lane * 26}px;--bg:{bg};--fg:{fg}'>{html.escape(text)}</div>")
 
 
@@ -210,38 +210,19 @@ def _chan_rows(r: dict, bks: list[dict], w0, w1, today, grid: str, now_line: str
     return "".join(out)
 
 
-def render() -> None:
-    from views import common
-    if st.session_state.pop("cb_go_input", False) and "input" in common.PAGES:
-        st.switch_page(common.PAGES["input"])  # 예약·고치기는 실적 입력 달력 카드에서
-    page_header("충방전기 현황", "현황")
-    st.markdown(CSS, unsafe_allow_html=True)
+def body(center: str, all_open: bool) -> None:
+    """장비 가동 현황 › 시험(충방전): 챔버 · 채널마다 누가 언제까지 쓰는지 (예전 '충방전기 현황' 화면 그대로)."""
     ch = db.load_channels()
     logs = db.load_logs()
     eq = db.load_equipment()
     today = dt.date.today()
-
     centers = list(dict.fromkeys(c for c in ch["center"] if c)) if not ch.empty else []
     bk = chargers.bookings(logs)
     stt = chargers.status(ch, bk, today) if not ch.empty else ch
-    with st.container(key="cb_top", horizontal=True, gap="small", vertical_alignment="center"):
-        center = None
-        if centers:
-            # 현황표 건물 칸은 짧은 이름(제조검증·MV·문백)으로 저장됨 → 그대로 짧게 보여 줌
-            order = [k for k in db.CENTER_SHORT if k in centers] + [c for c in centers if c not in db.CENTER_SHORT]
-            center = st.segmented_control("건물", ["전체"] + order, default="전체", key="cb_center",
-                                          format_func=db.center_short,
-                                          label_visibility="collapsed") or "전체"
-        d0 = today.replace(day=1)
-        d1 = ((d0 + dt.timedelta(days=95)).replace(day=1)) - dt.timedelta(days=1)  # 이번 달 + 2개월
-        rng = (d0, d1)  # 조회 기간은 이번 달 + 2개월 고정 (2026-11-10 기간 고르기 없앰)
-        all_open = st.toggle("채널 모두 펼치기", key="cb_all")
-        st.space("stretch")
-        if centers:
-            st.download_button("현황표 엑셀 다운로드", lambda stt=stt, today=today: chargers.to_excel(stt, today),  # 누를 때만 만듦 icon=":material/download:",
-                               file_name=f"충방전기_현황표_{today:%y%m%d}.xlsx", key="cb_dl",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        st.button("충방전기 예약", icon=":material/add:", key="cb_new", on_click=_book_new, type="primary")
+    center = center if center in centers else "전체"
+    d0 = today.replace(day=1)
+    d1 = ((d0 + dt.timedelta(days=95)).replace(day=1)) - dt.timedelta(days=1)  # 이번 달 + 2개월
+    rng = (d0, d1)  # 조회 기간은 이번 달 + 2개월 고정 (2026-11-10 기간 고르기 없앰)
 
     if not centers:
         st.info("챔버 구성이 아직 없어요. 챔버 구성은 관리자에게 문의해 주세요.")
@@ -389,3 +370,15 @@ def _config_editor(ch: pd.DataFrame, eq: pd.DataFrame) -> None:
             db.save_channels(out)
             st.toast("챔버 구성을 저장했어요.")
             st.rerun()
+
+
+def excel_bytes(center: str) -> bytes | None:
+    """챔버 현황표 엑셀 (장비 가동 현황 엑셀의 두 번째 시트). 챔버 구성이 없으면 None."""
+    ch = db.load_channels()
+    if ch.empty:
+        return None
+    today = dt.date.today()
+    stt = chargers.status(ch, chargers.bookings(db.load_logs()), today)
+    if center != "전체":
+        stt = stt[stt["center"] == center]
+    return chargers.to_excel(stt, today) if not stt.empty else None

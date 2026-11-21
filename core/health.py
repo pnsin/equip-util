@@ -1,6 +1,6 @@
 """데이터 점검 (2026-11-20 사용자: "실적이 있는데 화면에 안 나오는 경우는 아주 큰일").
 
-시트에 있는 실적이 어느 화면(가동률·달력·충방전기 현황·i-Tube 파일)에서 빠지거나, 잘못 연결되거나,
+시트에 있는 실적이 어느 화면(가동률·달력·장비 가동 현황·i-Tube 파일)에서 빠지거나, 잘못 연결되거나,
 두 번 세어질 수 있는 경우를 찾아 목록으로 돌려줍니다. 화면은 views/health.py.
 level: "확인" = 숫자가 빠지거나 틀어질 수 있음 · "참고" = 설계대로지만 알아 두면 좋은 것
 """
@@ -107,14 +107,20 @@ def run(logs: pd.DataFrame, eq: pd.DataFrame, ch: pd.DataFrame, companies: pd.Da
     add("out_of_life", CHECK, "장비 도입일 전이나 불용일 뒤의 실적", "그 기간은 가용시간이 0이라 가동률이 틀어져요.",
         ok[[outside(r) for r in ok.to_dict("records")]] if len(ok) else ok)
 
-    # 5. 충방전기 현황
+    # 5. 장비 가동 현황 › 시험(충방전) (예전 충방전기 현황)
     fam = set(chargers)
     for i in list(chargers):
         fam.update(_chain(i, parent))
     chg = ok[ok["eid"].isin(fam)]
     no_ch = chg[chg["chambers"].map(to_str) == ""]
-    add("no_chamber", CHECK, "충방전기 현황에 안 보이는 충방전기 실적",
-        "챔버가 정해져 있지 않아 충방전기 현황 표에 나오지 않아요. 입력 카드에서 챔버를 골라 주세요.", no_ch)
+    add("no_chamber", CHECK, "충방전 챔버 표에 안 보이는 충방전기 실적",
+        "챔버가 정해져 있지 않아 장비 가동 현황 › 시험(충방전) 챔버 표에 나오지 않아요. 입력 카드에서 챔버를 골라 주세요.", no_ch)
+    # 2026-11-21 장비 가동 현황: 장비용도가 시험·제조·분석이 아닌 장비(충방전기 빼고)는 어느 구분에도 안 보임
+    use_of = {int(i): to_str(u) for i, u in zip(eq["id"], eq.get("use", pd.Series([""] * len(eq))))}
+    no_grp = ok[[(use_of.get(e, "") not in ("시험", "제조", "생산", "분석")) and e not in fam for e in ok["eid"]]]
+    add("no_group", CHECK, "장비 가동 현황에 안 보이는 실적",
+        "장비 목록의 장비용도가 시험·제조·분석 중 하나가 아니라 장비 가동 현황 어느 구분에도 나오지 않아요. 장비용도를 채워 주세요.",
+        no_grp, lambda r: f"장비용도 '{use_of.get(r['eid'], '') or '빈칸'}'")
     ch_eq = dict(zip(ch["id"].astype(int), ch["equip_id"])) if not ch.empty else {}
     desc = descendants(eq)
 
@@ -126,7 +132,7 @@ def run(logs: pd.DataFrame, eq: pd.DataFrame, ch: pd.DataFrame, companies: pd.Da
         return out
     with_ch = ok[ok["chambers"].map(to_str) != ""]
     gone = with_ch[[any(c not in ch_eq for c in ch_ids(v)) for v in with_ch["chambers"]]]
-    add("bad_chamber", CHECK, "없는 챔버를 가리키는 실적", "챔버 구성에서 지워진 챔버라 충방전기 현황에 나오지 않아요.", gone,
+    add("bad_chamber", CHECK, "없는 챔버를 가리키는 실적", "챔버 구성에서 지워진 챔버라 시험(충방전) 챔버 표에 나오지 않아요.", gone,
         lambda r: f"챔버ID {r['chambers']}")
 
     def wrong(r) -> bool:
