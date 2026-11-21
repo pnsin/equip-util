@@ -1388,10 +1388,15 @@ def _day_cell(col, d: dt.date, entries: list[dict], *, selected: bool, holiday: 
             ents = [e for e in entries if e["cat"] == c]
             if not ents:
                 continue
-            h = sum(e.get("kpi_h", e["hours"]) for e in ents)
+            if holiday or d.weekday() >= 5:  # 주말·공휴일: 실제 쓴 시간 (가동률에는 안 셈). 충방전기는 주장비마다 하루 최대
+                chg = [e for e in ents if e.get("charger")]
+                h = sum(e["hours"] for e in ents if not e.get("charger")) + sum(
+                    min(db.CHARGER_DAY_MAX, sum(e["hours"] for e in chg if e["root"] == i)) for i in {e["root"] for e in chg})
+            else:
+                h = sum(e.get("kpi_h", e["hours"]) for e in ents)
             hs = _hours(h)  # 반올림하지 않음 (합계가 가동률과 맞게)
             lines.append(f"<div><b style='color:{CATS[c][1]}'>{MINI_LABEL.get(c, c)}</b><span>{len(ents)}건</span>"
-                         f"<span>{hs if h else '<i>0h</i>'}</span></div>")  # 주말·공휴일이라 가동률에 안 세는 날은 흐리게
+                         f"<span>{hs if h else ''}</span></div>")
         cell.markdown(f"<div class='cal-mini l{len(lines)}'>{''.join(lines)}</div>", unsafe_allow_html=True)
     # 구역: 시험·제조·분석은 비어 있어도 항상, 교육·지원은 실적이 있을 때만
     cats = [c for c in shown_cats if c in LANE_CATS or any(e["cat"] == c for e in entries)]
@@ -1486,7 +1491,7 @@ def render(header: bool = True) -> None:
     kpi_h = {(int(i), d.date()): float(h) for i, d, h in zip(capped["log_id"], capped["day"], capped["hours"])}
     for dd, v in by_day.items():
         for e in v:
-            e["kpi_h"] = kpi_h.get((e["id"], dd), e["hours"])
+            e["kpi_h"] = kpi_h.get((e["id"], dd), 0.0)  # 가동률에 안 세는 날(주말 표시용 줄)은 0
     present = list(FIXED_CATS)
     # 구분 버튼 숫자 = 이달 실적 건수 (기간 실적은 하루하루가 아니라 한 건으로; 2026-11-20 아래 목록 건수와 같게)
     n_rec: dict[str, int] = {}
@@ -1580,7 +1585,7 @@ def render(header: bool = True) -> None:
     # 실적 줄마다 숨은 카드를 따로 그리면 요소가 몇백 개 늘어 처음 열 때 느려져, 카드 내용만 한 곳에 모아 둠
     st.markdown(f"<div class='cal-state cal-cards' data-cards=\"{html.escape(json.dumps(cards, ensure_ascii=False, separators=(",", ":")))}\"></div>",
                 unsafe_allow_html=True)
-    card.markdown("<div class='cal-mobile-hint'>날짜를 누르면 그날 실적을 입력할 수 있어요. 흐린 0h는 진행 중이지만 주말·공휴일이라 가동률에 세지 않는 날이에요.</div>",
+    card.markdown("<div class='cal-mobile-hint'>날짜를 누르면 그날 실적을 입력할 수 있어요. 충방전기 등의 주말·공휴일 시간은 달력에만 보이고 가동률에는 세지 않아요.</div>",
                   unsafe_allow_html=True)
     card.markdown(_month_agenda(month, by_day), unsafe_allow_html=True)
 
@@ -1592,19 +1597,21 @@ def render(header: bool = True) -> None:
 def _with_off_days(daily: pd.DataFrame, logs: pd.DataFrame, mode: str) -> pd.DataFrame:
     """'휴무일 제외' 기간 실적(충방전기 등)의 주말·공휴일도 0시간으로 달력 칸에 보이게.
 
-    2026-11-20 사용자: 토요일 칸에 장기 충방전 시험이 안 보여 목록과 달라 보임. 시험은 계속 돌고 있으니 칸에는
-    '충방 3건'으로 보이고, 시간은 가동률 규칙대로 0 (주말 제외)이라 합계는 그대로.
+    2026-11-20 사용자: 토요일 칸에 장기 충방전 시험이 안 보여 목록과 달라 보임.
+    2026-11-21 사용자: 주말에도 시간은 달력에 보이고 가동률만 빠지게 → 주말 줄의 시간 = 평일 하루 몫과 같게
+    (달력 표시용. 가동률(kpi_h)은 expand_daily+charger_caps 로 따로 계산해 주말 0 그대로).
     """
     if mode == "start" or logs.empty or daily.empty:
         return daily
     have = set(zip(daily["log_id"], daily["day"].dt.normalize()))
+    per_day = daily.groupby("log_id")["hours"].mean().to_dict()  # 평일 하루 몫
     add = []
     for r in logs.itertuples(index=False):
         if db.to_str(getattr(r, "include_holidays", "")) != "N" or pd.isna(r.start_date) or pd.isna(r.end_date):
             continue
         for d in pd.date_range(r.start_date.normalize(), r.end_date.normalize()):
             if (r.id, d) not in have:
-                add.append((r.id, r.equip_id, d, 0.0, 0.0))
+                add.append((r.id, r.equip_id, d, float(per_day.get(r.id, 0.0)), 0.0))
     if not add:
         return daily
     extra = pd.DataFrame(add, columns=["log_id", "equip_id", "day", "hours", "fee"])
@@ -1655,7 +1662,7 @@ def _month_agenda(month: dt.date, by_day: dict) -> str:
                    f"<span>{len(recs)}건 · {_hours(sum(r['h'] for r in recs))}</span></summary>{''.join(inner)}</details>")
     total = sum(r["h"] for r in rows.values())
     return (f"<div class='cal-agenda'><div class='ag-h'>{month.month}월 실적 {len(rows)}건 · {_hours(total)}"
-            f"<small>장비를 누르면 펼쳐져요</small></div>{''.join(out)}</div>")
+            f"<small>시간은 가동률 기준 · 장비를 누르면 펼쳐져요</small></div>{''.join(out)}</div>")
 
 
 def _set_end(key: str, start: dt.date, days: int) -> None:
