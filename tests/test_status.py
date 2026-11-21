@@ -16,7 +16,8 @@ def _eq():
         (4, "열충격 시험기", "시험", None), (5, "SEM", "분석", None), (6, "옛 장비", "시험", None),
     ]
     df = pd.DataFrame([{"id": i, "name": n, "short": n, "use": u, "parent_id": p, "location": "제조검증",
-                        "depth": 0 if p is None else 1, "acquired_on": pd.NaT,
+                        "depth": 0 if p is None else 1, "acquired_on": pd.NaT, "code": f"C-{i}", "nfec": "",
+                        "kind": "장비", "manager": "", "in_kpi": True, "annual_hours": 2000,
                         "retired_on": pd.Timestamp("2026-01-01") if i == 6 else pd.NaT} for i, n, u, p in rows])
     df["parent_id"] = df["parent_id"].astype("float")
     return df
@@ -63,20 +64,30 @@ def test_now_next_prefers_running_then_upcoming():
     assert status.now_next(bs, D(2026, 11, 22)) == (bs[0], False)
 
 
-def test_excel_hours_match_kpi_calc_and_show_weekend_zero(monkeypatch):
+def test_excel_same_format_as_test_part_file_and_hours_match_kpi(monkeypatch):
     monkeypatch.setattr(db, "charger_caps", lambda: {})
     monkeypatch.setattr(db, "charger_family", lambda eq, ch=None: set())
     logs, eq = _logs(), _eq()
-    w0, w1 = D(2026, 11, 1), D(2027, 1, 31)
-    hours = status.kpi_hours(logs, w0, w1)
+    ys, ye, today = D(2026, 1, 1), D(2026, 12, 31), D(2026, 11, 21)
+    rws = status.rows(eq, status.device_group(eq), status.bars(logs, ys, ye), ys, ye, busy_first=False)
+    wb = load_workbook(io.BytesIO(status.to_excel(rws, logs, eq, 2026, today, {"annual_hours": 2000})))
+    assert wb.sheetnames[:2] == ["총괄", "1. 열충격 시험기"]
+    ws = wb["1. 열충격 시험기"]
+    assert [ws.cell(1, j).value for j in (1, 5, 6, 9, 14, 16, 17, 21)] == [
+        "장비명", "가동No.", "사용시작일", "사용기관(기업)명", "사용시간\n(hr기준)", "월", "사용시간(hr)", "가동률"]
+    rows = list(ws.iter_rows(min_row=2, max_col=14, values_only=True))
+    assert len(rows) == 365  # 하루 한 줄 (그날 실적이 둘이면 줄이 늘어남)
+    got = sum(r[13] or 0 for r in rows)
     daily = calc.expand_daily(logs, "spread", {})
-    kpi = daily[(daily["equip_id"] == 4) & (daily["day"] >= pd.Timestamp(w0))]["hours"].sum()
-    assert abs(sum(v for (e, _), v in hours.items() if e == 4) - kpi) < 1e-9
-    bk = status.bars(logs, w0, w1)
-    rws = status.rows(eq, status.device_group(eq), bk, w0, w1)
-    ws = load_workbook(io.BytesIO(status.to_excel(rws, bk, hours, w0, w1, D(2026, 11, 21), "t"))).active
-    r = next(i for i in range(1, ws.max_row + 1) if ws.cell(i, 3).value == "열충격 시험기")
-    assert abs(ws.cell(r, 6).value - round(kpi, 1)) < 1e-9
-    sat = 7 + (D(2026, 11, 7) - w0).days  # 11/7 토요일: 시험은 이어지지만 0시간
-    assert ws.cell(r, sat).value == 0
-    assert ws.cell(r, 7).value is None  # 11/1 시작 전
+    summ = calc.equipment_summary(daily, eq[eq["id"] == 4], ys, today, 2000, eq).iloc[0]
+    assert abs(got - summ["사용시간"]) < 1e-6  # 가동률 계산과 같은 시간 (오늘까지)
+    sat = next(r for r in rows if r[5].date() == D(2026, 11, 7))
+    assert sat[8] == "업체1" and sat[13] == 0  # 주말에도 이어지는 시험은 업체 + 0시간
+    later = next(r for r in rows if r[5].date() == D(2026, 12, 2))
+    assert later[8] == "업체2" and later[13] is None  # 오늘 뒤 예약은 업체만
+    assert ws["Q2"].value.startswith("=SUMIFS($N:$N") and ws["Q14"].value == "=SUM(Q2:Q13)"
+    tot = wb["총괄"]
+    assert tot["E6"].value == "열충격 시험기" and tot["N6"].value == "='1. 열충격 시험기'!R14"
+    assert abs(tot["J6"].value - round(summ["가용시간"], 1)) < 1e-9
+    line = wb[next(n for n in wb.sheetnames if n.endswith("전극 라인"))]
+    assert any(c.value == "전극 라인 › 롤프레스" for c in line["A"])  # 세부장비 실적은 주장비 탭에
