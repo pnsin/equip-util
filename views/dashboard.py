@@ -4,6 +4,7 @@
 """
 import datetime as dt
 import html
+import os
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -344,7 +345,11 @@ def render() -> None:
     q_sum, q_tot, pq_tot = cur_and_prev("분기", m_ref)
 
     ref_day = min(today, (pd.Timestamp(year, cm, 1) + pd.offsets.MonthEnd(0)).date())  # 주간·월간 표의 기준일
-    _top_row(year, y_tot, kpi, ref_day)
+    if os.environ.get("EQUIP_KPI_V2"):  # 2026-11-22 다시 설계 시안 (기본은 그대로)
+        from views import dashboard_v2
+        dashboard_v2.top(year, y_tot, kpi, _year_fee(year, ref_day), _eok, _won_short)
+    else:
+        _top_row(year, y_tot, kpi, ref_day)
     _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
                   (m_sum, q_sum, year_sum), cats, kpi)
     _fee_section(year, cm, period, months, ref_day, kpi)
