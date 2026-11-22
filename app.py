@@ -193,16 +193,14 @@ def sidebar(local: bool) -> None:
         # 지금 화면 메뉴 강조 (Streamlit 은 aria-current 를 달지 않아 주소로 고름)
         cur = "" if getattr(pg, "_default", False) else pg.url_path
         on = f'[data-testid="stSidebar"] a[href="{cur}"]'
-        side_light = ui_style.THEME_NAME == "day"  # 2026-11-22 밝은 테마 시안: 흰 메뉴
-        on_bg, on_fg, dot, dot_on = ("#EEF2FF", "#4338CA", "#CBD5E1", "#4F46E5") if side_light else ("#1A2234", "#A5B4FC", "#3B475C", "#818CF8")
-        css.append(f'{on} {{background: {on_bg} !important;}} {on} p {{color: {on_fg} !important; font-weight: 600 !important;}} '
-                   f'{on} [data-testid="stIconMaterial"] {{color: {on_fg} !important;}}')
+        css.append(f'{on} {{background: #1A2234 !important;}} {on} p {{color: #A5B4FC !important; font-weight: 600 !important;}} '
+                   f'{on} [data-testid="stIconMaterial"] {{color: #A5B4FC !important;}}')
         # 2026-11-10 메뉴 앞 작은 점 (지금 화면은 보라색으로 빛남)
         lk = '[data-testid="stSidebar"] [data-testid="stPageLink"] a'
         css.append(f'{lk} span::before {{display:none !important;}} '
-                   f'{lk}::before {{content:""; width:6px; height:6px; border-radius:50%; background:{dot}; flex:none; '
+                   f'{lk}::before {{content:""; width:6px; height:6px; border-radius:50%; background:#3B475C; flex:none; '
                    f'transition:all .2s ease;}} {lk}:hover::before {{background:#94A3B8;}} '
-                   f'{on}::before {{background:{dot_on} !important; box-shadow:0 0 0 3px rgba(129,140,248,.22);}}')
+                   f'{on}::before {{background:#818CF8 !important; box-shadow:0 0 0 3px rgba(129,140,248,.22);}}')
         st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
         last = db.last_undo()
         if last:

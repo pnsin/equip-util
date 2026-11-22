@@ -111,13 +111,8 @@ THEMES = {
         "side-hover": "#2B2B29", "side-active": "#34342F", "side-active-ink": "#F2F1EC",
         "logo": "logo_dark.png", "base": "dark",
     },
-    # H. 밝은 테마 시안 1 (2026-11-22): 흰 본문 + 흰 메뉴. slate 와 같은 배치·KPI 색, 색만 밝게 (ui_day.py)
-    "day": {"bg": "#F4F6FA", "panel": "#FFFFFF", "panel2": "#F1F4F9", "deep": "#EEF2F7", "line": "#CBD5E1", "line2": "#B6C2D2", "ink": "#0F172A", "muted": "#475569", "dim": "#94A3B8", "accent": "#4F46E5", "accent-hi": "#4338CA", "accent-bg": "#EEF2FF", "ok": "#059669", "ok-bg": "#ECFDF5", "ng": "#DC2626", "ng-bg": "#FEF2F2", "warn": "#D97706", "warn-bg": "#FFFBEB", "bar-off": "#E2E8F0", "shadow": "0 12px 32px rgba(15,23,42,.10)", "card-shadow": "0 1px 2px rgba(15,23,42,.05)", "side": "#FFFFFF", "side-line": "#E2E8F0", "side-ink": "#0F172A", "side-muted": "#64748B", "side-dim": "#94A3B8", "side-hover": "#F1F5F9", "side-active": "#EEF2FF", "side-active-ink": "#4338CA", "logo": "logo_light.png", "base": "light"},
-    # I. 밝은 테마 시안 2 (2026-11-22): 메뉴는 지금처럼 남색, 본문만 밝게
-    "day-navy": {"bg": "#F4F6FA", "panel": "#FFFFFF", "panel2": "#F1F4F9", "deep": "#EEF2F7", "line": "#CBD5E1", "line2": "#B6C2D2", "ink": "#0F172A", "muted": "#475569", "dim": "#94A3B8", "accent": "#4F46E5", "accent-hi": "#4338CA", "accent-bg": "#EEF2FF", "ok": "#059669", "ok-bg": "#ECFDF5", "ng": "#DC2626", "ng-bg": "#FEF2F2", "warn": "#D97706", "warn-bg": "#FFFBEB", "bar-off": "#E2E8F0", "shadow": "0 12px 32px rgba(15,23,42,.10)", "card-shadow": "0 1px 2px rgba(15,23,42,.05)", "side": "#0F172A", "side-line": "#1E293B", "side-ink": "#E2E8F0", "side-muted": "#94A3B8", "side-dim": "#64748B", "side-hover": "#162033", "side-active": "#1E293B", "side-active-ink": "#F8FAFC", "logo": "logo_dark.png", "base": "light"},
 }
 THEME_NAME = os.environ.get("EQUIP_THEME", "slate")
-IS_DAY = THEME_NAME.startswith("day")
 TOKENS = {k: v for k, v in THEMES.get(THEME_NAME, THEMES["dark"]).items() if k not in ("logo", "base")}
 T = TOKENS
 
@@ -621,15 +616,10 @@ _SLATE_CSS = """<style>
 
 def apply_style():
     st.markdown(_CSS, unsafe_allow_html=True)
-    if THEME_NAME.startswith("clean") or THEME_NAME == "slate" or IS_DAY:
+    if THEME_NAME.startswith("clean") or THEME_NAME == "slate":
         st.markdown(_CLEAN_CSS, unsafe_allow_html=True)
-    if THEME_NAME == "slate" or IS_DAY:
+    if THEME_NAME == "slate":
         st.markdown(_SLATE_CSS, unsafe_allow_html=True)
-    if IS_DAY:  # 2026-11-22 밝은 테마 시안: slate 위에 색만 덮어씀
-        from ui_day import DAY_CSS, DAY_SIDE_CSS
-        st.markdown(DAY_CSS, unsafe_allow_html=True)
-        if THEME_NAME == "day":
-            st.markdown(DAY_SIDE_CSS, unsafe_allow_html=True)
 
 
 # 표 칸·숫자 칸을 처음 누를 때 Streamlit 화면은 편집기 조각(js 파일)을 그제야 내려받습니다.
@@ -849,8 +839,7 @@ def login_bg():
     """접속 화면 배경 (대시보드 블러 프리뷰 스타일).
     2026-11-19 속도: 예전엔 가짜 대시보드를 화면에서 흐리게(blur) 3겹으로 그려, 그래픽 성능이 낮은 PC에서
     접속 화면이 버벅였음. 같은 모습을 미리 흐리게 찍어 둔 그림(static/login_bg.jpg, 29KB)으로 바꿈."""
-    bg = {"day": "login_bg_light.jpg", "day-navy": "login_bg_light_navy.jpg"}.get(THEME_NAME, "login_bg.jpg")  # 2026-11-22 밝은 시안
-    uri = _data_uri(os.path.join(_DIR, "static", bg))
+    uri = _data_uri(os.path.join(_DIR, "static", "login_bg.jpg"))
     style = f' style="background-image:url(\'{uri}\')"' if uri else ""
     st.markdown(f'<div class="login-preview-bg"{style}></div>', unsafe_allow_html=True)
 
