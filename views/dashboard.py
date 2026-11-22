@@ -211,12 +211,12 @@ def _bars(values: list, labels: list[str], cur: int | None, color: tuple, fmt, k
     real = [v for v in values if v is not None and pd.notna(v)]
     top = top or max(real + [target or 0, 1e-9]) * 1.22
     ys = [(v if v is not None and pd.notna(v) else 0) for v in values]
-    colors = [color[0] if values[i] is not None else "#334155" for i in range(len(values))]  # 2026-11-19 모든 달 진하게
+    colors = [color[0] if values[i] is not None else T["bar-off"] for i in range(len(values))]  # 2026-11-19 모든 달 진하게
     texts = [fmt(v) if v is not None and pd.notna(v) and (v > 0 or i <= (cur if cur is not None else 99)) else ""
              for i, v in enumerate(values)]
     fig = go.Figure(go.Bar(
         x=labels, y=ys, marker=dict(color=colors, cornerradius=6), text=texts, textposition="outside",
-        textfont=dict(size=12, color="#F8FAFC", weight=600),
+        textfont=dict(size=12, color=T["ink"], weight=600),
         customdata=custom if custom is not None else labels, hovertemplate=hover or "%{x}<extra></extra>",
         cliponaxis=False))
     if target and target <= top:
