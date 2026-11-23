@@ -635,6 +635,11 @@ def render_grid(container, eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, mont
     opts = GROUPS + (["기타"] if any(v == "기타" and i in leaves for i, v in groups.items()) else [])
     with container:
         with st.container(key="eg_top", horizontal=True, vertical_alignment="center", gap="small"):
+            # 예전 버튼 이름(제조(문백) 등)이 남아 있으면 첫 버튼으로
+            if st.session_state.get("eg_last") not in opts:
+                st.session_state["eg_last"] = GROUPS[0]
+            if st.session_state.get("eg_grp") not in opts:
+                st.session_state.pop("eg_grp", None)
             g = st.pills("구분", opts, default=st.session_state.get("eg_last", GROUPS[0]), key="eg_grp",
                          label_visibility="collapsed", format_func=lambda x: f"{x}  {cnt.get(x, 0)}대")
             g = g or st.session_state.get("eg_last", GROUPS[0])
