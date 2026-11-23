@@ -202,7 +202,8 @@ LABELS = ["시험", "제조", "분석", "교육", "지원"]
 # 2026-11-23 사용자: 분야를 담당자(센터)별로 나눔. 충방전기만 센터 셋으로, 제조는 오창(제조검증·MV)·문백.
 # 항목이 많아 버튼 대신 목록에서 여러 개 고름.
 CH_MV, CH_OC, CH_MB = "시험(충방전, MV)", "시험(충방전, 제조검증)", "시험(충방전, 문백)"
-FIELDS = ["시험(환경)", CH_MV, CH_OC, CH_MB, "제조(오창)", "제조(문백)", "분석", "기타"]
+ENV_MB = "시험(환경, 문백)"  # 문백 실환경모사·안전시험 챔버 (문백 담당자)
+FIELDS = ["시험(환경)", ENV_MB, CH_MV, CH_OC, CH_MB, "제조(오창)", "제조(문백)", "분석", "기타"]
 
 
 def equip_fields(eq: pd.DataFrame) -> dict[int, str]:
@@ -222,7 +223,7 @@ def equip_fields(eq: pd.DataFrame) -> dict[int, str]:
         elif g == "제조":
             out[i] = "제조(문백)" if c == "문백" else "제조(오창)"  # 제조검증·MV = 오창
         elif g == "시험":
-            out[i] = "시험(환경)"
+            out[i] = ENV_MB if c == "문백" else "시험(환경)"
         else:
             out[i] = g if g in FIELDS else "기타"
     return out
