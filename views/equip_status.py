@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 import html
+import re
 
 import pandas as pd
 import streamlit as st
@@ -71,7 +72,7 @@ CSS = """<style>
 .tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
 .tl2 .bar span {position: relative; z-index: 1;}
 .tl2 .bar small.pd {font-weight: 600; opacity: .72; margin-left: 6px; font-size: .7rem;}
-.tl2 .out {position: absolute; height: 24px; display: flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 650;
+.tl2 .out {position: absolute; height: 24px; display: block; line-height: 24px; overflow: hidden; text-overflow: ellipsis; font-size: .75rem; font-weight: 650;
   color: #E2E8F0; white-space: nowrap;}
 .tl2 .out small {font-weight: 500; color: #94A3B8; font-size: .7rem;}
 .tl2 .out.bdone {opacity: .5;}
@@ -157,9 +158,34 @@ def _state(b: dict, today: dt.date) -> str:
     return "done" if b["end"] < today else ("soon" if b["start"] > today else "now")
 
 
-def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int, day_px: float, y0: int = 7,
-         room: tuple[int, int] = (999, 999)) -> str:
-    """막대 하나. room = (왼쪽, 오른쪽) 같은 줄 옆 막대까지 빈 날 수: 글자가 들어갈 때만 옆에 씀 (2026-11-23 겹침 수정)."""
+def _tw(txt: str, small: bool = False) -> float:
+    """글자 너비 (대략 px): 한글 12.5, 그 밖 6.8 (작은 글씨는 조금 좁게)."""
+    w = sum(12.5 if ord(c) > 0x2E80 else 6.8 for c in txt)
+    return w * (0.88 if small else 1)
+
+
+def _label_plan(b: dict, w0: dt.date, w1: dt.date, today: dt.date, ppd: float, repeat: bool) -> dict:
+    """막대 글자 자리 정하기 (2026-11-23 겹침 해결): 막대 안에 들어가면 안, 아니면 막대 바로 오른쪽.
+    오른쪽 글자 자리만큼 막대가 '차지하는 칸'을 늘려서 같은 줄 다음 막대와 절대 안 겹치게 줄을 나눔."""
+    a, z = max(b["start"], w0), min(b["end"], w1)
+    n = (z - a).days + 1
+    comp = short_comp(b["company"])
+    when = status_span(b, today).replace(" ", "") + (f" · {b['note']}" if b.get("note") else "")
+    bar_px = n * ppd
+    w_comp, w_when = _tw(comp) + 20, _tw(when, True) + 8
+    if bar_px >= w_comp + w_when:
+        mode, out_px = "both", 0.0  # 업체 + 기간 모두 막대 안
+    elif bar_px >= w_comp:
+        mode, out_px = "comp", w_when + 6  # 업체는 안, 기간은 오른쪽
+    else:
+        mode, out_px = "out", (0 if repeat else _tw(comp) + 5) + w_when + 6  # 모두 오른쪽 (같은 업체가 이어지면 기간만)
+    reach = z + dt.timedelta(days=int(-(-out_px // ppd)) if out_px else 0)  # 글자까지 차지하는 마지막 날
+    return {"mode": mode, "when": when, "repeat": repeat, "reach": reach}
+
+
+def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int, y0: int, plan: dict,
+         limit: dt.date) -> str:
+    """막대 하나. 바깥 글자는 같은 줄 다음 막대(limit) 앞에서 잘림 (… 표시) → 어떤 화면 너비에서도 안 겹침."""
     span = (w1 - w0).days + 1
     a, z = max(b["start"], w0), min(b["end"], w1)
     if z < a:
@@ -170,36 +196,28 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
     comp = b["company"]
     color = INNER if comp == "내부" else CATS.get(b["cat"], CATS["지원"])[1]
     cls = "bar " + {"now": "", "soon": "", "done": "bdone"}[stt] + (" cl" if b["start"] < w0 else "") + (" cr" if b["end"] > w1 else "")
-    offs = ""
-    if b.get("skip_off"):  # 휴무일 제외 실적: 막대는 그대로 잇고 (가동률 제외는 말풍선에만)
-        offs = "".join(f"<i class='off' style='left:{k / n * 100:.3f}%;width:{100 / n:.3f}%'></i>"
-                       for k in range(n) if status.is_off(a + dt.timedelta(days=k), hol))
     tip = f"{comp} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b.get("staff") else "")
     if b.get("merged", 1) > 1:
         tip += f" · 실적 {b['merged']}건 이어짐"
     if b.get("note"):
         tip += f" · {b['note']}"
-    if offs:
+    if b.get("skip_off") and any(status.is_off(a + dt.timedelta(days=k), hol) for k in range(n)):
         tip += " · 주말·공휴일은 가동률에서 빠져요"
-    when = status_span(b, today).replace(" ", "") + (f" · {b['note']}" if b.get("note") else "")
     top = f"top:{y0 + lane * 30}px"
-    bar_px = n * day_px
-    fits = bar_px >= len(comp) * 12.5 + 22  # 업체 이름이 막대 안에 들어가는지 (대략)
-    both = bar_px >= len(comp) * 12.5 + len(when) * 6.6 + 34  # 업체 + 기간이 다 들어가는지 → 기간도 막대 안 (업체 바로 뒤)
-    inner = (f"<span>{html.escape(comp)}"
-             + (f" <small class='pd'>{html.escape(when)}</small>" if both else
-                (f" <small class='pd'>{b['note']}</small>" if b.get("note") else ""))
-             + "</span>") if fits else ""
-    out_txt = ("" if both else f"<small>{when}</small>" if fits else f"{html.escape(comp)} <small>{when}</small>")
-    need = (0 if fits else len(comp) * 12.5) + len(when) * 6.6 + 14  # 옆 글자 너비 (대략 px)
-    if both:
-        out_html = ""
-    elif room[1] * day_px >= need:
-        out_html = f"<div class='out b{stt}' style='left:calc({left + width:.3f}% + 6px);{top}'>{out_txt}</div>"
-    elif room[0] * day_px >= need:
-        out_html = f"<div class='out b{stt}' style='right:calc({100 - left:.3f}% + 6px);{top}'>{out_txt}</div>"
-    else:  # 자리가 없으면 글자 없이 (마우스를 올리면 업체·기간)
-        out_html = ""
+    mode, when = plan["mode"], html.escape(plan["when"])
+    comp = short_comp(comp)
+    inner = ""
+    if mode == "both":
+        inner = f"<span>{html.escape(comp)} <small class='pd'>{when}</small></span>"
+    elif mode == "comp":
+        inner = f"<span>{html.escape(comp)}</span>"
+    out_html = ""
+    if mode != "both":
+        txt = f"<small>{when}</small>" if (mode == "comp" or plan["repeat"]) else f"{html.escape(comp)} <small>{when}</small>"
+        room = (min(limit, w1 + dt.timedelta(days=1)) - z).days - 1  # 다음 막대까지 빈 날
+        mx = max(room, 0) / span * 100
+        out_html = (f"<div class='out b{stt}' title='{html.escape(tip)}' "
+                    f"style='left:calc({left + width:.3f}% + 5px);max-width:calc({mx:.3f}% - 8px);{top}'>{txt}</div>")
     return (f"<div class='{cls}' title='{html.escape(tip)}' style='--c:{color};left:{left:.3f}%;width:{width:.3f}%;{top}'>"
             f"{inner}</div>{out_html}")
 
@@ -221,25 +239,27 @@ def _merge(bs: list[dict], hol: set) -> list[dict]:
 
 
 def _lanes(bs: list[dict], w0: dt.date, w1: dt.date, today: dt.date, hol: set, day_px: float, y0: int = 7) -> tuple[str, int]:
-    """막대들 → 겹치면 아래 줄로, 옆 글자는 같은 줄 옆 막대까지 자리가 있을 때만."""
-    lanes: list[list[dict]] = []
+    """막대들 → 겹치면 아래 줄로. 막대 + 오른쪽 글자 자리까지 '차지하는 칸'으로 줄을 나눠서 글자끼리 안 겹침."""
+    ppd = day_px * 0.72  # 좁은 화면 기준으로 넉넉하게 (실제 하루 너비가 이보다 크면 글자 자리가 남을 뿐)
+    lanes: list[list[tuple[dict, dict]]] = []
+    last_comp, last_end = None, None
     for b in _merge(bs, hol):
         a, z = max(b["start"], w0), min(b["end"], w1)
         if z < a:
             continue
-        ln = next((j for j, xs in enumerate(lanes) if xs[-1]["end"] < b["start"]), None)
+        repeat = b["company"] == last_comp and last_end is not None and (b["start"] - last_end).days <= 14
+        plan = _label_plan(b, w0, w1, today, ppd, repeat)
+        last_comp, last_end = b["company"], b["end"]
+        ln = next((j for j, xs in enumerate(lanes) if xs[-1][1]["reach"] < a), None)
         if ln is None:
-            lanes.append([b])
+            lanes.append([(b, plan)])
         else:
-            lanes[ln].append(b)
+            lanes[ln].append((b, plan))
     html_ = ""
     for ln, xs in enumerate(lanes):
-        for k, b in enumerate(xs):
-            prev_end = xs[k - 1]["end"] if k else w0 - dt.timedelta(days=1)
-            next_start = xs[k + 1]["start"] if k + 1 < len(xs) else w1 + dt.timedelta(days=1)
-            room = ((max(b["start"], w0) - max(prev_end, w0 - dt.timedelta(days=1))).days - 1,
-                    (min(next_start, w1 + dt.timedelta(days=1)) - min(b["end"], w1)).days - 1)
-            html_ += _bar(b, w0, w1, today, hol, ln, day_px, y0, room)
+        for k, (b, plan) in enumerate(xs):
+            limit = max(xs[k + 1][0]["start"], w0) if k + 1 < len(xs) else w1 + dt.timedelta(days=1)
+            html_ += _bar(b, w0, w1, today, hol, ln, y0, plan, limit)
     return html_, 2 * y0 + 24 + 30 * max(len(lanes) - 1, 0)
 
 
@@ -478,7 +498,15 @@ def _charger_board(center: str, all_open: bool, today: dt.date) -> None:
 
 def status_span(b: dict, today: dt.date) -> str:
     from core import chargers
+    if b["start"] == b["end"]:  # 하루짜리는 날짜 하나만
+        return f"{b['start']:%m.%d}" if b["start"].year == today.year else f"'{b['start']:%y.%m.%d}"
     return chargers.span_text(b["start"], b["end"], today)
+
+
+def short_comp(c: str) -> str:
+    """막대에 쓸 짧은 업체 이름: 주식회사·(주)·(재) 같은 말은 뺌 (말풍선엔 전체 이름)."""
+    t = re.sub(r"\(주\)|\(재\)|㈜|주식회사", "", str(c)).strip()
+    return re.sub(r"\s+", " ", t) or str(c)
 
 
 def _excel(want: str, center: str) -> bytes:
