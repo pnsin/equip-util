@@ -216,10 +216,14 @@ def render_report() -> None:
 LABELS = ["시험", "제조", "분석", "교육", "지원"]
 # 2026-11-23 사용자: 분야를 담당자(센터)별로 나눔. 충방전기만 센터 셋으로, 제조는 오창(제조검증·MV)·문백.
 # 항목이 많아 버튼 대신 목록에서 여러 개 고름.
-# 2026-11-23 사용자: 이름이 눈에 잘 들어오게 "무엇 · 어디" 순서로.
-ENV_OC, ENV_MB = "환경시험 · 오창", "환경시험 · 문백"  # 문백 = 실환경모사·안전시험 챔버 (문백 담당자)
-CH_MV, CH_OC, CH_MB = "충방전 · MV센터", "충방전 · 제조검증센터", "충방전 · 문백"
-MF_OC, MF_MB, AN_OC = "제조 · 오창", "제조 · 문백", "분석 · 오창"
+# 2026-11-23 사용자: 이름이 눈에 잘 들어오게 "무엇 · 지역.센터명" (정확한 센터 이름으로).
+_OC, _MV, _MB = "오창.배터리제조검증지원센터", "오창.MV배터리안전성평가센터", "문백.배터리연구지원센터"
+ENV_OC, ENV_MB = "환경시험 · 오창.배터리제조검증지원센터·MV배터리안전성평가센터", f"환경시험 · {_MB}"  # 문백 = 실환경모사·안전시험 챔버
+CH_MV, CH_OC, CH_MB = f"충방전 · {_MV}", f"충방전 · {_OC}", f"충방전 · {_MB}"
+MF_OC, MF_MB, AN_OC = f"제조 · {_OC}", f"제조 · {_MB}", f"분석 · {_OC}"
+# 내려받는 파일 이름에 붙일 짧은 이름
+FIELD_TAG = {ENV_OC: "환경시험-오창", ENV_MB: "환경시험-문백", CH_MV: "충방전-MV", CH_OC: "충방전-제조검증",
+             CH_MB: "충방전-문백", MF_OC: "제조-오창", MF_MB: "제조-문백", AN_OC: "분석-오창"}
 FIELDS = [ENV_OC, ENV_MB, CH_MV, CH_OC, CH_MB, MF_OC, MF_MB, AN_OC, "기타"]
 
 
@@ -343,7 +347,7 @@ def _download_body(key: str) -> None:
     data = lambda args=args: itube.make_itube_file(*args)  # noqa: E731 - 누를 때만 만듦
     fname = _itube_filename(cfg, s, e)
     if picked:
-        tag = "_".join(f.replace(" · ", "-") for f in picked)
+        tag = "_".join(FIELD_TAG.get(f, f) for f in picked)
         fname = fname.replace(".xlsx", f"_{tag}.xlsx")
     st.download_button("엑셀로 내려받기", data=data, file_name=fname, mime=XLSX,
                        type="primary", width="stretch", icon=":material/download:", key=f"{key}_btn")
