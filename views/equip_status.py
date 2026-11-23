@@ -18,190 +18,259 @@ from ui_style import page_header
 from views import charger_board
 from views.calendar_entry import CATS
 
-DAY_PX = 8  # 하루 너비 (이번 달 + 2개월 ≈ 730px)
+# 2026-11-23 사용자: 표처럼 칸이 많고 '일정 없는 장비' 줄이 구분마다 반복돼 보기 안 좋음 → A안 (타임라인 정리형)
+# 장비 이름 칸 하나 + 기간 막대 (업체는 막대 안, 날짜는 옆), 기간 2주/5주/3달 + ‹ 오늘 ›, 일정 없는 장비는 맨 아래 한 상자.
+SPANS = {"2주": (0, 14, 14, 44), "5주": (1, 35, 28, 26), "3달": (1, 91, 63, 12)}  # (몇 주 전부터, 일수, 넘길 일수, 하루 최소 px)
+NAME_W = 300
 
 CSS = """<style>
-.st-key-es_top {align-items: center; margin-bottom: .4rem; row-gap: 8px; flex-wrap: wrap;}
-.st-key-es_cat [data-testid="stButtonGroup"], .st-key-cb_center [data-testid="stButtonGroup"] {gap: 6px;}
-.st-key-es_cat [data-testid="stButtonGroup"] button p {font-weight: 700; color: var(--muted);}
-.st-key-es_cat [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #6366F1 !important;}
-.st-key-es_cat [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
-.es-t .ea, .es-t .eb, .es-t .ec {position: sticky; z-index: 3; background: var(--panel); box-sizing: border-box;}
-.es-t .ea {left: 0; width: 300px; min-width: 300px; max-width: 300px;}
-.es-t .eb {left: 300px; width: 150px; min-width: 150px; max-width: 150px;}
-.es-t .ec {left: 450px; width: 130px; min-width: 130px; max-width: 130px; box-shadow: inset -1px 0 0 #64748B;}
-.es-t td.ea {font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis;}
-.es-t td.ea.sub {font-weight: 500; color: #CBD5E1;}
-.es-t td.ea .tw {color: #64748B; margin-right: 4px;}
-.es-t tr.sec td {height: 34px; background: linear-gradient(rgba(99,102,241,.08), rgba(99,102,241,.08)), var(--panel);}
-.es-t tr.sec td.ea {font-size: .82rem; color: var(--fc); text-align: left; padding-left: 12px;}
-.es-t tr.sec td.ea i {display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--fc); margin-right: 7px;
-  vertical-align: 1px;}
-.es-t tr.sec td.ea span {color: #94A3B8; font-weight: 600; margin-left: 8px; font-size: .74rem;}
-.es-t .cb-tl {background-image: repeating-linear-gradient(90deg, rgba(148,163,184,.10) 0 16px, transparent 16px 56px);
-  background-size: 56px 100%; background-repeat: repeat-x;}
-.es-hol {position: absolute; top: 0; bottom: 0; background: rgba(148,163,184,.10);}
-.es-dh {position: relative; height: 15px;}
-.es-dh span {position: absolute; top: 0; font-size: .62rem; color: #64748B; transform: translateX(-50%);}
-.cb-bar .off {position: absolute; top: 0; bottom: 0;
-  background: repeating-linear-gradient(135deg, rgba(15,23,42,.55) 0 3px, rgba(15,23,42,.25) 3px 6px);}
-.cb-bar b {position: relative; font-weight: 700; overflow: hidden; text-overflow: ellipsis;}
-.es-t tr.kid, .es-t tr.hid {visibility: collapse;}
-.es-t tr.idl td {height: 34px; color: #94A3B8; font-weight: 700; font-size: .78rem;}
-.es-t td.ea label.cb-ch {max-width: 100%; overflow: hidden;}
-.es-t td.ea .nm {overflow: hidden; text-overflow: ellipsis;}
-.es-t td.ea .kn {font-size: .66rem; font-weight: 700; color: #94A3B8; background: #334155; border-radius: 999px; padding: 0 6px;
-  flex: none;}
-.cb-foot i.wk {background: repeating-linear-gradient(135deg, #475569 0 3px, #1E293B 3px 6px);}
+.st-key-es_top {align-items: center; margin-bottom: .2rem; row-gap: 8px; flex-wrap: wrap;}
+.st-key-es_nav {flex: none; width: auto !important;}
+.st-key-es_nav button {min-height: 34px; padding: 0 10px;}
+.st-key-es_span {flex: none; width: auto !important;}
+.tl2 {background: var(--panel); border-radius: 18px; overflow-x: auto; padding: 4px 0 10px; margin-top: .3rem;}
+.tl2-in {position: relative; min-width: calc(var(--nw) + var(--n) * var(--md));}
+.tl2 .cols {position: absolute; top: 0; bottom: 0; left: var(--nw); right: 0; pointer-events: none;}
+.tl2 .cols i {position: absolute; top: 52px; bottom: 0;}
+.tl2 .cols i.off {background: rgba(2,6,23,.30);}
+.tl2 .cols i.td {background: rgba(99,102,241,.13); box-shadow: inset 1px 0 0 rgba(129,140,248,.5), inset -1px 0 0 rgba(129,140,248,.5);}
+.tl2 .r {display: grid; grid-template-columns: var(--nw) 1fr; position: relative;}
+.tl2 .nm {position: sticky; left: 0; z-index: 2; background: var(--panel); padding: 6px 14px 6px 20px; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center; text-align: left;}
+.tl2 .nm b {font-weight: 650; font-size: .86rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.tl2 .nm small {color: #64748B; font-size: .72rem; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.tl2 .nm .sd {display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: #475569;}
+.tl2 .nm .sd.d-now {background: #34D399; box-shadow: 0 0 0 3px rgba(52,211,153,.18);}
+.tl2 .nm .sd.d-soon {background: #FBBF24;}
+.tl2 .hd {height: 52px; border-bottom: 1px solid #334155;}
+.tl2 .hd .ln {position: relative;}
+.tl2 .hd .wk {position: absolute; top: 9px; font-size: .74rem; color: #94A3B8; font-weight: 650; padding-left: 6px; white-space: nowrap;}
+.tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #64748B; text-align: center;}
+.tl2 .hd .dy.off {color: #475569;}
+.tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; background: #6366F1; color: #fff; font-weight: 700;}
+.tl2 .grp {display: flex; align-items: center; gap: 10px; padding: 16px 20px 8px; font-size: .84rem; font-weight: 700;
+  color: var(--ink); position: sticky; left: 0; width: max-content;}
+.tl2 .grp i {width: 8px; height: 8px; border-radius: 50%;}
+.tl2 .grp span {color: #94A3B8; font-weight: 500; font-size: .75rem;}
+.tl2 .grp span em {font-style: normal; color: var(--ink); font-weight: 650;}
+.tl2 .dv {border-top: 1px solid #2A364B;}
+.tl2 .dv.kid {border-top: 1px dashed #2A364B;}
+.tl2 .dv.kid .nm {padding-left: calc(38px + var(--dp, 0) * 14px);}
+.tl2 .dv.kid .nm b {font-weight: 500; color: #CBD5E1; font-size: .8rem;}
+.tl2 .ln {position: relative; overflow: hidden; min-height: 38px;}
+.tl2 .bar {position: absolute; height: 24px; border-radius: 7px; display: flex; align-items: center; padding: 0 9px;
+  font-size: .75rem; font-weight: 650; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: color-mix(in srgb, var(--c) 30%, #1E293B); box-shadow: inset 3px 0 0 var(--c); box-sizing: border-box;}
+.tl2 .bar.bsoon {background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 75%, transparent); color: #E2E8F0;}
+.tl2 .bar.bdone {opacity: .45;}
+.tl2 .bar.cl {border-top-left-radius: 0; border-bottom-left-radius: 0;}
+.tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
+.tl2 .bar .off {position: absolute; top: 0; bottom: 0; background: rgba(2,6,23,.38);}
+.tl2 .bar span {position: relative;}
+.tl2 .out {position: absolute; height: 24px; display: flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 650;
+  color: #E2E8F0; white-space: nowrap;}
+.tl2 .out small {font-weight: 500; color: #94A3B8; font-size: .7rem;}
+.tl2 .out.bdone {opacity: .5;}
+.es-idle {background: var(--panel); border-radius: 18px; padding: 14px 20px; margin-top: 12px;}
+.es-idle summary {list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 700;
+  color: var(--ink);}
+.es-idle summary::-webkit-details-marker {display: none;}
+.es-idle summary span {color: #94A3B8; font-weight: 500; font-size: .76rem;}
+.es-idle summary em {margin-left: auto; font-style: normal; font-size: .76rem; color: #A5B4FC; font-weight: 600;}
+.es-idle summary em:before {content: "펼치기 ▾";} .es-idle[open] summary em:before {content: "접기 ▴";}
+.es-idle .ig {display: grid; grid-template-columns: 110px 1fr; gap: 10px 12px; margin-top: 12px; text-align: left;}
+.es-idle .k {font-size: .76rem; color: #94A3B8; display: flex; gap: 6px; align-items: center; height: 26px;}
+.es-idle .k i {width: 7px; height: 7px; border-radius: 50%;}
+.es-idle .chips {display: flex; flex-wrap: wrap; gap: 6px;}
+.es-idle .chip {font-size: .76rem; color: #CBD5E1; background: #243049; border-radius: 999px; padding: 4px 11px;}
+.es-leg {display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; font-size: .74rem; color: #94A3B8; margin-top: 12px;}
+.es-leg span {display: flex; align-items: center; gap: 6px;}
+.es-leg i {width: 16px; height: 10px; border-radius: 3px; display: inline-block;}
 @media (max-width: 640px) {
-  .es-t .ea {width: 112px; min-width: 112px; max-width: 112px; white-space: normal !important; word-break: keep-all;
-    line-height: 1.25; font-size: .7rem; box-shadow: inset -1px 0 0 #64748B;}
-  .es-t .eb, .es-t .ec {display: none;}  /* 휴대폰: 업체·기간 칸은 빼고 막대가 바로 보이게 (업체 이름은 막대 안에) */
-  .es-t .ea {width: 132px; min-width: 132px; max-width: 132px;}
-  .st-key-es_top {flex-wrap: wrap !important; gap: 6px !important;}
+  .st-key-es_top {gap: 6px !important;}
   .st-key-es_top > div:has(.st-key-es_cat), .st-key-es_cat {flex: 1 0 100% !important; width: 100% !important;}
-  .st-key-es_cat [data-testid="stButtonGroup"] {gap: 3px !important;}
-  .st-key-es_cat [data-testid="stButtonGroup"] > div {flex-wrap: nowrap !important;}
-  .st-key-es_cat [data-testid="stButtonGroup"] button {padding: 0 9px !important; min-height: 34px;}
-  .st-key-es_cat [data-testid="stButtonGroup"] button p {font-size: .8rem;}
-  .st-key-cb_center {width: 76px !important; min-width: 76px;}
-  .es-t tr.sec td.ea span {display: block; margin: 1px 0 0 15px;}
+  .st-key-es_cat [data-testid="stButtonGroup"] > div {flex-wrap: nowrap !important; gap: 3px !important;}
+  .st-key-es_cat [data-testid="stButtonGroup"] button {padding: 0 8px !important;}
+  .st-key-es_cat [data-testid="stButtonGroup"] button p {font-size: .78rem;}
+  .st-key-es_span [data-testid="stButtonGroup"] button {padding: 0 9px !important;}
+  .st-key-es_top > div:nth-child(2):not([class*="st-key"]) {display: none;}
+  .tl2 {--nw: 92px !important; --md: 16px !important;}
+  .tl2 .dv:not(.kid) .nm {display: contents;}
+  .tl2 .dv:not(.kid) .nm b {grid-column: 1 / -1; grid-row: 1; padding: 9px 14px 2px; white-space: normal; line-height: 1.3;
+    position: sticky; left: 0;}
+  .tl2 .dv:not(.kid) .nm small {grid-column: 1; grid-row: 2; padding: 0 6px 0 14px; align-self: center; position: sticky; left: 0;
+    background: var(--panel); z-index: 2;}
+  .tl2 .dv:not(.kid) .ln {grid-column: 2; grid-row: 2;}
+  .tl2 .dv.nob .ln, .tl2 .dv.nob .nm small {display: none;}
+  .tl2 .dv.kid .nm {padding-left: 14px;}
+  .tl2 .dv.kid .nm b {font-size: .72rem; white-space: normal; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; word-break: break-all;}
+  .tl2 .nm {padding-left: 14px;}
+  .tl2 .grp {padding-left: 14px;}
+  .tl2 .grp span {font-size: .7rem;}
+  .tl2 .hd .wk {font-size: .66rem;}
+  .tl2 .out small {display: none;}
+  .es-idle .ig {grid-template-columns: 1fr;}
+  .es-idle .k {height: auto;}
+  .es-leg {gap: 6px 12px; font-size: .68rem;}
 }
 </style>"""
 
-DASH = "<span class='cb-dash'>—</span>"
+INNER = "#94A3B8"  # 내부 사용 막대 색
 
 
-def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int) -> str:
+def window(today: dt.date) -> tuple[dt.date, dt.date, int]:
+    """보는 기간: 기본 5주 (지난주 월요일부터). ‹ › 로 넘긴 만큼 옮김."""
+    back, n, _, md = SPANS[st.session_state.get("es_span") or "5주"]
+    w0 = today - dt.timedelta(days=today.weekday() + 7 * back) + dt.timedelta(days=int(st.session_state.get("es_shift", 0)))
+    return w0, w0 + dt.timedelta(days=n - 1), md
+
+
+def _move(step: int) -> None:
+    _, _, jump, _ = SPANS[st.session_state.get("es_span") or "5주"]
+    st.session_state.es_shift = 0 if step == 0 else int(st.session_state.get("es_shift", 0)) + step * jump
+
+
+def _state(b: dict, today: dt.date) -> str:
+    return "done" if b["end"] < today else ("soon" if b["start"] > today else "now")
+
+
+def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int, day_px: float, y0: int = 7) -> str:
     span = (w1 - w0).days + 1
     a, z = max(b["start"], w0), min(b["end"], w1)
     if z < a:
         return ""
     n = (z - a).days + 1
     left, width = (a - w0).days / span * 100, n / span * 100
-    bg, fg = CATS.get(b["cat"], CATS["지원"])
+    stt = _state(b, today)
+    comp = b["company"]
+    color = INNER if comp == "내부" else CATS.get(b["cat"], CATS["지원"])[1]
+    cls = "bar " + {"now": "", "soon": "bsoon", "done": "bdone"}[stt] + (" cl" if b["start"] < w0 else "") + (" cr" if b["end"] > w1 else "")
     offs = ""
-    if b["skip_off"]:  # 주말·공휴일에도 이어지는 시험: 막대는 잇고 그날만 빗금 (가동률 제외)
-        offs = "".join(f"<span class='off' style='left:{k / n * 100:.3f}%;width:{100 / n:.3f}%'></span>"
+    if b["skip_off"]:  # 휴무일 제외 실적: 막대는 잇고 주말·공휴일만 어둡게 (가동률 제외)
+        offs = "".join(f"<i class='off' style='left:{k / n * 100:.3f}%;width:{100 / n:.3f}%'></i>"
                        for k in range(n) if status.is_off(a + dt.timedelta(days=k), hol))
-    tip = f"{b['company']} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b["staff"] else "")
+    tip = f"{comp} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b["staff"] else "")
     if offs:
         tip += " · 주말·공휴일은 가동률에서 빠져요"
-    label = f"<b>{html.escape(b['company'])}</b>" if n * DAY_PX >= 44 else ""  # 짧은 막대는 글자 없이 (마우스를 올리면 보임)
-    return (f"<div class='cb-bar{' cb-soon' if b['start'] > today else ''}' title='{html.escape(tip)}' "
-            f"style='left:{left:.3f}%;width:{max(width, .6):.3f}%;top:{5 + lane * 26}px;--bg:{bg};--fg:{fg};padding:0 4px'>"
-            f"{offs}{label}</div>")
+    when = status_span(b, today).replace(" ", "")
+    top = f"top:{y0 + lane * 30}px"
+    fits = n * day_px >= len(comp) * 12.5 + 22  # 업체 이름이 막대 안에 들어가는지 (대략)
+    inner = f"<span>{html.escape(comp)}</span>" if fits else ""
+    out_txt = (f"<small>{when}</small>" if fits else f"{html.escape(comp)} <small>{when}</small>")
+    right_side = left + width < 78  # 오른쪽 끝 가까우면 막대 왼쪽에
+    pos = (f"left:calc({left + width:.3f}% + 6px)" if right_side else f"right:calc({100 - left:.3f}% + 6px)")
+    if not right_side and left < 22:  # 기간을 거의 다 덮는 막대: 글자는 막대 안에만
+        out_html = ""
+    else:
+        out_html = f"<div class='out b{stt}' style='{pos};{top}'>{out_txt}</div>"
+    return (f"<div class='{cls}' title='{html.escape(tip)}' style='--c:{color};left:{left:.3f}%;width:{width:.3f}%;{top}'>"
+            f"{offs}{inner}</div>{out_html}")
 
 
 def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str, center: str, today: dt.date) -> None:
-    """2026-11-21 사용자: 분류가 많아 복잡 → 주장비만 한 줄씩 (세부장비는 ⊕ 로 펼침), 이번 기간에 쓰는 장비만 위에,
-    나머지는 구분마다 '일정 없는 장비 n대' 한 줄로 접음."""
-    w0, w1 = status.window(today)
+    w0, w1, md = window(today)
+    span = (w1 - w0).days + 1
     bk = status.bars(logs, w0, w1)
     rws = status.rows(eq, groups, bk, w0, w1, want, center)
+    if not rws:
+        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#94A3B8'>이 구분·센터에 장비가 없어요.</div>",
+                    unsafe_allow_html=True)
+        return
     by_eq: dict[int, list[dict]] = {}
     for b in (bk.to_dict("records") if not bk.empty else []):
         by_eq.setdefault(int(b["equip_id"]), []).append(b)
     fam: dict[int, list[dict]] = {}  # 주장비 → 묶음 줄 (자신 먼저)
     for r in rws:
         fam.setdefault(r["root"], []).append(r)
-    fam_bars = {rt: sorted((b for x in xs for b in by_eq.get(x["id"], [])), key=lambda b: b["start"]) for rt, xs in fam.items()}
-    on_roots = {rt for rt, bs in fam_bars.items() if status.now_next(bs, today)[1]}
-    st.markdown(
-        "<div class='cb-kpis'>"
-        f"<div class='cb-k' style='--kc:#A5B4FC'><span>장비</span><b>{len(fam)} 대</b></div>"
-        f"<div class='cb-k' style='--kc:#FF8DA1'><span>오늘 가동 중</span><b>{len(on_roots)} 대</b></div>"
-        f"<div class='cb-k' style='--kc:#6EE7B7'><span>쉬는 장비</span><b>{len(fam) - len(on_roots)} 대</b></div>"
-        "</div>", unsafe_allow_html=True)
-    if not rws:
-        st.markdown("<div class='cb-box' style='padding:28px;text-align:center;color:#94A3B8'>이 구분·센터에 장비가 없어요.</div>",
-                    unsafe_allow_html=True)
-        return
+    fam_bars = {rt: [b for x in xs for b in by_eq.get(x["id"], [])] for rt, xs in fam.items()}
+    n_kids = {}
+    for i, p in zip(eq["id"], eq["parent_id"]):
+        if pd.notna(p):
+            n_kids[int(p)] = n_kids.get(int(p), 0) + 1
 
     hol = calc.kr_holidays({w0.year, w1.year})
-    span = (w1 - w0).days + 1
-    tlw = span * DAY_PX
-    pos = lambda d: (d - w0).days / span * 100  # noqa: E731
-    months, m = [w0], (w0 + dt.timedelta(days=32)).replace(day=1)
-    while m <= w1:
-        months.append(m)
-        m = (m + dt.timedelta(days=32)).replace(day=1)
-    edges = [pos(x) for x in months] + [100.0]
-    mh = "".join(f"<span style='left:{edges[i]:.2f}%;width:{edges[i + 1] - edges[i]:.2f}%'>{x.month}월</span>"
-                 for i, x in enumerate(months))
-    mondays = [w0 + dt.timedelta(days=k) for k in range(span) if (w0 + dt.timedelta(days=k)).weekday() == 0]
-    dh = "".join(f"<span style='left:{pos(d) + 50 / span:.2f}%'>{d.day}</span>" for d in mondays)
-    grid = "".join(f"<div class='cb-g' style='left:{pos(x):.2f}%'></div>" for x in months[1:])
-    grid += "".join(f"<div class='es-hol' style='left:{pos(d):.2f}%;width:{100 / span:.3f}%'></div>"
-                    for d in sorted(hol) if w0 <= d <= w1 and d.weekday() < 5)
-    now_line = f"<div class='cb-now' style='left:{pos(today) + 50 / span:.2f}%'></div>" if w0 <= today <= w1 else ""
-    wk_style = f"background-position-x:{((5 - w0.weekday()) % 7) * DAY_PX}px"
+    day_px = max(md, 1060 / span)
+    pc = lambda d: (d - w0).days / span * 100  # noqa: E731
+    days = [w0 + dt.timedelta(days=k) for k in range(span)]
+    cols, hd = [], []
+    for d in days:
+        off = status.is_off(d, hol)
+        if off:
+            cols.append(f"<i class='off' style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'></i>")
+        if d == today:
+            cols.append(f"<i class='td' style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'></i>")
+        if d.weekday() == 0:
+            wk = f"{d.month}월 {d.day}일 주" if span <= 35 else f"{d.month}.{d.day}"
+            hd.append(f"<div class='wk' style='left:{pc(d):.3f}%'>{wk}</div>")
+        if span <= 35:  # 3달은 주 첫날만 (위 줄), 오늘은 세로 띠로
+            lab = f"<b>{d.day}</b>" if d == today else str(d.day)
+            hd.append(f"<div class='dy{' off' if off else ''}{' td' if d == today else ''}' "
+                      f"style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'>{lab}</div>")
 
-    def line(r: dict, bs: list[dict], cls: str, kids: int) -> str:
+    def lane_html(bs: list[dict], y0: int = 7) -> tuple[str, int]:
         bars, lanes = "", []
-        for b in bs:
+        for b in sorted(bs, key=lambda b: b["start"]):
             ln = next((j for j, e in enumerate(lanes) if e < b["start"]), len(lanes))
             lanes[ln:ln + 1] = [b["end"]]
-            bars += _bar(b, w0, w1, today, hol, ln)
-        h = 31 + 26 * max(len(lanes) - 1, 0)
-        b, running = status.now_next(bs, today)
-        who = (f"<td class='co eb' title='{html.escape(b['company'])}'>{html.escape(b['company'])}</td>" if b
-               else f"<td class='m eb'>{DASH}</td>")
-        when = (status_span(b, today) + ("" if running else " 예약")) if b else ""
-        sub = r["id"] != r["root"]
-        if kids:  # 주장비: ⊕ 를 누르면 세부장비 줄이 펼쳐짐 (충방전기 채널 ⊕ 와 같은 방식)
-            nm = (f"<label class='cb-ch'><input type='checkbox' id='ek{r['id']}'><i>+</i>"
-                  f"<span class='nm'>{html.escape(r['name'])}</span><span class='kn'>{kids}</span></label>")
-        else:
-            nm = ("<span class='tw'>└</span>" if sub else "") + html.escape(r["name"])
-        pad = 12 + (14 * max(r["depth"], 1) if sub else 0)
-        return (f"<tr class='{cls}'><td class='ea{' sub' if sub else ''}' style='text-align:left;padding-left:{pad}px' "
-                f"title='{html.escape(r['full'])}'>{nm}</td>{who}<td class='pd ec'>{html.escape(when)}</td>"
-                f"<td class='tl'><div class='cb-tl' style='height:{h}px;{wk_style}'>{grid}{now_line}{bars}</div></td></tr>")
+            bars += _bar(b, w0, w1, today, hol, ln, day_px, y0)
+        return bars, 2 * y0 + 24 + 30 * max(len(lanes) - 1, 0)
 
-    out, show_css = [], []
+    def dot(bs: list[dict]) -> str:
+        ss = {_state(b, today) for b in bs}
+        return "now" if "now" in ss else ("soon" if "soon" in ss else "")
+
+    out, idle = [], {}
     secs = GROUPS if want == "전체" else [want]
     for sec in secs:
         roots = [rt for rt, xs in fam.items() if xs[0]["group"] == sec]
         if not roots:
             continue
-        busy = [rt for rt in roots if any(b["end"] >= w0 and b["start"] <= w1 for b in fam_bars[rt])]
-        idle = [rt for rt in roots if rt not in busy]
-        n_on = sum(1 for rt in roots if rt in on_roots)
-        if want == "전체":
-            out.append(f"<tr class='sec' style='--fc:{CATS[sec][1]}'><td class='ea'><i></i>{GROUP_LABEL[sec]}"
-                       f"<span>오늘 {n_on} / {len(roots)}대</span></td><td class='eb'></td><td class='ec'></td><td></td></tr>")
-        key = status.GROUPS.index(sec)
-        for kind, rts in (("b", busy), ("i", idle)):
-            if kind == "i" and rts:
-                out.append(f"<tr class='idl'><td class='ea' style='text-align:left'><label class='cb-ch'>"
-                           f"<input type='checkbox' id='ei{key}'><i>+</i>일정 없는 장비 {len(rts)}대</label></td>"
-                           f"<td class='eb'></td><td class='ec'></td><td class='tl'></td></tr>")
-                show_css.append(f"tr.idl:has(#ei{key}:checked) ~ tr.ig{key}:not(.kid){{visibility:visible;}}")
-            for rt in rts:
-                xs = fam[rt]
-                head = xs[0] if xs[0]["id"] == rt else {**xs[0], "id": rt, "root": rt, "depth": 0,
-                                                        "name": xs[0]["name"], "full": xs[0]["full"]}
-                kids = [x for x in xs if x["id"] != rt]
-                base = f"ig{key} hid" if kind == "i" else ""
-                out.append(line(head, fam_bars[rt], base, len(kids)))
-                for x in kids:
-                    out.append(line(x, sorted(by_eq.get(x["id"], []), key=lambda b: b["start"]),
-                                    f"kid k{rt} {base}".strip(), 0))
-                if kids:
-                    cond = f"tr:has(#ek{rt}:checked) ~ tr.k{rt}"
-                    show_css.append(f"{cond}{{visibility:visible;}}" if kind == "b" else
-                                    f"tr.idl:has(#ei{key}:checked) ~ {cond}{{visibility:visible;}}")
+        busy = [rt for rt in roots if fam_bars[rt]]
+        idle[sec] = [fam[rt][0] for rt in roots if not fam_bars[rt]]
+        if not busy:  # 이 기간에 쓰는 장비가 없는 구분은 제목도 없이 아래 '일정 없는 장비'에만
+            continue
+        n_now = sum(1 for rt in roots if dot(fam_bars[rt]) == "now")
+        n_soon = sum(1 for rt in roots if dot(fam_bars[rt]) == "soon")
+        out.append(f"<div class='grp'><i style='background:{CATS[sec][1]}'></i>{GROUP_LABEL[sec]}"
+                   f"<span>오늘 <em>{n_now}</em> · 예정 <em>{n_soon}</em> · 전체 {len(roots)}대</span></div>")
+        for rt in busy:
+            xs = fam[rt]
+            head = xs[0]
+            own = by_eq.get(rt, [])
+            nk = n_kids.get(rt, 0)
+            sub = " · ".join(x for x in (db.center_short(head["center"]), f"세부 {nk}" if nk else "") if x)
+            bars, h = lane_html(own, 14)
+            out.append(f"<div class='r dv{'' if own else ' nob'}'><div class='nm' title='{html.escape(head['full'])}'>"
+                       f"<b><span class='sd d-{dot(fam_bars[rt])}'></span>{html.escape(head['name'])}</b><small>{html.escape(sub)}</small></div>"
+                       f"<div class='ln' style='height:{h}px'>{bars}</div></div>")
+            for x in xs[1:]:
+                bs = by_eq.get(x["id"], [])
+                if not bs:  # 이 기간에 실적이 없는 세부장비는 줄을 만들지 않음 (세부 n 으로만)
+                    continue
+                bars, h = lane_html(bs)
+                out.append(f"<div class='r dv kid' style='--dp:{max(x['depth'] - 1, 0)}'><div class='nm' title='{html.escape(x['full'])}'>"
+                           f"<b>{html.escape(x['name'])}</b></div><div class='ln' style='height:{h}px'>{bars}</div></div>")
     st.markdown(
-        "<style>" + "".join(show_css) + "</style>"
-        f"<div class='cb-box'><table class='cb-t es-t' style='--tlw:{tlw}px'><tr><th class='ea'>장비</th><th class='eb'>업체</th>"
-        f"<th class='ec'>기간</th><th class='tl'><div class='cb-mh'>{mh}</div><div class='es-dh cb-mh'>{dh}</div></th></tr>"
-        + "".join(out) + "</table></div>"
-        "<div class='cb-foot'>"
-        + "".join(f"<span><i style='background:{CATS[k][1]}'></i>{k}</span>" for k in ("시험", "제조", "분석", "교육", "지원"))
-        + "<span><i class='wk'></i>주말·공휴일 (가동률 제외)</span>"
-        "<span><i style='border:1.5px dashed #E8B04B;background:rgba(230,182,85,0.16)'></i>아직 시작 전 (예약)</span>"
-        "<span style='color:#E35D78'>│ 오늘</span></div>", unsafe_allow_html=True)
+        f"<div class='tl2' style='--nw:{NAME_W}px;--n:{span};--md:{md}px'><div class='tl2-in'>"
+        f"<div class='cols'>{''.join(cols)}</div>"
+        f"<div class='r hd'><div class='nm'></div><div class='ln'>{''.join(hd)}</div></div>"
+        + "".join(out) + "</div></div>", unsafe_allow_html=True)
+
+    n_idle = sum(len(v) for v in idle.values())
+    if n_idle:
+        ig = "".join(f"<div class='k'><i style='background:{CATS[g][1]}'></i>{GROUP_LABEL[g]}</div><div class='chips'>"
+                     + "".join(f"<span class='chip' title='{html.escape(r['full'])}'>{html.escape(r['name'])}</span>" for r in rs)
+                     + "</div>" for g, rs in idle.items() if rs)
+        st.markdown(f"<details class='es-idle' open><summary>이 기간 일정 없는 장비 <span>{n_idle}대</span><em></em></summary>"
+                    f"<div class='ig'>{ig}</div></details>", unsafe_allow_html=True)
+    leg = "".join(f"<span><i style='background:color-mix(in srgb,{CATS[k][1]} 30%,#1E293B);box-shadow:inset 3px 0 0 {CATS[k][1]}'></i>{k}</span>"
+                  for k in ("시험", "제조", "분석", "교육", "지원"))
+    leg += (f"<span><i style='background:color-mix(in srgb,{INNER} 30%,#1E293B);box-shadow:inset 3px 0 0 {INNER}'></i>내부</span>"
+            "<span><i style='box-shadow:inset 0 0 0 1.5px #94A3B8'></i>예정</span>"
+            "<span><i style='background:#64748B;opacity:.45'></i>끝남</span>"
+            "<span><i style='background:rgba(2,6,23,.6)'></i>주말·공휴일 (가동률 제외)</span>")
+    st.markdown(f"<div class='es-leg'>{leg}</div>", unsafe_allow_html=True)
 
 
 def status_span(b: dict, today: dt.date) -> str:
@@ -241,6 +310,13 @@ def render() -> None:
                                     default=None if "es_cat" in st.session_state else "전체",
                                     format_func=lambda g: GROUP_LABEL.get(g, g), label_visibility="collapsed") or "전체"
         st.space("stretch")
+        if want != CHARGER:  # 기간 고르기 · 넘기기 (충방전기 표는 예전처럼 이번 달 + 2개월)
+            st.segmented_control("기간", list(SPANS), key="es_span", default=None if "es_span" in st.session_state else "5주",
+                                 label_visibility="collapsed", on_change=lambda: st.session_state.update(es_shift=0))
+            with st.container(key="es_nav", horizontal=True, gap="xsmall"):
+                st.button("", icon=":material/chevron_left:", key="es_prev", on_click=_move, args=(-1,), help="앞 기간")
+                st.button("오늘", key="es_today", on_click=_move, args=(0,))
+                st.button("", icon=":material/chevron_right:", key="es_next", on_click=_move, args=(1,), help="다음 기간")
         center = st.selectbox("센터", ["전체"] + order, key="cb_center", format_func=db.center_short,
                               label_visibility="collapsed", width=110) or "전체"
         tag = GROUP_LABEL.get(want, "전체").replace("(", "_").replace(")", "")
