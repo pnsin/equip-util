@@ -33,7 +33,8 @@ CSS = """<style>
 .tl2 {background: var(--panel); border-radius: 18px; overflow-x: auto; padding: 4px 0 10px; margin-top: .3rem;}
 .tl2-in {position: relative; min-width: calc(var(--nw) + var(--n) * var(--md));}
 .tl2 .cols {position: absolute; top: 0; bottom: 0; left: var(--nw); right: 0; pointer-events: none;}
-.tl2 .cols i {position: absolute; top: 52px; bottom: 0;}
+.tl2 .cols i {position: absolute; top: 62px; bottom: 0;}
+.tl2 .cols i.wl {top: 6px; width: 0; border-left: 1px solid #475569;}
 .tl2 .cols i.off {background: rgba(2,6,23,.30);}
 .tl2 .cols i.td {background: rgba(99,102,241,.13); box-shadow: inset 1px 0 0 rgba(129,140,248,.5), inset -1px 0 0 rgba(129,140,248,.5);}
 .tl2 .r {display: grid; grid-template-columns: var(--nw) 1fr; position: relative;}
@@ -44,13 +45,14 @@ CSS = """<style>
 .tl2 .nm .sd {display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: #475569;}
 .tl2 .nm .sd.d-now {background: #34D399; box-shadow: 0 0 0 3px rgba(52,211,153,.18);}
 .tl2 .nm .sd.d-soon {background: #FBBF24;}
-.tl2 .hd {height: 52px; border-bottom: 1px solid #334155;}
+.tl2 .hd {height: 62px; border-bottom: 1px solid #334155;}
+.tl2 .hd .dy small {display: block; font-size: .62rem; line-height: 1.15; font-weight: inherit; opacity: .85;}
 .tl2 .hd .ln {position: relative;}
 .tl2 .hd .wk {position: absolute; top: 9px; font-size: .74rem; color: #94A3B8; font-weight: 650; white-space: nowrap; display: flex; justify-content: center;}
 .tl2 .hd .wk.r {justify-content: flex-end; padding-right: 4px;}
 .tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #64748B; text-align: center;}
 .tl2 .hd .dy.off {color: #F87171; font-weight: 650;}
-.tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; background: #6366F1; color: #fff; font-weight: 700;}
+.tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; padding: 1px 0; background: #6366F1; color: #fff; font-weight: 700;}
 .tl2 .grp {display: flex; align-items: center; gap: 10px; padding: 16px 20px 8px; font-size: .84rem; font-weight: 700;
   color: var(--ink); position: sticky; left: 0; width: max-content;}
 .tl2 .grp i {width: 8px; height: 8px; border-radius: 50%;}
@@ -248,13 +250,15 @@ def _frame(w0: dt.date, w1: dt.date, md: int, today: dt.date) -> tuple[set, floa
             cols.append(f"<i class='off' style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'></i>")
         if d == today:
             cols.append(f"<i class='td' style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'></i>")
+        if d.weekday() == 0 and d > w0:  # 주 구분 선
+            cols.append(f"<i class='wl' style='left:{pc(d):.3f}%'></i>")
         if d.weekday() == 0:  # 주 이름: 그 주 (보는 기간 안 부분) 가운데. 끝에 걸린 짧은 주는 오른쪽 끝에 붙임
             e = min(d + dt.timedelta(days=6), w1)
             n = (e - d).days + 1
             pos = "c" if n >= 3 else "r"
             hd.append(f"<div class='wk {pos}' style='left:{pc(d):.3f}%;width:{n / span * 100:.3f}%'>{d.month}월 {d.day}일 주</div>")
         if span <= 35:  # 날짜 줄 (1주는 요일도)
-            lab = f"{d.day} {WEEKDAY[d.weekday()]}" if span <= 7 else str(d.day)
+            lab = f"{d.day} {WEEKDAY[d.weekday()]}" if span <= 7 else f"{d.day}<small>{WEEKDAY[d.weekday()]}</small>"
             lab = f"<b>{lab}</b>" if d == today else lab
             hd.append(f"<div class='dy{' off' if off else ''}{' td' if d == today else ''}' "
                       f"style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'>{lab}</div>")
