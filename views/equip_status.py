@@ -149,7 +149,9 @@ def _state(b: dict, today: dt.date) -> str:
     return "done" if b["end"] < today else ("soon" if b["start"] > today else "now")
 
 
-def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int, day_px: float, y0: int = 7) -> str:
+def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int, day_px: float, y0: int = 7,
+         room: tuple[int, int] = (999, 999)) -> str:
+    """막대 하나. room = (왼쪽, 오른쪽) 같은 줄 옆 막대까지 빈 날 수: 글자가 들어갈 때만 옆에 씀 (2026-11-23 겹침 수정)."""
     span = (w1 - w0).days + 1
     a, z = max(b["start"], w0), min(b["end"], w1)
     if z < a:
@@ -165,6 +167,8 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
         offs = "".join(f"<i class='off' style='left:{k / n * 100:.3f}%;width:{100 / n:.3f}%'></i>"
                        for k in range(n) if status.is_off(a + dt.timedelta(days=k), hol))
     tip = f"{comp} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b.get("staff") else "")
+    if b.get("merged", 1) > 1:
+        tip += f" · 실적 {b['merged']}건 이어짐"
     if b.get("note"):
         tip += f" · {b['note']}"
     if offs:
@@ -175,21 +179,61 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
     inner = (f"<span>{html.escape(comp)}" + (f" <small style='font-weight:500;opacity:.8'>{b['note']}</small>" if b.get("note") else "")
              + "</span>") if fits else ""
     out_txt = (f"<small>{when}</small>" if fits else f"{html.escape(comp)} <small>{when}</small>")
-    right_side = left + width < 78  # 오른쪽 끝 가까우면 막대 왼쪽에
-    pos = (f"left:calc({left + width:.3f}% + 6px)" if right_side else f"right:calc({100 - left:.3f}% + 6px)")
-    if not right_side and left < 22:  # 기간을 거의 다 덮는 막대: 글자는 막대 안에만
+    need = (0 if fits else len(comp) * 12.5) + len(when) * 6.6 + 14  # 옆 글자 너비 (대략 px)
+    if room[1] * day_px >= need:
+        out_html = f"<div class='out b{stt}' style='left:calc({left + width:.3f}% + 6px);{top}'>{out_txt}</div>"
+    elif room[0] * day_px >= need:
+        out_html = f"<div class='out b{stt}' style='right:calc({100 - left:.3f}% + 6px);{top}'>{out_txt}</div>"
+    else:  # 자리가 없으면 글자 없이 (마우스를 올리면 업체·기간)
         out_html = ""
-    else:
-        out_html = f"<div class='out b{stt}' style='{pos};{top}'>{out_txt}</div>"
     return (f"<div class='{cls}' title='{html.escape(tip)}' style='--c:{color};left:{left:.3f}%;width:{width:.3f}%;{top}'>"
             f"{offs}{inner}</div>{out_html}")
+
+
+def _merge(bs: list[dict], hol: set) -> list[dict]:
+    """같은 업체가 이어서 쓴 실적(사이가 비지 않거나 주말·공휴일만 끼면)은 막대 하나로 (2026-11-23: 하루짜리가 촘촘해 글자가 겹침)."""
+    out: list[dict] = []
+    for b in sorted(bs, key=lambda x: (x["start"], x["end"])):
+        p = out[-1] if out else None
+        gap = [p["end"] + dt.timedelta(days=k) for k in range(1, (b["start"] - p["end"]).days)] if p else []
+        if p and p["company"] == b["company"] and p.get("cat") == b.get("cat") and len(gap) <= 7 \
+                and all(status.is_off(d, hol) for d in gap):
+            out[-1] = {**p, "end": max(p["end"], b["end"]), "merged": p.get("merged", 1) + 1,
+                       "skip_off": (bool(p.get("skip_off")) and bool(b.get("skip_off"))) or bool(gap),
+                       "note": p.get("note") if p.get("note") == b.get("note") else ""}
+        else:
+            out.append(dict(b))
+    return out
+
+
+def _lanes(bs: list[dict], w0: dt.date, w1: dt.date, today: dt.date, hol: set, day_px: float, y0: int = 7) -> tuple[str, int]:
+    """막대들 → 겹치면 아래 줄로, 옆 글자는 같은 줄 옆 막대까지 자리가 있을 때만."""
+    lanes: list[list[dict]] = []
+    for b in _merge(bs, hol):
+        a, z = max(b["start"], w0), min(b["end"], w1)
+        if z < a:
+            continue
+        ln = next((j for j, xs in enumerate(lanes) if xs[-1]["end"] < b["start"]), None)
+        if ln is None:
+            lanes.append([b])
+        else:
+            lanes[ln].append(b)
+    html_ = ""
+    for ln, xs in enumerate(lanes):
+        for k, b in enumerate(xs):
+            prev_end = xs[k - 1]["end"] if k else w0 - dt.timedelta(days=1)
+            next_start = xs[k + 1]["start"] if k + 1 < len(xs) else w1 + dt.timedelta(days=1)
+            room = ((max(b["start"], w0) - max(prev_end, w0 - dt.timedelta(days=1))).days - 1,
+                    (min(next_start, w1 + dt.timedelta(days=1)) - min(b["end"], w1)).days - 1)
+            html_ += _bar(b, w0, w1, today, hol, ln, day_px, y0, room)
+    return html_, 2 * y0 + 24 + 30 * max(len(lanes) - 1, 0)
 
 
 def _frame(w0: dt.date, w1: dt.date, md: int, today: dt.date) -> tuple[set, float, list[str], list[str]]:
     """타임라인 바탕: 주말·공휴일 · 오늘 열 색, 위쪽 날짜 줄."""
     span = (w1 - w0).days + 1
     hol = calc.kr_holidays({w0.year, w1.year})
-    day_px = max(md, 1060 / span)
+    day_px = max(md, 980 / span)  # 하루 너비 (대략, 좁은 화면 기준으로 조금 작게)
     pc = lambda d: (d - w0).days / span * 100  # noqa: E731
     days = [w0 + dt.timedelta(days=k) for k in range(span)]
     cols, hd = [], []
@@ -234,12 +278,7 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
     hol, day_px, cols, hd = _frame(w0, w1, md, today)
 
     def lane_html(bs: list[dict], y0: int = 7) -> tuple[str, int]:
-        bars, lanes = "", []
-        for b in sorted(bs, key=lambda b: b["start"]):
-            ln = next((j for j, e in enumerate(lanes) if e < b["start"]), len(lanes))
-            lanes[ln:ln + 1] = [b["end"]]
-            bars += _bar(b, w0, w1, today, hol, ln, day_px, y0)
-        return bars, 2 * y0 + 24 + 30 * max(len(lanes) - 1, 0)
+        return _lanes(bs, w0, w1, today, hol, day_px, y0)
 
     def dot(bs: list[dict]) -> str:
         ss = {_state(b, today) for b in bs}
@@ -333,12 +372,7 @@ def _charger_board(center: str, all_open: bool, today: dt.date) -> None:
                 "note": f"{n_used}/{n_all}ch" if 0 < n_used < n_all else ""}
 
     def lane_html(bs: list[dict], y0: int = 7) -> tuple[str, int]:
-        bars, lanes = "", []
-        for b in sorted(bs, key=lambda x: x["start"]):
-            ln = next((j for j, e in enumerate(lanes) if e < b["start"]), len(lanes))
-            lanes[ln:ln + 1] = [b["end"]]
-            bars += _bar(b, w0, w1, today, hol, ln, day_px, y0)
-        return bars, 2 * y0 + 24 + 30 * max(len(lanes) - 1, 0)
+        return _lanes(bs, w0, w1, today, hol, day_px, y0)
 
     recs = stt.to_dict("records")
     out, show_css, idle = [], [], []
