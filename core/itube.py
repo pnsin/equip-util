@@ -188,7 +188,15 @@ def _fill_defaults(rec: dict, known: dict | None = None) -> dict:
     if not to_str(rec.get("product")):
         rec["product"] = (k.get("product") or ("배터리 제조 교육" if purpose == "교육" else "")
                           or to_str(rec.get("sub_item")) or DEFAULT_PRODUCT)
-    # 2026-11-23 사용자: 휴무일자포함은 모두 N (Y면 담당자가 i-Tube에서 휴일을 일일이 지워야 해서). 사용시간은 그대로.
+    # 2026-11-23 사용자: 휴무일자포함은 모두 N, 주말·공휴일 시간은 뺌 (가동률 계산과 같은 기준).
+    # 주말 포함(Y) 실적은 사용시간을 기간 안 평일 몫만 남김 (예: 화~다음 월 7일 148h → 평일 5일 몫 105.7h).
+    if to_str(rec.get("include_holidays")) != "N":
+        s, e = to_date(rec.get("start_date")), to_date(rec.get("end_date")) or to_date(rec.get("start_date"))
+        if s and e and e >= s:
+            days = [s + dt.timedelta(days=i) for i in range((e - s).days + 1)]
+            off = calc.kr_holidays({d.year for d in days})
+            work = sum(1 for d in days if d.weekday() < 5 and d not in off)
+            rec["hours"] = (to_num(rec.get("hours"), 0) or 0) * work / len(days)
     rec["include_holidays"] = "N"
     if to_str(rec.get("usage_type")) == "내부":
         if not to_str(rec.get("company")):
@@ -260,6 +268,7 @@ def make_itube_file(records: list[dict], equipment_rows: list[tuple[str, str]],
     """
     known = known_details(list(history or []) + list(records))
     records = merge_periods([_fill_defaults(r, known) for r in records])
+    records = [r for r in records if (to_num(r.get("hours"), 0) or 0) > 0]  # 주말에만 쓴 실적은 빠짐
     if template_bytes:
         wb = load_workbook(io.BytesIO(template_bytes))
         ws = wb["Sheet1"] if "Sheet1" in wb.sheetnames else wb.worksheets[0]
