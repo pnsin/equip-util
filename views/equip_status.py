@@ -24,8 +24,6 @@ DAY_PX = 8  # 하루 너비 (이번 달 + 2개월 ≈ 730px)
 CSS = """<style>
 .st-key-es_top {align-items: center; margin-bottom: .4rem; row-gap: 8px; flex-wrap: wrap;}
 .st-key-es_cat [data-testid="stButtonGroup"], .st-key-cb_center [data-testid="stButtonGroup"] {gap: 6px;}
-.st-key-es_cat [data-testid="stButtonGroup"] button {border-radius: 999px !important; border: none !important;
-  background: var(--panel) !important; box-shadow: 0 1px 2px rgba(17, 28, 46, .08); padding: 0 16px !important;}
 .st-key-es_cat [data-testid="stButtonGroup"] button p {font-weight: 700; color: var(--muted);}
 .st-key-es_cat [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #6366F1 !important;}
 .st-key-es_cat [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}

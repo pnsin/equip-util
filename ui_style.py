@@ -611,6 +611,23 @@ _SLATE_CSS = """<style>
   [data-testid="stMetricValue"] > div { white-space: normal; overflow: visible; text-overflow: clip; }
   .dst { text-align: center; } .dst .sl, .dst .sv, .dst .dd, .dst > div { justify-content: center; text-align: center; }
   .cb-k { justify-content: center; text-align: left; }
+  /* 2026-11-23 사용자: 고르기 버튼 모양 통일 (디자인 점검 2번).
+     거르기·고르기(st.pills · st.segmented_control)는 모두 같은 둥근 알약, 고른 것은 남보라.
+     '보기 바꾸기'(카드/목록 · 기록/장비별 · 견적서 양식)는 st.tabs 와 같은 밑줄 탭 (VIEW_KEYS). */
+  [data-testid="stButtonGroup"] > div { gap: 6px !important; }
+  [data-testid="stButtonGroup"] button { border-radius: 999px !important; margin: 0 !important; min-height: 34px;
+        padding: 0 11px !important; background: var(--panel) !important; border: 1px solid #475569 !important; box-shadow: none !important; }
+  [data-testid="stButtonGroup"] button p { font-size: .88rem; font-weight: 600; color: #CBD5E1 !important; }
+  [data-testid="stButtonGroup"] button:hover { border-color: #818CF8 !important; }
+  [data-testid="stButtonGroup"] button[aria-checked="true"] { background: #6366F1 !important; border-color: #6366F1 !important; }
+  [data-testid="stButtonGroup"] button[aria-checked="true"] p { color: #FFFFFF !important; }
+  .st-key-info_view [data-testid="stButtonGroup"] > div, .st-key-maint_mode [data-testid="stButtonGroup"] > div, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] > div { gap: 18px !important; }
+  .st-key-info_view [data-testid="stButtonGroup"] button, .st-key-maint_mode [data-testid="stButtonGroup"] button, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button { border-radius: 0 !important; background: transparent !important; border: 0 !important;
+        border-bottom: 2px solid transparent !important; padding: 0 2px !important; min-height: 34px; }
+  .st-key-info_view [data-testid="stButtonGroup"] button p, .st-key-maint_mode [data-testid="stButtonGroup"] button p, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button p { font-size: .95rem; color: #94A3B8 !important; }
+  .st-key-info_view [data-testid="stButtonGroup"] button:hover p, .st-key-maint_mode [data-testid="stButtonGroup"] button:hover p, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button:hover p { color: #E2E8F0 !important; }
+  .st-key-info_view [data-testid="stButtonGroup"] button[aria-checked="true"], .st-key-maint_mode [data-testid="stButtonGroup"] button[aria-checked="true"], div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button[aria-checked="true"] { background: transparent !important; border-bottom-color: #6366F1 !important; }
+  .st-key-info_view [data-testid="stButtonGroup"] button[aria-checked="true"] p, .st-key-maint_mode [data-testid="stButtonGroup"] button[aria-checked="true"] p, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p { color: #F8FAFC !important; }
 </style>"""
 
 
