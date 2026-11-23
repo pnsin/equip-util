@@ -199,8 +199,9 @@ def render_report() -> None:
 # ── 실적 내려받기 (i-Tube 업로드 양식 equip_log_template) ──────────────
 
 LABELS = ["시험", "제조", "분석", "교육", "지원"]
-# 2026-11-23 사용자: 분야를 센터까지 나눔 (MV센터는 오창)
-FIELDS = ["시험(환경)", "시험(충방전-오창)", "시험(충방전-문백)", "제조(오창)", "제조(문백)", "분석", "기타"]
+# 2026-11-23 사용자: 분야를 담당자(센터)별로 나눔. MV센터는 오창.
+# 문백의 시험 장비(충방전기 + 실환경모사·안전시험 챔버)는 모두 문백 담당자 → '시험(문백)' 하나로.
+FIELDS = ["시험(환경)", "시험(충방전-오창)", "시험(문백)", "제조(오창)", "제조(문백)", "분석", "기타"]
 
 
 def equip_fields(eq: pd.DataFrame) -> dict[int, str]:
@@ -215,8 +216,10 @@ def equip_fields(eq: pd.DataFrame) -> dict[int, str]:
     for i in eq["id"].astype(int):
         g = grp.get(root.get(i, i), grp.get(i, "기타"))
         where = "문백" if db.center_short(cen.get(i, "")) == "문백" else "오창"  # 제조검증·MV = 오창
-        if g == status.CHARGER:
-            out[i] = f"시험(충방전-{where})"
+        if g in (status.CHARGER, "시험") and where == "문백":
+            out[i] = "시험(문백)"
+        elif g == status.CHARGER:
+            out[i] = "시험(충방전-오창)"
         elif g == "제조":
             out[i] = f"제조({where})"
         elif g == "시험":
