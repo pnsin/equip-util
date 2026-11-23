@@ -77,6 +77,9 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #1E8E5A; white-space: nowrap;}
 .cb-t td.u {white-space: nowrap; vertical-align: middle; padding: 0 12px; line-height: 1.35;}
 .cb-t td.u .sp {font: inherit; color: inherit;}
+.cb-t td.u .cn {display: block; font-size: .72rem; font-weight: 500; color: #94A3B8; margin-top: 2px;}
+.cb-t td.u .cn.one {display: inline; margin: 0 0 0 6px;} .cb-t td.u .cn.one:before {content: '· ';}
+@media (max-width: 640px) {.cb-t td.u .cn {font-size: .62rem; margin-top: 0;}}
 .cb-ch li b {color: var(--muted); font-weight: 600; min-width: 38px;}
 .cb-ch li.on {color: #E35D78; font-weight: 700;}
 .cb-t td:has(details[open]) {white-space: normal; vertical-align: top; padding-top: 6px;}
@@ -271,6 +274,9 @@ def body(center: str, all_open: bool) -> None:
         for x in recs:
             unit_ch[x["unit"]] = unit_ch.get(x["unit"], 0) + int(x["ch_count"] or 0)
         shorts = {u: _short(u) for u in dict.fromkeys(x["unit"] for x in recs)}
+        n_rows = {}  # 충방전기마다 보이는 챔버 줄 수 (한 줄이면 센터 이름을 옆에)
+        for x in recs:
+            n_rows[x["unit"]] = n_rows.get(x["unit"], 0) + 1
         all_bk = {cid: b for cid, b in bk.groupby("chamber_id")} if not bk.empty else {}
         for ri, r in enumerate(recs):
             b = r["now"] or r["next"]
@@ -279,7 +285,10 @@ def body(center: str, all_open: bool) -> None:
             spec = (_spec(r.get("unit_sheet", "")) or _spec(r["unit"])  # 사양(V·A·ch)은 챔버 구성에 적은 이름에서
                     or f"{int(unit_ch.get(r['unit'], 0))}ch")  # 어디에도 없으면 채널 수라도
             u_td = (f"<td class='u s0' rowspan='{span_u.get(ri, 1)}' title='{html.escape(r['unit'])}'>{html.escape(nm)}"
-                    + (f" <span class='sp'>({html.escape(spec)})</span>" if spec else "") + "</td>") if new_u else ""
+                    + (f" <span class='sp'>({html.escape(spec)})</span>" if spec else "")
+                    + (f"<span class='cn{' one' if n_rows.get(r['unit'], 0) < 2 else ''}'>{html.escape(db.center_short(r.get('center', '')))}</span>"
+                       if r.get("center") else "")
+                    + "</td>") if new_u else ""  # 2026-11-23 사용자: 장비 이름 아래 센터 이름
             c = html.escape(r["cycler"]) if (new_u or r["cycler"] != prev_c) else ""
             prev_u, prev_c = r["unit"], r["cycler"]
             bars, lanes = "", []  # 기간이 겹치는 예약(채널 일부씩)은 줄을 나눠 그림
