@@ -759,6 +759,7 @@ CATS = {"시험": ("rgba(230,85,114,0.16)", "#FF8DA1"), CHARGER_GROUP: ("rgba(21
 CAT_ORDER = list(CATS)
 FIXED_CATS = ["시험", CHARGER_GROUP, "제조", "분석", "교육", "지원"]
 LANE_CATS = ["시험", CHARGER_GROUP, "제조", "분석"]  # 칸마다 비어 있어도 보이는 구역 (2026-11-10 시험을 환경·충방전으로 나눔)
+SHOW_CALENDAR = False  # 장비 사용 등록의 '달력' 보기 (2026-11-23 사용자 요청으로 숨김)
 GROUP_LABEL = {"시험": "시험(환경)", CHARGER_GROUP: "시험(충방전)"}
 MINI_LABEL = {"시험": "환경", CHARGER_GROUP: "충방"}  # 휴대폰 달력 칸의 짧은 이름  # 입력 카드 구분 버튼에 보이는 이름
 CARD_GROUPS = ["시험", CHARGER_GROUP, "제조", "분석"]  # 입력 카드 장비 구분 (시험 = 충방전기 뺀 시험 장비)
@@ -1477,10 +1478,14 @@ def render(header: bool = True) -> None:
             st.session_state.cal_month = _shift_month(month, 1)
             st.rerun()
         legend = st.container(key="cal_legend", width="content")
-        # 2026-11-23 사용자: 예전 엑셀처럼 장비(줄) × 날짜(칸) 표가 기본. 달력은 옆 탭으로 남김
-        view = st.segmented_control("보기", ["표", "달력"], default=st.session_state.get("cal_view_last", "표"),
-                                    key="q_form_entryview", label_visibility="collapsed") or st.session_state.get(
-                                        "cal_view_last", "표")
+        # 2026-11-23 사용자: 예전 엑셀처럼 장비(줄) × 날짜(칸) 표가 기본.
+        # 같은 날 사용자: 달력은 이제 안 써도 됨 → 숨김. 다시 필요하다고 하면 SHOW_CALENDAR = True 로 (코드는 그대로 둠)
+        if SHOW_CALENDAR:
+            view = st.segmented_control("보기", ["표", "달력"], default=st.session_state.get("cal_view_last", "표"),
+                                        key="q_form_entryview", label_visibility="collapsed") or st.session_state.get(
+                                            "cal_view_last", "표")
+        else:
+            view = "표"
         st.session_state["cal_view_last"] = view
 
     if view == "표":
