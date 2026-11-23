@@ -14,10 +14,7 @@ from views.calendar_entry import CATS, CHARGER_GROUP, PURPOSE_CAT
 CSS = """<style>
 .st-key-cb_top {align-items: center; margin-bottom: .4rem;}
 .st-key-cb_center [data-testid="stButtonGroup"] {gap: 6px;}
-.st-key-cb_center [data-testid="stButtonGroup"] button {border-radius: 999px !important; border: none !important;
-  background: var(--panel) !important; box-shadow: 0 1px 2px rgba(17, 28, 46, .08); padding: 0 16px !important;}
 .st-key-cb_center [data-testid="stButtonGroup"] button p {font-weight: 700; color: var(--muted);}
-.st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #334155 !important;}
 .st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .cb-kpis {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px;}
 .cb-k {background: var(--panel); border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); text-align: center;}

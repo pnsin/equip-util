@@ -34,7 +34,6 @@ CSS = """<style>
 .st-key-cs_tools [data-testid="stButtonGroup"] button {border-radius: 999px !important; height: 34px; min-height: 0;
   padding: 0 14px; background: var(--panel); border: 1px solid var(--line) !important;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button p {font-size: .84rem; font-weight: 600; color: #94A3B8;}
-.st-key-cs_tools [data-testid="stButtonGroup"] button[aria-checked="true"] {background: #334155 !important; border-color: #F8FAFC !important;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .st-key-cs_tools .st-key-cs_q {flex: 1 1 200px; min-width: 180px;}
 .st-key-cs_tools .st-key-cs_new button {background: var(--accent); color: #fff; border: none; border-radius: 12px;
@@ -89,7 +88,7 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
 .st-key-cs_panel [data-baseweb="select"] > div:focus-within, .st-key-cs_panel [data-baseweb="input"]:focus-within,
 .st-key-cs_panel [data-baseweb="textarea"]:focus-within {border-color: var(--accent) !important; background: var(--panel) !important;}
 .st-key-cs_panel [data-testid="stButtonGroup"] button {border-radius: 999px !important; padding: 2px 12px; min-height: 0; height: 31px;
-  border: none !important; background: #26334D;}
+}
 .st-key-cs_panel [data-testid="stButtonGroup"] button p {font-size: .8rem; font-weight: 600; color: #94A3B8;}
 .st-key-cs_panel [data-testid="stButtonGroup"] button[aria-checked="true"] {background: var(--accent) !important;}
 .st-key-cs_panel [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}

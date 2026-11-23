@@ -12,6 +12,7 @@ import streamlit as st
 from core import calc, db, report
 from core.terms import w
 from ui_style import CHART_CONFIG, T, chart_layout, empty_state, page_header
+from views import dashboard_v2
 from views.common import go_records
 
 CFG = CHART_CONFIG
@@ -344,7 +345,8 @@ def render() -> None:
     q_sum, q_tot, pq_tot = cur_and_prev("분기", m_ref)
 
     ref_day = min(today, (pd.Timestamp(year, cm, 1) + pd.offsets.MonthEnd(0)).date())  # 주간·월간 표의 기준일
-    _top_row(year, y_tot, kpi, ref_day)
+    # 2026-11-23 사용자: 다시 설계한 시안 적용 (목표 대비 지금 + 보조 정보 한 줄)
+    dashboard_v2.top(year, y_tot, kpi, _year_fee(year, ref_day), _eok, _won_short)
     _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
                   (m_sum, q_sum, year_sum), cats, kpi)
     _fee_section(year, cm, period, months, ref_day, kpi)
@@ -363,40 +365,6 @@ def _won_short(v: float) -> str:
     if v >= 1e8:
         return f"{v / 1e8:.2f}<small>억 원</small>"
     return f"{v / 1e4:,.0f}<small>만 원</small>" if v else "0<small>원</small>"
-
-
-def _top_row(year: int, y_tot: dict, kpi: dict, ref_day) -> None:
-    """2026-11-19 사용자 시안: 맨 위 한 줄 요약 4칸 (01 연간 가동률 · 02 연간 수수료 · 03 유지보수 · 04 종·대수)."""
-    from views.equipment import count_summary
-    goal_u, goal_f = float(kpi["util_total"] or 0), float(kpi["fee"] or 0)
-    fee = _year_fee(year, ref_day)
-    c1 = (f'<div class="k c1"><div class="tt">{E(w("연간 가동률"))}</div><div class="bdy">'
-          f'<div class="big" style="color:{BLUE[0]}">{y_tot["util"]:.1f}<small>%</small></div>'
-          f'<div class="sub">목표 {goal_u:.1f}%</div></div></div>')
-    # 2026-11-19 사용자: '목표 금액 (달성률 %)' 모양
-    # 2026-11-19 사용자: 달성률(%)은 빼고 목표 금액만
-    rate = f'목표 {_eok(goal_f)}' if goal_f else "&nbsp;"  # 5억 원
-    c2 = (f'<div class="k c2"><div class="tt">연간 수수료</div><div class="bdy">'
-          f'<div class="big" style="color:{TEAL[0]}">{_won_short(fee)}</div><div class="sub">{rate}</div></div></div>')
-    # 03 유지보수: 올해 건수 + 달마다 작은 숫자
-    mt = db.load_maint()
-    mt = mt[mt["date"].map(lambda d: bool(d) and d.year == year)] if not mt.empty else mt
-    by_m = mt.groupby(mt["date"].map(lambda d: d.month)).size().to_dict() if not mt.empty else {}
-    mini = "".join(f'<div><b class="{"" if by_m.get(m) else "z"}">{by_m.get(m, 0)}</b><span>{m}월</span></div>'
-                   for m in range(1, 13))
-    c3 = (f'<div class="k c3"><div class="tt">유지보수 실적</div><div class="bdy">'
-          f'<div class="big" style="color:{AMBER[0]}">{len(mt)}<small>건</small></div>'
-          f'<div class="mm">{mini}</div></div></div>')
-    # 04 종·대수 (센터별 + 합계)
-    blocks, _ = count_summary(db.load_equipment(full=True))
-    df = dict(blocks)["센터별"]
-    rows = "".join(
-        f'<tr{" class=sum" if r["센터"] == "합계" else ""}><td>{E(r["센터"])}</td><td>{r["종"]}종</td>'
-        f'<td>{r["대수"]}대</td><td>{r["i-Tube 등록"]}</td></tr>' for r in df.to_dict("records"))
-    c4 = (f'<div class="k c4"><div class="tt">장비 종·대수</div><div class="bdy">'
-          f'<table><thead><tr><th>센터</th><th>종</th><th>대수</th><th>i-Tube 등록</th></tr></thead><tbody>{rows}</tbody>'
-          f'</table></div></div>')
-    st.markdown(f'<div class="dtop">{c1}{c2}{c3}{c4}</div>', unsafe_allow_html=True)
 
 
 def _util_section(year, cm, cq, period, target, m_of, q_of, m_tot, pm_tot, q_tot, pq_tot, y_tot, py_tot,
