@@ -1,9 +1,9 @@
 """장비 사용 등록 › 장비표 (2026-11-23 사용자): 예전 엑셀처럼 왼쪽 = 장비, 오른쪽 = 날짜.
 
-- 위 버튼으로 시험(환경) · 시험(충방전) · 제조(오창) · 제조(문백) · 분석 중 하나를 고르면 그 장비만 줄로 나옴.
+- 위 버튼으로 시험(환경) · 시험(충방전) · 제조(오창) · 문백 · 분석 중 하나를 고르면 그 장비만 줄로 나옴.
 - 칸 = 시간 + 업체 약칭 (업체마다 색), 며칠 이어지는 실적(기간·묶음)은 띠 하나. 같은 장비에서 겹치면 줄이 나뉨.
 - 칸을 누르면 오른쪽 입력 카드가 그 장비·날짜로 열림 (있는 실적이면 그 실적). 빈칸 여러 개를 끌면 장기(기간) 입력.
-- 합계 = 가동률(장비 KPI 현황)과 같은 계산 (calc.expand_daily + 충방전기 하루 최대, 주말·공휴일 0).
+- 기간 실적도 날짜 칸마다 시간+업체 (엑셀처럼). 칸 고르기 → Ctrl+C/V, Delete, Ctrl+Z.
 """
 from __future__ import annotations
 
@@ -20,8 +20,10 @@ from core import period as per
 from core.calc import expand_daily
 from core.period import kr_holidays
 
-GROUPS = ["시험(환경)", "시험(충방전)", "제조(오창)", "제조(문백)", "분석"]
-GROUP_DOT = {"시험(환경)": "#F472B6", "시험(충방전)": "#E879F9", "제조(오창)": "#34D399", "제조(문백)": "#34D399",
+# 2026-11-23 사용자: 문백 장비(제조 라인 + 충방전기 + 실환경모사·안전시험 챔버)는 예전 문백 엑셀처럼 한 버튼에
+MB = "문백"
+GROUPS = ["시험(환경)", "시험(충방전)", "제조(오창)", MB, "분석"]
+GROUP_DOT = {"시험(환경)": "#F472B6", "시험(충방전)": "#E879F9", "제조(오창)": "#34D399", MB: "#FBBF24",
              "분석": "#A78BFA", "기타": "#94A3B8"}
 WEEK = "월화수목금토일"
 # 업체 색: 어두운 바탕에서 서로 잘 구별되는 색 (업체 이름으로 늘 같은 색)
@@ -39,10 +41,12 @@ def equip_groups(eq: pd.DataFrame) -> dict[int, str]:
     out = {}
     for i in eq["id"].astype(int):
         g = grp.get(root.get(i, i), grp.get(i, "기타"))
-        if g == status.CHARGER or grp.get(i) == status.CHARGER:
+        if db.center_short(cen.get(i, "")) == "문백":
+            out[i] = MB
+        elif g == status.CHARGER or grp.get(i) == status.CHARGER:
             out[i] = "시험(충방전)"
         elif g == "제조":
-            out[i] = "제조(문백)" if db.center_short(cen.get(i, "")) == "문백" else "제조(오창)"
+            out[i] = "제조(오창)"
         elif g == "시험":
             out[i] = "시험(환경)"
         elif g == "분석":
@@ -87,7 +91,7 @@ def _ch_label(rec: dict) -> str:
 
 
 def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group: str, hide_off: bool) -> dict:
-    """화면에 그릴 표 데이터: 날짜 열, 묶음(구분 칸)별 장비 줄, 줄마다 실적(칸·띠)과 합계."""
+    """화면에 그릴 표 데이터: 날짜 열, 묶음(구분 칸)별 장비 줄, 줄마다 실적(날짜 칸)."""
     m0 = month.replace(day=1)
     m1 = (m0 + dt.timedelta(days=32)).replace(day=1) - dt.timedelta(days=1)
     ts0, ts1 = pd.Timestamp(m0), pd.Timestamp(m1)
@@ -105,9 +109,14 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
     leaves = set(db.pick_ids(eq, m1))
     ids = [i for i in order if groups.get(i) == group and (i in leaves or i in with_logs)]
 
-    # 구분 칸: 제조는 라인(맨 위 장비), 나머지는 센터
+    # 구분 칸: 제조는 라인(맨 위 장비), 문백은 라인·충방전기 묶음 + 시험 챔버, 나머지는 센터
+    from core import status
+    dg = status.device_group(eq, db.load_channels())
+
     def section(i: int) -> str:
-        if group.startswith("제조"):
+        if group == MB and dg.get(root.get(i, i)) == "시험":
+            return "시험 챔버"
+        if group.startswith("제조") or group == MB:
             return short.get(root.get(i, i), "")
         return db.center_short(cen.get(i, "")) or "기타"
     sec_order: list[str] = []
@@ -142,8 +151,14 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
             else:
                 hlab = f"{hours:g}"
             comp = db.to_str(first.get("company"))
+            # 날짜별 시간 (기간 실적도 칸마다 보이게; 주말 제외 실적은 주말 칸이 비어 있음)
+            if period:
+                dd = expand_daily(g, cfg.get("alloc_mode", "spread"))
+                per_day = {d.date(): float(h) for d, h in dd.groupby("day")["hours"].sum().items() if h > 0}
+            else:
+                per_day = {s: hours}
             items_by_eq.setdefault(int(eid), []).append({
-                "log": int(first["id"]), "s": s, "e": e, "period": period, "h": hlab,
+                "log": int(first["id"]), "s": s, "e": e, "period": period, "h": hlab, "days": per_day,
                 "co": short_company(comp), "full": comp or "내부", "color": company_color(comp),
                 "ch": _ch_label(first)})
 
@@ -154,24 +169,17 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
         busy = {it["s"] for v in items_by_eq.values() for it in v if not it["period"]}
         days = [d for d in days if d not in off or d in busy]
 
-    # 합계 = 가동률과 같은 계산
-    capped = expand_daily(near, cfg.get("alloc_mode", "spread"), db.charger_caps()) if not near.empty else None
-    tot: dict[int, float] = {}
-    if capped is not None and not capped.empty:
-        cm = capped[(capped["day"] >= ts0) & (capped["day"] <= ts1)]
-        tot = {int(k): float(v) for k, v in cm.groupby("equip_id")["hours"].sum().items()}
-
     rows = []
     for i in ids:
         its = sorted(items_by_eq.get(i, []), key=lambda it: (it["s"], not it["period"]))
         lanes: list[list[dict]] = []
         for it in its:
-            vis = [d for d in days if it["s"] <= d <= it["e"]]
+            vis = [d for d in days if d in it["days"]]
             if not vis:
                 continue
-            it = {**it, "d0": vis[0], "d1": vis[-1], "n": len(vis)}
-            for ln in lanes:
-                if all(it["d0"] > o["d1"] or it["d1"] < o["d0"] for o in ln):
+            it = {**it, "vis": set(vis)}
+            for ln in lanes:  # 같은 날 겹치는 실적은 줄을 나눔 (한 실적은 늘 같은 줄)
+                if all(not (it["vis"] & o["vis"]) for o in ln):
                     ln.append(it)
                     break
             else:
@@ -179,13 +187,13 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
         p = parent.get(i)
         name = re.sub(r"\s*\+\s*챔버.*$", "", short.get(i, str(i)))  # '…+챔버 3대(문백#1~#3)' 는 줄 이름에서 뺌
         name = re.sub(r"\s·\s(문백|오창|제조검증|MV)$", "", name)  # 센터별로 나눈 표라 같은 이름 구분용 꼬리는 뺌
-        sub = short.get(p, "") if p is not None and not group.startswith("제조") else ""
+        sub = short.get(p, "") if p is not None and not group.startswith("제조") and group != MB else ""
         if sub and sub in name:
             sub = ""
-        if group.startswith("제조") and root.get(i, i) == i and any(parent.get(j) == i for j in ids):
-            name = "라인 전체"
+        if (group.startswith("제조") or group == MB) and root.get(i, i) == i and any(parent.get(j) == i for j in ids):
+            name = "라인 전체" if dg.get(i) == "제조" else "장비 전체"
         rows.append({"id": i, "name": name, "full": short.get(i, str(i)), "parent": sub, "sec": section(i),
-                     "lanes": lanes or [[]], "total": round(tot.get(i, 0.0), 1)})
+                     "lanes": lanes or [[]]})
     return {"days": days, "off": off, "rows": rows, "m0": m0}
 
 
@@ -198,61 +206,50 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
         return "<div class='eg-empty'>이 구분에는 이번 달에 보일 장비가 없어요.</div>"
     h = ["<div class='eg-scroll'><table class='eg'><colgroup><col class='c-sec'><col class='c-dev'>"]
     h += ["<col>" for _ in days]
-    h.append("<col class='c-tot'></colgroup><thead><tr><th class='sec'>구분</th><th class='dev'>장비</th>")
+    h.append("</colgroup><thead><tr><th class='sec'>구분</th><th class='dev'>장비</th>")
     for d in days:
         cls = ("off " if d in data["off"] else "") + ("today" if d == today else "")
         h.append(f"<th class='{cls}'>{d.day}<small>{WEEK[d.weekday()]}</small></th>")
-    h.append("<th class='tot'>합계</th></tr></thead><tbody>")
+    h.append("</tr></thead><tbody>")  # 합계 열은 뺌 (2026-11-23 사용자: 앱에서는 필요 없음)
     sec_rows: dict[str, int] = {}
     for r in rows:
         sec_rows[r["sec"]] = sec_rows.get(r["sec"], 0) + len(r["lanes"])
     seen: set[str] = set()
     sel_eid, sel_day, sel_log = (sel or {}).get("eid"), (sel or {}).get("day"), (sel or {}).get("log")
+    ri = 0
     for r in rows:
         n = len(r["lanes"])
         for li, lane in enumerate(r["lanes"]):
             last = " last" if li == n - 1 else ""
-            h.append(f"<tr class='{'first' if li == 0 else ''}{last}'>")
+            h.append(f"<tr class='{'first' if li == 0 else ''}{last}' data-ri='{ri}'>")
+            ri += 1
             if li == 0 and r["sec"] not in seen:
                 seen.add(r["sec"])
                 h.append(f"<td class='sec' rowspan='{sec_rows[r['sec']]}'><span>{e(r['sec'])}</span></td>")
             if li == 0:
                 par = f"<small>{e(r['parent'])}</small>" if r["parent"] else ""
                 h.append(f"<td class='dev' rowspan='{n}' title='{e(r['full'])}'><div class='nm'>{e(r['name'])}</div>{par}</td>")
-            starts = {it["d0"]: it for it in lane}
-            skip = 0
-            for d in days:
-                if skip:
-                    skip -= 1
-                    continue
+            at = {d: it for it in lane for d in it["vis"]}
+            for ci, d in enumerate(days):
                 cls = "off" if d in data["off"] else ""
-                it = starts.get(d)
+                it = at.get(d)
                 if it is None:
                     s_cls = " sel" if sel_eid == r["id"] and sel_day == d and not sel_log else ""
-                    h.append(f"<td class='{cls}{s_cls}' data-eid='{r['id']}' data-day='{d}'></td>")
+                    h.append(f"<td class='{cls}{s_cls}' data-eid='{r['id']}' data-day='{d}' data-ci='{ci}'></td>")
                     continue
-                span = it["n"]
-                skip = span - 1
                 c = it["color"]
                 picked = " picked" if sel_log == it["log"] else ""
-                tip = e(f"{it['full']} · {it['s']:%m/%d}" + (f"~{it['e']:%m/%d}" if it["period"] else "")
-                        + (f" · {it['h']}" + ("h" if not it["period"] else "")))
-                if it["period"]:
-                    bits = [f"<b>{e(it['co'])}</b>"]
-                    if span >= 3:
-                        bits.append(f"<span>{e(' · '.join(x for x in (it['ch'], it['h']) if x))}</span>")
-                    if span >= 6:
-                        bits.append(f"<span class='d'>{it['s'].month}/{it['s'].day}~{it['e'].month}/{it['e'].day}</span>")
-                    cont = (" cl" if it["s"] < it["d0"] else "") + (" cr" if it["e"] > it["d1"] else "")
-                    inner = (f"<div class='bar{cont}{picked}' data-log='{it['log']}' data-day='{it['d0']}' title='{tip}' "
-                             f"style='background:{_rgba(c, .30)};border-left-color:{c}'>{''.join(bits)}</div>")
-                else:
-                    inner = (f"<div class='cell{picked}' data-log='{it['log']}' data-day='{it['d0']}' title='{tip}' "
-                             f"style='background:{_rgba(c, .32)}'><b>{e(it['h'])}</b><span>{e(it['co'])}</span></div>")
-                h.append(f"<td class='{cls} has' colspan='{span}'>{inner}</td>")
-            if li == 0:
-                t = r["total"]
-                h.append(f"<td class='tot{' z' if not t else ''}' rowspan='{n}'>{t:g}</td>")
+                hv = it["days"][d]
+                hl = f"{round(hv, 1):g}"
+                tip = e(f"{it['full']} · {d:%m/%d} {hl}h" + (f" · {it['s']:%m/%d}~{it['e']:%m/%d}" if it["period"] else "")
+                        + (f" · {it['ch']}" if it["ch"] else ""))
+                # 기간 실적은 이어지는 칸끼리 붙여 보이게 (왼쪽·오른쪽 이음)
+                prev_same = ci > 0 and at.get(days[ci - 1]) is it
+                next_same = ci + 1 < len(days) and at.get(days[ci + 1]) is it
+                join = (" jl" if prev_same else "") + (" jr" if next_same else "")
+                h.append(f"<td class='{cls} has' data-eid='{r['id']}' data-day='{d}' data-ci='{ci}'>"
+                         f"<div class='cell{join}{picked}' data-log='{it['log']}' data-day='{d}' title='{tip}' "
+                         f"style='background:{_rgba(c, .32)}'><b>{e(hl)}</b><span>{e(it['co'])}</span></div></td>")
             h.append("</tr>")
     h.append("</tbody></table></div>")
     # 업체 색 안내
@@ -262,7 +259,7 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
             for it in lane:
                 seen_c.setdefault(it["co"], it["color"])
     leg = "".join(f"<span><i style='background:{c}'></i>{e(n)}</span>" for n, c in seen_c.items())
-    h.append(f"<div class='eg-foot'><div class='eg-leg'>{leg}</div><div class='eg-note'>합계 = 가동률 계산과 같음</div></div>")
+    h.append(f"<div class='eg-foot'><div class='eg-leg'>{leg}</div><div class='eg-note'>칸 고르기(끌기·Shift+클릭) · Ctrl+C / Ctrl+V · Delete · Ctrl+Z</div></div>")
     return "".join(h)
 
 
@@ -301,6 +298,12 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
 .bar .d{opacity:.7;font-size:10px}
 .cell:hover,.bar:hover{filter:brightness(1.18)}
 .cell.picked,.bar.picked{outline:2px solid #FCD34D;outline-offset:-2px}
+.cell.jl{left:0;border-top-left-radius:0;border-bottom-left-radius:0}
+.cell.jr{right:0;border-top-right-radius:0;border-bottom-right-radius:0}
+.eg tbody td.rs{background:rgba(99,102,241,.22)!important}
+.eg tbody td.rs .cell{box-shadow:inset 0 0 0 2px #A5B4FC}
+.eg tbody td.cp{outline:2px dashed #FCD34D;outline-offset:-3px}
+.eg-tip{font-size:11.5px;color:#64748B;margin-top:6px}
 .eg-foot{display:flex;justify-content:space-between;gap:12px;margin-top:10px;flex-wrap:wrap}
 .eg-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#94A3B8}
 .eg-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
@@ -311,59 +314,126 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
   .eg th.sec{font-size:0}
   .eg th.dev,.eg td.dev{left:26px}.eg col.c-dev{width:112px}.eg td.dev{padding:0 6px;font-size:11px}
   .eg col.c-tot{width:44px}
-  table.eg{min-width:calc(26px + 112px + 44px + var(--ndays) * 42px)}
+  table.eg{min-width:calc(26px + 112px + var(--ndays) * 42px)}
 }
 """
 
 JS = r"""
 export default function(component) {
   const { data, setTriggerValue, parentElement } = component;
+  const W = window;
   let box = parentElement.querySelector('.eg-root');
   if (!box) { box = document.createElement('div'); box.className = 'eg-root'; parentElement.appendChild(box); }
   box.innerHTML = data.html;
   const t = box.querySelector('table.eg');
   if (t) { t.style.setProperty('--ndays', data.ndays); t.style.setProperty('--minw', data.minw + 'px'); }
-  let down = null, moved = false;
-  const clear = () => box.querySelectorAll('td.drag').forEach(x => x.classList.remove('drag'));
-  const paint = (a, b) => {
-    clear();
-    if (!a || !b || a.dataset.eid !== b.dataset.eid) return;
-    const tr = a.parentElement, cells = [...tr.querySelectorAll('td[data-eid]')];
-    let i = cells.indexOf(a), j = cells.indexOf(b);
-    if (i > j) [i, j] = [j, i];
-    // 실적이 있는 칸을 건너뛰지 않게: 사이에 실적 칸이 있으면 거기서 멈춤
-    for (let k = i; k <= j; k++) cells[k].classList.add('drag');
+  // 엑셀처럼: 칸 고르기(끌기·Shift+클릭) → Ctrl+C → 다른 칸 누르고 Ctrl+V
+  const trs = () => [...box.querySelectorAll('tbody tr[data-ri]')];
+  const cellAt = (r, c) => { const tr = trs()[r]; return tr ? tr.querySelector(`td[data-ci="${c}"]`) : null; };
+  const pos = (td) => ({r: +td.parentElement.dataset.ri, c: +td.dataset.ci});
+  if (W.__egSig !== data.sig) { W.__egSel = null; W.__egSig = data.sig; }
+  const paintSel = () => {
+    box.querySelectorAll('td.rs').forEach(x => x.classList.remove('rs'));
+    const s = W.__egSel; if (!s) return;
+    const [r0, r1] = [Math.min(s.a.r, s.b.r), Math.max(s.a.r, s.b.r)], [c0, c1] = [Math.min(s.a.c, s.b.c), Math.max(s.a.c, s.b.c)];
+    if (r0 === r1 && c0 === c1) return;  // 한 칸은 노란 테두리(선택)로 이미 보임
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const td = cellAt(r, c); if (td) td.classList.add('rs'); }
   };
+  const paintClip = () => {
+    box.querySelectorAll('td.cp').forEach(x => x.classList.remove('cp'));
+    const k = W.__egClip; if (!k || k.sig !== data.sig) return;
+    k.items.forEach(it => { const td = box.querySelector(`td[data-day="${it.day}"] .cell[data-log="${it.log}"]`); if (td) td.parentElement.classList.add('cp'); });
+  };
+  paintSel(); paintClip();
+  let down = null, moved = false;
   box.onmousedown = (ev) => {
-    const td = ev.target.closest('td[data-eid]');
+    W.__egActive = true;
+    const td = ev.target.closest('td[data-ci]');
     if (!td || ev.button !== 0) return;
-    down = td; moved = false; ev.preventDefault();
+    ev.preventDefault();
+    if (ev.shiftKey && W.__egSel) { W.__egSel = {a: W.__egSel.a, b: pos(td)}; paintSel(); return; }
+    down = td; moved = false; W.__egSel = {a: pos(td), b: pos(td)}; paintSel();
   };
   box.onmouseover = (ev) => {
     if (!down) return;
-    const td = ev.target.closest('td[data-eid]');
-    if (td && td !== down) { moved = true; paint(down, td); }
+    const td = ev.target.closest('td[data-ci]');
+    if (td && td !== down) { moved = true; W.__egSel = {a: pos(down), b: pos(td)}; paintSel(); }
   };
-  const up = (ev) => {
+  box.onmouseup = (ev) => {
     if (!down) return;
     const a = down; down = null;
-    const td = ev.target.closest ? ev.target.closest('td[data-eid]') : null;
-    if (moved && td && td.dataset.eid === a.dataset.eid && td !== a) {
-      const d = [a.dataset.day, td.dataset.day].sort();
-      setTriggerValue('pick', {t: 'range', eid: +a.dataset.eid, d0: d[0], d1: d[1], n: Date.now()});
+    const td = ev.target.closest ? ev.target.closest('td[data-ci]') : null;
+    if (!moved) {
+      const it = a.querySelector('[data-log]');
+      if (it) setTriggerValue('pick', {t: 'log', log: +it.dataset.log, day: it.dataset.day, n: Date.now()});
+      else setTriggerValue('pick', {t: 'new', eid: +a.dataset.eid, day: a.dataset.day, n: Date.now()});
       return;
     }
-    clear();
-    if (!moved) setTriggerValue('pick', {t: 'new', eid: +a.dataset.eid, day: a.dataset.day, n: Date.now()});
+    // 한 줄에서 빈칸만 끌었으면 기간(장기) 입력으로 열기
+    if (td && td.parentElement === a.parentElement) {
+      const s = W.__egSel, c0 = Math.min(s.a.c, s.b.c), c1 = Math.max(s.a.c, s.b.c);
+      let empty = true;
+      for (let c = c0; c <= c1; c++) { const x = cellAt(s.a.r, c); if (x && x.querySelector('[data-log]')) empty = false; }
+      if (empty) {
+        const d = [a.dataset.day, td.dataset.day].sort();
+        setTriggerValue('pick', {t: 'range', eid: +a.dataset.eid, d0: d[0], d1: d[1], n: Date.now()});
+      }
+    }
   };
-  box.onmouseup = up;
-  const docUp = () => { if (down) { down = null; clear(); } };
-  document.addEventListener('mouseup', docUp);
-  box.onclick = (ev) => {
-    const it = ev.target.closest('[data-log]');
-    if (it) setTriggerValue('pick', {t: 'log', log: +it.dataset.log, day: it.dataset.day, n: Date.now()});
+  if (!W.__egKeys) {
+    W.__egKeys = true;
+    // 표는 shadow DOM 안에 있어서 문서에서는 composedPath 로 확인
+    document.addEventListener('mousedown', (ev) => {
+      if (!ev.composedPath().some(n => n && n.classList && n.classList.contains('eg-root'))) W.__egActive = false;
+    }, true);
+    document.addEventListener('mouseup', () => { if (W.__egUp) W.__egUp(); });
+    document.addEventListener('keydown', (ev) => {
+      if (!W.__egActive || !W.__egKey) return;
+      const tg = ev.target, tag = (tg && tg.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || (tg && tg.isContentEditable)) return;
+      W.__egKey(ev);
+    });
+  }
+  W.__egUp = () => { down = null; };
+  W.__egKey = (ev) => {
+    const ctl = ev.ctrlKey || ev.metaKey, k = ev.key.toLowerCase();
+    const s = W.__egSel;
+    if (k === 'escape') { W.__egClip = null; paintClip(); return; }
+    if (ctl && k === 'z') { ev.preventDefault(); setTriggerValue('pick', {t: 'undo', n: Date.now()}); return; }
+    if (!s) return;
+    const [r0, r1] = [Math.min(s.a.r, s.b.r), Math.max(s.a.r, s.b.r)], [c0, c1] = [Math.min(s.a.c, s.b.c), Math.max(s.a.c, s.b.c)];
+    if (k === 'delete' || k === 'backspace') {
+      const out = [];
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+        const td = cellAt(r, c), it = td && td.querySelector('[data-log]');
+        if (it) out.push({log: +it.dataset.log, day: it.dataset.day});
+      }
+      if (!out.length) return;
+      ev.preventDefault();
+      setTriggerValue('pick', {t: 'del', items: out, n: Date.now()});
+      return;
+    }
+    if (!ctl) return;
+    if (k === 'c') {
+      const items = [];
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+        const td = cellAt(r, c), it = td && td.querySelector('[data-log]');
+        if (it) items.push({dr: r - r0, dc: c - c0, log: +it.dataset.log, day: it.dataset.day});
+      }
+      if (!items.length) return;
+      ev.preventDefault();
+      W.__egClip = {sig: data.sig, items}; paintClip();
+    } else if (k === 'v') {
+      const clip = W.__egClip; if (!clip) return;
+      ev.preventDefault();
+      const out = [];
+      clip.items.forEach(it => {
+        const td = cellAt(r0 + it.dr, c0 + it.dc);
+        if (td) out.push({log: it.log, src: it.day, eid: +td.dataset.eid, day: td.dataset.day});
+      });
+      if (out.length) setTriggerValue('pick', {t: 'paste', items: out, n: Date.now()});
+    }
   };
-  return () => document.removeEventListener('mouseup', docUp);
 }
 """
 
@@ -377,6 +447,133 @@ def _component():
     return _COMP
 
 
+def _paste(items: list[dict]) -> None:
+    """복사한 칸(실적)을 고른 칸에 하루짜리 실적으로 붙여 넣음. 기간 실적은 그날 몫 시간으로.
+
+    이미 같은 장비·같은 날·같은 업체 실적이 있으면 건너뜀 (두 번 붙여 넣어도 겹치지 않게). Ctrl+Z 로 한 번에 되돌림."""
+    logs = db.load_logs()
+    if logs.empty or not items:
+        return
+    full = logs.copy()
+    full["end_date"] = full["end_date"].fillna(full["start_date"])
+    cfg = db.get_settings()
+    recs, skipped = [], 0
+    for it in items:
+        try:
+            lid, eid = int(it["log"]), int(it["eid"])
+            src_day, day = dt.date.fromisoformat(it["src"]), dt.date.fromisoformat(it["day"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        hit = full[full["id"] == lid]
+        if hit.empty:
+            continue
+        src = hit.iloc[0].to_dict()
+        hours = db.to_num(src.get("hours"), 0) or 0
+        if per.is_period(src):
+            rows = per.series_rows(full, lid)
+            dd = expand_daily(rows, cfg.get("alloc_mode", "spread"))
+            dd = dd[dd["day"] == pd.Timestamp(src_day)]
+            hours = float(dd["hours"].sum()) if not dd.empty else 0
+        if hours <= 0:
+            continue
+        comp = db.to_str(src.get("company"))
+        same = full[(full["equip_id"] == eid) & (full["start_date"] <= pd.Timestamp(day))
+                    & (full["end_date"] >= pd.Timestamp(day)) & (full["company"].map(db.to_str) == comp)]
+        if not same.empty or any(r["equip_id"] == eid and r["start_date"] == day and r["company"] == comp for r in recs):
+            skipped += 1
+            continue
+        rec = {k: src.get(k) for k in db.LOG_FIELDS if k in src}
+        rec.update(equip_id=eid, start_date=day, end_date=day, hours=round(hours, 1), fee=0, series="", fee_log="",
+                   company=comp)
+        if eid != int(src["equip_id"]):  # 다른 장비면 챔버·채널 선택은 가져오지 않음
+            rec.update(chambers="", ch_part="")
+        recs.append(rec)
+    if recs:
+        with db.undo_group(f"붙여넣기 {len(recs)}건"):
+            db.insert_logs(recs)
+        _reset_panel()
+        st.toast(f"{len(recs)}건 붙여 넣었어요" + (f" (이미 있는 {skipped}칸은 건너뜀)" if skipped else ""))
+    elif skipped:
+        st.toast("이미 같은 실적이 있어서 붙여 넣지 않았어요")
+
+
+def _reset_panel() -> None:
+    """실적이 바뀌었으니 오른쪽 입력 카드를 닫고 다시 그림 (지워진 실적을 들고 있지 않게)."""
+    for k in ("cal_pick", "cal_picks", "cal_preset"):
+        st.session_state.pop(k, None)
+    st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
+    st.session_state.entry_ver = st.session_state.get("entry_ver", 0) + 1
+
+
+def _undo(_items=None) -> None:
+    """Ctrl+Z: 마지막 저장·삭제·붙여넣기를 되돌림 (최근 30번까지, 달력과 같은 기록)."""
+    label = db.undo_last()
+    if label:
+        _reset_panel()
+        st.toast(f"되돌렸어요: {label}")
+
+
+def _delete(items: list[dict]) -> None:
+    """고른 칸의 실적을 지움 (엑셀의 Delete). 기간 실적은 고른 날만 빼고 나머지는 남김 (가운데를 빼면 둘로 나뉨)."""
+    logs = db.load_logs()
+    if logs.empty or not items:
+        return
+    full = logs.copy()
+    full["end_date"] = full["end_date"].fillna(full["start_date"])
+    mode = db.get_settings().get("alloc_mode", "spread")
+    # 칸 → 그 날을 가진 실제 행 (묶음 실적은 달마다 한 줄)
+    rm: dict[int, set] = {}
+    for it in items:
+        try:
+            lid, day = int(it["log"]), dt.date.fromisoformat(it["day"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        rows = per.series_rows(full, lid)
+        ts = pd.Timestamp(day)
+        hit = rows[(rows["start_date"] <= ts) & (rows["end_date"] >= ts)]
+        if hit.empty:
+            continue
+        rm.setdefault(int(hit.iloc[0]["id"]), set()).add(day)
+    if not rm:
+        return
+    dels, upd, adds = [], {}, []
+    for rid, days in rm.items():
+        row = full[full["id"] == rid]
+        r = row.iloc[0].to_dict()
+        dd = expand_daily(row, mode)
+        dd = dd[dd["hours"] > 0] if (dd["hours"] > 0).any() else dd
+        all_days = [d.date() for d in dd["day"]]
+        hours = dict(zip(all_days, dd["hours"].astype(float)))
+        fees = dict(zip(all_days, dd["fee"].astype(float)))
+        keep = [d for d in all_days if d not in days]
+        if not keep:
+            dels.append(rid)
+            continue
+        runs, cur = [], [keep[0]]
+        for d in keep[1:]:  # 지운 날이 사이에 있으면 끊김
+            between = [x for x in all_days if cur[-1] < x < d]
+            if any(x in days for x in between):
+                runs.append(cur)
+                cur = [d]
+            else:
+                cur.append(d)
+        runs.append(cur)
+        pieces = [{"start_date": rr[0], "end_date": rr[-1], "hours": round(sum(hours[x] for x in rr), 1),
+                   "fee": round(sum(fees[x] for x in rr))} for rr in runs]
+        base = {k: r.get(k) for k in db.LOG_FIELDS if k in r}
+        upd[rid] = base | pieces[0]
+        adds += [base | p for p in pieces[1:]]
+    with db.undo_group(f"칸 지우기 {len(items)}칸"):
+        if upd:
+            db.update_logs(upd)
+        if adds:
+            db.insert_logs(adds)
+        if dels:
+            db.delete_logs(dels)
+    _reset_panel()
+    st.toast(f"{len(items)}칸 지웠어요 · Ctrl+Z로 되돌리기")
+
+
 def _on_pick() -> None:
     """표에서 누른 것 → 오른쪽 입력 카드 (views.calendar_entry 의 cal_* 상태를 그대로 씀)."""
     st_obj = st.session_state.get("eg_grid")
@@ -385,12 +582,23 @@ def _on_pick() -> None:
         ev = st_obj.get("pick")
     if not ev:
         return
+    if ev.get("t") in ("paste", "del", "undo"):
+        {"paste": _paste, "del": _delete, "undo": _undo}[ev["t"]](ev.get("items") or [])
+        return
     from views import calendar_entry as ce
     ce._clear_sel()
     st.session_state.cal_open = True
     # 입력 카드의 장비 구분·사용목적 기본값도 그 구분으로
-    lane = {"시험(환경)": "시험", "시험(충방전)": ce.CHARGER_GROUP, "제조(오창)": "제조", "제조(문백)": "제조",
+    lane = {"시험(환경)": "시험", "시험(충방전)": ce.CHARGER_GROUP, "제조(오창)": "제조",
             "분석": "분석"}.get(st.session_state.get("eg_last", ""))
+    if st.session_state.get("eg_last") == MB and ev.get("eid") is not None:  # 문백: 누른 장비의 구분으로
+        from core import status
+        eq = db.load_equipment()
+        g = status.device_group(eq, db.load_channels())
+        rt = dict(zip(eq["id"].astype(int), eq["root_id"])) if "root_id" in eq else {}
+        r0 = int(rt.get(int(ev["eid"])) or int(ev["eid"]))
+        lane = {"시험": "시험", status.CHARGER: ce.CHARGER_GROUP, "제조": "제조", "분석": "분석"}.get(
+            g.get(int(ev["eid"])) if g.get(int(ev["eid"])) == status.CHARGER else g.get(r0, g.get(int(ev["eid"]))))
     if lane:
         st.session_state.cal_lane = lane
     else:
@@ -449,6 +657,6 @@ def render_grid(container, eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, mont
                 sel = {"eid": pre["eq"], "day": st.session_state.get("cal_day")}
         nd = len(data["days"])
         devw = 190 if g.startswith("제조") else 230
-        _component()(data={"html": to_html(data, dt.date.today(), sel), "ndays": nd,
-                           "minw": 92 + devw + 58 + nd * 34},
+        _component()(data={"html": to_html(data, dt.date.today(), sel), "ndays": nd, "sig": f"{g}|{month:%Y-%m}|{hide}",
+                           "minw": 92 + devw + nd * 34},
                      key="eg_grid", on_pick_change=_on_pick)
