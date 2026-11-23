@@ -193,14 +193,14 @@ def sidebar(local: bool) -> None:
         # 지금 화면 메뉴 강조 (Streamlit 은 aria-current 를 달지 않아 주소로 고름)
         cur = "" if getattr(pg, "_default", False) else pg.url_path
         on = f'[data-testid="stSidebar"] a[href="{cur}"]'
-        css.append(f'{on} {{background: #1A2234 !important;}} {on} p {{color: #A5B4FC !important; font-weight: 600 !important;}} '
-                   f'{on} [data-testid="stIconMaterial"] {{color: #A5B4FC !important;}}')
-        # 2026-11-10 메뉴 앞 작은 점 (지금 화면은 보라색으로 빛남)
+        css.append(f'{on} {{background: #FDF2EE !important;}} {on} p {{color: #D97757 !important; font-weight: 700 !important;}} '
+                   f'{on} [data-testid="stIconMaterial"] {{color: #D97757 !important;}}')
+        # 2026-11-10 메뉴 앞 작은 점 (지금 화면은 테라코타로 빛남)
         lk = '[data-testid="stSidebar"] [data-testid="stPageLink"] a'
         css.append(f'{lk} span::before {{display:none !important;}} '
-                   f'{lk}::before {{content:""; width:6px; height:6px; border-radius:50%; background:#3B475C; flex:none; '
-                   f'transition:all .2s ease;}} {lk}:hover::before {{background:#94A3B8;}} '
-                   f'{on}::before {{background:#818CF8 !important; box-shadow:0 0 0 3px rgba(129,140,248,.22);}}')
+                   f'{lk}::before {{content:""; width:6px; height:6px; border-radius:50%; background:#D6D2C8; flex:none; '
+                   f'transition:all .2s ease;}} {lk}:hover::before {{background:#A39F96;}} '
+                   f'{on}::before {{background:#D97757 !important; box-shadow:0 0 0 3px rgba(217,119,87,.2);}}')
         st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
         last = db.last_undo()
         if last:

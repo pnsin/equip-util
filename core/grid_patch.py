@@ -103,7 +103,7 @@ RUNTIME_JS = """
       var host = cv.parentElement;
       if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
       var b = document.createElement('div');
-      b.style.cssText = 'position:absolute;pointer-events:none;height:' + RH + 'px;background:rgba(99,102,241,.22);box-shadow:inset 0 0 0 1px rgba(129,140,248,.7);z-index:2;';
+      b.style.cssText = 'position:absolute;pointer-events:none;height:' + RH + 'px;background:rgba(217,119,87,.22);box-shadow:inset 0 0 0 1px rgba(217,119,87,.7);z-index:2;';
       host.appendChild(b);
       sel = {wrap: wrap, bar: b};
     }

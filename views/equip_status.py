@@ -35,26 +35,26 @@ CSS = """<style>
 .tl2-in {position: relative; min-width: calc(var(--nw) + var(--n) * var(--md));}
 .tl2 .cols {position: absolute; top: 0; bottom: 0; left: var(--nw); right: 0; pointer-events: none;}
 .tl2 .cols i {position: absolute; top: 62px; bottom: 0;}
-.tl2 .cols i.wl {top: 6px; width: 0; border-left: 1px solid #475569;}
-.tl2 .cols i.off {background: rgba(2,6,23,.30);}
-.tl2 .cols i.td {background: rgba(99,102,241,.13); box-shadow: inset 1px 0 0 rgba(129,140,248,.5), inset -1px 0 0 rgba(129,140,248,.5);}
+.tl2 .cols i.wl {top: 6px; width: 0; border-left: 1px solid #EAE7DF;}
+.tl2 .cols i.off {background: rgba(120,104,72,.06);}
+.tl2 .cols i.td {background: rgba(217,119,87,.13); box-shadow: inset 1px 0 0 rgba(217,119,87,.5), inset -1px 0 0 rgba(217,119,87,.5);}
 .tl2 .r {display: grid; grid-template-columns: var(--nw) 1fr; position: relative;}
 .tl2 .nm {position: sticky; left: 0; z-index: 2; background: var(--panel); padding: 6px 14px 6px 20px; min-width: 0;
   display: flex; flex-direction: column; justify-content: center; text-align: left;}
 .tl2 .nm b {font-weight: 650; font-size: .86rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.tl2 .nm small {color: #64748B; font-size: .72rem; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.tl2 .nm .sd {display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: #475569;}
-.tl2 .nm .sd.d-now {background: #34D399; box-shadow: 0 0 0 3px rgba(52,211,153,.18);}
-.tl2 .nm .sd.d-soon {background: #FBBF24;}
-.tl2 .hd {height: 62px; border-bottom: 1px solid #334155;}
+.tl2 .nm small {color: #A39F96; font-size: .72rem; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.tl2 .nm .sd {display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: #E8E6DF;}
+.tl2 .nm .sd.d-now {background: #4A6B5D; box-shadow: 0 0 0 3px rgba(74,107,93,.18);}
+.tl2 .nm .sd.d-soon {background: #D4A359;}
+.tl2 .hd {height: 62px; border-bottom: 1px solid #EAE7DF;}
 .tl2 .hd .dy small {display: block; font-size: .62rem; line-height: 1.15; font-weight: inherit; opacity: .85;}
 .tl2 .hd .ln {position: relative;}
-.tl2 .hd .wk {position: absolute; top: 9px; font-size: .74rem; color: #94A3B8; font-weight: 650; white-space: nowrap; display: flex; justify-content: center;}
+.tl2 .hd .wk {position: absolute; top: 9px; font-size: .74rem; color: #6B6860; font-weight: 650; white-space: nowrap; display: flex; justify-content: center;}
 .tl2 .hd .wk.r {justify-content: flex-end; padding-right: 4px;}
-.tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #64748B; text-align: center;}
-.tl2 .hd .dy.off {color: #F87171; font-weight: 650;}
-.tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; padding: 1px 0; background: #6366F1; color: #fff; font-weight: 700;}
-.tl2 .grpw {position: relative; margin-top: 18px; border-top: 2px solid var(--gc); background: color-mix(in srgb, var(--gc) 12%, transparent);}
+.tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #A39F96; text-align: center;}
+.tl2 .hd .dy.off {color: #C84B31; font-weight: 650;}
+.tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; padding: 1px 0; background: #D97757; color: #fff; font-weight: 700;}
+.tl2 .grpw {position: relative; margin-top: 18px; border-top: 2px solid var(--gc); background: color-mix(in srgb, var(--gc) 5%, transparent);}
 .tl2 .grpw.first {margin-top: 0;}
 .tl2 .grpw .grp {padding: 9px 20px;}
 .tl2 .grp {display: flex; align-items: center; gap: 10px; padding: 16px 20px 8px; font-size: .84rem; font-weight: 700;
@@ -62,51 +62,51 @@ CSS = """<style>
 .tl2 .grp i {width: 8px; height: 8px; border-radius: 50%;}
 .tl2 .grpw .grp {font-size: .92rem;}
 .tl2 .grpw .grp i {width: 10px; height: 10px;}
-.tl2 .grp span {color: #94A3B8; font-weight: 500; font-size: .75rem;}
+.tl2 .grp span {color: #6B6860; font-weight: 500; font-size: .75rem;}
 .tl2 .grp span em {font-style: normal; color: var(--ink); font-weight: 650;}
-.tl2 .dv {border-top: 1px solid #2A364B;}
-.tl2 .dv.kid {border-top: 1px dashed #2A364B;}
+.tl2 .dv {border-top: 1px solid #EAE7DF;}
+.tl2 .dv.kid {border-top: 1px dashed #EAE7DF;}
 .tl2 .dv.kid .nm {padding-left: calc(38px + var(--dp, 0) * 14px);}
-.tl2 .dv.kid .nm b {font-weight: 500; color: #CBD5E1; font-size: .8rem;}
+.tl2 .dv.kid .nm b {font-weight: 500; color: #4A4741; font-size: .8rem;}
 .tl2 .ln {position: relative; overflow: hidden; min-height: 38px;}
 .tl2 .bar {position: absolute; height: 24px; border-radius: 7px; display: flex; align-items: center; padding: 0 9px;
-  font-size: .75rem; font-weight: 650; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  background: var(--c); color: #0B1220; box-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent); box-sizing: border-box;}
-.tl2 .bar.bdone {background: color-mix(in srgb, var(--c) 30%, #1E293B); box-shadow: none; color: #CBD5E1; font-weight: 550;}
+  font-size: .75rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: var(--cb); color: var(--c); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent); box-sizing: border-box;}
+.tl2 .bar.bdone {background: #F2EFE9; box-shadow: none; color: #A39F96; font-weight: 550;}
 .tl2 .bar.cl {border-top-left-radius: 0; border-bottom-left-radius: 0;}
 .tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
 .tl2 .bar span {position: relative; z-index: 1;}
 .tl2 .bar small.pd {font-weight: 600; opacity: .72; margin-left: 6px; font-size: .7rem;}
 .tl2 .out {position: absolute; height: 24px; display: block; line-height: 24px; overflow: hidden; text-overflow: ellipsis; font-size: .75rem; font-weight: 650;
-  color: #E2E8F0; white-space: nowrap;}
-.tl2 .out small {font-weight: 500; color: #94A3B8; font-size: .7rem;}
+  color: #191918; white-space: nowrap;}
+.tl2 .out small {font-weight: 500; color: #6B6860; font-size: .7rem;}
 .tl2 .out.bdone {opacity: .5;}
 .tl2 .chx {display: none;} .tl2.all .chx {display: grid;}
-.tl2 .chx .nm b {font-size: .74rem; color: #94A3B8; font-weight: 600; padding-left: 22px;}
+.tl2 .chx .nm b {font-size: .74rem; color: #6B6860; font-weight: 600; padding-left: 22px;}
 .tl2 .chx .ln {min-height: 26px;}
 .tl2 .chx .nm {padding-top: 2px; padding-bottom: 2px;}
 .tl2 .chx .bar {height: 20px; font-size: .7rem;} .tl2 .chx .out {height: 20px;}
 .tl2 .dv.cb .nm small {padding-left: 0;}
-.tl2 .free {position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: .72rem; color: #475569;}
+.tl2 .free {position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: .72rem; color: #A39F96;}
 .tl2 label.es-ck {display: flex; align-items: center; gap: 7px; cursor: pointer; min-width: 0;}
 .tl2 label.es-ck input {display: none;}
-.tl2 label.es-ck i {font-style: normal; flex: none; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #818CF8;
-  color: #A5B4FC; font-size: 12px; line-height: 12px; text-align: center; font-weight: 700;}
-.tl2 label.es-ck:has(input:checked) i {background: #6366F1; color: #fff; border-color: #6366F1;}
-.es-idle .chip small {color: #64748B; font-size: .7rem; margin-left: 2px;}
+.tl2 label.es-ck i {font-style: normal; flex: none; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #D97757;
+  color: #C26344; font-size: 12px; line-height: 12px; text-align: center; font-weight: 700;}
+.tl2 label.es-ck:has(input:checked) i {background: #D97757; color: #fff; border-color: #D97757;}
+.es-idle .chip small {color: #A39F96; font-size: .7rem; margin-left: 2px;}
 .es-idle {background: var(--panel); border-radius: 18px; padding: 14px 20px; margin-top: 12px;}
 .es-idle summary {list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 700;
   color: var(--ink);}
 .es-idle summary::-webkit-details-marker {display: none;}
-.es-idle summary span {color: #94A3B8; font-weight: 500; font-size: .76rem;}
-.es-idle summary em {margin-left: auto; font-style: normal; font-size: .76rem; color: #A5B4FC; font-weight: 600;}
+.es-idle summary span {color: #6B6860; font-weight: 500; font-size: .76rem;}
+.es-idle summary em {margin-left: auto; font-style: normal; font-size: .76rem; color: #C26344; font-weight: 600;}
 .es-idle summary em:before {content: "펼치기 ▾";} .es-idle[open] summary em:before {content: "접기 ▴";}
 .es-idle .ig {display: grid; grid-template-columns: 110px 1fr; gap: 10px 12px; margin-top: 12px; text-align: left;}
-.es-idle .k {font-size: .76rem; color: #94A3B8; display: flex; gap: 6px; align-items: center; height: 26px;}
+.es-idle .k {font-size: .76rem; color: #6B6860; display: flex; gap: 6px; align-items: center; height: 26px;}
 .es-idle .k i {width: 7px; height: 7px; border-radius: 50%;}
 .es-idle .chips {display: flex; flex-wrap: wrap; gap: 6px;}
-.es-idle .chip {font-size: .76rem; color: #CBD5E1; background: #243049; border-radius: 999px; padding: 4px 11px;}
-.es-leg {display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; font-size: .74rem; color: #94A3B8; margin-top: 12px;}
+.es-idle .chip {font-size: .76rem; color: #4A4741; background: #F2EFE9; border-radius: 999px; padding: 4px 11px;}
+.es-leg {display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; font-size: .74rem; color: #6B6860; margin-top: 12px;}
 .es-leg span {display: flex; align-items: center; gap: 6px;}
 .es-leg i {width: 16px; height: 10px; border-radius: 3px; display: inline-block;}
 @media (max-width: 640px) {
@@ -139,7 +139,7 @@ CSS = """<style>
 }
 </style>"""
 
-INNER = "#94A3B8"  # 내부 사용 막대 색
+INNER = ("#EAE8E3", "#3F3D38")  # 내부 사용 막대 색 (배경, 글자)
 
 
 def window(today: dt.date) -> tuple[dt.date, dt.date, int]:
@@ -199,7 +199,7 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
     left, width = (a - w0).days / span * 100, n / span * 100
     stt = _state(b, today)
     comp = b["company"]
-    color = INNER if comp == "내부" else CATS.get(b["cat"], CATS["지원"])[1]
+    cbg, color = INNER if comp == "내부" else CATS.get(b["cat"], CATS["지원"])
     cls = "bar " + {"now": "", "soon": "", "done": "bdone"}[stt] + (" cl" if b["start"] < w0 else "") + (" cr" if b["end"] > w1 else "")
     tip = f"{comp} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b.get("staff") else "")
     if b.get("merged", 1) > 1:
@@ -223,7 +223,7 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
         mx = max(room, 0) / span * 100
         out_html = (f"<div class='out b{stt}' title='{html.escape(tip)}' "
                     f"style='left:calc({left + width:.3f}% + 5px);max-width:calc({mx:.3f}% - 8px);{top}'>{txt}</div>")
-    return (f"<div class='{cls}' title='{html.escape(tip)}' style='--c:{color};left:{left:.3f}%;width:{width:.3f}%;{top}'>"
+    return (f"<div class='{cls}' title='{html.escape(tip)}' style='--c:{color};--cb:{cbg};left:{left:.3f}%;width:{width:.3f}%;{top}'>"
             f"{inner}</div>{out_html}")
 
 
@@ -304,7 +304,7 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
     bk = status.bars(logs, w0, w1)
     rws = status.rows(eq, groups, bk, w0, w1, want, center)
     if not rws:
-        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#94A3B8'>이 구분·센터에 장비가 없어요.</div>",
+        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#6B6860'>이 구분·센터에 장비가 없어요.</div>",
                     unsafe_allow_html=True)
         return
     by_eq: dict[int, list[dict]] = {}
@@ -376,10 +376,10 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
 
 
 def _legend(cats: tuple = ("시험", "제조", "분석", "교육", "지원")) -> None:
-    leg = "".join(f"<span><i style='background:{CATS[k][1]}'></i>{k}</span>" for k in cats)
-    leg += (f"<span><i style='background:{INNER}'></i>내부</span>"
-            "<span style='margin-left:10px'><i style='background:color-mix(in srgb,#FF8DA1 30%,#1E293B)'></i>끝남 (흐린 색)</span>"
-            "<span><b style='color:#F87171;font-weight:650'>빨간 날짜</b> = 주말·공휴일 (가동률 제외)</span>")
+    leg = "".join(f"<span><i style='background:{CATS[k][0]};box-shadow:inset 0 0 0 1.5px {CATS[k][1]}'></i>{k}</span>" for k in cats)
+    leg += (f"<span><i style='background:{INNER[0]};box-shadow:inset 0 0 0 1.5px {INNER[1]}'></i>내부</span>"
+            "<span style='margin-left:10px'><i style='background:#F2EFE9'></i>끝남 (흐린 색)</span>"
+            "<span><b style='color:#C84B31;font-weight:650'>빨간 날짜</b> = 주말·공휴일 (가동률 제외)</span>")
     st.markdown(f"<div class='es-leg'>{leg}</div>", unsafe_allow_html=True)
 
 
@@ -399,7 +399,7 @@ def _charger_board(center: str, all_open: bool, today: dt.date) -> None:
     if center != "전체":
         stt = stt[stt["center"] == center]
     if stt.empty:
-        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#94A3B8'>이 센터에 충방전기가 없어요.</div>",
+        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#6B6860'>이 센터에 충방전기가 없어요.</div>",
                     unsafe_allow_html=True)
         return
     hol, day_px, cols, hd = _frame(w0, w1, md, today)
