@@ -18,7 +18,6 @@ from ui_style import page_header
 from views import charger_board
 from views.calendar_entry import CATS
 
-SHORT_LABEL = {"시험": "환경", CHARGER: "충방전"}  # 위쪽 버튼에 쓰는 짧은 이름 (휴대폰에서도 한 줄)
 DAY_PX = 8  # 하루 너비 (이번 달 + 2개월 ≈ 730px)
 
 CSS = """<style>
@@ -61,7 +60,8 @@ CSS = """<style>
     line-height: 1.25; font-size: .7rem; box-shadow: inset -1px 0 0 #64748B;}
   .es-t .eb, .es-t .ec {display: none;}  /* 휴대폰: 업체·기간 칸은 빼고 막대가 바로 보이게 (업체 이름은 막대 안에) */
   .es-t .ea {width: 132px; min-width: 132px; max-width: 132px;}
-  .st-key-es_top {flex-wrap: nowrap !important; gap: 6px !important;}
+  .st-key-es_top {flex-wrap: wrap !important; gap: 6px !important;}
+  .st-key-es_top > div:has(.st-key-es_cat), .st-key-es_cat {flex: 1 0 100% !important; width: 100% !important;}
   .st-key-es_cat [data-testid="stButtonGroup"] {gap: 3px !important;}
   .st-key-es_cat [data-testid="stButtonGroup"] > div {flex-wrap: nowrap !important;}
   .st-key-es_cat [data-testid="stButtonGroup"] button {padding: 0 9px !important; min-height: 34px;}
@@ -236,11 +236,12 @@ def render() -> None:
     cens = set(db.equip_centers(eq).values())
     order = [c for c in db.CENTER_SHORT.values() if c in cens]
 
-    # 2026-11-21 사용자: 버튼 두 줄이 복잡 → 한 줄 (구분은 짧은 이름, 센터는 작은 선택 칸, 엑셀은 아이콘)
+    # 2026-11-21 사용자: 버튼 두 줄이 복잡 → 한 줄 (센터는 작은 선택 칸, 엑셀은 아이콘)
+    # 2026-11-23 사용자: 구분 버튼은 시험(환경) / 시험(충방전) / 제조 / 분석 그대로
     with st.container(key="es_top", horizontal=True, gap="small", vertical_alignment="center"):
         want = st.segmented_control("구분", ["전체"] + GROUPS, key="es_cat",
                                     default=None if "es_cat" in st.session_state else "전체",
-                                    format_func=lambda g: SHORT_LABEL.get(g, g), label_visibility="collapsed") or "전체"
+                                    format_func=lambda g: GROUP_LABEL.get(g, g), label_visibility="collapsed") or "전체"
         st.space("stretch")
         center = st.selectbox("센터", ["전체"] + order, key="cb_center", format_func=db.center_short,
                               label_visibility="collapsed", width=110) or "전체"
