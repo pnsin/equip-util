@@ -199,21 +199,30 @@ def render_report() -> None:
 # ── 실적 내려받기 (i-Tube 업로드 양식 equip_log_template) ──────────────
 
 LABELS = ["시험", "제조", "분석", "교육", "지원"]
-FIELDS = ["제조", "시험", "분석", "기타"]
+# 2026-11-23 사용자: 분야를 센터까지 나눔 (MV센터는 오창)
+FIELDS = ["시험(환경)", "시험(충방전-오창)", "시험(충방전-문백)", "제조(오창)", "제조(문백)", "분석", "기타"]
 
 
 def equip_fields(eq: pd.DataFrame) -> dict[int, str]:
-    """장비 ID → 분야(제조·시험·분석, 없으면 '기타'). 세부장비는 장비용도가 비어 있으면 위 장비 것을 씀."""
-    use = {int(i): str(u).strip() for i, u in zip(eq["id"], eq["use"])}
-    par = {int(i): (int(p) if pd.notna(p) else None) for i, p in zip(eq["id"], eq["parent_id"])}
+    """장비 ID → 분야. 구분(시험·충방전·제조·분석)은 장비 가동 현황과 같은 규칙, 충방전·제조는 센터로 한 번 더 나눔.
+
+    세부장비는 맨 위 장비의 구분을 따름 (예: 충방전기 시스템 아래 에이징 챔버 → 충방전, 분석기 아래 항온항습기 → 분석)."""
+    from core import status
+    grp = status.device_group(eq, db.load_channels())
+    cen = db.equip_centers(eq)
+    root = {int(i): int(r) for i, r in zip(eq["id"], eq["root_id"]) if pd.notna(r) and int(r)} if "root_id" in eq else {}
     out = {}
-    for i in use:
-        cur, seen = i, set()
-        while cur is not None and not use.get(cur) and cur not in seen:
-            seen.add(cur)
-            cur = par.get(cur)
-        u = use.get(cur, "") if cur is not None else ""
-        out[i] = next((f for f in FIELDS[:3] if f in u), "기타")
+    for i in eq["id"].astype(int):
+        g = grp.get(root.get(i, i), grp.get(i, "기타"))
+        where = "문백" if db.center_short(cen.get(i, "")) == "문백" else "오창"  # 제조검증·MV = 오창
+        if g == status.CHARGER:
+            out[i] = f"시험(충방전-{where})"
+        elif g == "제조":
+            out[i] = f"제조({where})"
+        elif g == "시험":
+            out[i] = "시험(환경)"
+        else:
+            out[i] = g if g in FIELDS else "기타"
     return out
 
 
