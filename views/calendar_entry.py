@@ -1846,7 +1846,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
         # 그날 걸쳐 있는 장기(기간) 실적은 한 줄로 접어 둠 (2026-11-20 사용자: 입력이 주가 되게)
         if not period.empty:
             # 2026-11-24 사용자: 기본값은 늘 접힘 (다른 날을 고르면 다시 접힘)
-            with st.expander(f"진행 중인 장기 실적 {len(period)}건", expanded=False, key=f"ep_long_{day}"):
+            with st.expander(f"진행 중인 장기 실적 {len(period)}건", expanded=False, key=f"ep_long_{day:%Y%m%d}"):
                 with st.container(key="ep_list_long", gap="small"):
                     for r in period.sort_values(["end_date", "id"]).to_dict("records"):
                         rid = int(r["id"])
