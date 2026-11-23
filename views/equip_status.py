@@ -54,9 +54,14 @@ CSS = """<style>
 .tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #64748B; text-align: center;}
 .tl2 .hd .dy.off {color: #F87171; font-weight: 650;}
 .tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; padding: 1px 0; background: #6366F1; color: #fff; font-weight: 700;}
+.tl2 .grpw {position: relative; margin-top: 18px; border-top: 2px solid var(--gc); background: color-mix(in srgb, var(--gc) 12%, transparent);}
+.tl2 .grpw.first {margin-top: 0;}
+.tl2 .grpw .grp {padding: 9px 20px;}
 .tl2 .grp {display: flex; align-items: center; gap: 10px; padding: 16px 20px 8px; font-size: .84rem; font-weight: 700;
   color: var(--ink); position: sticky; left: 0; width: max-content;}
 .tl2 .grp i {width: 8px; height: 8px; border-radius: 50%;}
+.tl2 .grpw .grp {font-size: .92rem;}
+.tl2 .grpw .grp i {width: 10px; height: 10px;}
 .tl2 .grp span {color: #94A3B8; font-weight: 500; font-size: .75rem;}
 .tl2 .grp span em {font-style: normal; color: var(--ink); font-weight: 650;}
 .tl2 .dv {border-top: 1px solid #2A364B;}
@@ -67,7 +72,7 @@ CSS = """<style>
 .tl2 .bar {position: absolute; height: 24px; border-radius: 7px; display: flex; align-items: center; padding: 0 9px;
   font-size: .75rem; font-weight: 650; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: var(--c); color: #0B1220; box-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent); box-sizing: border-box;}
-.tl2 .bar.bdone {background: #334155; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--c) 55%, #334155); color: #94A3B8; font-weight: 550;}
+.tl2 .bar.bdone {background: color-mix(in srgb, var(--c) 30%, #1E293B); box-shadow: none; color: #CBD5E1; font-weight: 550;}
 .tl2 .bar.cl {border-top-left-radius: 0; border-bottom-left-radius: 0;}
 .tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
 .tl2 .bar span {position: relative; z-index: 1;}
@@ -335,8 +340,8 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
             continue
         n_now = sum(1 for rt in roots if dot(fam_bars[rt]) == "now")
         n_soon = sum(1 for rt in roots if dot(fam_bars[rt]) == "soon")
-        out.append(f"<div class='grp'><i style='background:{CATS[sec][1]}'></i>{GROUP_LABEL[sec]}"
-                   f"<span>오늘 <em>{n_now}</em> · 예정 <em>{n_soon}</em> · 전체 {len(roots)}대</span></div>")
+        out.append(f"<div class='grpw{'' if out else ' first'}' style='--gc:{CATS[sec][1]}'><div class='grp'><i style='background:{CATS[sec][1]}'></i>{GROUP_LABEL[sec]}"
+                   f"<span>오늘 <em>{n_now}</em> · 예정 <em>{n_soon}</em> · 전체 {len(roots)}대</span></div></div>")
         for rt in busy:
             xs = fam[rt]
             head = xs[0]
@@ -373,7 +378,7 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
 def _legend(cats: tuple = ("시험", "제조", "분석", "교육", "지원")) -> None:
     leg = "".join(f"<span><i style='background:{CATS[k][1]}'></i>{k}</span>" for k in cats)
     leg += (f"<span><i style='background:{INNER}'></i>내부</span>"
-            "<span style='margin-left:10px'><i style='background:#334155;box-shadow:inset 3px 0 0 #64748B'></i>끝남 (회색)</span>"
+            "<span style='margin-left:10px'><i style='background:color-mix(in srgb,#FF8DA1 30%,#1E293B)'></i>끝남 (흐린 색)</span>"
             "<span><b style='color:#F87171;font-weight:650'>빨간 날짜</b> = 주말·공휴일 (가동률 제외)</span>")
     st.markdown(f"<div class='es-leg'>{leg}</div>", unsafe_allow_html=True)
 
@@ -423,8 +428,8 @@ def _charger_board(center: str, all_open: bool, today: dt.date) -> None:
         total = int(sum(int(r["ch_count"] or 0) for r in rs))
         used = int(sum(int(r["used"] or 0) for r in rs))
         pct = f" · {used / total:.0%}" if total else ""
-        out.append(f"<div class='grp'><i style='background:{CATS[CHARGER][1]}'></i>{html.escape(db.center_short(cen))}"
-                   f"<span>오늘 사용 <em>{used}</em> / {total} ch{pct}</span></div>")
+        out.append(f"<div class='grpw{'' if out else ' first'}' style='--gc:{CATS[CHARGER][1]}'><div class='grp'><i style='background:{CATS[CHARGER][1]}'></i>{html.escape(db.center_short(cen))}"
+                   f"<span>오늘 사용 <em>{used}</em> / {total} ch{pct}</span></div></div>")
         for u in busy:
             urs = [r for r in rs if r["unit"] == u]
             spec = charger_board._spec(urs[0].get("unit_sheet", "")) or charger_board._spec(u) or f"{sum(int(r['ch_count'] or 0) for r in urs)}ch"
