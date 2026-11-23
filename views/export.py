@@ -68,20 +68,6 @@ def _history(logs: pd.DataFrame) -> list[dict]:
     return logs[cols].to_dict("records") if not logs.empty else []
 
 
-def _over_weekday_hours(sel: pd.DataFrame) -> pd.DataFrame:
-    """사용시간이 기간 안 평일 수 × 24h 를 넘는 실적 (휴무일자포함 N 으로 올릴 때 걸릴 수 있음)."""
-    if sel.empty:
-        return sel
-    off = calc.kr_holidays({d.year for d in sel["start_date"].dropna()} | {d.year for d in sel["end_date"].dropna()})
-
-    def cap(s, e) -> float:
-        if pd.isna(s):
-            return float("inf")
-        days = pd.date_range(s, e if pd.notna(e) else s)
-        return 24.0 * sum(1 for d in days if d.weekday() < 5 and d.date() not in off)
-    return sel[[float(db.to_num(h, 0) or 0) > cap(s, e) for h, s, e in zip(sel["hours"], sel["start_date"], sel["end_date"])]]
-
-
 def fill_from_companies(sel: pd.DataFrame, comp: pd.DataFrame) -> pd.DataFrame:
     """실적에 비어 있는 사업자등록번호·업종·품목을 업체 목록(같은 이름)에서 채움.
 
@@ -216,39 +202,26 @@ def render_report() -> None:
 LABELS = ["시험", "제조", "분석", "교육", "지원"]
 # 2026-11-23 사용자: 분야를 담당자(센터)별로 나눔. 충방전기만 센터 셋으로, 제조는 오창(제조검증·MV)·문백.
 # 항목이 많아 버튼 대신 목록에서 여러 개 고름.
-# 2026-11-23 사용자: 이름이 눈에 잘 들어오게 "무엇 · 지역.센터명" (정확한 센터 이름으로).
-_OC, _MV, _MB = "오창.배터리제조검증지원센터", "오창.MV배터리안전성평가센터", "문백.배터리연구지원센터"
-ENV_OC, ENV_MB = "환경시험 · 오창.배터리제조검증지원센터·MV배터리안전성평가센터", f"환경시험 · {_MB}"  # 문백 = 실환경모사·안전시험 챔버
-CH_MV, CH_OC, CH_MB = f"충방전 · {_MV}", f"충방전 · {_OC}", f"충방전 · {_MB}"
-MF_OC, MF_MB, AN_OC = f"제조 · {_OC}", f"제조 · {_MB}", f"분석 · {_OC}"
-# 내려받는 파일 이름에 붙일 짧은 이름
-FIELD_TAG = {ENV_OC: "환경시험-오창", ENV_MB: "환경시험-문백", CH_MV: "충방전-MV", CH_OC: "충방전-제조검증",
-             CH_MB: "충방전-문백", MF_OC: "제조-오창", MF_MB: "제조-문백", AN_OC: "분석-오창"}
-FIELDS = [ENV_OC, ENV_MB, CH_MV, CH_OC, CH_MB, MF_OC, MF_MB, AN_OC, "기타"]
+# 2026-11-23 사용자: 이름이 눈에 잘 들어오게 "무엇 · 어디" 순서로, 어디는 정확한 센터명 "지역.센터명"으로.
+_PLACE = {db.CENTERS[0]: "오창." + db.CENTERS[0], db.CENTERS[1]: "오창." + db.CENTERS[1], db.CENTERS[2]: "문백." + db.CENTERS[2]}
+_KINDS = [("환경시험", "시험"), ("충방전", "충방전"), ("제조", "제조"), ("분석", "분석")]
+FIELDS = [f"{k} · {_PLACE[c]}" for k, _ in _KINDS for c in db.CENTERS] + ["기타"]
 
 
 def equip_fields(eq: pd.DataFrame) -> dict[int, str]:
-    """장비 ID → 분야. 구분(시험·충방전·제조·분석)은 장비 가동 현황과 같은 규칙, 충방전·제조는 센터로 한 번 더 나눔.
+    """장비 ID → 분야 '무엇 · 지역.센터명'. 구분(시험·충방전·제조·분석)은 장비 가동 현황과 같은 규칙.
 
     세부장비는 맨 위 장비의 구분을 따름 (예: 충방전기 시스템 아래 에이징 챔버 → 충방전, 분석기 아래 항온항습기 → 분석)."""
     from core import status
     grp = status.device_group(eq, db.load_channels())
     cen = db.equip_centers(eq)
     root = {int(i): int(r) for i, r in zip(eq["id"], eq["root_id"]) if pd.notna(r) and int(r)} if "root_id" in eq else {}
+    kind = {"시험": "환경시험", status.CHARGER: "충방전", "제조": "제조", "분석": "분석"}
     out = {}
     for i in eq["id"].astype(int):
         g = grp.get(root.get(i, i), grp.get(i, "기타"))
-        c = db.center_short(cen.get(i, ""))
-        if g == status.CHARGER:
-            out[i] = CH_MB if c == "문백" else CH_MV if c == "MV" else CH_OC
-        elif g == "제조":
-            out[i] = MF_MB if c == "문백" else MF_OC  # 제조검증·MV = 오창
-        elif g == "시험":
-            out[i] = ENV_MB if c == "문백" else ENV_OC
-        elif g == "분석":
-            out[i] = AN_OC
-        else:
-            out[i] = g if g in FIELDS else "기타"
+        c = cen.get(i, "") or cen.get(root.get(i, i), "")
+        out[i] = f"{kind[g]} · {_PLACE[c]}" if g in kind and c in _PLACE else "기타"
     return out
 
 
@@ -309,7 +282,8 @@ def _download_body(key: str) -> None:
     field_of = equip_fields(eq)
     all_sel, _ = itube_selection(logs, s, e, start_only=True)
     cnt = all_sel["equip_id"].map(lambda v: field_of.get(int(v), "기타")).value_counts() if not all_sel.empty else {}
-    opts = ["전체"] + [f for f in FIELDS if f in cnt or f != "기타"]
+    used = set(field_of.values())  # 장비가 하나도 없는 조합(예: 분석 · MV센터)은 목록에 안 보임
+    opts = ["전체"] + [f for f in FIELDS if f in cnt or (f != "기타" and f in used)]
     total = len(all_sel)
     from views import common as _cm
     with _cm.LAST_ROW:  # 기간 단위·연도·월과 같은 줄 (2026-11-10)
@@ -336,10 +310,6 @@ def _download_body(key: str) -> None:
         st.caption(f"ITUBE번호가 없는 장비 실적 {len(no_code)}건은 장비번호 '-'로 들어가요: {names}")
     if len(sel) > 1000:
         st.warning("i-Tube는 한 번에 1000건까지 올릴 수 있어요. 기간을 나눠 주세요.", icon=":material/info:")
-    over = _over_weekday_hours(sel)
-    if not over.empty:  # 휴무일자포함을 모두 N으로 내보내서 (2026-11-23)
-        st.caption(f"주말·공휴일까지 쓴 실적 {len(over)}건은 사용시간이 평일 시간(평일 수 × 24h)보다 많아 "
-                   f"i-Tube에서 걸릴 수 있어요: " + ", ".join(sorted(set(over["equip_name"]))))
     if sel.empty:
         return
     args = (sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], itube_template(cfg),
@@ -347,7 +317,7 @@ def _download_body(key: str) -> None:
     data = lambda args=args: itube.make_itube_file(*args)  # noqa: E731 - 누를 때만 만듦
     fname = _itube_filename(cfg, s, e)
     if picked:
-        tag = "_".join(FIELD_TAG.get(f, f) for f in picked)
+        tag = "_".join(f.replace(" · ", "-") for f in picked)
         fname = fname.replace(".xlsx", f"_{tag}.xlsx")
     st.download_button("엑셀로 내려받기", data=data, file_name=fname, mime=XLSX,
                        type="primary", width="stretch", icon=":material/download:", key=f"{key}_btn")
