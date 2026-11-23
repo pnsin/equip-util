@@ -54,6 +54,9 @@ RUNTIME_JS = """
     if (v === undefined){
       v = !!(c && c.closest && c.closest('[data-testid="stDataFrame"],[data-testid="stDataFrameGlideDataEditor"]'));
       if (v) memo.set(c, v);
+      // 2026-11-23 휴대폰 등에서는 표를 숨긴 그림판(문서 맨 바깥에 붙은 display:none canvas)에 먼저 그린 뒤 옮김 → 그것도 표로 봄
+      else if (c && c.parentElement === document.documentElement && c.style.display === 'none'
+               && document.querySelector('[data-testid="stDataFrame"],[data-testid="stDataFrameGlideDataEditor"]')){ v = true; memo.set(c, v); }
     }
     return v;
   }
@@ -115,6 +118,19 @@ RUNTIME_JS = """
       ft.call(this, t, r[0] + r[2] / 2, y);
       this.textAlign = 'start';
       return;
+    }
+    // 2026-11-23 칸보다 긴 글자: 가운데 정렬이면 앞뒤가 같이 잘려서 앞글자가 안 보였음
+    // → 칸 왼쪽부터 그리고, 넘치는 끝만 '…'로 줄임 (전체 글자는 칸을 누르면 그대로 보임)
+    if (r && x >= r[0] - 1 && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3] && r[2] > 30 && inGrid(this.canvas)){
+      var room = r[2] - 10;
+      if (this.measureText(t).width > room){
+        var s = String(t), lo = 0, hi = s.length;
+        while (lo < hi){ var mid = (lo + hi + 1) >> 1; if (this.measureText(s.slice(0, mid) + '…').width <= room) lo = mid; else hi = mid - 1; }
+        var a = this.textAlign; this.textAlign = 'left';
+        ft.call(this, s.slice(0, lo).replace(/\\s+$/, '') + '…', r[0] + 5, y);
+        this.textAlign = a;
+        return;
+      }
     }
     return ft.apply(this, arguments);
   };
