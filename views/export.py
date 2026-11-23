@@ -48,16 +48,17 @@ def itube_selection(logs: pd.DataFrame, s: dt.date, e: dt.date, *, start_only: b
     has = sel["itube_code"] != ""
     sel.loc[has, "equip_name"] = sel.loc[has, "itube_name"]
     sel.loc[has, "equip_code"] = sel.loc[has, "itube_code"]
-    sel.loc[has, "equip_kind"] = sel.loc[has, "itube_kind"]
     if (~has).any():
         # 2026-11-23: i-Tube에 등록이 안 되는 시설(드라이룸 등)도 기록용으로 넣음.
-        # 장비명 = 그 장비 이름 그대로, 장비번호 '-', 장비구분 = 최상위 장비 구분(주장비/부장비)
+        # 장비명 = 맨 위 장비 이름 (사용자: 세부장비 이름 말고 상위 이름), 장비번호 '-'
         eq = db.load_equipment()
         root = dict(zip(eq["id"], eq["root_id"])) if "root_id" in eq else {}
-        kind = dict(zip(eq["id"], eq["kind"]))
+        name = dict(zip(eq["id"], eq["name"]))
         top = sel.loc[~has, "equip_id"].map(lambda v: root.get(int(v), int(v)) if pd.notna(v) else v)
-        sel.loc[~has, "equip_kind"] = [kind.get(t) if kind.get(t) in ("주장비", "부장비") else "주장비" for t in top]
+        sel.loc[~has, "equip_name"] = [name.get(t) or n for t, n in zip(top, sel.loc[~has, "equip_name"])]
         sel.loc[~has, "equip_code"] = NO_CODE
+    # 2026-11-23 사용자: 가동률 시트에는 모두 '주장비' (부장비로 등록된 장비도)
+    sel["equip_kind"] = "주장비"
     return fill_from_companies(sel, db.load_companies()), no_code
 
 
@@ -65,6 +66,20 @@ def _history(logs: pd.DataFrame) -> list[dict]:
     """빈 지원개요·제품명을 채울 때 참고할 전체 실적 (업체·i-Tube 장비·내용만)."""
     cols = [c for c in ("id", "start_date", "itube_code", "company", "dept", "detail", "product") if c in logs]
     return logs[cols].to_dict("records") if not logs.empty else []
+
+
+def _over_weekday_hours(sel: pd.DataFrame) -> pd.DataFrame:
+    """사용시간이 기간 안 평일 수 × 24h 를 넘는 실적 (휴무일자포함 N 으로 올릴 때 걸릴 수 있음)."""
+    if sel.empty:
+        return sel
+    off = calc.kr_holidays({d.year for d in sel["start_date"].dropna()} | {d.year for d in sel["end_date"].dropna()})
+
+    def cap(s, e) -> float:
+        if pd.isna(s):
+            return float("inf")
+        days = pd.date_range(s, e if pd.notna(e) else s)
+        return 24.0 * sum(1 for d in days if d.weekday() < 5 and d.date() not in off)
+    return sel[[float(db.to_num(h, 0) or 0) > cap(s, e) for h, s, e in zip(sel["hours"], sel["start_date"], sel["end_date"])]]
 
 
 def fill_from_companies(sel: pd.DataFrame, comp: pd.DataFrame) -> pd.DataFrame:
@@ -279,6 +294,10 @@ def _download_body(key: str) -> None:
         st.caption(f"ITUBE번호가 없는 장비 실적 {len(no_code)}건은 장비번호 '-'로 들어가요: {names}")
     if len(sel) > 1000:
         st.warning("i-Tube는 한 번에 1000건까지 올릴 수 있어요. 기간을 나눠 주세요.", icon=":material/info:")
+    over = _over_weekday_hours(sel)
+    if not over.empty:  # 휴무일자포함을 모두 N으로 내보내서 (2026-11-23)
+        st.caption(f"주말·공휴일까지 쓴 실적 {len(over)}건은 사용시간이 평일 시간(평일 수 × 24h)보다 많아 "
+                   f"i-Tube에서 걸릴 수 있어요: " + ", ".join(sorted(set(over["equip_name"]))))
     if sel.empty:
         return
     args = (sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], itube_template(cfg),
