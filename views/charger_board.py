@@ -286,7 +286,7 @@ def body(center: str, all_open: bool) -> None:
                     or f"{int(unit_ch.get(r['unit'], 0))}ch")  # 어디에도 없으면 채널 수라도
             u_td = (f"<td class='u s0' rowspan='{span_u.get(ri, 1)}' title='{html.escape(r['unit'])}'>{html.escape(nm)}"
                     + (f" <span class='sp'>({html.escape(spec)})</span>" if spec else "")
-                    + (f"<span class='cn{' one' if n_rows.get(r['unit'], 0) < 2 else ''}'>{html.escape(db.center_short(r.get('center', '')))}</span>"
+                    + (f"<span class='cn{' one' if n_rows.get(r['unit'], 0) < 2 else ''}'>{html.escape(r.get('center', ''))}</span>"
                        if r.get("center") else "")
                     + "</td>") if new_u else ""  # 2026-11-23 사용자: 장비 이름 아래 센터 이름
             c = html.escape(r["cycler"]) if (new_u or r["cycler"] != prev_c) else ""
@@ -313,7 +313,7 @@ def body(center: str, all_open: bool) -> None:
             rows.append(_chan_rows(r, list(all_bk.get(int(r["id"]), pd.DataFrame()).to_dict("records")), w0, w1, today,
                                    grid, now_line, tlw))
             show_css.append(f"tr.cbr:has(#ck{int(r['id'])}:checked) ~ tr.g{int(r['id'])}{{visibility:visible;}}")
-        rows.append(f"<tr class='cb-sum'><td colspan='3' class='s0'>{html.escape(db.center_short(center))} 합계</td><td class='s3'>{total} ch</td>"
+        rows.append(f"<tr class='cb-sum'><td colspan='3' class='s0'>{html.escape(center)} 합계</td><td class='s3'>{total} ch</td>"
                     f"<td colspan='2' class='s4'>사용 중 {used} · 비어 있음 {total - used}</td><td></td></tr>")
         st.markdown(
             "<style>" + "".join(show_css) + "</style>"
