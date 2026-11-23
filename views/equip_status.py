@@ -247,7 +247,7 @@ def _lanes(bs: list[dict], w0: dt.date, w1: dt.date, today: dt.date, hol: set, d
         a, z = max(b["start"], w0), min(b["end"], w1)
         if z < a:
             continue
-        repeat = b["company"] == last_comp and last_end is not None and (b["start"] - last_end).days <= 14
+        repeat = False  # 업체명은 항상 보이게 (2026-11-23 사용자: 이름 빠진 막대가 헷갈림)
         plan = _label_plan(b, w0, w1, today, ppd, repeat)
         last_comp, last_end = b["company"], b["end"]
         ln = next((j for j, xs in enumerate(lanes) if xs[-1][1]["reach"] < a), None)
