@@ -204,11 +204,11 @@ def run(logs: pd.DataFrame, eq: pd.DataFrame, ch: pd.DataFrame, companies: pd.Da
     def facility(i: int) -> bool:
         return any("시설" in cat.get(j, "") for j in _chain(i, parent))
     no_code = ok[ok["itube_code"].map(to_str) == ""]
-    add("no_itube", CHECK, "i-Tube 파일에서 빠지는 실적",
-        "이 장비와 그 위 장비 모두 i-Tube 번호가 없어서 실적 내려받기(i-Tube 파일)에 들어가지 않아요. 장비 목록에서 번호를 넣어 주세요.",
+    add("no_itube", CHECK, "i-Tube 번호가 없는 장비의 실적",
+        "이 장비와 그 위 장비 모두 i-Tube 번호가 없어서 i-Tube 파일에 장비번호 '-'로 들어가요(업로드 때 걸러질 수 있어요). 장비 목록에서 번호를 넣어 주세요.",
         no_code[~no_code["eid"].map(facility)])
     add("no_itube_facility", NOTE, "i-Tube 번호가 없는 시설의 실적",
-        "시설(클린룸·드라이룸 등)이라 i-Tube 파일에는 들어가지 않아요. 가동률에는 잡혀요.",
+        "시설(클린룸·드라이룸 등)이라 i-Tube에 등록이 안 돼요. 기록용으로 i-Tube 파일에 장비번호 '-'로 들어가요.",
         no_code[no_code["eid"].map(facility)])
     ext = ok[ok["usage_type"].map(to_str) == "외부"]
     add("ext_no_company", CHECK, "외부 실적인데 업체가 비어 있음", "i-Tube 파일에 기관명이 비어 올라가요.",
