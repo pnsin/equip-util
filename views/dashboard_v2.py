@@ -24,7 +24,7 @@ CSS = """<style>
 .dh .tt {font-size: 19px !important;}
 .dh .tt::before {content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--sc);
   margin-right: 10px; vertical-align: 2px;}
-.st-key-dsec_util {--sc: #3B82F6;} .st-key-dsec_fee {--sc: #10B981;}
+.st-key-dsec_util {--sc: #D97757;} .st-key-dsec_fee {--sc: #4A6B5D;}
 [class*="st-key-dsec_"] {border-top-width: 1px !important;}
 .st-key-dsec_util, .st-key-dsec_fee {border-top-color: var(--line) !important;}
 .dct {border-left: 0 !important; padding-left: 0 !important; color: var(--muted) !important; font-weight: 700 !important;}
@@ -45,9 +45,9 @@ CSS = """<style>
   mask-size: var(--ms) 100%; -webkit-mask-size: var(--ms) 100%;}
 .bat .cap {width: 6px; height: 14px; margin-left: 3px; border-radius: 0 4px 4px 0;
   background: color-mix(in srgb, var(--c) 55%, var(--line));}
-.bat .goal {position: absolute; background: none; border-radius: 0; padding: 0; margin: 0; box-shadow: none; top: -9px; bottom: -9px; width: 0; border-left: 2px dashed var(--ink); opacity: .75;}
+.bat .goal {position: absolute; background: none; border-radius: 0; padding: 0; margin: 0; box-shadow: none; top: -9px; bottom: -9px; width: 0; border-left: 2px dashed #6B6860; opacity: .9;}
 .bat .goal em {font-style: normal; position: absolute; top: -20px; left: 0; transform: translateX(-50%); font-size: 12px; font-weight: 700;
-  color: var(--ink); white-space: nowrap;}
+  color: #6B6860; white-space: nowrap;}
 .kc .meta {display: flex; justify-content: center; gap: 28px; margin-top: 18px; font-size: 15px; color: var(--muted);}
 .kc .meta b {display: block; font-size: 22px; color: var(--ink); font-weight: 800; margin-top: 2px;}
 .kc .meta b.hit {color: var(--c);}
@@ -58,7 +58,7 @@ CSS = """<style>
   border-radius: 14px; overflow: hidden; font-variant-numeric: tabular-nums; min-height: 92px;}
 .ks .cl {display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 10px 6px;
   border-left: 1px solid var(--line); min-width: 0;}
-.ks .cl:first-child {border-left: 0; background: color-mix(in srgb, var(--c) 11%, transparent);}
+.ks .cl:first-child {border-left: 0; background: var(--cb);}
 .ks .t {font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap;}
 .ks .v {font-size: 24px; font-weight: 800; color: var(--ink); white-space: nowrap; line-height: 1.2;}
 .ks .v small {font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 3px 0 1px;}
@@ -93,14 +93,14 @@ def top(year: int, y_tot: dict, kpi: dict, fee: float, eok, won_short) -> None:
     u = float(y_tot["util"] or 0)
     ur = u / gu * 100 if gu else None
     fr = fee / gf * 100 if gf else None
-    c1 = (f'<div class="kc" style="--c:#3B82F6"><div class="lb">{E(w(f"{year}년 가동률"))}</div>'
+    c1 = (f'<div class="kc" style="--c:#D97757"><div class="lb">{E(w(f"{year}년 가동률"))}</div>'
           f'<div class="num">{u:.1f}<small>%</small></div>'
-          + _gauge("#3B82F6", u, gu, 100, f"목표 {gu:.0f}%")
+          + _gauge("#D97757", u, gu, 100, f"목표 {gu:.0f}%")
           + f'<div class="meta"><div>달성률<b class="{"hit" if ur and ur >= 100 else ""}">'
           f'{f"{ur:.1f}%" if ur is not None else "–"}</b></div></div></div>')
-    c2 = (f'<div class="kc" style="--c:#10B981"><div class="lb">{year}년 수수료</div>'
+    c2 = (f'<div class="kc" style="--c:#4A6B5D"><div class="lb">{year}년 수수료</div>'
           f'<div class="num">{won_short(fee)}</div>'
-          + _gauge("#10B981", fee, gf, max(gf * 1.25, fee * 1.04, 1), f"목표 {eok(gf)}")
+          + _gauge("#4A6B5D", fee, gf, max(gf * 1.25, fee * 1.04, 1), f"목표 {eok(gf)}")
           + f'<div class="meta"><div>달성률<b class="{"hit" if fr and fr >= 100 else ""}">'
           f'{f"{fr:.1f}%" if fr is not None else "–"}</b></div></div></div>')
     eq = db.load_equipment(full=True)
@@ -129,13 +129,13 @@ def top(year: int, y_tot: dict, kpi: dict, fee: float, eok, won_short) -> None:
     def jd(j, d) -> str:
         return f'<div class="v">{j}<small>종</small>{d}<small>대</small></div>'
 
-    s1 = (f'<div style="--c:#F59E0B;--n:4">' + cell("유지보수 · 올해" if year == today.year else f"유지보수 · {year}", cnt(len(yr)))
+    s1 = (f'<div style="--c:#D97757;--cb:#FDF2EE;--n:4">' + cell("유지보수 · 올해" if year == today.year else f"유지보수 · {year}", cnt(len(yr)))
           + cell("이번 달" if year == today.year else "12월", cnt(n_of(year, rm)))
           + cell("지난달" if year == today.year else "11월", cnt(n_of(pm_y, pm))) + cell("최근 기록", last) + '</div>')
     blocks, _ = count_summary(eq)
     rows = dict(blocks)["센터별"].to_dict("records")
     tot = next((r for r in rows if r["센터"] == "합계"), {"종": 0, "대수": 0})
     cs = [r for r in rows if r["센터"] != "합계"]
-    s2 = (f'<div style="--c:#8B5CF6;--n:{len(cs) + 1}">' + cell("장비 전체", jd(tot["종"], tot["대수"]))
+    s2 = (f'<div style="--c:#4A6B5D;--cb:#EBF2EE;--n:{len(cs) + 1}">' + cell("장비 전체", jd(tot["종"], tot["대수"]))
           + "".join(cell(db.center_short(r["센터"]) or r["센터"], jd(r["종"], r["대수"])) for r in cs) + '</div>')
     st.markdown(CSS + f'<div class="kh">{c1}{c2}</div><div class="ks">{s1}{s2}</div>', unsafe_allow_html=True)

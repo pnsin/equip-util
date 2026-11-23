@@ -22,39 +22,39 @@ CENTER_ORDER = ["문백", "제조검증", "MV"]
 SHORT: dict[int, str] = {}  # 장비 ID → 짧은 이름 (화면 그릴 때 채움)
 
 # 구역 색: (진한 색, 연한 막대, 바탕)
-# 2026-11-19 리디자인: 01 파랑 · 02 초록 · 03 주황 · 04 보라 (색은 배지 · 막대 · 큰 숫자에만)
-BLUE = ("#3B82F6", "rgba(59,130,246,0.35)", "rgba(59,130,246,0.16)")
-TEAL = ("#10B981", "rgba(16,185,129,0.35)", "rgba(16,185,129,0.16)")
-AMBER = ("#F59E0B", "rgba(245,158,11,0.35)", "rgba(245,158,11,0.16)")
-PURPLE = ("#8B5CF6", "rgba(139,92,246,0.35)", "rgba(139,92,246,0.16)")
-GOAL = "#F59E0B"
+# 2026-11-23 따뜻한 종이 테마: 가동률 테라코타 · 수수료 세이지 · 유지보수 웜골드 · 장비 세이지 (색은 배지 · 막대 · 큰 숫자에만)
+BLUE = ("#D97757", "rgba(217,119,87,0.35)", "#FDF2EE")
+TEAL = ("#4A6B5D", "rgba(74,107,93,0.35)", "#EBF2EE")
+AMBER = ("#D4A359", "rgba(212,163,89,0.35)", "#FBF3E2")
+PURPLE = ("#4A6B5D", "rgba(74,107,93,0.35)", "#EBF2EE")
+GOAL = "#6B6860"  # 목표 점선·글자 (지시서)
 
 CSS = """<style>
 [class*="st-key-dsec_"] {background: var(--panel); border-radius: 20px; padding: 22px 26px 20px; margin-bottom: 14px;
-  gap: .55rem; border: 1px solid rgba(255,255,255,0.08);}
-.st-key-dsec_util {border-top: 2px solid #3B82F6;} .st-key-dsec_fee {border-top: 2px solid #10B981;}
+  gap: .55rem; border: 1px solid #E8E6DF;}
+.st-key-dsec_util {border-top: 2px solid #D97757;} .st-key-dsec_fee {border-top: 2px solid #4A6B5D;}
 /* 위 요약 4칸 (2026-11-19 사용자 시안: 가동률·수수료는 좁게, 유지보수·종대수는 넓게) */
 .dtop {display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: stretch; margin: 4px 0 16px;}
-.dtop .k {background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px 16px 14px;
+.dtop .k {background: var(--panel); border: 1px solid #E8E6DF; border-radius: 18px; padding: 14px 16px 14px;
   text-align: center; display: flex; flex-direction: column; justify-content: flex-start; min-height: 196px;
   font-variant-numeric: tabular-nums;}
-.dtop .k.c1 {border-top: 2px solid #3B82F6;} .dtop .k.c2 {border-top: 2px solid #10B981;}
-.dtop .k.c3 {border-top: 2px solid #F59E0B;} .dtop .k.c4 {border-top: 2px solid #8B5CF6;}
-.dtop .tt {font-size: 21px; font-weight: 700; color: #F8FAFC; padding: 4px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.06);}
+.dtop .k.c1 {border-top: 2px solid #D97757;} .dtop .k.c2 {border-top: 2px solid #4A6B5D;}
+.dtop .k.c3 {border-top: 2px solid #D4A359;} .dtop .k.c4 {border-top: 2px solid #4A6B5D;}
+.dtop .tt {font-size: 21px; font-weight: 700; color: #191918; padding: 4px 0 10px; border-bottom: 1px solid #EAE7DF;}
 .dtop .bdy {flex: 1; display: flex; flex-direction: column; justify-content: center; padding-top: 6px;}
 .dtop .big {font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; margin: 10px 0 8px;}
 .dtop .big small {font-size: 30px; font-weight: 800;}
-.dtop .sub {font-size: 15px; color: #CBD5E1;} .dtop .sub b {font-weight: 700;}
+.dtop .sub {font-size: 15px; color: #4A4741;} .dtop .sub b {font-weight: 700;}
 .dtop .mm {display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin-top: 12px; font-size: 11.5px;}
-.dtop .mm b {display: block; font-weight: 700; color: #E2E8F0;} .dtop .mm b.z {color: #475569;}
-.dtop .mm span {color: #94A3B8; font-size: 10.5px;}
+.dtop .mm b {display: block; font-weight: 700; color: #191918;} .dtop .mm b.z {color: #A39F96;}
+.dtop .mm span {color: #6B6860; font-size: 10.5px;}
 .dtop table {width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; border: 0 !important;}
 .dtop th, .dtop td {padding: 6px 6px !important; text-align: center !important; border: 0 !important;
-  background: transparent !important; white-space: nowrap; color: #E2E8F0;}
-.dtop th {color: #94A3B8 !important; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.12) !important;}
-.dtop td {border-bottom: 1px solid rgba(255,255,255,0.06) !important;}
+  background: transparent !important; white-space: nowrap; color: #191918;}
+.dtop th {color: #6B6860 !important; font-weight: 600; border-bottom: 1px solid #E8E6DF !important;}
+.dtop td {border-bottom: 1px solid #EAE7DF !important;}
 .dtop tr, .dtop thead, .dtop tbody {border: 0 !important; background: transparent !important;}
-.dtop tr.sum td {background: rgba(245,158,11,0.14) !important; color: #FBD38D; font-weight: 700; border-bottom: 0 !important;}
+.dtop tr.sum td {background: #FBF3E2 !important; color: #92400E; font-weight: 700; border-bottom: 0 !important;}
 .dtop tr.sum td:first-child {border-radius: 10px 0 0 10px;} .dtop tr.sum td:last-child {border-radius: 0 10px 10px 0;}
 @media (max-width: 1200px) {.dtop {grid-template-columns: 1fr 1fr;}}
 @media (max-width: 640px) {.dtop {grid-template-columns: 1fr 1fr; gap: 8px;} .dtop .k {min-height: 0; padding: 10px 8px !important;}
@@ -65,82 +65,82 @@ CSS = """<style>
 .dh {display: flex; align-items: center; gap: 14px; margin-bottom: 12px;}
 .dh .ic {width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
   font-size: 21px; font-weight: 700;}
-.dh .tt {font-size: 24px; font-weight: 700; color: #F8FAFC; line-height: 1.3;}
-.dper {font-size: 14px; color: #E2E8F0; border: 1px solid #475569; height: 38px; display: flex; align-items: center; padding: 0 16px; border-radius: 99px; white-space: nowrap;}
+.dh .tt {font-size: 24px; font-weight: 700; color: #191918; line-height: 1.3;}
+.dper {font-size: 14px; color: #191918; border: 1px solid #E8E6DF; height: 38px; display: flex; align-items: center; padding: 0 16px; border-radius: 99px; white-space: nowrap;}
 .st-key-dash_pp > div, .st-key-dash_pp [data-testid="stElementContainer"] {margin: 0 !important;}
 .st-key-dash_pp [data-testid="stMarkdownContainer"] p, .st-key-dash_pp [data-testid="stMarkdownContainer"] {margin: 0;}
-.dst {border: 1px solid #52617A; border-radius: 20px; padding: 16px 20px; height: 100%; min-height: 134px; transition: all 0.25s ease; background: rgba(85,121,230,0.16);}
-.dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,36,51,.06); border-color: #64748B; background: var(--panel);}
-.dst.big {border: 0; background: linear-gradient(135deg, #5B6CFF 0%, #9B6CFF 60%, #D27CE0 100%); box-shadow: 0 8px 22px rgba(91,108,255,.28);}
-.dst.big:hover {transform: translateY(-2px); box-shadow: 0 14px 32px rgba(91,108,255,.4);}
-.dst .sl {font-size: 16px; color: #E2E8F0; font-weight: 600;}
+.dst {border: 1px solid #EAE7DF; border-radius: 20px; padding: 16px 20px; height: 100%; min-height: 134px; transition: all 0.25s ease; background: var(--panel);}
+.dst:hover {transform: translateY(-2px); box-shadow: 0 8px 24px rgba(25,25,24,.06); border-color: #E8E6DF; background: var(--panel);}
+.dst.big {border: 0; background: #D97757; box-shadow: 0 8px 22px rgba(217,119,87,.22);}
+.dst.big:hover {transform: translateY(-2px); box-shadow: 0 14px 32px rgba(217,119,87,.3);}
+.dst .sl {font-size: 16px; color: #191918; font-weight: 600;}
 .dst.big .sl {color: #fff;}
-.dst .sv {font-size: 2.05rem; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 6px; color: #F8FAFC;
+.dst .sv {font-size: 2.05rem; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 6px; color: #191918;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .dst.big .sv {color: #fff;}
 .dst .sv small {font-size: 1rem; margin-left: 3px; font-weight: 600;}
 .dst .sv.name {font-size: 1.55rem; padding: 4px 0 3px;}
 .dch {font-size: 14px; font-weight: 600; padding: 2px 9px; border-radius: 99px; display: inline-block;}
-.dch.g {color: #6EE7B7; background: rgba(85,230,153,0.16);} .dch.r {color: #FF9AAE; background: rgba(230,85,85,0.16);}
-.dch.n {color: #E2E8F0; background: #52617A;}
-.dst.big .dch {background: rgba(255,255,255,.14); color: #F8FAFC;}
-.dst.big .dch.g {color: #9FE3C1;} .dst.big .dch.r {color: #FFD0D8;}
-.dlead {border-radius: 12px; padding: 12px 16px; font-size: 15.5px; line-height: 1.6; color: #F8FAFC; margin-top: 12px;}
-.dct {font-size: 15px !important; font-weight: 800; color: #F1F5F9 !important; margin: 22px 0 12px; padding-left: 9px;
-  border-left: 3px solid #6366F1; line-height: 1.2; letter-spacing: -.01em;}
-.st-key-dsec_util .dct {border-left-color: #3B82F6;} .st-key-dsec_fee .dct {border-left-color: #10B981;}  /* 2026-11-19 섹션 색에 맞춤 */
+.dch.g {color: #4A6B5D; background: #EBF2EE;} .dch.r {color: #C84B31; background: #FBEAE5;}
+.dch.n {color: #6B6860; background: #F2EFE9;}
+.dst.big .dch {background: rgba(255,255,255,.2); color: #FFFFFF;}
+.dst.big .dch.g {color: #FFFFFF;} .dst.big .dch.r {color: #FFFFFF;}
+.dlead {border-radius: 12px; padding: 12px 16px; font-size: 15.5px; line-height: 1.6; color: #191918; margin-top: 12px;}
+.dct {font-size: 15px !important; font-weight: 800; color: #191918 !important; margin: 22px 0 12px; padding-left: 9px;
+  border-left: 3px solid #D97757; line-height: 1.2; letter-spacing: -.01em;}
+.st-key-dsec_util .dct {border-left-color: #D97757;} .st-key-dsec_fee .dct {border-left-color: #4A6B5D;}  /* 2026-11-19 섹션 색에 맞춤 */
 .dq {display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px; margin: -10px 8px 14px;}
-.dq div {border-top: 1.5px solid #64748B; text-align: center; font-size: 14px; color: #E2E8F0; padding-top: 6px;}
-.dq b {color: #F8FAFC; margin-left: 4px;}
-.dbox {border: 1px solid #52617A; border-radius: 16px; padding: 14px 18px; height: 100%;}
-.dbox .bh {margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #F8FAFC; display: flex;
+.dq div {border-top: 1.5px solid #E8E6DF; text-align: center; font-size: 14px; color: #191918; padding-top: 6px;}
+.dq b {color: #191918; margin-left: 4px;}
+.dbox {border: 1px solid #EAE7DF; border-radius: 16px; padding: 14px 18px; height: 100%;}
+.dbox .bh {margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #191918; display: flex;
   justify-content: space-between;}
 .dml {display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) var(--vw, 62px); gap: 10px; align-items: center;
-  font-size: 14.5px; margin: 7px 0; color: #F8FAFC;}
+  font-size: 14.5px; margin: 7px 0; color: #191918;}
 .dml span {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .dml b {text-align: right; white-space: nowrap;}
-.dtb {height: 8px; background: #52617A; border-radius: 99px; position: relative;}
+.dtb {height: 8px; background: #EAE7DF; border-radius: 99px; position: relative;}
 .dtb i {position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px;}
 .dpills {display: flex; gap: 8px; flex-wrap: wrap;}
-.dpills span {font-size: 14.5px; padding: 6px 12px; border-radius: 12px; background: rgba(133,85,230,0.16); color: #F8FAFC;}
+.dpills span {font-size: 14.5px; padding: 6px 12px; border-radius: 12px; background: #F2EFE9; color: #191918;}
 .dpills b {margin-left: 5px;}
 .drec {display: flex; justify-content: space-between; gap: 10px; font-size: 14.5px; padding: 7px 0;
-  border-bottom: 1px dashed #52617A; color: #F8FAFC;}
+  border-bottom: 1px dashed #EAE7DF; color: #191918;}
 .drec:last-child {border: 0;}
 .drec > span:first-child {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .drec .tag {font-size: 13px; padding: 2px 8px; border-radius: 99px; margin-right: 6px; font-weight: 600;
-  background: rgba(138,85,230,0.16); color: #7E5BC2;}
-.dcnt {width: 100%; border-collapse: collapse; font-size: 15.5px; color: #F8FAFC; text-align: center; border: 0 !important;}
+  background: #FDF2EE; color: #C26344;}
+.dcnt {width: 100%; border-collapse: collapse; font-size: 15.5px; color: #191918; text-align: center; border: 0 !important;}
 .dcnt th, .dcnt td {border: 0 !important; background: transparent !important; white-space: nowrap;}
-.dcnt th {font-size: 14px; font-weight: 600; color: #E2E8F0 !important; padding: 9px 8px !important;
-  border-bottom: 1.5px solid #64748B !important;}
-.dcnt td {padding: 11px 8px !important; border-bottom: 1px solid #52617A !important;}
+.dcnt th {font-size: 14px; font-weight: 600; color: #191918 !important; padding: 9px 8px !important;
+  border-bottom: 1.5px solid #E8E6DF !important;}
+.dcnt td {padding: 11px 8px !important; border-bottom: 1px solid #EAE7DF !important;}
 @media (max-width: 640px) {.dcnt {font-size: 14px;} .dcnt th {font-size: 12.5px;} .dcnt td b {font-size: 17px;}
   .dcnt th, .dcnt td {padding-left: 4px !important; padding-right: 4px !important;}
   .dcnt {table-layout: fixed;} .dcnt th:first-child {width: 40%;}
   .dcnt th, .dcnt td:first-child {white-space: normal; word-break: break-all; font-size: 13px;}}
 .dcnt td b {font-size: 19px; font-weight: 700;}
-.dcnt tr.sum td {border-bottom: 0 !important; background: rgba(230,160,85,0.14) !important; color: #FBD38D;}
+.dcnt tr.sum td {border-bottom: 0 !important; background: #FBF3E2 !important; color: #92400E;}
 .dcnt tr.sum td:first-child {border-radius: 12px 0 0 12px;} .dcnt tr.sum td:last-child {border-radius: 0 12px 12px 0;}
-.dnone {font-size: 14.5px; color: #CBD5E1; padding: 4px 0;}
-.dsub {font-size: 13px; font-weight: 600; color: #CBD5E1; margin-left: 10px;}
-.drep {width: 100%; border-collapse: collapse; font-size: 15px; color: #F8FAFC; text-align: center; border: 0 !important;
+.dnone {font-size: 14.5px; color: #4A4741; padding: 4px 0;}
+.dsub {font-size: 13px; font-weight: 600; color: #4A4741; margin-left: 10px;}
+.drep {width: 100%; border-collapse: collapse; font-size: 15px; color: #191918; text-align: center; border: 0 !important;
   font-variant-numeric: tabular-nums;}
 .drep tr, .drep thead, .drep tbody {border: 0 !important; background: transparent !important;}
 .drep th, .drep td {border: 0 !important; background: transparent !important; white-space: nowrap; text-align: center !important;}
-.drep th {font-size: 14px; font-weight: 600; color: #E2E8F0 !important; padding: 9px 8px !important;
-  border-bottom: 1.5px solid #64748B !important;}
-.drep td {padding: 8px 8px !important; border-bottom: 1px solid #52617A !important;}
+.drep th {font-size: 14px; font-weight: 600; color: #191918 !important; padding: 9px 8px !important;
+  border-bottom: 1.5px solid #E8E6DF !important;}
+.drep td {padding: 8px 8px !important; border-bottom: 1px solid #EAE7DF !important;}
 .drep td:first-child {font-weight: 600;}
-.drep td.g {color: #CBD5E1;}
-.drep .gl {display: block; font-size: 12px; font-weight: 600; color: #FBD38D;}
-.drep td.na, .drep td.z {color: #475569 !important; font-weight: 400 !important;}
-.drep td.hit {color: #6EE7B7; font-weight: 700;}
-.drep tr.sum td {background: rgba(59,130,246,0.16) !important; font-weight: 700; font-size: 15px; border-bottom: 0 !important;}
-.drep.fee tr.sum td {background: rgba(16,185,129,0.16) !important;}
-.drep tr.goal td {color: #A7F3D0; font-weight: 700; font-size: 15px; background: rgba(16,185,129,0.09) !important;}  /* 2026-11-19 주황 → 비치는 녹색 */
-.drep tr.rate td {font-weight: 700; font-size: 15px; color: #F8FAFC; border-bottom: 0 !important;}
-.drep tr.rate td.hit {color: #6EE7B7;}
+.drep td.g {color: #4A4741;}
+.drep .gl {display: block; font-size: 12px; font-weight: 600; color: #92400E;}
+.drep td.na, .drep td.z {color: #A39F96 !important; font-weight: 400 !important;}
+.drep td.hit {color: #4A6B5D; font-weight: 700;}
+.drep tr.sum td {background: #FDF2EE !important; font-weight: 700; font-size: 15px; border-bottom: 0 !important;}
+.drep.fee tr.sum td {background: #EBF2EE !important;}
+.drep tr.goal td {color: #4A6B5D; font-weight: 700; font-size: 15px; background: #EBF2EE !important;}  /* 목표 줄: 수수료는 세이지 틴트 */
+.drep tr.rate td {font-weight: 700; font-size: 15px; color: #191918; border-bottom: 0 !important;}
+.drep tr.rate td.hit {color: #4A6B5D;}
 .drep tr.sum td:first-child {border-radius: 12px 0 0 12px;}
 .drep tr.sum td:last-child {border-radius: 0 12px 12px 0;}
 @media (max-width: 640px) {.drep {font-size: 13px; table-layout: fixed;} .drep th {font-size: 12px;}
@@ -161,8 +161,8 @@ CSS = """<style>
 .drep .gl {display: inline !important; margin-left: 6px;}
 /* 2026-11-19 사용자: 가동률 표와 수수료 표의 칸 위치를 똑같이 (구분 31% + 나머지 같은 폭) */
 .drep {table-layout: fixed;} .drep th:first-child {width: 31%;}
-/* 2026-11-19 사용자: 가동률 표도 수수료 표처럼 맨 위 '목표' 줄 (비치는 파란색) · 아래 전체 · 달성률 */
-.drep:not(.fee) tr.goal td {color: #BFDBFE; background: rgba(59,130,246,0.09) !important;}
+/* 2026-11-19 사용자: 가동률 표도 수수료 표처럼 맨 위 '목표' 줄 · 아래 전체 · 달성률. 2026-11-23 가동률 목표 줄 = 피치 틴트 */
+.drep:not(.fee) tr.goal td {color: #C26344; background: #FDF2EE !important;}
 [class*="st-key-dsec_"] [data-testid="stVerticalBlock"] {gap: .35rem;}
 </style>"""
 
@@ -212,12 +212,12 @@ def _bars(values: list, labels: list[str], cur: int | None, color: tuple, fmt, k
     real = [v for v in values if v is not None and pd.notna(v)]
     top = top or max(real + [target or 0, 1e-9]) * 1.22
     ys = [(v if v is not None and pd.notna(v) else 0) for v in values]
-    colors = [color[0] if values[i] is not None else "#334155" for i in range(len(values))]  # 2026-11-19 모든 달 진하게
+    colors = [color[0] if values[i] is not None else T["bar-off"] for i in range(len(values))]  # 2026-11-19 모든 달 진하게
     texts = [fmt(v) if v is not None and pd.notna(v) and (v > 0 or i <= (cur if cur is not None else 99)) else ""
              for i, v in enumerate(values)]
     fig = go.Figure(go.Bar(
         x=labels, y=ys, marker=dict(color=colors, cornerradius=6), text=texts, textposition="outside",
-        textfont=dict(size=12, color="#F8FAFC", weight=600),
+        textfont=dict(size=12, color=T["ink"], weight=600),
         customdata=custom if custom is not None else labels, hovertemplate=hover or "%{x}<extra></extra>",
         cliponaxis=False))
     if target and target <= top:

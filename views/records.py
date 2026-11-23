@@ -97,14 +97,14 @@ def _ledger() -> None:
         hay = df["company"].astype(str) + " " + df["item"].astype(str)
         df = df[hay.str.contains(q, case=False, regex=False)]
     # 2026-11-19 사용자: 칸에 비해 글씨가 작음 → 크게, 칸마다 색
-    cards = [("건수", f"{len(df):,}<small>건</small>", "#818CF8"),
-             ("공급가 합계", f"{df['supply'].sum():,.0f}<small>원</small>", "#34D399"),
-             ("미수금", f"{df['unpaid'].sum():,.0f}<small>원</small>", "#FBBF24" if df["unpaid"].sum() else "#94A3B8")]
+    cards = [("건수", f"{len(df):,}<small>건</small>", "#D97757"),
+             ("공급가 합계", f"{df['supply'].sum():,.0f}<small>원</small>", "#4A6B5D"),
+             ("미수금", f"{df['unpaid'].sum():,.0f}<small>원</small>", "#D4A359" if df["unpaid"].sum() else "#A39F96")]
     st.markdown(
         '<style>.flk{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:6px 0 14px}'
-        '.flk>div{background:var(--panel,#1E293B);border:1px solid rgba(255,255,255,.08);border-radius:16px;'
+        '.flk>div{background:var(--panel,#FFFFFF);border:1px solid #E8E6DF;border-radius:16px;'
         'padding:16px 12px;text-align:center;font-variant-numeric:tabular-nums}'
-        '.flk .l{font-size:17px;font-weight:700;color:#E2E8F0;margin-bottom:6px}'
+        '.flk .l{font-size:17px;font-weight:700;color:#191918;margin-bottom:6px}'
         '.flk .v{font-size:34px;font-weight:800;line-height:1.2}.flk .v small{font-size:20px;margin-left:4px;font-weight:700}'
         '@media(max-width:640px){.flk{grid-template-columns:1fr}.flk .v{font-size:28px}}</style>'
         '<div class="flk">' + "".join(

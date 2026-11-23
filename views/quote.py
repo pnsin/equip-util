@@ -518,7 +518,7 @@ def render_new() -> None:
     with action_box:
         problems = _problems(d)
         for p in problems:
-            st.markdown(f'<div style="color:#FCD34D;font-size:14px;font-weight:600;margin:.1rem 0 .3rem">⚠ {p}</div>',
+            st.markdown(f'<div style="color:#9C6B20;font-size:14px;font-weight:600;margin:.1rem 0 .3rem">⚠ {p}</div>',
                         unsafe_allow_html=True)
         again = bool(d.get("id"))
         if st.button("고친 내용 저장하고 PDF 만들기" if again else "발급하고 PDF 만들기", type="primary",
@@ -615,7 +615,7 @@ def _ledger() -> None:
     view = cur[list(LEDGER)].rename(columns=LEDGER).reset_index(drop=True)
     recs = cur.to_dict("records")
     tv = st.session_state.get("q_led_ver", 0)
-    styled = view.style.set_properties(subset=["견적번호"], **{"color": "#A5B4FC", "font-weight": "600"})
+    styled = view.style.set_properties(subset=["견적번호"], **{"color": "#C26344", "font-weight": "600"})
     ev = st.dataframe(styled, hide_index=True, width="stretch", height=min(520, 38 + 35 * (len(view) + 1)),
                       on_select="rerun", selection_mode="single-cell", key=f"q_led_tbl_{year}_{tv}",
                       column_config={"발급일자": st.column_config.DateColumn(format="YYYY-MM-DD"),
@@ -704,11 +704,11 @@ _ROW_BTNS = st.components.v2.component(
     css="""
 .rowbtns { display:flex; gap:.25rem; justify-content:flex-end; align-items:center; }
 .rowbtns button { display:inline-flex; align-items:center; gap:.3rem; height:2.25rem; padding:0 .6rem; border:0;
-  border-radius:.5rem; background:transparent; color:var(--st-text-color, #E2E8F0); font:inherit; font-size:.95rem; cursor:pointer; }
-.rowbtns button:hover { background:rgba(99,102,241,.16); color:#A5B4FC; }
+  border-radius:.5rem; background:transparent; color:var(--st-text-color, #191918); font:inherit; font-size:.95rem; cursor:pointer; }
+.rowbtns button:hover { background:rgba(217,119,87,.16); color:#C26344; }
 .rowbtns button svg { width:1.1rem; height:1.1rem; fill:currentColor; }
 .rowbtns button.off { opacity:.4; cursor:default; }
-.rowbtns button.off:hover { background:transparent; color:var(--st-text-color, #E2E8F0); }
+.rowbtns button.off:hover { background:transparent; color:var(--st-text-color, #191918); }
 """,
     js="""
 export default function({ data, parentElement, setTriggerValue }) {

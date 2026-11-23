@@ -23,13 +23,17 @@ from core.period import kr_holidays
 # 2026-11-23 사용자: 문백 장비(제조 라인 + 충방전기 + 실환경모사·안전시험 챔버)는 예전 문백 엑셀처럼 한 버튼에
 MB = "문백"
 GROUPS = ["시험(환경)", "시험(충방전)", "제조(오창)", MB, "분석"]
-GROUP_DOT = {"시험(환경)": "#F472B6", "시험(충방전)": "#E879F9", "제조(오창)": "#34D399", MB: "#FBBF24",
-             "분석": "#A78BFA", "기타": "#94A3B8"}
+GROUP_DOT = {"시험(환경)": "#D97757", "시험(충방전)": "#B0567F", "제조(오창)": "#4A6B5D", MB: "#D4A359",
+             "분석": "#7A65A8", "기타": "#A39F96"}
 WEEK = "월화수목금토일"
-# 업체 색: 어두운 바탕에서 서로 잘 구별되는 색 (업체 이름으로 늘 같은 색)
-PALETTE = ["#F59E0B", "#F43F5E", "#38BDF8", "#10B981", "#A78BFA", "#2DD4BF", "#FB923C", "#E879F9",
-           "#84CC16", "#60A5FA", "#F472B6", "#FACC15"]
-INNER = "#94A3B8"
+# 업체 색: (글자색, 칸 바탕) 짝. 밝은 종이 바탕에서 서로 구별되는 부드러운 파스텔 + 진한 글자 (업체 이름으로 늘 같은 색)
+# 2026-11-23 지시서: 앞 다섯 짝은 시험·제조·분석·교육·지원 색과 같은 계열
+PALETTE = ["#9A3412", "#1E4D3B", "#4C3575", "#92400E", "#2C5470", "#8A2E5A",
+           "#4A5A1E", "#8A4B12", "#205958", "#6B4528", "#3C3A7A", "#6E5A12"]
+_BG = {"#9A3412": "#FDE8E4", "#1E4D3B": "#E6F2EC", "#4C3575": "#EFEBF8", "#92400E": "#FEF3C7", "#2C5470": "#E3EEF5",
+       "#8A2E5A": "#F6E3EC", "#4A5A1E": "#EAF1DC", "#8A4B12": "#FCE9D6", "#205958": "#DFF0EF", "#6B4528": "#F1E6DA",
+       "#3C3A7A": "#E9E7F6", "#6E5A12": "#F5EDCF", "#3F3D38": "#EAE8E3"}
+INNER = "#3F3D38"  # 내부: 배경 #EAE8E3 · 글자 #3F3D38
 
 
 def equip_groups(eq: pd.DataFrame) -> dict[int, str]:
@@ -249,7 +253,7 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
                 join = (" jl" if prev_same else "") + (" jr" if next_same else "")
                 h.append(f"<td class='{cls} has' data-eid='{r['id']}' data-day='{d}' data-ci='{ci}'>"
                          f"<div class='cell{join}{picked}' data-log='{it['log']}' data-day='{d}' title='{tip}' "
-                         f"style='background:{_rgba(c, .32)}'><b>{e(hl)}</b><span>{e(it['co'])}</span></div></td>")
+                         f"style='background:{_BG.get(c, _rgba(c, .18))};color:{c}'><b>{e(hl)}</b><span>{e(it['co'])}</span></div></td>")
             h.append("</tr>")
     h.append("</tbody></table></div>")
     # 업체 색 안내
@@ -258,57 +262,57 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
         for lane in r["lanes"]:
             for it in lane:
                 seen_c.setdefault(it["co"], it["color"])
-    leg = "".join(f"<span><i style='background:{c}'></i>{e(n)}</span>" for n, c in seen_c.items())
+    leg = "".join(f"<span><i style='background:{_BG.get(c, c)};box-shadow:inset 0 0 0 1.5px {c}'></i>{e(n)}</span>" for n, c in seen_c.items())
     h.append(f"<div class='eg-foot'><div class='eg-leg'>{leg}</div><div class='eg-note'>칸 고르기(끌기·Shift+클릭) · Ctrl+C / Ctrl+V · Delete · Ctrl+Z</div></div>")
     return "".join(h)
 
 
 CSS = """
 :host{display:block}
-.eg-scroll{overflow-x:auto;border:1px solid #334155;border-radius:14px;background:#1E293B}
+.eg-scroll{overflow-x:auto;border:1px solid #E8E6DF;border-radius:14px;background:#FFFFFF}
 table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;min-width:var(--minw,900px);
-  font-family:inherit;color:#E2E8F0}
+  font-family:inherit;color:#191918}
 .eg col.c-sec{width:92px}.eg col.c-dev{width:var(--devw,190px)}.eg col.c-tot{width:58px}
-.eg th,.eg td{border-right:1px solid #334155;border-bottom:1px solid #334155;text-align:center;padding:0;height:34px;
+.eg th,.eg td{border-right:1px solid #EAE7DF;border-bottom:1px solid #EAE7DF;text-align:center;padding:0;height:34px;
   font-size:11px;position:relative;box-sizing:border-box}
-.eg thead th{background:#162032;height:42px;font-weight:600;color:#CBD5E1;font-size:12px;position:sticky;top:0;z-index:3}
-.eg thead th small{display:block;font-size:10px;color:#64748B;font-weight:400}
-.eg thead th.off,.eg thead th.off small{color:#F87171}
-.eg thead th.today{background:#312E81;color:#fff}.eg thead th.today small{color:#C7D2FE}
-.eg td.off{background:rgba(15,23,42,.38)}
-.eg td.sec{background:#162032;color:#FBBF24;font-weight:700;font-size:11.5px;padding:4px 6px;line-height:1.35;word-break:keep-all}
-.eg td.dev{text-align:left;padding:0 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#1A2436}
+.eg thead th{background:#F2EFE9;height:42px;font-weight:600;color:#4A4741;font-size:12px;position:sticky;top:0;z-index:3}
+.eg thead th small{display:block;font-size:10px;color:#A39F96;font-weight:400}
+.eg thead th.off,.eg thead th.off small{color:#C84B31}
+.eg thead th.today{background:#D97757;color:#fff}.eg thead th.today small{color:#FDF2EE}
+.eg td.off{background:#F7F5F0}
+.eg td.sec{background:#FAF9F5;color:#6B6860;font-weight:700;font-size:11.5px;padding:4px 6px;line-height:1.35;word-break:keep-all}
+.eg td.dev{text-align:left;padding:0 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#FFFFFF}
 .eg td.dev .nm{overflow:hidden;text-overflow:ellipsis}
-.eg td.dev small{display:block;color:#64748B;font-size:9.5px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
+.eg td.dev small{display:block;color:#A39F96;font-size:9.5px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
 .eg th.sec,.eg td.sec{position:sticky;left:0;z-index:2}
 .eg th.dev,.eg td.dev{position:sticky;left:92px;z-index:2}
 .eg thead th.sec,.eg thead th.dev{z-index:4}
-.eg td.tot{font-weight:700;background:#162032;font-size:12px}
-.eg td.tot.z{color:#475569;font-weight:400}
+.eg td.tot{font-weight:700;background:#F2EFE9;font-size:12px}
+.eg td.tot.z{color:#A39F96;font-weight:400}
 .eg tbody td[data-eid]{cursor:pointer}
-.eg tbody td[data-eid]:hover{background:rgba(99,102,241,.14)}
-.eg tbody td.drag{background:rgba(99,102,241,.28)!important}
-.eg tbody td.sel{box-shadow:inset 0 0 0 2px #FCD34D}
+.eg tbody td[data-eid]:hover{background:rgba(217,119,87,.14)}
+.eg tbody td.drag{background:rgba(217,119,87,.28)!important}
+.eg tbody td.sel{box-shadow:inset 0 0 0 2px #D97757}
 .cell{position:absolute;inset:2px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  line-height:1.15;cursor:pointer;color:#F8FAFC;overflow:hidden}
+  line-height:1.15;cursor:pointer;color:#191918;overflow:hidden}
 .cell b{font-size:12px}.cell span{font-size:9px;letter-spacing:-.2px;opacity:.92;white-space:nowrap}
 .bar{position:absolute;top:3px;bottom:3px;left:2px;right:2px;border-radius:6px;border-left:3px solid;display:flex;align-items:center;
-  gap:6px;padding:0 8px;font-size:11px;white-space:nowrap;overflow:hidden;cursor:pointer;color:#F1F5F9}
+  gap:6px;padding:0 8px;font-size:11px;white-space:nowrap;overflow:hidden;cursor:pointer;color:#191918}
 .bar.cl{border-top-left-radius:0;border-bottom-left-radius:0}.bar.cr{border-top-right-radius:0;border-bottom-right-radius:0}
 .bar .d{opacity:.7;font-size:10px}
-.cell:hover,.bar:hover{filter:brightness(1.18)}
-.cell.picked,.bar.picked{outline:2px solid #FCD34D;outline-offset:-2px}
+.cell:hover,.bar:hover{filter:brightness(.96)}
+.cell.picked,.bar.picked{outline:2px solid #D97757;outline-offset:-2px}
 .cell.jl{left:0;border-top-left-radius:0;border-bottom-left-radius:0}
 .cell.jr{right:0;border-top-right-radius:0;border-bottom-right-radius:0}
-.eg tbody td.rs{background:rgba(99,102,241,.22)!important}
-.eg tbody td.rs .cell{box-shadow:inset 0 0 0 2px #A5B4FC}
-.eg tbody td.cp{outline:2px dashed #FCD34D;outline-offset:-3px}
-.eg-tip{font-size:11.5px;color:#64748B;margin-top:6px}
+.eg tbody td.rs{background:rgba(217,119,87,.22)!important}
+.eg tbody td.rs .cell{box-shadow:inset 0 0 0 2px #C26344}
+.eg tbody td.cp{outline:2px dashed #D97757;outline-offset:-3px}
+.eg-tip{font-size:11.5px;color:#A39F96;margin-top:6px}
 .eg-foot{display:flex;justify-content:space-between;gap:12px;margin-top:10px;flex-wrap:wrap}
-.eg-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#94A3B8}
+.eg-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#6B6860}
 .eg-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
-.eg-note{font-size:12px;color:#64748B}
-.eg-empty{padding:40px;text-align:center;color:#94A3B8;border:1px dashed #334155;border-radius:14px}
+.eg-note{font-size:12px;color:#A39F96}
+.eg-empty{padding:40px;text-align:center;color:#6B6860;border:1px dashed #E8E6DF;border-radius:14px}
 @media (max-width:640px){
   .eg col.c-sec{width:26px}.eg td.sec{writing-mode:vertical-rl;padding:4px 0;font-size:10px;letter-spacing:.5px}
   .eg th.sec{font-size:0}
