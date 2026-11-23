@@ -254,10 +254,11 @@ def _download_body(key: str) -> None:
     all_sel, _ = itube_selection(logs, s, e, start_only=True)
     cnt = all_sel["equip_id"].map(lambda v: field_of.get(int(v), "기타")).value_counts() if not all_sel.empty else {}
     opts = ["전체"] + [f for f in FIELDS if f in cnt or f != "기타"]
-    total = int(sum(cnt.values())) if len(cnt) else 0
+    total = len(all_sel)
     from views import common as _cm
     with _cm.LAST_ROW:  # 기간 단위·연도·월과 같은 줄 (2026-11-10)
-        picked = st.multiselect("분야", opts, default=["전체"], key=f"{key}_fields", placeholder="분야 고르기",
+        st.session_state.setdefault(f"{key}_fields", ["전체"])
+        picked = st.multiselect("분야", opts, key=f"{key}_fields", placeholder="분야 고르기",
                                 on_change=_tidy_fields, args=(f"{key}_fields",),
                                 format_func=lambda f: f"{f} {total if f == '전체' else int(cnt.get(f, 0))}건")
     if "전체" in picked:  # 전체를 고르면 나머지는 무시
