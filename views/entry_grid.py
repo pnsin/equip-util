@@ -1,6 +1,6 @@
 """장비 사용 등록 › 장비표 (2026-11-23 사용자): 예전 엑셀처럼 왼쪽 = 장비, 오른쪽 = 날짜.
 
-- 위 버튼으로 시험(환경) · 시험(충방전) · 제조(오창) · 제조(문백) · 분석 중 하나를 고르면 그 장비만 줄로 나옴.
+- 위 버튼으로 시험(환경) · 시험(충방전) · 제조(오창) · 문백 · 분석 중 하나를 고르면 그 장비만 줄로 나옴.
 - 칸 = 시간 + 업체 약칭 (업체마다 색), 며칠 이어지는 실적(기간·묶음)은 띠 하나. 같은 장비에서 겹치면 줄이 나뉨.
 - 칸을 누르면 오른쪽 입력 카드가 그 장비·날짜로 열림 (있는 실적이면 그 실적). 빈칸 여러 개를 끌면 장기(기간) 입력.
 - 기간 실적도 날짜 칸마다 시간+업체 (엑셀처럼). 칸 고르기 → Ctrl+C/V, Delete, Ctrl+Z.
@@ -20,8 +20,10 @@ from core import period as per
 from core.calc import expand_daily
 from core.period import kr_holidays
 
-GROUPS = ["시험(환경)", "시험(충방전)", "제조(오창)", "제조(문백)", "분석"]
-GROUP_DOT = {"시험(환경)": "#F472B6", "시험(충방전)": "#E879F9", "제조(오창)": "#34D399", "제조(문백)": "#34D399",
+# 2026-11-23 사용자: 문백 장비(제조 라인 + 충방전기 + 실환경모사·안전시험 챔버)는 예전 문백 엑셀처럼 한 버튼에
+MB = "문백"
+GROUPS = ["시험(환경)", "시험(충방전)", "제조(오창)", MB, "분석"]
+GROUP_DOT = {"시험(환경)": "#F472B6", "시험(충방전)": "#E879F9", "제조(오창)": "#34D399", MB: "#FBBF24",
              "분석": "#A78BFA", "기타": "#94A3B8"}
 WEEK = "월화수목금토일"
 # 업체 색: 어두운 바탕에서 서로 잘 구별되는 색 (업체 이름으로 늘 같은 색)
@@ -39,10 +41,12 @@ def equip_groups(eq: pd.DataFrame) -> dict[int, str]:
     out = {}
     for i in eq["id"].astype(int):
         g = grp.get(root.get(i, i), grp.get(i, "기타"))
-        if g == status.CHARGER or grp.get(i) == status.CHARGER:
+        if db.center_short(cen.get(i, "")) == "문백":
+            out[i] = MB
+        elif g == status.CHARGER or grp.get(i) == status.CHARGER:
             out[i] = "시험(충방전)"
         elif g == "제조":
-            out[i] = "제조(문백)" if db.center_short(cen.get(i, "")) == "문백" else "제조(오창)"
+            out[i] = "제조(오창)"
         elif g == "시험":
             out[i] = "시험(환경)"
         elif g == "분석":
@@ -105,9 +109,14 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
     leaves = set(db.pick_ids(eq, m1))
     ids = [i for i in order if groups.get(i) == group and (i in leaves or i in with_logs)]
 
-    # 구분 칸: 제조는 라인(맨 위 장비), 나머지는 센터
+    # 구분 칸: 제조는 라인(맨 위 장비), 문백은 라인·충방전기 묶음 + 시험 챔버, 나머지는 센터
+    from core import status
+    dg = status.device_group(eq, db.load_channels())
+
     def section(i: int) -> str:
-        if group.startswith("제조"):
+        if group == MB and dg.get(root.get(i, i)) == "시험":
+            return "시험 챔버"
+        if group.startswith("제조") or group == MB:
             return short.get(root.get(i, i), "")
         return db.center_short(cen.get(i, "")) or "기타"
     sec_order: list[str] = []
@@ -178,11 +187,11 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
         p = parent.get(i)
         name = re.sub(r"\s*\+\s*챔버.*$", "", short.get(i, str(i)))  # '…+챔버 3대(문백#1~#3)' 는 줄 이름에서 뺌
         name = re.sub(r"\s·\s(문백|오창|제조검증|MV)$", "", name)  # 센터별로 나눈 표라 같은 이름 구분용 꼬리는 뺌
-        sub = short.get(p, "") if p is not None and not group.startswith("제조") else ""
+        sub = short.get(p, "") if p is not None and not group.startswith("제조") and group != MB else ""
         if sub and sub in name:
             sub = ""
-        if group.startswith("제조") and root.get(i, i) == i and any(parent.get(j) == i for j in ids):
-            name = "라인 전체"
+        if (group.startswith("제조") or group == MB) and root.get(i, i) == i and any(parent.get(j) == i for j in ids):
+            name = "라인 전체" if dg.get(i) == "제조" else "장비 전체"
         rows.append({"id": i, "name": name, "full": short.get(i, str(i)), "parent": sub, "sec": section(i),
                      "lanes": lanes or [[]]})
     return {"days": days, "off": off, "rows": rows, "m0": m0}
@@ -577,8 +586,16 @@ def _on_pick() -> None:
     ce._clear_sel()
     st.session_state.cal_open = True
     # 입력 카드의 장비 구분·사용목적 기본값도 그 구분으로
-    lane = {"시험(환경)": "시험", "시험(충방전)": ce.CHARGER_GROUP, "제조(오창)": "제조", "제조(문백)": "제조",
+    lane = {"시험(환경)": "시험", "시험(충방전)": ce.CHARGER_GROUP, "제조(오창)": "제조",
             "분석": "분석"}.get(st.session_state.get("eg_last", ""))
+    if st.session_state.get("eg_last") == MB and ev.get("eid") is not None:  # 문백: 누른 장비의 구분으로
+        from core import status
+        eq = db.load_equipment()
+        g = status.device_group(eq, db.load_channels())
+        rt = dict(zip(eq["id"].astype(int), eq["root_id"])) if "root_id" in eq else {}
+        r0 = int(rt.get(int(ev["eid"])) or int(ev["eid"]))
+        lane = {"시험": "시험", status.CHARGER: ce.CHARGER_GROUP, "제조": "제조", "분석": "분석"}.get(
+            g.get(int(ev["eid"])) if g.get(int(ev["eid"])) == status.CHARGER else g.get(r0, g.get(int(ev["eid"]))))
     if lane:
         st.session_state.cal_lane = lane
     else:
