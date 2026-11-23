@@ -49,7 +49,7 @@ CSS = """<style>
 .tl2 .hd .wk {position: absolute; top: 9px; font-size: .74rem; color: #94A3B8; font-weight: 650; white-space: nowrap; display: flex; justify-content: center;}
 .tl2 .hd .wk.r {justify-content: flex-end; padding-right: 4px;}
 .tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #64748B; text-align: center;}
-.tl2 .hd .dy.off {color: #475569;}
+.tl2 .hd .dy.off {color: #F87171; font-weight: 650;}
 .tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; background: #6366F1; color: #fff; font-weight: 700;}
 .tl2 .grp {display: flex; align-items: center; gap: 10px; padding: 16px 20px 8px; font-size: .84rem; font-weight: 700;
   color: var(--ink); position: sticky; left: 0; width: max-content;}
@@ -64,11 +64,9 @@ CSS = """<style>
 .tl2 .bar {position: absolute; height: 24px; border-radius: 7px; display: flex; align-items: center; padding: 0 9px;
   font-size: .75rem; font-weight: 650; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: var(--c); color: #0B1220; box-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent); box-sizing: border-box;}
-.tl2 .bar.bsoon {background: color-mix(in srgb, var(--c) 12%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); color: #F1F5F9;}
 .tl2 .bar.bdone {background: #334155; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--c) 55%, #334155); color: #94A3B8; font-weight: 550;}
 .tl2 .bar.cl {border-top-left-radius: 0; border-bottom-left-radius: 0;}
 .tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
-.tl2 .bar .off {position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, rgba(11,18,32,.30) 0 3px, transparent 3px 8px);}
 .tl2 .bar span {position: relative; z-index: 1;}
 .tl2 .out {position: absolute; height: 24px; display: flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 650;
   color: #E2E8F0; white-space: nowrap;}
@@ -168,9 +166,9 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
     stt = _state(b, today)
     comp = b["company"]
     color = INNER if comp == "내부" else CATS.get(b["cat"], CATS["지원"])[1]
-    cls = "bar " + {"now": "", "soon": "bsoon", "done": "bdone"}[stt] + (" cl" if b["start"] < w0 else "") + (" cr" if b["end"] > w1 else "")
+    cls = "bar " + {"now": "", "soon": "", "done": "bdone"}[stt] + (" cl" if b["start"] < w0 else "") + (" cr" if b["end"] > w1 else "")
     offs = ""
-    if b.get("skip_off"):  # 휴무일 제외 실적: 막대는 잇고 주말·공휴일만 어둡게 (가동률 제외)
+    if b.get("skip_off"):  # 휴무일 제외 실적: 막대는 그대로 잇고 (가동률 제외는 말풍선에만)
         offs = "".join(f"<i class='off' style='left:{k / n * 100:.3f}%;width:{100 / n:.3f}%'></i>"
                        for k in range(n) if status.is_off(a + dt.timedelta(days=k), hol))
     tip = f"{comp} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b.get("staff") else "")
@@ -194,7 +192,7 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
     else:  # 자리가 없으면 글자 없이 (마우스를 올리면 업체·기간)
         out_html = ""
     return (f"<div class='{cls}' title='{html.escape(tip)}' style='--c:{color};left:{left:.3f}%;width:{width:.3f}%;{top}'>"
-            f"{offs}{inner}</div>{out_html}")
+            f"{inner}</div>{out_html}")
 
 
 def _merge(bs: list[dict], hol: set) -> list[dict]:
@@ -344,10 +342,8 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
 def _legend(cats: tuple = ("시험", "제조", "분석", "교육", "지원")) -> None:
     leg = "".join(f"<span><i style='background:{CATS[k][1]}'></i>{k}</span>" for k in cats)
     leg += (f"<span><i style='background:{INNER}'></i>내부</span>"
-            "<span style='margin-left:10px'><i style='background:#E2E8F0;box-shadow:0 0 6px rgba(226,232,240,.5)'></i>진행 중 (진한 색)</span>"
-            "<span><i style='box-shadow:inset 0 0 0 1.5px #E2E8F0'></i>예정 (테두리)</span>"
-            "<span><i style='background:#334155;box-shadow:inset 3px 0 0 #64748B'></i>끝남 (회색)</span>"
-            "<span><i style='background:repeating-linear-gradient(135deg,#94A3B8 0 2px,#1E293B 2px 5px)'></i>빗금 = 주말·공휴일 (가동률 제외)</span>")
+            "<span style='margin-left:10px'><i style='background:#334155;box-shadow:inset 3px 0 0 #64748B'></i>끝남 (회색)</span>"
+            "<span><b style='color:#F87171;font-weight:650'>빨간 날짜</b> = 주말·공휴일 (가동률 제외)</span>")
     st.markdown(f"<div class='es-leg'>{leg}</div>", unsafe_allow_html=True)
 
 
