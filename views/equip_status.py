@@ -19,8 +19,9 @@ from views import charger_board
 from views.calendar_entry import CATS
 
 # 2026-11-23 사용자: 표처럼 칸이 많고 '일정 없는 장비' 줄이 구분마다 반복돼 보기 안 좋음 → A안 (타임라인 정리형)
-# 장비 이름 칸 하나 + 기간 막대 (업체는 막대 안, 날짜는 옆), 기간 2주/5주/3달 + ‹ 오늘 ›, 일정 없는 장비는 맨 아래 한 상자.
-SPANS = {"2주": (0, 14, 14, 44), "5주": (1, 35, 28, 26), "3달": (1, 91, 63, 12)}  # (몇 주 전부터, 일수, 넘길 일수, 하루 최소 px)
+# 장비 이름 칸 하나 + 기간 막대 (업체는 막대 안, 날짜는 옆), 기간 1주/1달 + ‹ 오늘 ›, 일정 없는 장비는 맨 아래 한 상자.
+SPANS = {"1주": 110, "1달": 30}  # 하루 최소 px
+WEEKDAY = "월화수목금토일"
 NAME_W = 300
 
 CSS = """<style>
@@ -134,15 +135,20 @@ INNER = "#94A3B8"  # 내부 사용 막대 색
 
 
 def window(today: dt.date) -> tuple[dt.date, dt.date, int]:
-    """보는 기간: 기본 5주 (지난주 월요일부터). ‹ › 로 넘긴 만큼 옮김."""
-    back, n, _, md = SPANS[st.session_state.get("es_span") or "5주"]
-    w0 = today - dt.timedelta(days=today.weekday() + 7 * back) + dt.timedelta(days=int(st.session_state.get("es_shift", 0)))
-    return w0, w0 + dt.timedelta(days=n - 1), md
+    """보는 기간: 1주 = 이번 주 월~일, 1달 = 이번 달 1일~말일 (기본). ‹ › 는 한 주 / 한 달씩."""
+    span = st.session_state.get("es_span") or "1달"
+    k = int(st.session_state.get("es_shift", 0))
+    if span == "1주":
+        w0 = today - dt.timedelta(days=today.weekday()) + dt.timedelta(weeks=k)
+        return w0, w0 + dt.timedelta(days=6), SPANS[span]
+    m = today.year * 12 + today.month - 1 + k
+    w0 = dt.date(m // 12, m % 12 + 1, 1)
+    w1 = dt.date((m + 1) // 12, (m + 1) % 12 + 1, 1) - dt.timedelta(days=1)
+    return w0, w1, SPANS["1달"]
 
 
 def _move(step: int) -> None:
-    _, _, jump, _ = SPANS[st.session_state.get("es_span") or "5주"]
-    st.session_state.es_shift = 0 if step == 0 else int(st.session_state.get("es_shift", 0)) + step * jump
+    st.session_state.es_shift = 0 if step == 0 else int(st.session_state.get("es_shift", 0)) + step
 
 
 def _state(b: dict, today: dt.date) -> str:
@@ -246,8 +252,9 @@ def _frame(w0: dt.date, w1: dt.date, md: int, today: dt.date) -> tuple[set, floa
         if d.weekday() == 0:
             wk = f"{d.month}월 {d.day}일 주" if span <= 35 else f"{d.month}.{d.day}"
             hd.append(f"<div class='wk' style='left:{pc(d):.3f}%'>{wk}</div>")
-        if span <= 35:  # 3달은 주 첫날만 (위 줄), 오늘은 세로 띠로
-            lab = f"<b>{d.day}</b>" if d == today else str(d.day)
+        if span <= 35:  # 날짜 줄 (1주는 요일도)
+            lab = f"{d.day} {WEEKDAY[d.weekday()]}" if span <= 7 else str(d.day)
+            lab = f"<b>{lab}</b>" if d == today else lab
             hd.append(f"<div class='dy{' off' if off else ''}{' td' if d == today else ''}' "
                       f"style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'>{lab}</div>")
 
@@ -497,7 +504,9 @@ def render() -> None:
                                     format_func=lambda g: GROUP_LABEL.get(g, g), label_visibility="collapsed") or "전체"
         st.space("stretch")
         # 기간 고르기 · 넘기기 (충방전기도 같은 타임라인, 2026-11-23)
-        st.segmented_control("기간", list(SPANS), key="es_span", default=None if "es_span" in st.session_state else "5주",
+        if st.session_state.get("es_span") not in (None, *SPANS):
+            st.session_state.pop("es_span")
+        st.segmented_control("기간", list(SPANS), key="es_span", default=None if "es_span" in st.session_state else "1달",
                              label_visibility="collapsed", on_change=lambda: st.session_state.update(es_shift=0))
         with st.container(key="es_nav", horizontal=True, gap="xsmall"):
             st.button("", icon=":material/chevron_left:", key="es_prev", on_click=_move, args=(-1,), help="앞 기간")
