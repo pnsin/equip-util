@@ -525,3 +525,26 @@ def test_same_name_system_keeps_name_and_units_get_numbers():
     short = dict(zip(eq["id"], eq["short"]))
     assert short == {10: "방폭챔버", 12: "방폭챔버 1호기", 14: "방폭챔버 2호기", 13: "방폭챔버 3호기", 11: "방폭챔버 4호기"}
     assert dict(zip(eq["id"], eq["itube_id"]))[11] == 11  # 각 호기는 자기 i-Tube 번호로 올라감
+
+
+def test_itube_fills_blank_detail_product_purpose():
+    """예전 시트·시험파트에서 가져온 실적처럼 지원개요·제품명이 없어도 i-Tube 파일 칸이 비지 않음."""
+    import io as _io
+    import datetime as _dt
+    from openpyxl import load_workbook as _lw
+    from core import itube as _it
+    d = _dt.date(2026, 9, 1)
+    base = dict(samples=1, disclose="N", include_holidays="N", fee=0, hours=4, start_date=d, end_date=d,
+                industry="전기전자", item="이차전지_에너지", sub_item="이차전지", equip_kind="주장비", etc="",
+                usage_type="외부", brn="1", dept="", detail="", product="", purpose_detail="")
+    recs = [dict(base, id=1, purpose="생산", company="A", equip_name="e", equip_code="C1"),
+            dict(base, id=2, purpose="시험", company="B", equip_name="e", equip_code="C2", purpose_detail="열충격시험"),
+            dict(base, id=3, purpose="생산", company="A", equip_name="e", equip_code="C3")]
+    hist = [dict(id=9, itube_code="C3", company="A", dept="", product="배터리 전극",
+                 detail="· 지원개요 : 5Ah급 셀 개발 지원\n· 인증/인정/시험법 : -\n· 지원내용 :")]
+    ws = _lw(_io.BytesIO(_it.make_itube_file(recs, [], None, hist)))["Sheet1"]
+    rows = [[ws.cell(r, c).value for c in range(1, 23)] for r in range(4, 7)]
+    assert all(r[8] and r[11] and r[20] for r in rows)  # 제품명 · 세부지원내용 · 사용목적(U)
+    assert rows[0][11].endswith("지원내용 : 배터리 시제품 제조")
+    assert "열충격시험" in rows[1][11] and rows[1][20] == "열충격시험"
+    assert "5Ah급 셀 개발 지원" in rows[2][11] and rows[2][8] == "배터리 전극"

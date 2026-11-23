@@ -48,6 +48,12 @@ def itube_selection(logs: pd.DataFrame, s: dt.date, e: dt.date, *, start_only: b
     return fill_from_companies(sel, db.load_companies()), no_code
 
 
+def _history(logs: pd.DataFrame) -> list[dict]:
+    """빈 지원개요·제품명을 채울 때 참고할 전체 실적 (업체·i-Tube 장비·내용만)."""
+    cols = [c for c in ("id", "start_date", "itube_code", "company", "dept", "detail", "product") if c in logs]
+    return logs[cols].to_dict("records") if not logs.empty else []
+
+
 def fill_from_companies(sel: pd.DataFrame, comp: pd.DataFrame) -> pd.DataFrame:
     """실적에 비어 있는 사업자등록번호·업종·품목을 업체 목록(같은 이름)에서 채움.
 
@@ -119,7 +125,9 @@ def render_itube() -> None:
     template = itube_template(cfg)
     if records:
         pairs = [(n, c) for n, c in zip(eq["name"], eq["code"]) if c]
-        data = lambda records=records, pairs=pairs, template=template: itube.make_itube_file(records, pairs, template)  # noqa: E731 - 누를 때만 만듦
+        hist = _history(logs)
+        data = lambda records=records, pairs=pairs, template=template, hist=hist: itube.make_itube_file(  # noqa: E731 - 누를 때만 만듦
+            records, pairs, template, hist)
         st.download_button("i-Tube 장비일지 내려받기", data=data, file_name=fname, mime=XLSX,
                            type="primary", width="stretch", icon=":material/download:")
         with st.expander("미리보기"):
@@ -233,7 +241,8 @@ def _download_body(key: str) -> None:
         st.warning("i-Tube는 한 번에 1000건까지 올릴 수 있어요. 기간을 나눠 주세요.", icon=":material/info:")
     if sel.empty:
         return
-    args = (sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], itube_template(cfg))
+    args = (sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], itube_template(cfg),
+            _history(logs))
     data = lambda args=args: itube.make_itube_file(*args)  # noqa: E731 - 누를 때만 만듦
     fname = _itube_filename(cfg, s, e)
     if field != "전체":

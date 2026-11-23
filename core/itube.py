@@ -131,13 +131,63 @@ def _cell_value(key: str, rec: dict):
 
 INTERNAL_ORG = ("(재)충북테크노파크", "3018213840")  # 활용유형 '내부' = 우리 기관
 
+# 지원개요를 어디서도 찾지 못할 때 쓰는 사용목적별 기본 문구 (2026-11-23)
+DEFAULT_OVERVIEW = {
+    "시험": "배터리 시험 평가",
+    "분석": "배터리 분석",
+    "계측": "배터리 계측",
+    "생산": "배터리 시제품 제조",
+    "교육": "배터리 제조 현장실습 교육",
+    "기타": "배터리 연구개발 지원",
+}
+DEFAULT_PRODUCT = "이차전지"
 
-def _fill_defaults(rec: dict) -> dict:
-    """내려받기 전에 비어 있는 칸 채우기: 지원내용 ← 지원개요, 내부 → 우리 기관 이름·사업자번호."""
+
+def _who(rec: dict) -> tuple[str, str]:
+    """같은 업체·같은 i-Tube 장비를 알아보는 열쇠."""
+    code = to_str(rec.get("itube_code")) or to_str(rec.get("equip_code"))
+    who = to_str(rec.get("company")) or f"내부:{to_str(rec.get('dept'))}"
+    return code, who
+
+
+def known_details(history: list[dict]) -> dict[tuple[str, str], dict]:
+    """다른 실적에 적힌 지원개요·시험법·제품명을 업체+장비별로 모아 둠 (최근 것이 이김)."""
+    out: dict[tuple[str, str], dict] = {}
+    rows = sorted(history, key=lambda r: (str(r.get("start_date") or ""), str(r.get("id") or "")))
+    for r in rows:
+        overview, method, _ = seed.parse_detail(r.get("detail"))
+        k = _who(r)
+        d = out.setdefault(k, {})
+        if overview:
+            d["overview"] = overview
+            if method and method != "-":
+                d["method"] = method
+        if to_str(r.get("product")):
+            d["product"] = to_str(r.get("product"))
+    return out
+
+
+def _fill_defaults(rec: dict, known: dict | None = None) -> dict:
+    """내려받기 전에 비어 있는 칸 채우기 (시트의 실적은 그대로 둠).
+
+    지원개요: 실적의 지원개요 → 사용목적(상세) → 같은 업체·장비의 다른 실적 → 사용목적별 기본 문구
+    인증/인정/시험법: 없으면 '-' · 지원내용: 없으면 지원개요 · 사용목적(U열): 없으면 지원개요
+    제품명: 같은 업체·장비의 다른 실적 → 교육은 '배터리 제조 교육', 그 밖은 세부품목(없으면 이차전지)
+    내부 실적: 기업명·사업자번호 = 우리 기관
+    """
     rec = dict(rec)
+    k = known.get(_who(rec), {}) if known else {}
     overview, method, content = seed.parse_detail(rec.get("detail"))
-    if overview and not content:
-        rec["detail"] = seed.compose_detail(overview, method or "-", overview)
+    purpose = to_str(rec.get("purpose"))
+    overview = (overview or to_str(rec.get("purpose_detail")) or k.get("overview")
+                or DEFAULT_OVERVIEW.get(purpose, DEFAULT_OVERVIEW["기타"]))
+    method = method or k.get("method") or "-"
+    rec["detail"] = seed.compose_detail(overview, method, content or overview)
+    if not to_str(rec.get("purpose_detail")):
+        rec["purpose_detail"] = overview
+    if not to_str(rec.get("product")):
+        rec["product"] = (k.get("product") or ("배터리 제조 교육" if purpose == "교육" else "")
+                          or to_str(rec.get("sub_item")) or DEFAULT_PRODUCT)
     if to_str(rec.get("usage_type")) == "내부":
         if not to_str(rec.get("company")):
             rec["company"] = INTERNAL_ORG[0]
@@ -147,13 +197,15 @@ def _fill_defaults(rec: dict) -> dict:
 
 
 def make_itube_file(records: list[dict], equipment_rows: list[tuple[str, str]],
-                    template_bytes: bytes | None = None) -> bytes:
+                    template_bytes: bytes | None = None, history: list[dict] | None = None) -> bytes:
     """실적 목록을 i-Tube 업로드 양식에 채워 xlsx 바이트로 돌려줍니다.
 
     template_bytes 가 있으면(설정에서 올린 공식 양식) 그 파일에 그대로 채우고,
     없으면 build_blank 로 만든 양식에 채웁니다.
+    history: 빈칸을 채울 때 참고할 전체 실적 (없으면 records 만 참고).
     """
-    records = [_fill_defaults(r) for r in records]
+    known = known_details(list(history or []) + list(records))
+    records = [_fill_defaults(r, known) for r in records]
     if template_bytes:
         wb = load_workbook(io.BytesIO(template_bytes))
         ws = wb["Sheet1"] if "Sheet1" in wb.sheetnames else wb.worksheets[0]
