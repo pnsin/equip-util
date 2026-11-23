@@ -382,7 +382,10 @@ export default function(component) {
   };
   if (!W.__egKeys) {
     W.__egKeys = true;
-    document.addEventListener('mousedown', (ev) => { if (!ev.target.closest || !ev.target.closest('.eg-root')) W.__egActive = false; }, true);
+    // 표는 shadow DOM 안에 있어서 문서에서는 composedPath 로 확인
+    document.addEventListener('mousedown', (ev) => {
+      if (!ev.composedPath().some(n => n && n.classList && n.classList.contains('eg-root'))) W.__egActive = false;
+    }, true);
     document.addEventListener('mouseup', () => { if (W.__egUp) W.__egUp(); });
     document.addEventListener('keydown', (ev) => {
       if (!W.__egActive || !W.__egKey) return;
