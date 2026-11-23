@@ -14,10 +14,10 @@ KINDS = ["문의·상담", "방문", "기술지원", "요청·불만", "교육·
 STATUSES = ["접수", "진행 중", "완료"]
 # 유형 색 (글자색, 바탕색) — 달력 사용목적 색과 어울리는 파스텔
 KIND_COLOR = {
-    "문의·상담": ("#2E9BD6", "#E6F3FB"), "방문": ("#1E8E5A", "#E5F4EC"), "기술지원": ("#8E6CC0", "#F1ECF8"),
+    "문의·상담": ("#2E9BD6", "#E6F3FB"), "방문": ("#4A6B5D", "#EBF2EE"), "기술지원": ("#8E6CC0", "#F1ECF8"),
     "요청·불만": ("#D45087", "#FBEAF1"), "교육·견학": ("#E39A2D", "#FDF2E2"),
 }
-STATUS_COLOR = {"접수": ("#B5650B", "#FDF1E2"), "진행 중": ("#5B6CFF", "#EEF0FF"), "완료": ("#1E8E5A", "#E5F4EC")}
+STATUS_COLOR = {"접수": ("#92400E", "#FBF3E2"), "진행 중": ("#C26344", "#FDF2EE"), "완료": ("#4A6B5D", "#EBF2EE")}
 FIELDS = ("date", "kind", "title", "company", "contact", "staff", "equip_ids", "content", "action", "status",
           "follow_up")
 

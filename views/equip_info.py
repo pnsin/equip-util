@@ -27,14 +27,14 @@ DOC_TAG = {"설명서": ("PDF", "pink"), "SOP": ("SOP", "blue"), "사양서": ("
 # ── 장비 친구들: 사진이 없을 때 대신 나오는 그림 (이름으로 고름) ───────────────
 
 # 2026-11-06 다크 명세서: 귀여운 그림 대신 미니멀한 설비 선 아이콘
-_LN = 'stroke="#94A3B8" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"'
+_LN = 'stroke="#A39F96" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"'
 ICONS = {
-    "mix": ("#0F172A", f'<path d="M16 26h32l-4 22a5 5 0 0 1-5 4H25a5 5 0 0 1-5-4z" {_LN}/><path d="M12 26h40M32 10v24" {_LN}/>'),
-    "roll": ("#0F172A", f'<circle cx="22" cy="24" r="10" {_LN}/><circle cx="22" cy="24" r="3" {_LN}/><path d="M10 46h44M32 24h20" {_LN}/>'),
-    "box": ("#0F172A", f'<rect x="14" y="12" width="36" height="40" rx="5" {_LN}/><rect x="20" y="18" width="24" height="14" rx="3" {_LN}/><path d="M24 44h4" {_LN}/>'),
-    "bat": ("#0F172A", f'<rect x="20" y="12" width="24" height="42" rx="5" {_LN}/><path d="M28 8h8M34 24l-6 9h8l-6 9" {_LN}/>'),
-    "scope": ("#0F172A", f'<path d="M16 54h32M24 54V40M28 10l10 4-8 20-10-4z" {_LN}/><circle cx="40" cy="44" r="6" {_LN}/>'),
-    "gear": ("#0F172A", f'<circle cx="32" cy="32" r="8" {_LN}/><path d="M32 10v8M32 46v8M10 32h8M46 32h8M17 17l6 6M41 41l6 6M47 17l-6 6M23 41l-6 6" {_LN}/>'),
+    "mix": ("#F2EFE9", f'<path d="M16 26h32l-4 22a5 5 0 0 1-5 4H25a5 5 0 0 1-5-4z" {_LN}/><path d="M12 26h40M32 10v24" {_LN}/>'),
+    "roll": ("#F2EFE9", f'<circle cx="22" cy="24" r="10" {_LN}/><circle cx="22" cy="24" r="3" {_LN}/><path d="M10 46h44M32 24h20" {_LN}/>'),
+    "box": ("#F2EFE9", f'<rect x="14" y="12" width="36" height="40" rx="5" {_LN}/><rect x="20" y="18" width="24" height="14" rx="3" {_LN}/><path d="M24 44h4" {_LN}/>'),
+    "bat": ("#F2EFE9", f'<rect x="20" y="12" width="24" height="42" rx="5" {_LN}/><path d="M28 8h8M34 24l-6 9h8l-6 9" {_LN}/>'),
+    "scope": ("#F2EFE9", f'<path d="M16 54h32M24 54V40M28 10l10 4-8 20-10-4z" {_LN}/><circle cx="40" cy="44" r="6" {_LN}/>'),
+    "gear": ("#F2EFE9", f'<circle cx="32" cy="32" r="8" {_LN}/><path d="M32 10v8M32 46v8M10 32h8M46 32h8M17 17l6 6M41 41l6 6M47 17l-6 6M23 41l-6 6" {_LN}/>'),
 }
 _RULES = [("bat", "충방전|활성화|에이징|사이클러|cycler|셀 평가|평가"),
           ("scope", "분석|검사|측정|현미경|sem|xrd|ct\\b|tga|dsc|bet|입도|점도|저항"),
@@ -86,7 +86,7 @@ def _short_loc(loc: str) -> str:
 
 
 CSS = """<style>
-:root { --ip1:rgba(85,102,230,0.16); --ip2:rgba(123,85,230,0.16); --ip3:rgba(85,230,162,0.16); --ip4:rgba(230,163,85,0.16); --ip5:rgba(230,85,133,0.16); --ip6:rgba(85,194,230,0.16); }
+:root { --ip1:#FDF2EE; --ip2:#EFEBF8; --ip3:#EBF2EE; --ip4:#FBF3E2; --ip5:#F6E3EC; --ip6:#E3EEF5; }
 /* 카드 목록 */
 [class*="st-key-iccard_"] {position: relative;}
 [class*="st-key-icgo_"] {position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; z-index: 3; margin: 0 !important;}
@@ -94,7 +94,7 @@ CSS = """<style>
 [class*="st-key-icgo_"] button {width: 100% !important; height: 100% !important; opacity: 0; cursor: pointer;}
 .ic {background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden;
   box-shadow: var(--card-shadow); transition: transform .15s ease, box-shadow .15s ease;}
-[class*="st-key-iccard_"]:hover .ic {transform: translateY(-3px); box-shadow: 0 10px 24px rgba(17,28,46,.10);
+[class*="st-key-iccard_"]:hover .ic {transform: translateY(-3px); box-shadow: 0 10px 24px rgba(25,25,24,.08);
   border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
 .ic {margin-bottom: .45rem;}
 .ic .icph {height: 128px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;}
@@ -106,12 +106,12 @@ CSS = """<style>
 .ic .cd {display: flex; align-items: center; gap: .4rem; margin-top: .3rem; font-size: .82rem; font-variant-numeric: tabular-nums;}
 /* 2026-11-18 사용자 요청: 이 번호가 아이튜브 번호인 걸 알 수 있게 'i-Tube No.' 이름표 + 더 밝은 글자색 */
 .it {flex: none; font-size: .68rem; font-weight: 700; padding: .08rem .45rem; border-radius: 6px; letter-spacing: .02em;
-  background: var(--accent-bg); color: var(--accent-hi);}
-.itn {font-weight: 700; letter-spacing: .03em; color: color-mix(in srgb, var(--accent-hi) 50%, var(--ink));}
+  background: #F2EFE9; color: #4A4741;}  /* 2026-11-23 지시서: 사진 카드 배지는 #F2EFE9 바탕 · #4A4741 글자 */
+.itn {font-weight: 700; letter-spacing: .03em; color: var(--ink);}
 .itn.no {font-weight: 500; color: var(--muted);}
 .ic .wh {font-size: .75rem; color: var(--muted); margin-top: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .ic .bs {display: flex; gap: .3rem; margin-top: .55rem; flex-wrap: wrap; min-height: 1.36rem;}  /* 2026-11-19 배지 없는 카드도 같은 높이 */
-.bdg {font-size: .7rem; padding: .12rem .55rem; border-radius: 999px; background: var(--panel2); color: var(--muted);}
+.bdg {font-size: .7rem; padding: .12rem .55rem; border-radius: 999px; background: #F2EFE9; color: #4A4741;}
 .bdg.e {background: var(--warn-bg); color: var(--warn);}
 .bdg.k {background: var(--accent-bg); color: var(--accent);}
 /* 장비 한 대 */
@@ -124,7 +124,7 @@ CSS = """<style>
 .kv b {display: block; font-size: .88rem; font-weight: 600; color: var(--ink); word-break: keep-all; overflow-wrap: anywhere;}
 .bigph {border-radius: 14px; overflow: hidden; background: var(--panel2); aspect-ratio: 4 / 3;
   display: flex; align-items: center; justify-content: center;}
-.bigph img {width: 100%; height: 100%; object-fit: contain; background: #26334D;}
+.bigph img {width: 100%; height: 100%; object-fit: contain; background: #F2EFE9;}
 .bigph {position: relative;}
 .bigph .ii svg {width: 120px; height: 120px;}
 .phcap {font-size: .75rem; color: var(--muted); margin-top: .3rem; text-align: center;}
@@ -148,16 +148,16 @@ CSS = """<style>
 a.doc:hover .t b {color: var(--accent);}
 .doc .di {flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center;
   justify-content: center; font-size: .66rem; font-weight: 700;}
-.di.pink {background: rgba(230,85,133,0.16); color: #C2416E;} .di.blue {background: rgba(85,102,230,0.16); color: #5B6CFF;}
-.di.green {background: rgba(85,230,162,0.16); color: #1E8E5A;} .di.purple {background: rgba(123,85,230,0.16); color: #6E4FD0;}
-.di.orange {background: rgba(230,163,85,0.16); color: #B5650B;} .di.gray {background: var(--panel2); color: var(--muted);}
+.di.pink {background: #F6E3EC; color: #8A2E5A;} .di.blue {background: #FDF2EE; color: #C26344;}
+.di.green {background: #EBF2EE; color: #4A6B5D;} .di.purple {background: #EFEBF8; color: #4C3575;}
+.di.orange {background: #FBF3E2; color: #92400E;} .di.gray {background: var(--panel2); color: var(--muted);}
 .doc .t {flex: 1; min-width: 0;} .doc .t b {display: block; font-size: .88rem; font-weight: 600; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap;}
 .doc .t small {display: block; font-size: .72rem; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
 .doc .go {font-size: .72rem; color: var(--muted); background: var(--panel2); padding: .15rem .6rem; border-radius: 999px;}
 .doc.nolink .go {display: none;}
 .nodoc {font-size: .82rem; color: var(--dim); padding: .5rem 0 .2rem;}
-[class*="st-key-info_caution_"] textarea {background: rgba(230,194,85,0.16) !important; border-color: rgba(230,193,85,0.3) !important; line-height: 1.6;}
+[class*="st-key-info_caution_"] textarea {background: #FBF3E2 !important; border-color: #EAD9B5 !important; line-height: 1.6;}
 [class*="st-key-info_contact_"] textarea {line-height: 1.6;}
 /* 2026-11-20 휴대폰: 카드를 가로형(왼쪽 작은 그림 + 오른쪽 글)으로 → 한 화면에 여러 대 */
 @media (max-width: 640px) {.ic {display: flex; align-items: stretch;} .ic .icph {height: auto; width: 84px; min-height: 84px; flex: none;}

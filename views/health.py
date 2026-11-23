@@ -9,15 +9,15 @@ from ui_style import page_header
 CSS = """<style>
 .hc-sum {display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: .2rem 0 1rem;}
 .hc-sum span {padding: 6px 14px; border-radius: 999px; font-size: .85rem; font-weight: 700;}
-.hc-sum .s-chk {background: rgba(248,113,113,.14); color: #FCA5A5;}
-.hc-sum .s-note {background: rgba(148,163,184,.14); color: #CBD5E1;}
-.hc-sum .s-ok {background: rgba(16,185,129,.14); color: #6EE7B7;}
+.hc-sum .s-chk {background: rgba(200,75,49,.14); color: #C84B31;}
+.hc-sum .s-note {background: rgba(107,104,96,.14); color: #4A4741;}
+.hc-sum .s-ok {background: rgba(74,107,93,.14); color: #4A6B5D;}
 .hc-h {display: flex; align-items: center; justify-content: center; gap: 8px; margin: 1.1rem 0 .15rem; font-weight: 800; font-size: .98rem;}
 .hc-h .lv {font-size: .72rem; padding: 2px 9px; border-radius: 999px;}
-.hc-h .lv.chk {background: rgba(248,113,113,.16); color: #FCA5A5;}
-.hc-h .lv.note {background: rgba(148,163,184,.16); color: #CBD5E1;}
-.hc-h .n {color: #94A3B8; font-weight: 700; font-size: .85rem;}
-.hc-why {text-align: center; color: #94A3B8; font-size: .82rem; margin-bottom: .45rem;}
+.hc-h .lv.chk {background: rgba(200,75,49,.16); color: #C84B31;}
+.hc-h .lv.note {background: rgba(107,104,96,.16); color: #4A4741;}
+.hc-h .n {color: #6B6860; font-weight: 700; font-size: .85rem;}
+.hc-why {text-align: center; color: #6B6860; font-size: .82rem; margin-bottom: .45rem;}
 </style>"""
 
 

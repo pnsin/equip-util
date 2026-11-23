@@ -17,19 +17,19 @@ CSS = """<style>
 .st-key-cb_center [data-testid="stButtonGroup"] button p {font-weight: 700; color: var(--muted);}
 .st-key-cb_center [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .cb-kpis {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px;}
-.cb-k {background: var(--panel); border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); text-align: center;}
+.cb-k {background: var(--panel); border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(25,25,24,.05); text-align: center;}
 .cb-k span {display: block; font-size: 1rem; font-weight: 700; color: var(--kc); margin-bottom: 2px;}
 .cb-k b {display: block; font-size: 1.45rem; color: var(--ink); line-height: 1.3;}
-.cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 28, 46, .08); padding: 6px 0 8px; overflow-x: auto;}
+.cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(25,25,24,.05); padding: 6px 0 8px; overflow-x: auto;}
 .cb-t {border-collapse: collapse; width: max-content; margin: 0 auto; font-size: .8rem;}
-.cb-t th {font-size: .72rem; color: #94A3B8; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #52617A;
+.cb-t th {font-size: .72rem; color: #6B6860; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #EAE7DF;
   white-space: nowrap;}
-.cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #52617A; white-space: nowrap;}
+.cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #EAE7DF; white-space: nowrap;}
 .cb-t td {text-align: center;} .cb-t td.tl {text-align: left;}
 .cb-t td.u {font-weight: 700; color: var(--ink);}
 .cb-t td.c {color: var(--muted);}
-.cb-t td.m {color: #94A3B8;}
-.cb-dash {color: #94A3B8;}
+.cb-t td.m {color: #6B6860;}
+.cb-dash {color: #6B6860;}
 .cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink); font-size: .8rem;}
 .cb-t td.pd {font-size: .88rem; letter-spacing: .01em;}  /* 숫자는 한글보다 작아 보여서 살짝 키움 */
 .cb-t td.co {overflow: hidden; text-overflow: ellipsis;}
@@ -40,33 +40,33 @@ CSS = """<style>
 .cb-t .s2 {left: 450px; width: 120px; min-width: 120px; max-width: 120px;}
 .cb-t .s3 {left: 570px; width: 120px; min-width: 120px; max-width: 120px;}
 .cb-t .s4 {left: 690px; width: 160px; min-width: 160px; max-width: 160px;}
-.cb-t .s5 {left: 850px; width: 120px; min-width: 120px; max-width: 120px; box-shadow: inset -1px 0 0 #64748B;}
-.cb-t td.s0[colspan] {width: 570px; max-width: 570px;} .cb-t td.s4[colspan] {width: 280px; max-width: 280px; box-shadow: inset -1px 0 0 #64748B;}
+.cb-t .s5 {left: 850px; width: 120px; min-width: 120px; max-width: 120px; box-shadow: inset -1px 0 0 #DDD9CF;}
+.cb-t td.s0[colspan] {width: 570px; max-width: 570px;} .cb-t td.s4[colspan] {width: 280px; max-width: 280px; box-shadow: inset -1px 0 0 #DDD9CF;}
 .cb-t th.tl {padding: 8px 0;}
 @media (max-width: 700px) {.cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: static;}}
 .cb-t td.tl {position: relative; padding: 0;}
 .cb-tl, .cb-mh {width: var(--tlw); min-width: var(--tlw);}  /* 달마다 같은 너비 */
-.cb-t tr.grp td {border-top: 1px solid #52617A;}
+.cb-t tr.grp td {border-top: 1px solid #EAE7DF;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
-.cb-mh span {position: absolute; top: 0; font-size: .7rem; color: #94A3B8; font-weight: 600; text-align: center; box-sizing: border-box;
-  border-left: 1px solid #52617A;}
-.cb-g {position: absolute; top: 0; bottom: 0; width: 1px; background: #52617A;}
-.cb-now {position: absolute; top: -2px; bottom: -2px; width: 2px; background: #E35D78; border-radius: 2px; z-index: 2;}
+.cb-mh span {position: absolute; top: 0; font-size: .7rem; color: #6B6860; font-weight: 600; text-align: center; box-sizing: border-box;
+  border-left: 1px solid #EAE7DF;}
+.cb-g {position: absolute; top: 0; bottom: 0; width: 1px; background: #EAE7DF;}
+.cb-now {position: absolute; top: -2px; bottom: -2px; width: 2px; background: #C84B31; border-radius: 2px; z-index: 2;}
 .cb-bar {position: absolute; top: 5px; height: 21px; border-radius: 8px; font-size: .7rem; font-weight: 700; padding: 0 8px;
   display: flex; align-items: center; overflow: hidden; white-space: nowrap; border-left: 4px solid var(--fg);
   background: var(--bg); color: var(--fg); z-index: 1;}
-.cb-bar.cb-soon {border: 1.5px dashed #E8B04B; background: rgba(230,182,85,0.16); color: #B5650B;}
-.cb-mini {display: inline-block; width: 22px; height: 6px; border-radius: 3px; background: rgba(85,230,158,0.16); margin: 0 4px 1px 5px;
+.cb-bar.cb-soon {border: 1.5px dashed #D4A359; background: #FBF3E2; color: #92400E;}
+.cb-mini {display: inline-block; width: 22px; height: 6px; border-radius: 3px; background: #E6F2EC; margin: 0 4px 1px 5px;
   vertical-align: middle; overflow: hidden;}
-.cb-mini i {display: block; height: 100%; background: #E35D78; border-radius: 3px;}
-.cb-n {font-size: .7rem; font-weight: 700; color: #B8435C;}
-.cb-free {position: absolute; top: 8px; left: 6px; font-size: .72rem; font-weight: 700; color: #1E8E5A;}
+.cb-mini i {display: block; height: 100%; background: #C84B31; border-radius: 3px;}
+.cb-n {font-size: .7rem; font-weight: 700; color: #C84B31;}
+.cb-free {position: absolute; top: 8px; left: 6px; font-size: .72rem; font-weight: 700; color: #4A6B5D;}
 .cb-ch summary, label.cb-ch {cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px;}
 label.cb-ch input {display: none;}
 label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-t tr.chx {visibility: collapse;} .cb-box.all tr.chx {visibility: visible;}
-.cb-t tr.chx td {background: linear-gradient(rgba(99,102,241,.05), rgba(99,102,241,.05)), var(--panel); height: 28px;} .cb-t tr.chx td.n {color: #94A3B8; font-weight: 700; text-align: center;}
+.cb-t tr.chx td {background: linear-gradient(rgba(217,119,87,.05), rgba(217,119,87,.05)), var(--panel); height: 28px;} .cb-t tr.chx td.n {color: #6B6860; font-weight: 700; text-align: center;}
 .cb-t tr.chx td:empty {border-bottom-color: transparent;}
 .cb-ch summary::-webkit-details-marker {display: none;}
 .cb-ch summary i, label.cb-ch i {font-style: normal; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--accent);
@@ -74,16 +74,16 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
   line-height: 1;}
 .cb-ch[open] summary i {background: var(--accent); color: #fff;}
 .cb-ch ul {list-style: none; margin: 4px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(4, max-content); gap: 2px 14px;}
-.cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #1E8E5A; white-space: nowrap;}
+.cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #4A6B5D; white-space: nowrap;}
 .cb-t td.u {white-space: nowrap; vertical-align: middle; padding: 0 12px; line-height: 1.35;}
 .cb-t td.u .sp {font: inherit; color: inherit;}
-.cb-t td.u .cn {display: block; font-size: .72rem; font-weight: 500; color: #94A3B8; margin-top: 2px;}
+.cb-t td.u .cn {display: block; font-size: .72rem; font-weight: 500; color: #6B6860; margin-top: 2px;}
 .cb-t td.u .cn.one {display: inline; margin: 0 0 0 6px;} .cb-t td.u .cn.one:before {content: '· ';}
 @media (max-width: 640px) {.cb-t td.u .cn {font-size: .62rem; margin-top: 0;}}
 .cb-ch li b {color: var(--muted); font-weight: 600; min-width: 38px;}
-.cb-ch li.on {color: #E35D78; font-weight: 700;}
+.cb-ch li.on {color: #C84B31; font-weight: 700;}
 .cb-t td:has(details[open]) {white-space: normal; vertical-align: top; padding-top: 6px;}
-.cb-sum td {background: linear-gradient(rgba(85,143,230,0.16), rgba(85,143,230,0.16)), var(--panel); font-weight: 700; color: var(--muted);}
+.cb-sum td {background: #FDF2EE; font-weight: 700; color: var(--muted);}
 .cb-foot {display: flex; flex-wrap: wrap; gap: 14px; font-size: .74rem; color: var(--muted); margin-top: 8px;}
 .cb-foot i {display: inline-block; width: 11px; height: 11px; border-radius: 4px; margin-right: 5px; vertical-align: -1px;}
 /* 2026-11-20 휴대폰: 숫자 3칸은 한 줄로 작게, 표는 '장비'만 왼쪽에 고정하고 옆으로 밀어 일정 보기 */
@@ -91,7 +91,7 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
   .cb-k {padding: 8px 4px; border-radius: 12px;} .cb-k span {font-size: .7rem;} .cb-k b {font-size: .95rem;}
   .cb-t {font-size: .72rem;} .cb-t th {font-size: .66rem; padding: 6px 4px;} .cb-t td {padding: 0 4px;}
   .cb-t .s0 {position: sticky !important; left: 0; width: 104px; min-width: 104px; max-width: 104px; white-space: normal !important;
-    word-break: keep-all; line-height: 1.25; font-size: .7rem; box-shadow: inset -1px 0 0 #64748B;}
+    word-break: keep-all; line-height: 1.25; font-size: .7rem; box-shadow: inset -1px 0 0 #DDD9CF;}
   .cb-t .s1, .cb-t .s2, .cb-t .s3 {width: 64px; min-width: 64px; max-width: 64px;}
   .cb-t .s4 {width: 110px; min-width: 110px; max-width: 110px;} .cb-t .s5 {width: 92px; min-width: 92px; max-width: 92px;}
   .cb-t td.s0[colspan] {width: 232px; max-width: 232px;} .cb-t td.s4[colspan] {width: 202px; max-width: 202px;}
@@ -233,9 +233,9 @@ def body(center: str, all_open: bool) -> None:
         pct = f" · {used / total:.0%}" if total else ""
         st.markdown(
             "<div class='cb-kpis'>"
-            f"<div class='cb-k' style='--kc:#A5B4FC'><span>전체 채널</span><b>{total} ch</b></div>"
-            f"<div class='cb-k' style='--kc:#FF8DA1'><span>사용 중 채널</span><b>{used} ch{pct}</b></div>"
-            f"<div class='cb-k' style='--kc:#6EE7B7'><span>미사용 채널</span><b>{total - used} ch</b></div>"
+            f"<div class='cb-k' style='--kc:#C26344'><span>전체 채널</span><b>{total} ch</b></div>"
+            f"<div class='cb-k' style='--kc:#C84B31'><span>사용 중 채널</span><b>{used} ch{pct}</b></div>"
+            f"<div class='cb-k' style='--kc:#4A6B5D'><span>미사용 채널</span><b>{total - used} ch</b></div>"
             "</div>", unsafe_allow_html=True)
 
         # 타임라인: 고른 기간 (기본 = 이번 달 + 2개월)
@@ -322,8 +322,8 @@ def body(center: str, all_open: bool) -> None:
             + "".join(rows) + "</table></div>"
             "<div class='cb-foot'>"
             + "".join(f"<span><i style='background:{CATS[k][1]}'></i>{k}</span>" for k in ("시험", "제조", "분석", "지원"))
-            + "<span><i style='border:1.5px dashed #E8B04B;background:rgba(230,182,85,0.16)'></i>아직 시작 전 (예약)</span>"
-            "<span style='color:#E35D78'>│ 오늘</span></div>", unsafe_allow_html=True)
+            + "<span><i style='border:1.5px dashed #D4A359;background:#FBF3E2'></i>아직 시작 전 (예약)</span>"
+            "<span style='color:#C84B31'>│ 오늘</span></div>", unsafe_allow_html=True)
 
         mine = bk[bk["chamber_id"].isin(set(g["id"].astype(int)))] if not bk.empty else bk
         if not mine.empty:

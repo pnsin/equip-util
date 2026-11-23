@@ -162,10 +162,10 @@ def render() -> None:
         fig.add_bar(x=tr["기간"], y=tr["사용시간"], name="사용시간(h)", marker_color=T["accent"], opacity=0.9,
                     hovertemplate="%{x}<br>%{y:,.0f} h<extra></extra>")
         fig.add_scatter(x=tr["기간"], y=tr["가동률"], name=w("가동률(%)"), yaxis="y2", mode="lines+markers",
-                        line=dict(color=T["warn"], width=2.5), hovertemplate=w("%{x}<br>가동률 %{y:.1f}%<extra></extra>"))
+                        line=dict(color=T["ok"], width=2.5), hovertemplate=w("%{x}<br>가동률 %{y:.1f}%<extra></extra>"))
         if target:
             fig.add_scatter(x=tr["기간"], y=[target] * len(tr), name=f"목표 {target:.0f}%", yaxis="y2", mode="lines",
-                            line=dict(color=T["warn"], width=1, dash="dot"), hoverinfo="skip")
+                            line=dict(color=T["muted"], width=1, dash="dot"), hoverinfo="skip")
         top = max([target] + [v for v in tr["가동률"] if pd.notna(v)] + [10]) * 1.15
         fig.update_layout(xaxis=dict(type="category"), yaxis=dict(title="사용시간(h)", rangemode="tozero"),
                           yaxis2=dict(title=w("가동률(%)"), overlaying="y", side="right", range=[0, top],
