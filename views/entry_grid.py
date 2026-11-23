@@ -242,7 +242,8 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
                     h.append(f"<td class='{cls}{s_cls}' data-eid='{r['id']}' data-day='{d}' data-ci='{ci}'></td>")
                     continue
                 c = it["color"]
-                picked = " picked" if sel_log == it["log"] else ""
+                # 누른 그 칸만 표시 (기간 실적의 다른 날 칸은 그대로) — 2026-11-24 사용자
+                picked = " picked" if sel_log == it["log"] and (sel_day is None or sel_day == d) else ""
                 hv = it["days"][d]
                 hl = f"{round(hv, 1):g}"
                 tip = e(f"{it['full']} · {d:%m/%d} {hl}h" + (f" · {it['s']:%m/%d}~{it['e']:%m/%d}" if it["period"] else "")
@@ -661,7 +662,7 @@ def render_grid(container, eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, mont
         sel = None
         if st.session_state.get("cal_open"):
             if pick:
-                sel = {"log": int(pick["id"])}
+                sel = {"log": int(pick["id"]), "day": pick.get("day")}
             elif pre:
                 sel = {"eid": pre["eq"], "day": st.session_state.get("cal_day")}
         nd = len(data["days"])

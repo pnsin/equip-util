@@ -23,3 +23,14 @@ def test_html_has_click_targets():
     assert h.count("data-log='7'") == 3 and "picked" in h and "colspan" not in h
     assert h.count("<b>8</b>") == 3 and " jl" in h and " jr" in h
     assert h.count("data-eid='6'") == 3  # 빈 줄은 날짜마다 누를 수 있는 칸
+
+
+def test_only_clicked_cell_is_marked():
+    import datetime as dt
+    d = [dt.date(2026, 11, 2), dt.date(2026, 11, 3), dt.date(2026, 11, 4)]
+    it = {"log": 7, "s": d[0], "e": d[2], "period": True, "h": "8h/일", "co": "내부", "full": "내부",
+          "color": "#94A3B8", "ch": "", "days": {x: 8.0 for x in d}, "vis": set(d)}
+    data = {"days": d, "off": set(), "m0": d[0],
+            "rows": [{"id": 5, "name": "코터", "full": "코터", "parent": "", "sec": "라인", "lanes": [[it]]}]}
+    h = eg.to_html(data, d[0], {"log": 7, "day": d[1]})
+    assert h.count(" picked") == 1
