@@ -68,10 +68,10 @@ CSS = """<style>
 [data-testid="stLayoutWrapper"]:has(> .st-key-ep_head), .st-key-ep_panel > [data-testid="stElementContainer"]:has(.st-key-ep_head),
 .st-key-ep_head {position: sticky !important; top: -16px; z-index: 30; background: var(--panel);}
 .st-key-ep_head {padding: 4px 0 8px !important; box-shadow: 0 -16px 0 var(--panel), 0 6px 10px -8px rgba(25,25,24,.5);}
-.st-key-ep_long details {border: none !important; background: rgba(242,239,233,.35); border-radius: 12px !important;}
-.st-key-ep_long summary {padding: 8px 12px !important; min-height: 0 !important;}
-.st-key-ep_long summary p {font-size: .82rem !important; font-weight: 700; color: #4A4741;}
-.st-key-ep_long [data-testid="stExpanderDetails"] {padding: 0 8px 8px !important;}
+[class*="st-key-ep_long_"] details {border: none !important; background: rgba(242,239,233,.35); border-radius: 12px !important;}
+[class*="st-key-ep_long_"] summary {padding: 8px 12px !important; min-height: 0 !important;}
+[class*="st-key-ep_long_"] summary p {font-size: .82rem !important; font-weight: 700; color: #4A4741;}
+[class*="st-key-ep_long_"] [data-testid="stExpanderDetails"] {padding: 0 8px 8px !important;}
 .ep-h {line-height: 1.25;}
 .ep-d {font-family: 'Nunito', 'Pretendard Variable', 'Pretendard', sans-serif; font-size: 1.3rem; font-weight: 900; color: var(--ink);}
 .ep-d em {font-style: normal; font-size: .95rem; color: #6B6860; font-weight: 700; margin-left: 4px;}
@@ -1845,8 +1845,8 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                     st.rerun()
         # 그날 걸쳐 있는 장기(기간) 실적은 한 줄로 접어 둠 (2026-11-20 사용자: 입력이 주가 되게)
         if not period.empty:
-            picked_long = not series.empty and bool(set(series["id"].astype(int)) & set(period["id"].astype(int)))
-            with st.expander(f"진행 중인 장기 실적 {len(period)}건", expanded=picked_long, key="ep_long"):
+            # 2026-11-24 사용자: 기본값은 늘 접힘 (다른 날을 고르면 다시 접힘)
+            with st.expander(f"진행 중인 장기 실적 {len(period)}건", expanded=False, key=f"ep_long_{day:%Y%m%d}"):
                 with st.container(key="ep_list_long", gap="small"):
                     for r in period.sort_values(["end_date", "id"]).to_dict("records"):
                         rid = int(r["id"])
