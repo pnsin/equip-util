@@ -84,6 +84,7 @@ def expand_daily(logs: pd.DataFrame, mode: str = "spread", caps: dict | None = N
     caps = {장비ID: 하루 최대 시간 또는 (하루 최대 시간, 묶음ID)} 이면 (충방전기) 챔버·채널이 여러 개 돌아도
     하루 합계를 그 시간까지만 세고 (같은 묶음ID = 같은 주장비 아래 충방전기는 합쳐서),
     주말·공휴일 몫은 세지 않습니다. 실적(사용시간) 자체는 그대로이고 가동률 계산에만 씁니다.
+    caps 를 넘기면(빈 dict 포함 = 가동률 계산) 모든 장비의 주말·공휴일 몫을 0으로 (2026-11-23).
     """
     cols = ["log_id", "equip_id", "day", "hours", "fee"]
     if logs.empty:
@@ -112,6 +113,12 @@ def expand_daily(logs: pd.DataFrame, mode: str = "spread", caps: dict | None = N
         for d in days:
             recs.append((r.id, r.equip_id, d, h / n, f / n))
     df = pd.DataFrame(recs, columns=cols)
+    if caps is not None and not df.empty:
+        # 2026-11-23 사용자: 가동률에서 주말·공휴일은 뺌. 주말 포함(Y) 실적도 주말·공휴일 몫은 세지 않음.
+        # (caps 를 넘기는 곳 = 가동률 계산. 달력의 날짜별 표시는 caps 없이 불러서 그대로)
+        dd = pd.to_datetime(df["day"])
+        off = (dd.dt.weekday >= 5) | dd.dt.date.isin(hol)
+        df.loc[off, "hours"] = 0.0
     if caps and not df.empty:
         df = cap_daily(df, caps, hol)
     df["day"] = pd.to_datetime(df["day"])

@@ -49,9 +49,18 @@ def test_charger_day_capped_at_8h_and_weekends_dropped():
     by_day = d.groupby(d["day"].dt.date)["hours"].sum()
     assert by_day[D(2026, 11, 2)] == pytest.approx(8)
     assert by_day[D(2026, 11, 7)] == pytest.approx(0)
-    # 다른 장비는 그대로 더함
+    # 다른 장비는 그대로 더하되, 가동률에서는 주말 몫을 세지 않음 (2026-11-23)
     other = calc.expand_daily(logs.assign(equip_id=9), "spread", {7: 8.0})
-    assert other["hours"].sum() == pytest.approx(32)
+    assert other["hours"].sum() == pytest.approx(24)
+    # 가동률이 아닌 곳(caps 없이)은 실적 시간 그대로
+    assert calc.expand_daily(logs.assign(equip_id=9), "spread")["hours"].sum() == pytest.approx(32)
+
+
+def test_kpi_drops_weekend_share_of_y_rows():
+    """주말 포함(Y) 7일 148h → 가동률에는 평일 5일 몫만 (2026-11-23)."""
+    logs = pd.DataFrame([_log(1, "2026-09-01", "2026-09-07", 148, eid=9, hol="Y")])
+    d = calc.expand_daily(logs, "spread", {})
+    assert d["hours"].sum() == pytest.approx(148 * 5 / 7)
 
 
 def test_bookings_merge_series_and_status():

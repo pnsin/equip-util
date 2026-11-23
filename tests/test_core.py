@@ -570,7 +570,7 @@ def test_itube_merges_daily_rows_into_period():
 
 
 def test_itube_holidays_always_n():
-    """휴무일자포함은 모두 N, 사용시간은 그대로 (2026-11-23)."""
+    """휴무일자포함은 모두 N, 주말 포함 실적은 평일 몫만 (2026-11-23)."""
     import io as _io
     import datetime as _dt
     from openpyxl import load_workbook as _lw
@@ -580,4 +580,4 @@ def test_itube_holidays_always_n():
                equip_kind="주장비", start_date=d, end_date=d + _dt.timedelta(days=6), hours=148,
                include_holidays="Y", samples=1, fee=0)
     ws = _lw(_io.BytesIO(_it.make_itube_file([rec], [], None)))["Sheet1"]
-    assert ws.cell(4, 18).value == "N" and ws.cell(4, 19).value == 148
+    assert ws.cell(4, 18).value == "N" and ws.cell(4, 19).value == round(148 * 5 / 7)

@@ -265,7 +265,8 @@ def _equip_sheet(ws, eq: pd.DataFrame) -> None:
     for i, r in enumerate(eq.to_dict("records"), start=2):
         p = r["parent_id"]
         vals = (r.get("category", ""), "    " * int(r["depth"]) + r["name"],
-                by.get(int(p), "") if pd.notna(p) else "", by.get(int(r["root_id"]), ""), r["kind"], r["code"],
+                by.get(int(p), "") if pd.notna(p) else "", by.get(int(r["root_id"]), ""),
+                "주장비" if r["kind"] == "부장비" else r["kind"], r["code"],  # 2026-11-23 사용자: 부장비도 주장비로
                 r.get("nfec", ""), r.get("model", ""), r.get("location", ""))
         for j, v in enumerate(vals, start=1):
             c = ws.cell(i, j, v)

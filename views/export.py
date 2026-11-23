@@ -68,20 +68,6 @@ def _history(logs: pd.DataFrame) -> list[dict]:
     return logs[cols].to_dict("records") if not logs.empty else []
 
 
-def _over_weekday_hours(sel: pd.DataFrame) -> pd.DataFrame:
-    """사용시간이 기간 안 평일 수 × 24h 를 넘는 실적 (휴무일자포함 N 으로 올릴 때 걸릴 수 있음)."""
-    if sel.empty:
-        return sel
-    off = calc.kr_holidays({d.year for d in sel["start_date"].dropna()} | {d.year for d in sel["end_date"].dropna()})
-
-    def cap(s, e) -> float:
-        if pd.isna(s):
-            return float("inf")
-        days = pd.date_range(s, e if pd.notna(e) else s)
-        return 24.0 * sum(1 for d in days if d.weekday() < 5 and d.date() not in off)
-    return sel[[float(db.to_num(h, 0) or 0) > cap(s, e) for h, s, e in zip(sel["hours"], sel["start_date"], sel["end_date"])]]
-
-
 def fill_from_companies(sel: pd.DataFrame, comp: pd.DataFrame) -> pd.DataFrame:
     """실적에 비어 있는 사업자등록번호·업종·품목을 업체 목록(같은 이름)에서 채움.
 
@@ -332,10 +318,6 @@ def _download_body(key: str) -> None:
         st.caption(f"ITUBE번호가 없는 장비 실적 {len(no_code)}건은 장비번호 '-'로 들어가요: {names}")
     if len(sel) > 1000:
         st.warning("i-Tube는 한 번에 1000건까지 올릴 수 있어요. 기간을 나눠 주세요.", icon=":material/info:")
-    over = _over_weekday_hours(sel)
-    if not over.empty:  # 휴무일자포함을 모두 N으로 내보내서 (2026-11-23)
-        st.caption(f"주말·공휴일까지 쓴 실적 {len(over)}건은 사용시간이 평일 시간(평일 수 × 24h)보다 많아 "
-                   f"i-Tube에서 걸릴 수 있어요: " + ", ".join(sorted(set(over["equip_name"]))))
     if sel.empty:
         return
     args = (sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], itube_template(cfg),
