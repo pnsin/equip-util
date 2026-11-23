@@ -1119,6 +1119,7 @@ def _on_fast() -> None:
 def _clear_sel() -> None:
     st.session_state.pop("cal_sel", None)
     st.session_state.pop("cal_picks", None)
+    st.session_state.pop("cal_preset", None)
 
 
 def _picks() -> list[dict]:
@@ -1476,6 +1477,19 @@ def render(header: bool = True) -> None:
             st.session_state.cal_month = _shift_month(month, 1)
             st.rerun()
         legend = st.container(key="cal_legend", width="content")
+        # 2026-11-23 사용자: 예전 엑셀처럼 장비(줄) × 날짜(칸) 표가 기본. 달력은 옆 탭으로 남김
+        view = st.segmented_control("보기", ["표", "달력"], default=st.session_state.get("cal_view_last", "표"),
+                                    key="q_form_entryview", label_visibility="collapsed") or st.session_state.get(
+                                        "cal_view_last", "표")
+        st.session_state["cal_view_last"] = view
+
+    if view == "표":
+        from views import entry_grid
+        entry_grid.render_grid(card, eq, logs, cfg, month)
+        if right is not None:
+            with right:
+                _entry_panel(day, logs, eq, comp, cfg)
+        return
 
     weeks = calendar.Calendar(firstweekday=0).monthdatescalendar(month.year, month.month)
     hol = kr_holidays({weeks[0][0].year, weeks[-1][-1].year, today.year, today.year + 1})
@@ -1721,6 +1735,7 @@ def _ch_toggle(key: str, opts: list) -> None:
 
 def _close_panel() -> None:
     st.session_state.cal_open = False
+    st.session_state.pop("cal_preset", None)
     st.session_state.pop("cal_pick", None)
     st.session_state.pop("_ep_scrolled", None)
 
@@ -1847,16 +1862,21 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
         last_staff = st.session_state.get("last_staff") or st.session_state.get("me")
         lane = st.session_state.get("cal_lane")
         groups = ["전체"] + [c for c in CARD_GROUPS if any(cat_of.get(i) == c for i in pickable)]
-        cur_cat = cat_of.get(int(cur["equip_id"])) if cur is not None else None
+        # 장비표에서 빈칸을 누르면 그 장비(·끌어 고른 기간)가 미리 채워짐 (entry_grid._on_pick)
+        pre = st.session_state.get("cal_preset") if cur is None else None
+        pre_eq = int(pre["eq"]) if pre and int(pre["eq"]) in short_of else None
+        cur_cat = cat_of.get(int(cur["equip_id"])) if cur is not None else cat_of.get(pre_eq)
         want = lane if lane in groups else (cur_cat if cur_cat in groups else "전체")
         eq_opts = [short_of[i] for i in pickable]
         if cur is not None and short_of.get(cur["equip_id"]) not in eq_opts:
             eq_opts.append(short_of.get(cur["equip_id"]))
+        if pre_eq is not None and short_of[pre_eq] not in eq_opts:  # 라인 전체 등 목록 밖 장비
+            eq_opts.append(short_of[pre_eq])
         comp_opts = list(comp_by_name)
         if cur is not None and db.to_str(cur["company"]) and cur["company"] not in comp_opts:
             comp_opts.append(cur["company"])
         ov, _, content = seed.parse_detail(cur["detail"]) if cur is not None else ("", "", "")
-        k = f"{day}_{edit_id or 'new'}_{ver}"
+        k = f"{day}_{edit_id or 'new'}_{ver}_{st.session_state.get('cal_pv', 0)}"
 
         def ix(opts, v):
             return opts.index(v) if v in opts else None
@@ -1867,7 +1887,8 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             mode = None
             with st.container(horizontal=True, gap="small", key="ep_top", vertical_alignment="center"):
                 v_mode = st.segmented_control("입력 방식", ["하루", "기간"], key=f"ep_mode_{k}",
-                                              default="기간" if is_series else "하루", label_visibility="collapsed",
+                                              default="기간" if is_series or (pre and pre.get("mode") == "기간") else "하루",
+                                              label_visibility="collapsed",
                                               format_func=lambda m: {"하루": "단기", "기간": "장기"}[m],
                                               help="장기: 며칠~몇 달 계속 도는 시험을 한 번에 입력 (달력에는 매일 표시)") or (
                                                   "기간" if is_series else "하루")
@@ -1889,7 +1910,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                                              format_func=lambda c: GROUP_LABEL.get(c, c),
                                              label_visibility="collapsed") or "전체"
                 if g != "전체":
-                    keep = short_of.get(cur["equip_id"]) if cur is not None else None
+                    keep = short_of.get(cur["equip_id"]) if cur is not None else (short_of.get(pre_eq) if pre_eq else None)
                     in_g = [i for i in pickable if cat_of.get(i) == g]
                     if g == CHARGER_GROUP and not chans.empty:  # 충방전기: 센터를 누르면 그 센터 충방전기만
                         cen_of = {int(e): db.CENTER_SHORT.get(c, c) for e, c in zip(chans["equip_id"], chans["center"])
@@ -1904,7 +1925,8 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                     eq_opts = [short_of[i] for i in in_g]
                     if keep and keep not in eq_opts:
                         eq_opts.append(keep)
-            v_eq = st.selectbox("장비", eq_opts, index=ix(eq_opts, short_of.get(cur["equip_id"]) if cur is not None else None),
+            v_eq = st.selectbox("장비", eq_opts, index=ix(eq_opts, short_of.get(cur["equip_id"]) if cur is not None
+                                                     else (short_of.get(pre_eq) if pre_eq else None)),
                                 format_func=eq_label, placeholder="장비 이름을 입력해 찾기", key=f"ep_eq_{k}")
             where = db.path_text(eq, eq_id[v_eq]) if v_eq in eq_id else ""
             if where:  # 어느 주장비 소속인지 작게 (시간은 주장비에 합산)
@@ -1929,7 +1951,8 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             v_eid = eq_id.get(v_eq)
             chunks: list[dict] = []
             if v_mode == "기간":
-                p_start, p_end = per.series_span(series) if is_series else (day, day + dt.timedelta(days=6))
+                p_start, p_end = per.series_span(series) if is_series else (
+                    (pre["start"], pre["end"]) if pre and pre.get("mode") == "기간" else (day, day + dt.timedelta(days=6)))
                 c1, c2 = st.columns(2, gap="small")
                 v_ps = c1.date_input("시작일", value=p_start, format="YYYY-MM-DD", key=f"ep_ps_{k}")
                 if f"ep_pe_{k}" not in st.session_state or st.session_state[f"ep_pe_{k}"] < v_ps:
