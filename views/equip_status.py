@@ -70,6 +70,7 @@ CSS = """<style>
 .tl2 .bar.cl {border-top-left-radius: 0; border-bottom-left-radius: 0;}
 .tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
 .tl2 .bar span {position: relative; z-index: 1;}
+.tl2 .bar small.pd {font-weight: 600; opacity: .72; margin-left: 6px; font-size: .7rem;}
 .tl2 .out {position: absolute; height: 24px; display: flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 650;
   color: #E2E8F0; white-space: nowrap;}
 .tl2 .out small {font-weight: 500; color: #94A3B8; font-size: .7rem;}
@@ -182,12 +183,18 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
         tip += " · 주말·공휴일은 가동률에서 빠져요"
     when = status_span(b, today).replace(" ", "") + (f" · {b['note']}" if b.get("note") else "")
     top = f"top:{y0 + lane * 30}px"
-    fits = n * day_px >= len(comp) * 12.5 + 22  # 업체 이름이 막대 안에 들어가는지 (대략)
-    inner = (f"<span>{html.escape(comp)}" + (f" <small style='font-weight:500;opacity:.8'>{b['note']}</small>" if b.get("note") else "")
+    bar_px = n * day_px
+    fits = bar_px >= len(comp) * 12.5 + 22  # 업체 이름이 막대 안에 들어가는지 (대략)
+    both = bar_px >= len(comp) * 12.5 + len(when) * 6.6 + 34  # 업체 + 기간이 다 들어가는지 → 기간도 막대 안 (업체 바로 뒤)
+    inner = (f"<span>{html.escape(comp)}"
+             + (f" <small class='pd'>{html.escape(when)}</small>" if both else
+                (f" <small class='pd'>{b['note']}</small>" if b.get("note") else ""))
              + "</span>") if fits else ""
-    out_txt = (f"<small>{when}</small>" if fits else f"{html.escape(comp)} <small>{when}</small>")
+    out_txt = ("" if both else f"<small>{when}</small>" if fits else f"{html.escape(comp)} <small>{when}</small>")
     need = (0 if fits else len(comp) * 12.5) + len(when) * 6.6 + 14  # 옆 글자 너비 (대략 px)
-    if room[1] * day_px >= need:
+    if both:
+        out_html = ""
+    elif room[1] * day_px >= need:
         out_html = f"<div class='out b{stt}' style='left:calc({left + width:.3f}% + 6px);{top}'>{out_txt}</div>"
     elif room[0] * day_px >= need:
         out_html = f"<div class='out b{stt}' style='right:calc({100 - left:.3f}% + 6px);{top}'>{out_txt}</div>"
