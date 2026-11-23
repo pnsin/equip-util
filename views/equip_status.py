@@ -28,6 +28,7 @@ CSS = """<style>
 .st-key-es_nav {flex: none; width: auto !important;}
 .st-key-es_nav button {min-height: 34px; padding: 0 10px;}
 .st-key-es_span {flex: none; width: auto !important;}
+.st-key-cb_edit {margin-top: .8rem;}
 .tl2 {background: var(--panel); border-radius: 18px; overflow-x: auto; padding: 4px 0 10px; margin-top: .3rem;}
 .tl2-in {position: relative; min-width: calc(var(--nw) + var(--n) * var(--md));}
 .tl2 .cols {position: absolute; top: 0; bottom: 0; left: var(--nw); right: 0; pointer-events: none;}
@@ -71,6 +72,19 @@ CSS = """<style>
   color: #E2E8F0; white-space: nowrap;}
 .tl2 .out small {font-weight: 500; color: #94A3B8; font-size: .7rem;}
 .tl2 .out.bdone {opacity: .5;}
+.tl2 .chx {display: none;} .tl2.all .chx {display: grid;}
+.tl2 .chx .nm b {font-size: .74rem; color: #94A3B8; font-weight: 600; padding-left: 22px;}
+.tl2 .chx .ln {min-height: 26px;}
+.tl2 .chx .nm {padding-top: 2px; padding-bottom: 2px;}
+.tl2 .chx .bar {height: 20px; font-size: .7rem;} .tl2 .chx .out {height: 20px;}
+.tl2 .dv.cb .nm small {padding-left: 0;}
+.tl2 .free {position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: .72rem; color: #475569;}
+.tl2 label.es-ck {display: flex; align-items: center; gap: 7px; cursor: pointer; min-width: 0;}
+.tl2 label.es-ck input {display: none;}
+.tl2 label.es-ck i {font-style: normal; flex: none; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #818CF8;
+  color: #A5B4FC; font-size: 12px; line-height: 12px; text-align: center; font-weight: 700;}
+.tl2 label.es-ck:has(input:checked) i {background: #6366F1; color: #fff; border-color: #6366F1;}
+.es-idle .chip small {color: #64748B; font-size: .7rem; margin-left: 2px;}
 .es-idle {background: var(--panel); border-radius: 18px; padding: 14px 20px; margin-top: 12px;}
 .es-idle summary {list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 700;
   color: var(--ink);}
@@ -147,16 +161,19 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
     color = INNER if comp == "내부" else CATS.get(b["cat"], CATS["지원"])[1]
     cls = "bar " + {"now": "", "soon": "bsoon", "done": "bdone"}[stt] + (" cl" if b["start"] < w0 else "") + (" cr" if b["end"] > w1 else "")
     offs = ""
-    if b["skip_off"]:  # 휴무일 제외 실적: 막대는 잇고 주말·공휴일만 어둡게 (가동률 제외)
+    if b.get("skip_off"):  # 휴무일 제외 실적: 막대는 잇고 주말·공휴일만 어둡게 (가동률 제외)
         offs = "".join(f"<i class='off' style='left:{k / n * 100:.3f}%;width:{100 / n:.3f}%'></i>"
                        for k in range(n) if status.is_off(a + dt.timedelta(days=k), hol))
-    tip = f"{comp} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b["staff"] else "")
+    tip = f"{comp} · {b['start']:%Y-%m-%d} ~ {b['end']:%Y-%m-%d}" + (f" · {b['staff']}" if b.get("staff") else "")
+    if b.get("note"):
+        tip += f" · {b['note']}"
     if offs:
         tip += " · 주말·공휴일은 가동률에서 빠져요"
-    when = status_span(b, today).replace(" ", "")
+    when = status_span(b, today).replace(" ", "") + (f" · {b['note']}" if b.get("note") else "")
     top = f"top:{y0 + lane * 30}px"
     fits = n * day_px >= len(comp) * 12.5 + 22  # 업체 이름이 막대 안에 들어가는지 (대략)
-    inner = f"<span>{html.escape(comp)}</span>" if fits else ""
+    inner = (f"<span>{html.escape(comp)}" + (f" <small style='font-weight:500;opacity:.8'>{b['note']}</small>" if b.get("note") else "")
+             + "</span>") if fits else ""
     out_txt = (f"<small>{when}</small>" if fits else f"{html.escape(comp)} <small>{when}</small>")
     right_side = left + width < 78  # 오른쪽 끝 가까우면 막대 왼쪽에
     pos = (f"left:calc({left + width:.3f}% + 6px)" if right_side else f"right:calc({100 - left:.3f}% + 6px)")
@@ -166,6 +183,31 @@ def _bar(b: dict, w0: dt.date, w1: dt.date, today: dt.date, hol: set, lane: int,
         out_html = f"<div class='out b{stt}' style='{pos};{top}'>{out_txt}</div>"
     return (f"<div class='{cls}' title='{html.escape(tip)}' style='--c:{color};left:{left:.3f}%;width:{width:.3f}%;{top}'>"
             f"{offs}{inner}</div>{out_html}")
+
+
+def _frame(w0: dt.date, w1: dt.date, md: int, today: dt.date) -> tuple[set, float, list[str], list[str]]:
+    """타임라인 바탕: 주말·공휴일 · 오늘 열 색, 위쪽 날짜 줄."""
+    span = (w1 - w0).days + 1
+    hol = calc.kr_holidays({w0.year, w1.year})
+    day_px = max(md, 1060 / span)
+    pc = lambda d: (d - w0).days / span * 100  # noqa: E731
+    days = [w0 + dt.timedelta(days=k) for k in range(span)]
+    cols, hd = [], []
+    for d in days:
+        off = status.is_off(d, hol)
+        if off:
+            cols.append(f"<i class='off' style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'></i>")
+        if d == today:
+            cols.append(f"<i class='td' style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'></i>")
+        if d.weekday() == 0:
+            wk = f"{d.month}월 {d.day}일 주" if span <= 35 else f"{d.month}.{d.day}"
+            hd.append(f"<div class='wk' style='left:{pc(d):.3f}%'>{wk}</div>")
+        if span <= 35:  # 3달은 주 첫날만 (위 줄), 오늘은 세로 띠로
+            lab = f"<b>{d.day}</b>" if d == today else str(d.day)
+            hd.append(f"<div class='dy{' off' if off else ''}{' td' if d == today else ''}' "
+                      f"style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'>{lab}</div>")
+
+    return hol, day_px, cols, hd
 
 
 def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str, center: str, today: dt.date) -> None:
@@ -189,24 +231,7 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
         if pd.notna(p):
             n_kids[int(p)] = n_kids.get(int(p), 0) + 1
 
-    hol = calc.kr_holidays({w0.year, w1.year})
-    day_px = max(md, 1060 / span)
-    pc = lambda d: (d - w0).days / span * 100  # noqa: E731
-    days = [w0 + dt.timedelta(days=k) for k in range(span)]
-    cols, hd = [], []
-    for d in days:
-        off = status.is_off(d, hol)
-        if off:
-            cols.append(f"<i class='off' style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'></i>")
-        if d == today:
-            cols.append(f"<i class='td' style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'></i>")
-        if d.weekday() == 0:
-            wk = f"{d.month}월 {d.day}일 주" if span <= 35 else f"{d.month}.{d.day}"
-            hd.append(f"<div class='wk' style='left:{pc(d):.3f}%'>{wk}</div>")
-        if span <= 35:  # 3달은 주 첫날만 (위 줄), 오늘은 세로 띠로
-            lab = f"<b>{d.day}</b>" if d == today else str(d.day)
-            hd.append(f"<div class='dy{' off' if off else ''}{' td' if d == today else ''}' "
-                      f"style='left:{pc(d):.3f}%;width:{100 / span:.3f}%'>{lab}</div>")
+    hol, day_px, cols, hd = _frame(w0, w1, md, today)
 
     def lane_html(bs: list[dict], y0: int = 7) -> tuple[str, int]:
         bars, lanes = "", []
@@ -264,13 +289,140 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
                      + "</div>" for g, rs in idle.items() if rs)
         st.markdown(f"<details class='es-idle' open><summary>이 기간 일정 없는 장비 <span>{n_idle}대</span><em></em></summary>"
                     f"<div class='ig'>{ig}</div></details>", unsafe_allow_html=True)
+    _legend()
+
+
+def _legend(cats: tuple = ("시험", "제조", "분석", "교육", "지원")) -> None:
     leg = "".join(f"<span><i style='background:color-mix(in srgb,{CATS[k][1]} 30%,#1E293B);box-shadow:inset 3px 0 0 {CATS[k][1]}'></i>{k}</span>"
-                  for k in ("시험", "제조", "분석", "교육", "지원"))
+                  for k in cats)
     leg += (f"<span><i style='background:color-mix(in srgb,{INNER} 30%,#1E293B);box-shadow:inset 3px 0 0 {INNER}'></i>내부</span>"
             "<span><i style='box-shadow:inset 0 0 0 1.5px #94A3B8'></i>예정</span>"
             "<span><i style='background:#64748B;opacity:.45'></i>끝남</span>"
             "<span><i style='background:rgba(2,6,23,.6)'></i>주말·공휴일 (가동률 제외)</span>")
     st.markdown(f"<div class='es-leg'>{leg}</div>", unsafe_allow_html=True)
+
+
+def _charger_board(center: str, all_open: bool, today: dt.date) -> None:
+    """시험(충방전) (2026-11-23 사용자: 충방전도 새 디자인으로): 충방전기 → 챔버 줄 + 기간 막대, ⊕ 로 채널 줄.
+    센터마다 제목 줄에 오늘 사용 채널 (예전 큰 숫자 상자 대신). 이 기간 예약이 없는 충방전기는 맨 아래 한 상자."""
+    from core import chargers
+    ch = db.load_channels()
+    if ch.empty:
+        st.info("챔버 구성이 아직 없어요. 챔버 구성은 관리자에게 문의해 주세요.")
+        charger_board._config_editor(ch, db.load_equipment())
+        return
+    w0, w1, md = window(today)
+    span = (w1 - w0).days + 1
+    bk = chargers.bookings(db.load_logs())
+    stt = chargers.status(ch, bk, today)
+    if center != "전체":
+        stt = stt[stt["center"] == center]
+    if stt.empty:
+        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#94A3B8'>이 센터에 충방전기가 없어요.</div>",
+                    unsafe_allow_html=True)
+        return
+    hol, day_px, cols, hd = _frame(w0, w1, md, today)
+    by_ch: dict[int, list[dict]] = {}
+    for b in (bk.to_dict("records") if not bk.empty else []):
+        if b["end"] >= w0 and b["start"] <= w1:
+            by_ch.setdefault(int(b["chamber_id"]), []).append(b)
+
+    def as_bar(b: dict, chs: list[int]) -> dict:
+        n_used, n_all = len(chargers.used_of(b["ch_part"], chs)), len(chs)
+        return {**b, "cat": status.PURPOSE_CAT.get(b["purpose"], "시험"),
+                "note": f"{n_used}/{n_all}ch" if 0 < n_used < n_all else ""}
+
+    def lane_html(bs: list[dict], y0: int = 7) -> tuple[str, int]:
+        bars, lanes = "", []
+        for b in sorted(bs, key=lambda x: x["start"]):
+            ln = next((j for j, e in enumerate(lanes) if e < b["start"]), len(lanes))
+            lanes[ln:ln + 1] = [b["end"]]
+            bars += _bar(b, w0, w1, today, hol, ln, day_px, y0)
+        return bars, 2 * y0 + 24 + 30 * max(len(lanes) - 1, 0)
+
+    recs = stt.to_dict("records")
+    out, show_css, idle = [], [], []
+    for cen in dict.fromkeys(r["center"] for r in recs):
+        rs = [r for r in recs if r["center"] == cen]
+        units = list(dict.fromkeys(r["unit"] for r in rs))
+        busy = [u for u in units if any(by_ch.get(int(r["id"])) for r in rs if r["unit"] == u)]
+        idle += [(cen, u, [r for r in rs if r["unit"] == u]) for u in units if u not in busy]
+        if not busy:
+            continue
+        total = int(sum(int(r["ch_count"] or 0) for r in rs))
+        used = int(sum(int(r["used"] or 0) for r in rs))
+        pct = f" · {used / total:.0%}" if total else ""
+        out.append(f"<div class='grp'><i style='background:{CATS[CHARGER][1]}'></i>{html.escape(db.center_short(cen))}"
+                   f"<span>오늘 사용 <em>{used}</em> / {total} ch{pct}</span></div>")
+        for u in busy:
+            urs = [r for r in rs if r["unit"] == u]
+            spec = charger_board._spec(urs[0].get("unit_sheet", "")) or charger_board._spec(u) or f"{sum(int(r['ch_count'] or 0) for r in urs)}ch"
+            u_used = sum(int(r["used"] or 0) for r in urs)
+            u_all = sum(int(r["ch_count"] or 0) for r in urs)
+            on = any(r["now"] for r in urs)
+            soon = any(r["next"] for r in urs)
+            sd = "now" if on else ("soon" if soon else "")
+            sub = spec + (f" · 오늘 {u_used}/{u_all}ch" if on else "")
+            out.append(f"<div class='r dv nob'><div class='nm' title='{html.escape(u)}'><b><span class='sd d-{sd}'></span>"
+                       f"{html.escape(charger_board._short(u))}</b><small>{html.escape(sub)}</small></div>"
+                       f"<div class='ln' style='height:38px'></div></div>")
+            for r in urs:
+                cid = int(r["id"])
+                chs = chargers.chamber_chs(r["channels"], r["ch_count"])
+                bs = [as_bar(b, chs) for b in by_ch.get(cid, [])]
+                bars, h = lane_html(bs, 14)
+                name = r["chamber"] or r["cycler"] or "전체"
+                rng = html.escape(str(r["channels"]).replace("-", "~"))
+                cyc = html.escape(r["cycler"]) + " · " if r["chamber"] and r["cycler"] else ""
+                if len(chs) > 1:
+                    tog = (f"<label class='es-ck'><input type='checkbox' id='ck{cid}'><i>+</i>"
+                           f"<b>{html.escape(name)}</b></label>")
+                    show_css.append(f".tl2-in:has(#ck{cid}:checked) .g{cid}{{display:grid;}}")
+                else:
+                    tog = f"<b>{html.escape(name)}</b>"
+                out.append(f"<div class='r dv kid cb'><div class='nm'>{tog}<small>{cyc}ch {rng}</small></div>"
+                           f"<div class='ln' style='height:{h}px'>{bars or '<span class=free>비어 있음</span>'}</div></div>")
+                if len(chs) > 1:  # ⊕ 를 누르면 채널마다 한 줄
+                    for n in chs:
+                        mine = [as_bar({**b, "ch_part": ""}, [n]) for b in by_ch.get(cid, [])
+                                if n in chargers.used_of(b["ch_part"], chs)]
+                        cb, chh = lane_html(mine, 3)
+                        out.append(f"<div class='r dv kid chx g{cid}'><div class='nm'><b>ch {n}</b></div>"
+                                   f"<div class='ln' style='height:{chh}px'>{cb}</div></div>")
+    if out:
+        st.markdown(
+            "<style>" + "".join(show_css) + "</style>"
+            f"<div class='tl2{' all' if all_open else ''}' style='--nw:{NAME_W}px;--n:{span};--md:{md}px'><div class='tl2-in'>"
+            f"<div class='cols'>{''.join(cols)}</div>"
+            f"<div class='r hd'><div class='nm'></div><div class='ln'>{''.join(hd)}</div></div>"
+            + "".join(out) + "</div></div>", unsafe_allow_html=True)
+    if idle:
+        n_ch = sum(int(r["ch_count"] or 0) for _, _, urs in idle for r in urs)
+        by_cen: dict[str, list[str]] = {}
+        for cen, u, urs in idle:
+            spec = charger_board._spec(urs[0].get("unit_sheet", "")) or charger_board._spec(u)
+            by_cen.setdefault(cen, []).append(
+                f"<span class='chip' title='{html.escape(u)}'>{html.escape(charger_board._short(u))}"
+                + (f" <small>{html.escape(spec)}</small>" if spec else "") + "</span>")
+        ig = "".join(f"<div class='k'><i style='background:{CATS[CHARGER][1]}'></i>{html.escape(db.center_short(c))}</div>"
+                     f"<div class='chips'>{''.join(v)}</div>" for c, v in by_cen.items())
+        st.markdown(f"<details class='es-idle' open><summary>이 기간 예약 없는 충방전기 <span>{len(idle)}대 · {n_ch} ch</span><em></em>"
+                    f"</summary><div class='ig'>{ig}</div></details>", unsafe_allow_html=True)
+    _legend(("시험", "제조", "분석", "지원"))
+
+    mine = bk[bk["chamber_id"].isin(set(stt["id"].astype(int)))] if not bk.empty else bk
+    if not mine.empty:  # 예약 고치기 (달력 입력 카드로 엶)
+        name_of = dict(zip(stt["id"].astype(int), stt["chamber"]))
+        opts = mine.sort_values("start").drop_duplicates("key").to_dict("records")
+        with st.container(key="cb_edit", horizontal=True, gap="small", vertical_alignment="center"):
+            pick = st.selectbox(
+                "예약 고치기", range(len(opts)), index=None, placeholder="고칠 예약 고르기 (기간 · 챔버 · 업체)",
+                label_visibility="collapsed", key="cb_pick", width=420,
+                format_func=lambda i: " · ".join([
+                    ", ".join(name_of.get(int(c), "?") for c in mine.loc[mine["key"] == opts[i]["key"], "chamber_id"]),
+                    opts[i]["company"], chargers.span_text(opts[i]["start"], opts[i]["end"], today)]))
+            st.button("고치기", icon=":material/edit:", key="cb_edit_go", disabled=pick is None,
+                      on_click=charger_board._edit, args=(opts[pick] if pick is not None else {},))
 
 
 def status_span(b: dict, today: dt.date) -> str:
@@ -310,13 +462,13 @@ def render() -> None:
                                     default=None if "es_cat" in st.session_state else "전체",
                                     format_func=lambda g: GROUP_LABEL.get(g, g), label_visibility="collapsed") or "전체"
         st.space("stretch")
-        if want != CHARGER:  # 기간 고르기 · 넘기기 (충방전기 표는 예전처럼 이번 달 + 2개월)
-            st.segmented_control("기간", list(SPANS), key="es_span", default=None if "es_span" in st.session_state else "5주",
-                                 label_visibility="collapsed", on_change=lambda: st.session_state.update(es_shift=0))
-            with st.container(key="es_nav", horizontal=True, gap="xsmall"):
-                st.button("", icon=":material/chevron_left:", key="es_prev", on_click=_move, args=(-1,), help="앞 기간")
-                st.button("오늘", key="es_today", on_click=_move, args=(0,))
-                st.button("", icon=":material/chevron_right:", key="es_next", on_click=_move, args=(1,), help="다음 기간")
+        # 기간 고르기 · 넘기기 (충방전기도 같은 타임라인, 2026-11-23)
+        st.segmented_control("기간", list(SPANS), key="es_span", default=None if "es_span" in st.session_state else "5주",
+                             label_visibility="collapsed", on_change=lambda: st.session_state.update(es_shift=0))
+        with st.container(key="es_nav", horizontal=True, gap="xsmall"):
+            st.button("", icon=":material/chevron_left:", key="es_prev", on_click=_move, args=(-1,), help="앞 기간")
+            st.button("오늘", key="es_today", on_click=_move, args=(0,))
+            st.button("", icon=":material/chevron_right:", key="es_next", on_click=_move, args=(1,), help="다음 기간")
         center = st.selectbox("센터", ["전체"] + order, key="cb_center", format_func=db.center_short,
                               label_visibility="collapsed", width=110) or "전체"
         tag = GROUP_LABEL.get(want, "전체").replace("(", "_").replace(")", "")
@@ -330,7 +482,7 @@ def render() -> None:
             all_open = st.toggle("채널 모두 펼치기", key="cb_all")
             st.space("stretch")
             st.button("충방전기 예약", icon=":material/add:", key="cb_new", on_click=charger_board._book_new, type="primary")
-        charger_board.body(center, all_open)
+        _charger_board(center, all_open, today)
     else:
         _device_board(eq, logs, groups, want, center, today)
 
