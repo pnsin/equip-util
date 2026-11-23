@@ -14,6 +14,7 @@ UTIL_PCT = w("가동률(%)")
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
+NO_CODE = "-"  # i-Tube 번호가 없는 장비의 장비번호 칸
 TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "assets" / "itube_template.xlsx"
 
 
@@ -43,8 +44,20 @@ def itube_selection(logs: pd.DataFrame, s: dt.date, e: dt.date, *, start_only: b
         sel = sel[sel["purpose"].map(seed.purpose_label).isin(labels)]
     sel = sel.sort_values(["start_date", "equip_name", "id"]).copy()
     no_code = sel[sel["itube_code"] == ""]
-    sel = sel[sel["itube_code"] != ""].copy()
-    sel["equip_name"], sel["equip_code"], sel["equip_kind"] = sel["itube_name"], sel["itube_code"], sel["itube_kind"]
+    sel = sel.copy()
+    has = sel["itube_code"] != ""
+    sel.loc[has, "equip_name"] = sel.loc[has, "itube_name"]
+    sel.loc[has, "equip_code"] = sel.loc[has, "itube_code"]
+    sel.loc[has, "equip_kind"] = sel.loc[has, "itube_kind"]
+    if (~has).any():
+        # 2026-11-23: i-Tube에 등록이 안 되는 시설(드라이룸 등)도 기록용으로 넣음.
+        # 장비명 = 그 장비 이름 그대로, 장비번호 '-', 장비구분 = 최상위 장비 구분(주장비/부장비)
+        eq = db.load_equipment()
+        root = dict(zip(eq["id"], eq["root_id"])) if "root_id" in eq else {}
+        kind = dict(zip(eq["id"], eq["kind"]))
+        top = sel.loc[~has, "equip_id"].map(lambda v: root.get(int(v), int(v)) if pd.notna(v) else v)
+        sel.loc[~has, "equip_kind"] = [kind.get(t) if kind.get(t) in ("주장비", "부장비") else "주장비" for t in top]
+        sel.loc[~has, "equip_code"] = NO_CODE
     return fill_from_companies(sel, db.load_companies()), no_code
 
 
@@ -106,7 +119,7 @@ def render_itube() -> None:
 
     if not no_code.empty:
         names = ", ".join(sorted(set(no_code["equip_name"])))
-        st.caption(f"ITUBE번호가 없는 장비 실적 {len(no_code)}건은 넣지 않았습니다: {names}")
+        st.caption(f"ITUBE번호가 없는 장비 실적 {len(no_code)}건은 장비번호 '-'로 들어가요: {names}")
     records = sel.to_dict("records")
     issues = []
     for r in records:
@@ -236,7 +249,7 @@ def _download_body(key: str) -> None:
     m3.metric("장비", f"{sel['equip_code'].nunique():,}대")
     if not no_code.empty:
         names = ", ".join(sorted(set(no_code["equip_name"])))
-        st.caption(f"ITUBE번호가 없는 장비 실적 {len(no_code)}건은 빠져요: {names}")
+        st.caption(f"ITUBE번호가 없는 장비 실적 {len(no_code)}건은 장비번호 '-'로 들어가요: {names}")
     if len(sel) > 1000:
         st.warning("i-Tube는 한 번에 1000건까지 올릴 수 있어요. 기간을 나눠 주세요.", icon=":material/info:")
     if sel.empty:
