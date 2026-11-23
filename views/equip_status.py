@@ -54,7 +54,7 @@ CSS = """<style>
 .tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #A39F96; text-align: center;}
 .tl2 .hd .dy.off {color: #C84B31; font-weight: 650;}
 .tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; padding: 1px 0; background: #D97757; color: #fff; font-weight: 700;}
-.tl2 .grpw {position: relative; margin-top: 18px; border-top: 2px solid var(--gc); background: color-mix(in srgb, var(--gc) 5%, transparent);}
+.tl2 .grpw {position: relative; z-index: 3; margin-top: 18px; border-top: 2px solid var(--gc); background: color-mix(in srgb, var(--gc) 5%, #FFFFFF);}
 .tl2 .grpw.first {margin-top: 0;}
 .tl2 .grpw .grp {padding: 9px 20px;}
 .tl2 .grp {display: flex; align-items: center; gap: 10px; padding: 16px 20px 8px; font-size: .84rem; font-weight: 700;
@@ -72,10 +72,10 @@ CSS = """<style>
 .tl2 .bar {position: absolute; height: 24px; border-radius: 7px; display: flex; align-items: center; padding: 0 9px;
   font-size: .75rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: var(--cb); color: var(--c); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent); box-sizing: border-box;}
-.tl2 .bar.bdone {background: #F2EFE9; box-shadow: none; color: #A39F96; font-weight: 550;}
+.tl2 .bar.bdone {background: #F2EFE9; box-shadow: none; color: #8C877C; font-weight: 550;}
 .tl2 .bar.cl {border-top-left-radius: 0; border-bottom-left-radius: 0;}
 .tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
-.tl2 .bar span {position: relative; z-index: 1;}
+.tl2 .bar span {position: relative; z-index: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
 .tl2 .bar small.pd {font-weight: 600; opacity: .72; margin-left: 6px; font-size: .7rem;}
 .tl2 .out {position: absolute; height: 24px; display: block; line-height: 24px; overflow: hidden; text-overflow: ellipsis; font-size: .75rem; font-weight: 650;
   color: #191918; white-space: nowrap;}
@@ -120,10 +120,10 @@ CSS = """<style>
   .tl2 {--nw: 92px !important; --md: 16px !important;}
   .tl2 .dv:not(.kid) .nm {display: contents;}
   .tl2 .dv:not(.kid) .nm b {grid-column: 1 / -1; grid-row: 1; padding: 9px 14px 2px; white-space: normal; line-height: 1.3;
-    position: sticky; left: 0;}
+    position: sticky; left: 0; z-index: 3; background: var(--panel);}
   .tl2 .dv:not(.kid) .nm small {grid-column: 1; grid-row: 2; padding: 0 6px 0 14px; align-self: center; position: sticky; left: 0;
     background: var(--panel); z-index: 2;}
-  .tl2 .dv:not(.kid) .ln {grid-column: 2; grid-row: 2;}
+  .tl2 .dv:not(.kid) .ln {grid-column: 2; grid-row: 2; margin: -8px 0 -4px;}
   .tl2 .dv.nob .ln, .tl2 .dv.nob .nm small {display: none;}
   .tl2 .dv.kid .nm {padding-left: 14px;}
   .tl2 .dv.kid .nm b {font-size: .72rem; white-space: normal; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2;
