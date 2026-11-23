@@ -4,7 +4,10 @@
 - 그 아래 얇은 한 줄: 유지보수 · 장비 종·대수 (보조 정보).
 - 쪽 제목과 영역 제목의 장식(아이콘 타일 · 꼬리표 · 그라데이션 밑줄)은 이 화면에서 뺌.
 """
+import datetime as dt
 import html
+
+import pandas as pd
 
 import streamlit as st
 
@@ -49,28 +52,27 @@ CSS = """<style>
 .kc .meta b {display: block; font-size: 22px; color: var(--ink); font-weight: 800; margin-top: 2px;}
 .kc .meta b.hit {color: var(--c);}
 
-/* 보조 정보 한 줄 */
+/* 보조 정보 한 줄: 같은 크기 칸으로 나눔 (2026-11-23 사용자 B안) */
 .ks {display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 0 18px;}
-.ks > div {background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 18px;
-  display: flex; align-items: center; justify-content: center; gap: 22px; font-variant-numeric: tabular-nums; min-height: 64px;}
-.ks .t {font-size: 14px; font-weight: 700; color: var(--muted); white-space: nowrap;}
-.ks .v {font-size: 22px; font-weight: 800; color: var(--c); white-space: nowrap;}
-.ks .v small {font-size: 14px; font-weight: 700; margin-left: 1px;}
-.ks .mm {display: grid; grid-template-columns: repeat(12, 22px); gap: 2px; font-size: 11px; text-align: center;}
-.ks .mm b {display: block; height: 20px; border-radius: 4px; line-height: 20px; color: var(--ink);
-  background: color-mix(in srgb, #F59E0B calc(var(--a) * 1%), transparent);}
-.ks .mm b.z {color: var(--dim); background: transparent;}
-.ks .mm span {color: var(--dim);}
-.ks .cs {display: flex; gap: 18px; font-size: 13px; color: var(--muted);}
-.ks .cs b {display: block; font-size: 15px; color: var(--ink);}
+.ks > div {display: grid; grid-template-columns: repeat(var(--n), 1fr); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; overflow: hidden; font-variant-numeric: tabular-nums; min-height: 92px;}
+.ks .cl {display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 10px 6px;
+  border-left: 1px solid var(--line); min-width: 0;}
+.ks .cl:first-child {border-left: 0; background: color-mix(in srgb, var(--c) 11%, transparent);}
+.ks .t {font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap;}
+.ks .v {font-size: 24px; font-weight: 800; color: var(--ink); white-space: nowrap; line-height: 1.2;}
+.ks .v small {font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 3px 0 1px;}
+.ks .cl:first-child .v, .ks .cl:first-child .v small {color: var(--c);} .ks .cl:first-child .v {font-size: 28px;}
+.ks .v.d {font-size: 17px;}
+.ks .s {font-size: 11.5px; color: var(--muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 @media (max-width: 900px) {.kh, .ks {grid-template-columns: 1fr; gap: 10px;}}
 @media (max-width: 640px) {
   .kc {padding: 12px 14px 12px; border-radius: 14px;} .kc .lb {font-size: 14px;} .kc .num {font-size: 34px; margin: 2px 0 20px;}
   .kc .num small {font-size: 18px;} .bat .cell {height: 22px; border-radius: 8px;} .bat .fill {border-radius: 4px;}
   .kc .meta {gap: 6px; font-size: 13px; margin-top: 10px;} .kc .meta > div {display: flex; gap: 5px; align-items: baseline;}
   .kc .meta b {display: inline; font-size: 15px; margin: 0;} 
-  .ks > div {flex-direction: column; gap: 6px; padding: 10px;} .ks .mm {grid-template-columns: repeat(12, 1fr); width: 100%;}
-  .ks .cs {gap: 10px; font-size: 11.5px;}}
+  .ks > div {min-height: 76px;} .ks .cl {padding: 8px 3px;} .ks .t {font-size: 11px; letter-spacing: -.02em;} .ks .v {font-size: 17px;}
+  .ks .cl:first-child .v {font-size: 19px;} .ks .v small {font-size: 11px; margin: 0 1px;} .ks .v.d {font-size: 14px;} .ks .s {font-size: 10.5px;}}
 </style>"""
 
 
@@ -101,20 +103,39 @@ def top(year: int, y_tot: dict, kpi: dict, fee: float, eok, won_short) -> None:
           + _gauge("#10B981", fee, gf, max(gf * 1.25, fee * 1.04, 1), f"목표 {eok(gf)}")
           + f'<div class="meta"><div>달성률<b class="{"hit" if fr and fr >= 100 else ""}">'
           f'{f"{fr:.1f}%" if fr is not None else "–"}</b></div></div></div>')
-    mt = db.load_maint()
-    mt = mt[mt["date"].map(lambda d: bool(d) and d.year == year)] if not mt.empty else mt
-    by_m = mt.groupby(mt["date"].map(lambda d: d.month)).size().to_dict() if not mt.empty else {}
-    top_m = max(by_m.values() or [1])
-    mini = "".join(f'<div><b class="{"" if by_m.get(m) else "z"}" style="--a:{int(12 + 38 * by_m.get(m, 0) / top_m)}">'
-                   f'{by_m.get(m, 0)}</b><span>{m}</span></div>' for m in range(1, 13))
-    blocks, _ = count_summary(db.load_equipment(full=True))
+    eq = db.load_equipment(full=True)
+    names = dict(zip(eq["id"].astype(int), eq["name"]))
+    mt = db.load_maint()  # 최근 날짜부터
+    mt = mt[mt["date"].map(bool)] if not mt.empty else mt
+    today = dt.date.today()
+    rm = today.month if year == today.year else 12  # 기준 달 (지난 해를 보면 12월)
+    pm_y, pm = (year, rm - 1) if rm > 1 else (year - 1, 12)
+    n_of = (lambda y, m: int(mt["date"].map(lambda d: d.year == y and d.month == m).sum())) if not mt.empty else (lambda y, m: 0)
+    yr = mt[mt["date"].map(lambda d: d.year == year)] if not mt.empty else mt
+    if len(yr):
+        r0 = yr.iloc[0]
+        eid = r0["equip_id"]
+        last = (f'<div class="v d">{r0["date"]:%m.%d}</div>'
+                f'<div class="s">{E(names.get(int(eid), "") if pd.notna(eid) else (r0["equip_ref"] or ""))}</div>')
+    else:
+        last = '<div class="v d">—</div><div class="s">아직 없어요</div>'
+
+    def cell(t: str, body: str) -> str:
+        return f'<div class="cl"><div class="t">{E(t)}</div>{body}</div>'
+
+    def cnt(n: int) -> str:
+        return f'<div class="v">{n}<small>건</small></div>'
+
+    def jd(j, d) -> str:
+        return f'<div class="v">{j}<small>종</small>{d}<small>대</small></div>'
+
+    s1 = (f'<div style="--c:#F59E0B;--n:4">' + cell("유지보수 · 올해" if year == today.year else f"유지보수 · {year}", cnt(len(yr)))
+          + cell("이번 달" if year == today.year else "12월", cnt(n_of(year, rm)))
+          + cell("지난달" if year == today.year else "11월", cnt(n_of(pm_y, pm))) + cell("최근 기록", last) + '</div>')
+    blocks, _ = count_summary(eq)
     rows = dict(blocks)["센터별"].to_dict("records")
-    tot = next((r for r in rows if r["센터"] == "합계"), None)
-    cs = "".join(f'<div>{E(db.center_short(r["센터"]) or r["센터"])}<b>{r["종"]}종 {r["대수"]}대</b></div>'
-                 for r in rows if r["센터"] != "합계")
-    s1 = (f'<div style="--c:#F59E0B"><span class="t">유지보수</span><span class="v">{len(mt)}<small>건</small></span>'
-          f'<div class="mm">{mini}</div></div>')
-    s2 = (f'<div style="--c:#8B5CF6"><span class="t">장비</span>'
-          f'<span class="v">{tot["종"] if tot else 0}<small>종</small> {tot["대수"] if tot else 0}<small>대</small></span>'
-          f'<div class="cs">{cs}</div></div>')
+    tot = next((r for r in rows if r["센터"] == "합계"), {"종": 0, "대수": 0})
+    cs = [r for r in rows if r["센터"] != "합계"]
+    s2 = (f'<div style="--c:#8B5CF6;--n:{len(cs) + 1}">' + cell("장비 전체", jd(tot["종"], tot["대수"]))
+          + "".join(cell(db.center_short(r["센터"]) or r["센터"], jd(r["종"], r["대수"])) for r in cs) + '</div>')
     st.markdown(CSS + f'<div class="kh">{c1}{c2}</div><div class="ks">{s1}{s2}</div>', unsafe_allow_html=True)
