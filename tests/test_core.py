@@ -567,3 +567,17 @@ def test_itube_merges_daily_rows_into_period():
     assert got == [("A", D(2026, 9, 1), D(2026, 9, 7), 24), ("B", D(2026, 9, 2), D(2026, 9, 2), 4),
                    ("A", D(2026, 9, 9), D(2026, 9, 9), 4), ("A", D(2026, 9, 30), D(2026, 9, 30), 4),
                    ("A", D(2026, 10, 1), D(2026, 10, 1), 4)]
+
+
+def test_itube_holidays_always_n():
+    """휴무일자포함은 모두 N, 사용시간은 그대로 (2026-11-23)."""
+    import io as _io
+    import datetime as _dt
+    from openpyxl import load_workbook as _lw
+    from core import itube as _it
+    d = _dt.date(2026, 9, 1)
+    rec = dict(purpose="시험", usage_type="외부", company="A", brn="1", equip_name="e", equip_code="C1",
+               equip_kind="주장비", start_date=d, end_date=d + _dt.timedelta(days=6), hours=148,
+               include_holidays="Y", samples=1, fee=0)
+    ws = _lw(_io.BytesIO(_it.make_itube_file([rec], [], None)))["Sheet1"]
+    assert ws.cell(4, 18).value == "N" and ws.cell(4, 19).value == 148

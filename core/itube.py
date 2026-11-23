@@ -188,6 +188,8 @@ def _fill_defaults(rec: dict, known: dict | None = None) -> dict:
     if not to_str(rec.get("product")):
         rec["product"] = (k.get("product") or ("배터리 제조 교육" if purpose == "교육" else "")
                           or to_str(rec.get("sub_item")) or DEFAULT_PRODUCT)
+    # 2026-11-23 사용자: 휴무일자포함은 모두 N (Y면 담당자가 i-Tube에서 휴일을 일일이 지워야 해서). 사용시간은 그대로.
+    rec["include_holidays"] = "N"
     if to_str(rec.get("usage_type")) == "내부":
         if not to_str(rec.get("company")):
             rec["company"] = INTERNAL_ORG[0]
