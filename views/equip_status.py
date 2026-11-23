@@ -63,13 +63,13 @@ CSS = """<style>
 .tl2 .ln {position: relative; overflow: hidden; min-height: 38px;}
 .tl2 .bar {position: absolute; height: 24px; border-radius: 7px; display: flex; align-items: center; padding: 0 9px;
   font-size: .75rem; font-weight: 650; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  background: color-mix(in srgb, var(--c) 30%, #1E293B); box-shadow: inset 3px 0 0 var(--c); box-sizing: border-box;}
-.tl2 .bar.bsoon {background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 75%, transparent); color: #E2E8F0;}
-.tl2 .bar.bdone {opacity: .45;}
+  background: var(--c); color: #0B1220; box-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent); box-sizing: border-box;}
+.tl2 .bar.bsoon {background: color-mix(in srgb, var(--c) 12%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); color: #F1F5F9;}
+.tl2 .bar.bdone {background: #334155; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--c) 55%, #334155); color: #94A3B8; font-weight: 550;}
 .tl2 .bar.cl {border-top-left-radius: 0; border-bottom-left-radius: 0;}
 .tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
-.tl2 .bar .off {position: absolute; top: 0; bottom: 0; background: rgba(2,6,23,.38);}
-.tl2 .bar span {position: relative;}
+.tl2 .bar .off {position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, rgba(11,18,32,.30) 0 3px, transparent 3px 8px);}
+.tl2 .bar span {position: relative; z-index: 1;}
 .tl2 .out {position: absolute; height: 24px; display: flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 650;
   color: #E2E8F0; white-space: nowrap;}
 .tl2 .out small {font-weight: 500; color: #94A3B8; font-size: .7rem;}
@@ -342,12 +342,12 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
 
 
 def _legend(cats: tuple = ("시험", "제조", "분석", "교육", "지원")) -> None:
-    leg = "".join(f"<span><i style='background:color-mix(in srgb,{CATS[k][1]} 30%,#1E293B);box-shadow:inset 3px 0 0 {CATS[k][1]}'></i>{k}</span>"
-                  for k in cats)
-    leg += (f"<span><i style='background:color-mix(in srgb,{INNER} 30%,#1E293B);box-shadow:inset 3px 0 0 {INNER}'></i>내부</span>"
-            "<span><i style='box-shadow:inset 0 0 0 1.5px #94A3B8'></i>예정</span>"
-            "<span><i style='background:#64748B;opacity:.45'></i>끝남</span>"
-            "<span><i style='background:rgba(2,6,23,.6)'></i>주말·공휴일 (가동률 제외)</span>")
+    leg = "".join(f"<span><i style='background:{CATS[k][1]}'></i>{k}</span>" for k in cats)
+    leg += (f"<span><i style='background:{INNER}'></i>내부</span>"
+            "<span style='margin-left:10px'><i style='background:#E2E8F0;box-shadow:0 0 6px rgba(226,232,240,.5)'></i>진행 중 (진한 색)</span>"
+            "<span><i style='box-shadow:inset 0 0 0 1.5px #E2E8F0'></i>예정 (테두리)</span>"
+            "<span><i style='background:#334155;box-shadow:inset 3px 0 0 #64748B'></i>끝남 (회색)</span>"
+            "<span><i style='background:repeating-linear-gradient(135deg,#94A3B8 0 2px,#1E293B 2px 5px)'></i>빗금 = 주말·공휴일 (가동률 제외)</span>")
     st.markdown(f"<div class='es-leg'>{leg}</div>", unsafe_allow_html=True)
 
 
