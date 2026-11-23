@@ -306,7 +306,7 @@ def to_excel(rws: list[dict], logs: pd.DataFrame, eq: pd.DataFrame, year: int, t
         me, rr = info.get(rid, {}), 5 + k
         acq = me.get("acquired_on")
         q = sn.replace("'", "''")
-        vals = [f"세부장비 {kids.get(rid, 0)}대 포함" if kids.get(rid) else None, db.center_short(cen.get(rid, "")) or None, k,
+        vals = [f"세부장비 {kids.get(rid, 0)}대 포함" if kids.get(rid) else None, cen.get(rid, "") or None, k,
                 to_str(me.get("name")), acq.year if acq is not None and pd.notna(acq) else None, to_str(me.get("nfec")) or None,
                 to_str(me.get("code")) or None, None, round(av, 1), f"=N{rr}+Q{rr}", ni + no, f"=IFERROR(K{rr}/J{rr},0)",
                 f"='{q}'!R14", ni, f"=IFERROR(N{rr}/J{rr},0)", f"='{q}'!S14", no, f"=IFERROR(Q{rr}/J{rr},0)"]

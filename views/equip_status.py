@@ -347,7 +347,7 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
             head = xs[0]
             own = by_eq.get(rt, [])
             nk = n_kids.get(rt, 0)
-            sub = " · ".join(x for x in (db.center_short(head["center"]), f"세부 {nk}" if nk else "") if x)
+            sub = " · ".join(x for x in (head["center"], f"세부 {nk}" if nk else "") if x)
             bars, h = lane_html(own, 14)
             out.append(f"<div class='r dv{'' if own else ' nob'}'><div class='nm' title='{html.escape(head['full'])}'>"
                        f"<b><span class='sd d-{dot(fam_bars[rt])}'></span>{html.escape(head['name'])}</b><small>{html.escape(sub)}</small></div>"
@@ -428,7 +428,7 @@ def _charger_board(center: str, all_open: bool, today: dt.date) -> None:
         total = int(sum(int(r["ch_count"] or 0) for r in rs))
         used = int(sum(int(r["used"] or 0) for r in rs))
         pct = f" · {used / total:.0%}" if total else ""
-        out.append(f"<div class='grpw{'' if out else ' first'}' style='--gc:{CATS[CHARGER][1]}'><div class='grp'><i style='background:{CATS[CHARGER][1]}'></i>{html.escape(db.center_short(cen))}"
+        out.append(f"<div class='grpw{'' if out else ' first'}' style='--gc:{CATS[CHARGER][1]}'><div class='grp'><i style='background:{CATS[CHARGER][1]}'></i>{html.escape(cen)}"
                    f"<span>오늘 사용 <em>{used}</em> / {total} ch{pct}</span></div></div>")
         for u in busy:
             urs = [r for r in rs if r["unit"] == u]
@@ -480,7 +480,7 @@ def _charger_board(center: str, all_open: bool, today: dt.date) -> None:
             by_cen.setdefault(cen, []).append(
                 f"<span class='chip' title='{html.escape(u)}'>{html.escape(charger_board._short(u))}"
                 + (f" <small>{html.escape(spec)}</small>" if spec else "") + "</span>")
-        ig = "".join(f"<div class='k'><i style='background:{CATS[CHARGER][1]}'></i>{html.escape(db.center_short(c))}</div>"
+        ig = "".join(f"<div class='k'><i style='background:{CATS[CHARGER][1]}'></i>{html.escape(c)}</div>"
                      f"<div class='chips'>{''.join(v)}</div>" for c, v in by_cen.items())
         st.markdown(f"<details class='es-idle'><summary>이 기간 예약 없는 충방전기 <span>{len(idle)}대 · {n_ch} ch</span><em></em>"
                     f"</summary><div class='ig'>{ig}</div></details>", unsafe_allow_html=True)
@@ -521,7 +521,7 @@ def _excel(want: str, center: str) -> bytes:
     eq, logs = db.load_equipment(), db.load_logs()
     groups = status.device_group(eq, db.load_channels())
     rws = status.rows(eq, groups, status.bars(logs, ys, ye), ys, ye, want, center, busy_first=False)
-    title = "장비 가동 현황 · " + GROUP_LABEL.get(want, "전체") + (f" · {db.center_short(center)}" if center != "전체" else "")
+    title = "장비 가동 현황 · " + GROUP_LABEL.get(want, "전체") + (f" · {center}" if center != "전체" else "")
     extra = charger_board.excel_bytes(center) if want in ("전체", CHARGER) else None
     return status.to_excel(rws, logs, eq, today.year, today, db.get_settings(), title, extra)
 
@@ -555,7 +555,7 @@ def render() -> None:
             st.button("", icon=":material/chevron_left:", key="es_prev", on_click=_move, args=(-1,), help="앞 기간")
             st.button("오늘", key="es_today", on_click=_move, args=(0,))
             st.button("", icon=":material/chevron_right:", key="es_next", on_click=_move, args=(1,), help="다음 기간")
-        center = st.selectbox("센터", ["전체"] + order, key="cb_center", format_func=db.center_short,
+        center = st.selectbox("센터", ["전체"] + order, key="cb_center",
                               label_visibility="collapsed", width=110) or "전체"
         tag = GROUP_LABEL.get(want, "전체").replace("(", "_").replace(")", "")
         st.download_button("", lambda want=want, center=center: _excel(want, center),

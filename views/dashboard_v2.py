@@ -60,6 +60,7 @@ CSS = """<style>
   border-left: 1px solid var(--line); min-width: 0;}
 .ks .cl:first-child {border-left: 0; background: var(--cb);}
 .ks .t {font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap;}
+.ks .cn .t {text-align: center; line-height: 1.25; font-size: 12.5px;}
 .ks .v {font-size: 24px; font-weight: 800; color: var(--ink); white-space: nowrap; line-height: 1.2;}
 .ks .v small {font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 3px 0 1px;}
 .ks .cl:first-child .v, .ks .cl:first-child .v small {color: var(--c);} .ks .cl:first-child .v {font-size: 28px;}
@@ -72,7 +73,8 @@ CSS = """<style>
   .kc .meta {gap: 6px; font-size: 13px; margin-top: 10px;} .kc .meta > div {display: flex; gap: 5px; align-items: baseline;}
   .kc .meta b {display: inline; font-size: 15px; margin: 0;} 
   .ks > div {min-height: 76px;} .ks .cl {padding: 8px 3px;} .ks .t {font-size: 11px; letter-spacing: -.02em;} .ks .v {font-size: 17px;}
-  .ks .cl:first-child .v {font-size: 19px;} .ks .v small {font-size: 11px; margin: 0 1px;} .ks .v.d {font-size: 14px;} .ks .s {font-size: 10.5px;}}
+  .ks .cl:first-child .v {font-size: 19px;} .ks .v small {font-size: 11px; margin: 0 1px;} .ks .v.d {font-size: 14px;} .ks .s {font-size: 10.5px;}
+  .ks .cn .t {font-size: 10.5px; letter-spacing: -.03em;}}
 </style>"""
 
 
@@ -85,6 +87,15 @@ def _gauge(color: str, value: float, goal: float, scale: float, goal_label: str)
                  if goal else "")
     return (f'<div class="bat"><div class="cell"><div class="fill" style="width:{pct:.2f}%;--ms:{ms}"></div>{goal_html}</div>'
             f'<div class="cap"></div></div>')
+
+
+def _two_lines(name: str) -> str:
+    """2026-11-24 사용자: 센터는 정식 이름으로. 칸이 좁아 뜻이 끊기지 않는 곳에서 두 줄로 나눔."""
+    for cut in ("안전성", "지원센터"):
+        if cut in name and not name.startswith(cut):
+            i = name.index(cut)
+            return f"{E(name[:i])}<br>{E(name[i:])}"
+    return E(name)
 
 
 def top(year: int, y_tot: dict, kpi: dict, fee: float, eok, won_short) -> None:
@@ -120,8 +131,8 @@ def top(year: int, y_tot: dict, kpi: dict, fee: float, eok, won_short) -> None:
     else:
         last = '<div class="v d">—</div><div class="s">아직 없어요</div>'
 
-    def cell(t: str, body: str) -> str:
-        return f'<div class="cl"><div class="t">{E(t)}</div>{body}</div>'
+    def cell(t: str, body: str, cls: str = "") -> str:
+        return f'<div class="cl {cls}"><div class="t">{t if cls else E(t)}</div>{body}</div>'
 
     def cnt(n: int) -> str:
         return f'<div class="v">{n}<small>건</small></div>'
@@ -137,5 +148,5 @@ def top(year: int, y_tot: dict, kpi: dict, fee: float, eok, won_short) -> None:
     tot = next((r for r in rows if r["센터"] == "합계"), {"종": 0, "대수": 0})
     cs = [r for r in rows if r["센터"] != "합계"]
     s2 = (f'<div style="--c:#4A6B5D;--cb:#EBF2EE;--n:{len(cs) + 1}">' + cell("장비 전체", jd(tot["종"], tot["대수"]))
-          + "".join(cell(db.center_short(r["센터"]) or r["센터"], jd(r["종"], r["대수"])) for r in cs) + '</div>')
+          + "".join(cell(_two_lines(r["센터"]), jd(r["종"], r["대수"]), "cn") for r in cs) + '</div>')
     st.markdown(CSS + f'<div class="kh">{c1}{c2}</div><div class="ks">{s1}{s2}</div>', unsafe_allow_html=True)
