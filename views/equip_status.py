@@ -164,14 +164,14 @@ def _tw(txt: str, small: bool = False) -> float:
     return w * (0.88 if small else 1)
 
 
-def _label_plan(b: dict, w0: dt.date, w1: dt.date, today: dt.date, ppd: float, repeat: bool) -> dict:
+def _label_plan(b: dict, w0: dt.date, w1: dt.date, today: dt.date, ppd: float, repeat: bool, day_px: float = 0) -> dict:
     """막대 글자 자리 정하기 (2026-11-23 겹침 해결): 막대 안에 들어가면 안, 아니면 막대 바로 오른쪽.
     오른쪽 글자 자리만큼 막대가 '차지하는 칸'을 늘려서 같은 줄 다음 막대와 절대 안 겹치게 줄을 나눔."""
     a, z = max(b["start"], w0), min(b["end"], w1)
     n = (z - a).days + 1
     comp = short_comp(b["company"])
     when = status_span(b, today).replace(" ", "") + (f" · {b['note']}" if b.get("note") else "")
-    bar_px = n * ppd
+    bar_px = n * max(day_px, ppd)  # 막대 안에 넣을지는 보통 너비로 (좁은 화면은 … 로 잘림)
     w_comp, w_when = _tw(comp) + 20, _tw(when, True) + 8
     if bar_px >= w_comp + w_when:
         mode, out_px = "both", 0.0  # 업체 + 기간 모두 막대 안
@@ -248,7 +248,7 @@ def _lanes(bs: list[dict], w0: dt.date, w1: dt.date, today: dt.date, hol: set, d
         if z < a:
             continue
         repeat = False  # 업체명은 항상 보이게 (2026-11-23 사용자: 이름 빠진 막대가 헷갈림)
-        plan = _label_plan(b, w0, w1, today, ppd, repeat)
+        plan = _label_plan(b, w0, w1, today, ppd, repeat, day_px)
         last_comp, last_end = b["company"], b["end"]
         ln = next((j for j, xs in enumerate(lanes) if xs[-1][1]["reach"] < a), None)
         if ln is None:
