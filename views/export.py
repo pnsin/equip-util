@@ -216,9 +216,11 @@ def render_report() -> None:
 LABELS = ["시험", "제조", "분석", "교육", "지원"]
 # 2026-11-23 사용자: 분야를 담당자(센터)별로 나눔. 충방전기만 센터 셋으로, 제조는 오창(제조검증·MV)·문백.
 # 항목이 많아 버튼 대신 목록에서 여러 개 고름.
-CH_MV, CH_OC, CH_MB = "시험(충방전, MV)", "시험(충방전, 제조검증)", "시험(충방전, 문백)"
-ENV_MB = "시험(환경, 문백)"  # 문백 실환경모사·안전시험 챔버 (문백 담당자)
-FIELDS = ["시험(환경)", ENV_MB, CH_MV, CH_OC, CH_MB, "제조(오창)", "제조(문백)", "분석", "기타"]
+# 2026-11-23 사용자: 이름이 눈에 잘 들어오게 "무엇 · 어디" 순서로.
+ENV_OC, ENV_MB = "환경시험 · 오창", "환경시험 · 문백"  # 문백 = 실환경모사·안전시험 챔버 (문백 담당자)
+CH_MV, CH_OC, CH_MB = "충방전 · MV센터", "충방전 · 제조검증센터", "충방전 · 문백"
+MF_OC, MF_MB, AN_OC = "제조 · 오창", "제조 · 문백", "분석 · 오창"
+FIELDS = [ENV_OC, ENV_MB, CH_MV, CH_OC, CH_MB, MF_OC, MF_MB, AN_OC, "기타"]
 
 
 def equip_fields(eq: pd.DataFrame) -> dict[int, str]:
@@ -236,9 +238,11 @@ def equip_fields(eq: pd.DataFrame) -> dict[int, str]:
         if g == status.CHARGER:
             out[i] = CH_MB if c == "문백" else CH_MV if c == "MV" else CH_OC
         elif g == "제조":
-            out[i] = "제조(문백)" if c == "문백" else "제조(오창)"  # 제조검증·MV = 오창
+            out[i] = MF_MB if c == "문백" else MF_OC  # 제조검증·MV = 오창
         elif g == "시험":
-            out[i] = ENV_MB if c == "문백" else "시험(환경)"
+            out[i] = ENV_MB if c == "문백" else ENV_OC
+        elif g == "분석":
+            out[i] = AN_OC
         else:
             out[i] = g if g in FIELDS else "기타"
     return out
@@ -252,6 +256,39 @@ def _tidy_fields(k: str) -> None:
         cur = ["전체"] if "전체" not in prev else [f for f in cur if f != "전체"]
     st.session_state[k] = cur
     st.session_state[f"_{k}_prev"] = cur
+
+
+_CNT_JS = """<script>
+(() => {
+  const w = window.parent || window;
+  w.__itubeCnt = %s;
+  if (w.__itubeCntObs) { w.__itubeCntObs(); return; }
+  const doc = w.document;
+  const st = doc.createElement('style');
+  st.textContent = `[role=option][data-cnt]{display:flex;align-items:center}
+[role=option][data-cnt]::after{content:attr(data-cnt);margin-left:auto;padding-left:24px;font-size:.78rem;color:#94A3B8}
+[role=option][data-zero]{opacity:.4}`;
+  doc.head.appendChild(st);
+  const hide = () => doc.querySelectorAll('[data-testid=stHtml] > script').forEach(sc => {
+    if (sc.textContent.includes('__itubeCnt')) sc.closest('[data-testid=stElementContainer]').style.display = 'none';
+  });
+  const run = () => { hide(); doc.querySelectorAll('[role=option]').forEach(o => {
+    const n = w.__itubeCnt[o.textContent.trim()];
+    if (n === undefined) { o.removeAttribute('data-cnt'); o.removeAttribute('data-zero'); return; }
+    o.setAttribute('data-cnt', n.toLocaleString() + '건');
+    if (n) o.removeAttribute('data-zero'); else o.setAttribute('data-zero', '');
+  }); };
+  w.__itubeCntObs = run;
+  new w.MutationObserver(run).observe(doc.body, {childList: true, subtree: true});
+  run();
+})();
+</script>"""
+
+
+def _option_counts(cnt: dict[str, int]) -> None:
+    """분야 목록: 이름은 그대로, 건수는 오른쪽에 작게, 0건은 흐리게 (2026-11-23 사용자)."""
+    import json
+    st.html(_CNT_JS % json.dumps(cnt, ensure_ascii=False), unsafe_allow_javascript=True)
 
 
 def _download_body(key: str) -> None:
@@ -272,10 +309,11 @@ def _download_body(key: str) -> None:
     total = len(all_sel)
     from views import common as _cm
     with _cm.LAST_ROW:  # 기간 단위·연도·월과 같은 줄 (2026-11-10)
-        st.session_state.setdefault(f"{key}_fields", ["전체"])
+        k = f"{key}_fields"
+        st.session_state[k] = [f for f in st.session_state.get(k, ["전체"]) if f in opts] or ["전체"]
         picked = st.multiselect("분야", opts, key=f"{key}_fields", placeholder="분야 고르기",
-                                on_change=_tidy_fields, args=(f"{key}_fields",),
-                                format_func=lambda f: f"{f} {total if f == '전체' else int(cnt.get(f, 0))}건")
+                                on_change=_tidy_fields, args=(f"{key}_fields",))
+    _option_counts({f: total if f == "전체" else int(cnt.get(f, 0)) for f in opts})
     if "전체" in picked:  # 전체를 고르면 나머지는 무시
         picked = []
     sel, no_code = itube_selection(logs, s, e, start_only=True)
@@ -305,7 +343,7 @@ def _download_body(key: str) -> None:
     data = lambda args=args: itube.make_itube_file(*args)  # noqa: E731 - 누를 때만 만듦
     fname = _itube_filename(cfg, s, e)
     if picked:
-        tag = "_".join(f.replace(", ", "-").replace("(", "").replace(")", "") for f in picked)
+        tag = "_".join(f.replace(" · ", "-") for f in picked)
         fname = fname.replace(".xlsx", f"_{tag}.xlsx")
     st.download_button("엑셀로 내려받기", data=data, file_name=fname, mime=XLSX,
                        type="primary", width="stretch", icon=":material/download:", key=f"{key}_btn")
