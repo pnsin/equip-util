@@ -548,3 +548,22 @@ def test_itube_fills_blank_detail_product_purpose():
     assert rows[0][11].endswith("지원내용 : 배터리 시제품 제조")
     assert "열충격시험" in rows[1][11] and rows[1][20] == "열충격시험"
     assert "5Ah급 셀 개발 지원" in rows[2][11] and rows[2][8] == "배터리 전극"
+
+
+def test_itube_merges_daily_rows_into_period():
+    """하루씩 나뉜 같은 내용의 실적은 기간 한 줄로 (주말 건너뛰어도 이어짐, 달이 바뀌면 나눔)."""
+    import datetime as _dt
+    from core import itube as _it
+    D = _dt.date
+    base = dict(purpose="생산", usage_type="외부", company="A", brn="1", equip_name="e", equip_code="C1",
+                detail="x", product="p", purpose_detail="x", samples=1, fee=0, include_holidays="N")
+    days = [D(2026, 9, 1), D(2026, 9, 1), D(2026, 9, 2), D(2026, 9, 3), D(2026, 9, 4), D(2026, 9, 7),  # 금→월
+            D(2026, 9, 9),                                                            # 9/8 평일 빔 → 새 줄
+            D(2026, 9, 30), D(2026, 10, 1)]                                          # 달 바뀜 → 새 줄
+    recs = [dict(base, start_date=d, end_date=d, hours=4) for d in days]
+    recs.append(dict(base, company="B", start_date=D(2026, 9, 2), end_date=D(2026, 9, 2), hours=4))
+    out = _it.merge_periods(recs)
+    got = [(r["company"], r["start_date"], r["end_date"], r["hours"]) for r in out]
+    assert got == [("A", D(2026, 9, 1), D(2026, 9, 7), 24), ("B", D(2026, 9, 2), D(2026, 9, 2), 4),
+                   ("A", D(2026, 9, 9), D(2026, 9, 9), 4), ("A", D(2026, 9, 30), D(2026, 9, 30), 4),
+                   ("A", D(2026, 10, 1), D(2026, 10, 1), 4)]

@@ -12,7 +12,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from core import seed
+from core import calc, seed
 from core.db import digits, to_date, to_num, to_str
 from core.terms import w
 
@@ -196,6 +196,58 @@ def _fill_defaults(rec: dict, known: dict | None = None) -> dict:
     return rec
 
 
+_SUM_KEYS = ("start_date", "end_date", "hours", "fee", "samples")
+
+
+def merge_periods(records: list[dict]) -> list[dict]:
+    """하루씩 나뉜 실적을 기간 한 줄로 합침 (2026-11-23, 목록이 너무 길어서).
+
+    시작·종료일과 시간·사용료·시료수만 빼고 모든 칸이 같은 실적끼리, 날짜가 이어지면
+    (사이에 주말·공휴일만 있어도 이어진 것으로 봄) 한 줄로: 시작일 = 처음, 종료일 = 끝,
+    사용시간·사용료 = 합계, 시료수 = 가장 큰 값. 같은 달 안에서만 합침
+    (i-Tube 규칙: 같은 해, 2개월 이내 / 월별 제출과 맞춤).
+    """
+    if not records:
+        return records
+    dates = [to_date(r.get("start_date")) for r in records] + [to_date(r.get("end_date")) for r in records]
+    off = calc.kr_holidays({d.year for d in dates if d})
+
+    def rest_only(a: dt.date, b: dt.date) -> bool:  # a~b 사이(양 끝 제외)가 모두 쉬는 날인가
+        d = a + dt.timedelta(days=1)
+        while d < b:
+            if d.weekday() < 5 and d not in off:
+                return False
+            d += dt.timedelta(days=1)
+        return True
+
+    def key(r: dict) -> tuple:
+        return tuple(_cell_value(k, r) for k in KEYS if k not in _SUM_KEYS)
+
+    groups: dict[tuple, list[dict]] = {}
+    for r in records:
+        groups.setdefault(key(r), []).append(r)
+    out: list[dict] = []
+    for rows in groups.values():
+        rows.sort(key=lambda r: (to_date(r.get("start_date")) or dt.date.min, to_date(r.get("end_date")) or dt.date.min))
+        cur = None
+        for r in rows:
+            s, e = to_date(r.get("start_date")), to_date(r.get("end_date")) or to_date(r.get("start_date"))
+            if (cur is not None and s and cur["_e"] and (s.year, s.month) == (cur["_s"].year, cur["_s"].month)
+                    and (e.year, e.month) == (cur["_s"].year, cur["_s"].month)
+                    and (s <= cur["_e"] + dt.timedelta(days=1) or rest_only(cur["_e"], s))):
+                cur["_e"] = max(cur["_e"], e)
+                cur["hours"] = (to_num(cur.get("hours"), 0) or 0) + (to_num(r.get("hours"), 0) or 0)
+                cur["fee"] = (to_num(cur.get("fee"), 0) or 0) + (to_num(r.get("fee"), 0) or 0)
+                cur["samples"] = max(to_num(cur.get("samples"), 1) or 1, to_num(r.get("samples"), 1) or 1)
+                continue
+            cur = dict(r, _s=s, _e=e)
+            out.append(cur)
+    for r in out:
+        r["start_date"], r["end_date"] = r.pop("_s"), r.pop("_e")
+    out.sort(key=lambda r: (r["start_date"] or dt.date.min, to_str(r.get("equip_name"))))
+    return out
+
+
 def make_itube_file(records: list[dict], equipment_rows: list[tuple[str, str]],
                     template_bytes: bytes | None = None, history: list[dict] | None = None) -> bytes:
     """실적 목록을 i-Tube 업로드 양식에 채워 xlsx 바이트로 돌려줍니다.
@@ -205,7 +257,7 @@ def make_itube_file(records: list[dict], equipment_rows: list[tuple[str, str]],
     history: 빈칸을 채울 때 참고할 전체 실적 (없으면 records 만 참고).
     """
     known = known_details(list(history or []) + list(records))
-    records = [_fill_defaults(r, known) for r in records]
+    records = merge_periods([_fill_defaults(r, known) for r in records])
     if template_bytes:
         wb = load_workbook(io.BytesIO(template_bytes))
         ws = wb["Sheet1"] if "Sheet1" in wb.sheetnames else wb.worksheets[0]
