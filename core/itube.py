@@ -137,17 +137,19 @@ DEFAULT_OVERVIEW = {
     "분석": "배터리 분석",
     "계측": "배터리 계측",
     "생산": "배터리 시제품 제조",
-    "교육": "배터리 제조 현장실습 교육",
+    "교육": "배터리 교육",
     "기타": "배터리 연구개발 지원",
 }
 DEFAULT_PRODUCT = "이차전지"
 
 
-def _who(rec: dict) -> tuple[str, str]:
-    """같은 업체·같은 i-Tube 장비를 알아보는 열쇠."""
+def _who(rec: dict) -> tuple[str, str, str]:
+    """같은 업체·같은 i-Tube 장비·같은 사용목적을 알아보는 열쇠.
+
+    2026-11-24: 사용목적까지 같아야 빌려 씀 (내부 '생산' 실적에 내부 '교육' 실적의 제품명 '배터리 제조 교육'이 들어가던 문제)."""
     code = to_str(rec.get("itube_code")) or to_str(rec.get("equip_code"))
     who = to_str(rec.get("company")) or f"내부:{to_str(rec.get('dept'))}"
-    return code, who
+    return code, who, to_str(rec.get("purpose"))
 
 
 def known_details(history: list[dict]) -> dict[tuple[str, str], dict]:
@@ -172,7 +174,7 @@ def _fill_defaults(rec: dict, known: dict | None = None) -> dict:
 
     지원개요: 실적의 지원개요 → 사용목적(상세) → 같은 업체·장비의 다른 실적 → 사용목적별 기본 문구
     인증/인정/시험법: 없으면 '-' · 지원내용: 없으면 지원개요 · 사용목적(U열): 없으면 지원개요
-    제품명: 같은 업체·장비의 다른 실적 → 교육은 '배터리 제조 교육', 그 밖은 세부품목(없으면 이차전지)
+    제품명: 같은 업체·장비·사용목적의 다른 실적 → 세부품목(없으면 이차전지)
     내부 실적: 기업명·사업자번호 = 우리 기관
     """
     rec = dict(rec)
@@ -186,8 +188,8 @@ def _fill_defaults(rec: dict, known: dict | None = None) -> dict:
     if not to_str(rec.get("purpose_detail")):
         rec["purpose_detail"] = overview
     if not to_str(rec.get("product")):
-        rec["product"] = (k.get("product") or ("배터리 제조 교육" if purpose == "교육" else "")
-                          or to_str(rec.get("sub_item")) or DEFAULT_PRODUCT)
+        # 2026-11-24: 교육이라고 '배터리 제조 교육'으로 채우지 않음 (시험 장비 재직자 교육 등에도 들어가서)
+        rec["product"] = k.get("product") or to_str(rec.get("sub_item")) or DEFAULT_PRODUCT
     # 2026-11-23 사용자: 휴무일자포함은 모두 N, 주말·공휴일 시간은 뺌 (가동률 계산과 같은 기준).
     # 주말 포함(Y) 실적은 사용시간을 기간 안 평일 몫만 남김 (예: 화~다음 월 7일 148h → 평일 5일 몫 105.7h).
     if to_str(rec.get("include_holidays")) != "N":

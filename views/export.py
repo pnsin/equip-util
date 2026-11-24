@@ -64,7 +64,7 @@ def itube_selection(logs: pd.DataFrame, s: dt.date, e: dt.date, *, start_only: b
 
 def _history(logs: pd.DataFrame) -> list[dict]:
     """빈 지원개요·제품명을 채울 때 참고할 전체 실적 (업체·i-Tube 장비·내용만)."""
-    cols = [c for c in ("id", "start_date", "itube_code", "company", "dept", "detail", "product") if c in logs]
+    cols = [c for c in ("id", "start_date", "itube_code", "company", "dept", "purpose", "detail", "product") if c in logs]
     return logs[cols].to_dict("records") if not logs.empty else []
 
 
