@@ -339,6 +339,56 @@ def _num_step(key: str, delta: float, lo: float, hi: float | None) -> None:
     st.session_state[key] = f"{int(v):,}" if v == int(v) else f"{v:g}"
 
 
+def _num_tag(v: float | None) -> str:
+    if v is None:
+        return "n"
+    v = float(v)
+    return str(int(v)) if v == int(v) else f"{v:g}".replace(".", "p").replace("-", "m")
+
+
+# −/＋ 를 눌렀을 때 앱을 다시 그리지 않고 숫자 칸만 바로 바꿈. 마지막으로 누른 뒤 0.7초가 지나거나
+# 다른 곳을 누르면(칸에서 포커스가 빠지면) 그때 한 번 앱에 값이 넘어감 → 저장 버튼을 눌러도 값이 맞음.
+NUM_STEP_JS = r"""
+(() => {
+  const w = window.parent || window;
+  if (w.__numStepJs) return; w.__numStepJs = 1;
+  const doc = w.document;
+  const RE = /^st-key-.+_(up|dn)_nstep_([0-9p]+)_([0-9pm]+)_([0-9pmn]+)$/;
+  const num = (t) => t === 'n' ? null : parseFloat(t.replace('p', '.').replace('m', '-'));
+  const info = (el) => {
+    for (let n = el, i = 0; n && i < 10; n = n.parentElement, i++) {
+      for (const c of (n.classList || [])) { const m = c.match(RE); if (m) return {box: n, dir: m[1], step: num(m[2]), lo: num(m[3]), hi: num(m[4])}; }
+    }
+    return null;
+  };
+  const setter = Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype, 'value').set;
+  // 휴대폰에서 키보드가 뜨지 않게 누르는 동안은 칸에 포커스를 두지 않고, 알릴 때만 잠깐 포커스→해제
+  const pending = new Set();
+  let timer = null;
+  const commit = () => { clearTimeout(timer); timer = null;
+    pending.forEach(inp => { if (inp.isConnected) { inp.focus({preventScroll: true}); inp.blur(); } }); pending.clear(); };
+  doc.addEventListener('mousedown', (e) => {
+    if (e.button === 0 && info(e.target)) { e.preventDefault(); e.stopPropagation(); return; }
+    if (pending.size) commit();  // 저장 등 다른 곳을 누르면 그 전에 값부터 넘김
+  }, true);
+  doc.addEventListener('touchstart', (e) => { if (pending.size && !info(e.target)) commit(); }, true);
+  doc.addEventListener('click', (e) => {
+    const f = info(e.target); if (!f) return;
+    const row = f.box.closest('[class*="st-key-numr_"]'); const inp = row && row.querySelector('input');
+    if (!inp) return;  // 모양이 달라지면 예전처럼 앱이 처리
+    e.preventDefault(); e.stopPropagation();
+    let v = parseFloat(String(inp.value).replace(/,/g, '')); if (isNaN(v)) v = 0;
+    v += f.dir === 'up' ? f.step : -f.step;
+    if (f.lo !== null) v = Math.max(f.lo, v); if (f.hi !== null) v = Math.min(f.hi, v);
+    v = Math.round(v * 1000) / 1000;
+    setter.call(inp, Number.isInteger(v) ? v.toLocaleString('en-US') : String(v));
+    inp.dispatchEvent(new w.Event('input', {bubbles: true}));
+    pending.add(inp); clearTimeout(timer); timer = setTimeout(commit, 700);
+  }, true);
+})();
+"""
+
+
 def num_input(container, label: str, key: str, value: float, step: float = 1, lo: float = 0,
               hi: float | None = None, steppers: bool = True) -> float:
     """숫자 칸 (−/＋ 버튼 + 직접 입력). Streamlit 숫자 칸 대신 글자 칸을 써서 가볍고 오류가 없음."""
@@ -347,11 +397,14 @@ def num_input(container, label: str, key: str, value: float, step: float = 1, lo
     box = container.container(key=f"num_{key}", gap=None)
     box.markdown(f"<div class='num-l'>{label}</div>", unsafe_allow_html=True)
     with box.container(horizontal=True, gap=None, vertical_alignment="center", key=f"numr_{key}"):
+        # −/＋ 는 브라우저에서 바로 숫자를 바꾸고(NUM_STEP_JS), 잠시 멈추면 한 번만 앱에 알림 (2026-11-24 사용자: 느림)
+        # 버튼 key 에 한 칸·최소·최대를 담아 둠. 스크립트가 없으면 예전처럼 눌릴 때마다 앱이 다시 그림.
+        tag = f"nstep_{_num_tag(step)}_{_num_tag(lo)}_{_num_tag(hi)}"
         if steppers:
-            st.button("−", key=f"{key}_dn", on_click=_num_step, args=(key, -step, lo, hi))
+            st.button("−", key=f"{key}_dn_{tag}", on_click=_num_step, args=(key, -step, lo, hi))
         st.text_input(label, key=key, label_visibility="collapsed")
         if steppers:
-            st.button("＋", key=f"{key}_up", on_click=_num_step, args=(key, step, lo, hi))
+            st.button("＋", key=f"{key}_up_{tag}", on_click=_num_step, args=(key, step, lo, hi))
     try:
         v = float(str(st.session_state.get(key, "0")).replace(",", "") or 0)
     except ValueError:

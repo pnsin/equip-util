@@ -641,6 +641,9 @@ def render_grid(container, eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, mont
     with container:
         with st.container(key="eg_top", horizontal=True, vertical_alignment="center", gap="small"):
             # 예전 버튼 이름(제조(문백) 등)이 남아 있으면 첫 버튼으로
+            old = {"문백": MB}.get(st.session_state.get("eg_last"))  # 이름만 바뀐 버튼은 그 버튼으로
+            if old:
+                st.session_state["eg_last"] = old
             if st.session_state.get("eg_last") not in opts:
                 st.session_state["eg_last"] = GROUPS[0]
             if st.session_state.get("eg_grp") not in opts:
