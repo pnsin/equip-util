@@ -26,7 +26,8 @@ CSS = """<style>
 def _run(ver: int) -> list[dict]:  # ver(데이터 번호)가 바뀌면 다시 셈 — 이름이 '_'로 시작하면 캐시 키에서 빠져 안 바뀜
     eq = db.load_equipment()
     ch = db.load_channels()
-    return health.run(db.load_logs(), eq, ch, db.load_companies(), db.charger_ids(eq, ch))
+    from core import fee_ledger
+    return health.run(db.load_logs(), eq, ch, db.load_companies(), db.charger_ids(eq, ch), ledger=fee_ledger.load())
 
 
 def _split() -> tuple[list[dict], list[dict]]:

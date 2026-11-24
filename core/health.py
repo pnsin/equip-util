@@ -49,7 +49,7 @@ def _chain(i: int, parent: dict[int, int]) -> list[int]:
 
 
 def run(logs: pd.DataFrame, eq: pd.DataFrame, ch: pd.DataFrame, companies: pd.DataFrame,
-        chargers: set[int], today: dt.date | None = None) -> list[dict]:
+        chargers: set[int], today: dt.date | None = None, ledger: pd.DataFrame | None = None) -> list[dict]:
     """[{key, level, title, why, rows}] (문제가 있는 것만)."""
     today = today or dt.date.today()
     found: list[dict] = []
@@ -85,6 +85,19 @@ def run(logs: pd.DataFrame, eq: pd.DataFrame, ch: pd.DataFrame, companies: pd.Da
     hrs = pd.to_numeric(ok["hours"], errors="coerce")
     add("no_hours", CHECK, "사용시간이 0이거나 비어 있는 실적", "가동률에 0시간으로 잡혀요.", ok[~(hrs > 0)])
     days = (ok["end_date"] - ok["start_date"]).dt.days + 1
+    # 2026-11-24 점검: 주말·공휴일에만 있는 실적은 가동률에서 0시간 (주말·공휴일 제외 규칙). 모르고 지나가지 않게
+    from core.calc import kr_holidays
+    hol = kr_holidays(set(ok["start_date"].dt.year) | set(ok["end_date"].dt.year)) if len(ok) else set()
+
+    def off_only(r) -> bool:
+        s, e = r["start_date"].date(), r["end_date"].date()
+        return all((s + dt.timedelta(days=i)).weekday() >= 5 or (s + dt.timedelta(days=i)) in hol
+                   for i in range((e - s).days + 1))
+    add("off_days_only", NOTE, "주말·공휴일에만 있는 실적 (가동률 0시간)",
+        "가동률은 평일만 세서 이 실적은 가동률에 0시간으로 잡혀요. 날짜가 맞는지 봐 주세요 (실적과 i-Tube 파일에는 그대로 있어요).",
+        ok[[off_only(r) for r in ok.to_dict("records")]] if len(ok) else ok,
+        lambda r: f"{r['start_date']:%m/%d}({'월화수목금토일'[r['start_date'].weekday()]})"
+                  + ("" if r["start_date"] == r["end_date"] else f"~{r['end_date']:%m/%d}") + " 휴일")
     over = (hrs > days * 24) & ~ok["eid"].isin(chargers)
     add("over_24h", CHECK, "하루 24시간을 넘는 실적", "기간보다 사용시간이 많아요. 시간이나 기간이 잘못 들어갔을 수 있어요.",
         ok[over], lambda r: f"{int((r['end_date'] - r['start_date']).days) + 1}일에 {r['hours']:g}시간")
@@ -169,6 +182,23 @@ def run(logs: pd.DataFrame, eq: pd.DataFrame, ch: pd.DataFrame, companies: pd.Da
         "시료를 나눠 넣은 것이면 괜찮아요. 같은 일을 두 번 입력했다면 하나를 지워 주세요.",
         ok[ok["id"].isin(over_ids)].sort_values(["eid", "start_date"]))
 
+    # 2026-11-24 점검: 세부장비 시간은 주장비에 더해지므로, 주장비와 그 세부장비에 같은 기간 실적이 따로 있으면 두 번 셀 수 있음
+    anc_pairs: set = set()
+    by_e = {e: g for e, g in ok.groupby("eid")}
+    for e, g in by_e.items():
+        for a in _chain(e, parent)[1:]:
+            pg = by_e.get(a)
+            if pg is None:
+                continue
+            for r in g.itertuples():
+                hit = pg[(pg["start_date"] <= r.end_date) & (pg["end_date"] >= r.start_date)]
+                if len(hit):
+                    anc_pairs.add(r.id)
+                    anc_pairs.update(hit["id"])
+    add("parent_child", NOTE, "주장비와 그 세부장비에 같은 기간 실적",
+        "세부장비 시간은 주장비에 더해져요. 같은 일을 주장비와 세부장비에 한 번씩 넣었다면 두 번 세어져요. 다른 일이면 괜찮아요.",
+        ok[ok["id"].isin(anc_pairs)].sort_values(["start_date", "eid"]))
+
     # 같은 챔버를 기간이 겹치게 두 업체가 통째로 쓴 것 (채널을 나눠 쓴 게 아니면 중복 예약)
     cb = []
     for r in with_ch.to_dict("records"):
@@ -226,7 +256,40 @@ def run(logs: pd.DataFrame, eq: pd.DataFrame, ch: pd.DataFrame, companies: pd.Da
     add("unknown_company", NOTE, "업체 목록에 없는 업체 이름",
         "업체 목록과 글자가 달라서 사업자번호·업종이 자동으로 채워지지 않아요.",
         has_c[~has_c["company"].map(to_str).isin(names)])
+    if ledger is not None:
+        fee = fee_without_usage(ledger, lg, eq, brn_of, today)
+        if len(fee):
+            found.append({"key": "fee_no_usage", "level": NOTE, "title": "매출장에 수수료가 있는데 실적이 없음",
+                          "why": "재무팀 매출장에 수수료가 났는데, 그 업체가 같은 분류 장비를 쓴 실적이 그 전 반년 동안 없어요. "
+                                 "실적을 안 넣었다면 가동률이 실제보다 낮게 나와요.", "rows": fee})
     return found
+
+
+def fee_without_usage(ledger: pd.DataFrame, logs: pd.DataFrame, eq: pd.DataFrame, brn_of: dict,
+                      today: dt.date) -> pd.DataFrame:
+    """올해 매출장 줄 중 같은 업체(사업자번호) · 같은 보고 분류 장비 실적이 세금일자 200일 전 ~ 31일 뒤에 없는 줄."""
+    from core import report
+    if ledger is None or ledger.empty:
+        return pd.DataFrame(columns=ROW_COLS)
+    fl = ledger[[bool(d) and d.year == today.year for d in ledger["tax_date"]]]
+    if fl.empty:
+        return pd.DataFrame(columns=ROW_COLS)
+    cats = report.equip_cats(eq)
+    num = lambda v: "".join(c for c in to_str(v) if c.isdigit())  # noqa: E731
+    lg = logs.assign(cat=logs["equip_id"].map(lambda v: cats.get(int(v), report.OTHER)),
+                     b=[num(b) or brn_of.get(to_str(c), "") for b, c in zip(logs["brn"], logs["company"])])
+    out = []
+    for r, c in zip(fl.to_dict("records"), report.ledger_cats(fl)):
+        if c in (report.OTHER, report.CHECK):
+            continue
+        t = pd.Timestamp(r["tax_date"])
+        hit = lg[(lg["cat"] == c) & (lg["b"] == num(r["brn"])) & (lg["start_date"] <= t + pd.Timedelta(days=31))
+                 & (lg["end_date"] >= t - pd.Timedelta(days=200))]
+        if hit.empty:
+            out.append({"ID": int(r["id"]), "장비": c, "시작일": r["tax_date"], "종료일": r["tax_date"],
+                        "업체": to_str(r["company"]), "시간": 0.0,
+                        "내용": f"{to_str(r['item'])} · {int(r['supply'] or 0):,}원"})
+    return pd.DataFrame(out, columns=ROW_COLS)
 
 
 def summary(found: list[dict]) -> tuple[int, int]:

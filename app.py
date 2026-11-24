@@ -1,4 +1,12 @@
 import hmac
+import os
+import time
+
+# 2026-11-24 점검: Streamlit Cloud 서버 시계는 UTC (한국보다 9시간 느림). 그대로 두면 아침 9시 전에는 '오늘'이 어제로,
+# 1일 아침에는 '이번 달'이 지난달로 잡히고 작성일시도 9시간 이르게 저장됨 → 프로그램 전체를 한국 시간으로
+os.environ["TZ"] = "Asia/Seoul"
+if hasattr(time, "tzset"):
+    time.tzset()
 
 from core import grid_patch
 
