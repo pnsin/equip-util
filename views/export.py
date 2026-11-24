@@ -38,6 +38,10 @@ def itube_selection(logs: pd.DataFrame, s: dt.date, e: dt.date, *, start_only: b
         sel = logs[(logs["start_date"] >= pd.Timestamp(s)) & (logs["start_date"] <= pd.Timestamp(e))]
     else:
         sel = logs[(logs["start_date"] <= pd.Timestamp(e)) & (logs["end_date"] >= pd.Timestamp(s))]
+    # 2026-11-24 사용자: 아직 오지 않은 날짜의 실적은 빼기 (미리 넣어 둔 일정이 실적으로 오해될 수 있어서).
+    # 끝나는 날이 오늘 뒤인 실적(진행 중인 기간 실적 포함)은 끝난 뒤에 나옴.
+    today = pd.Timestamp(dt.date.today())
+    sel = sel[sel["end_date"].fillna(sel["start_date"]) <= today]
     if types:
         sel = sel[sel["usage_type"].isin(types)]
     if labels:
