@@ -20,7 +20,8 @@ def test_html_has_click_targets():
                      {"id": 6, "name": "프레스", "full": "프레스", "parent": "", "sec": "라인", "lanes": [[]]}]}
     h = eg.to_html(data, d[1], {"log": 7})
     # 2026-11-23: 기간 실적도 칸마다 (엑셀처럼) — 날짜 칸 셋에 모두 시간·업체
-    assert h.count("data-log='7'") == 3 and "picked" in h and "colspan" not in h
+    assert h.count("data-log='7'") == 3 and "picked" in h and "colspan" not in h.split("<tbody>")[1]
+    assert "1주차" in h
     assert h.count("<b>8</b>") == 3 and " jl" in h and " jr" in h
     assert h.count("data-eid='6'") == 3  # 빈 줄은 날짜마다 누를 수 있는 칸
 

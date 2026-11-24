@@ -260,10 +260,25 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
     h = ["<div class='eg-scroll'><table class='eg" + (" has-grp" if has_grp else "")
          + "'><colgroup><col class='c-sec'>" + ("<col class='c-grp'>" if has_grp else "") + "<col class='c-dev'>"]
     h += ["<col>" for _ in days]
-    h.append("</colgroup><thead><tr><th class='sec'>구분</th>"
-             + ("<th class='dev wide' colspan='2'>장비</th>" if has_grp else "<th class='dev'>장비</th>"))
+    h.append("</colgroup><thead><tr class='wkr'><th class='sec' rowspan='2'>구분</th>"
+             + ("<th class='dev wide' colspan='2' rowspan='2'>장비</th>" if has_grp
+                else "<th class='dev' rowspan='2'>장비</th>"))
+    # 주가 바뀌는 곳(그 주의 마지막 보이는 날) 오른쪽 선을 조금 진하게 (2026-11-24 사용자)
+    wk_end = {d for d, nx in zip(days, days[1:]) if nx.isocalendar()[:2] != d.isocalendar()[:2]}
+    # 날짜 위에 'n주차' 띠 (2026-11-24 사용자): 1일이 든 주 = 1주차
+    weeks = []
     for d in days:
-        cls = ("off " if d in data["off"] else "") + ("today" if d == today else "")
+        k = d.isocalendar()[:2]
+        if weeks and weeks[-1][0] == k:
+            weeks[-1][1] += 1
+        else:
+            weeks.append([k, 1])
+    for n, (_k, cnt) in enumerate(weeks, 1):
+        last = n < len(weeks)
+        h.append(f"<th class='wkl{' wk' if last else ''}' colspan='{cnt}'>{n}주차</th>")
+    h.append("</tr><tr class='dtr'>")
+    for d in days:
+        cls = ("off " if d in data["off"] else "") + ("today " if d == today else "") + ("wk" if d in wk_end else "")
         h.append(f"<th class='{cls}'>{d.day}<small>{WEEK[d.weekday()]}</small></th>")
     h.append("</tr></thead><tbody>")  # 합계 열은 뺌 (2026-11-23 사용자: 앱에서는 필요 없음)
     sec_rows: dict[str, int] = {}
@@ -306,7 +321,7 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
                     h.append(f"<td class='dev' rowspan='{n}' title='{e(r['full'])}'><div class='nm'>{_name_html(r['name'])}</div></td>")
             at = {d: it for it in lane for d in it["vis"]}
             for ci, d in enumerate(days):
-                cls = "off" if d in data["off"] else ""
+                cls = ("off" if d in data["off"] else "") + (" wk" if d in wk_end else "")
                 it = at.get(d)
                 if it is None:
                     s_cls = " sel" if sel_eid == r["id"] and sel_day == d and not sel_log else ""
@@ -345,6 +360,7 @@ CSS = """
 table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;min-width:var(--minw,900px);
   font-family:inherit;color:#191918}
 .eg col.c-sec{width:92px}.eg col.c-dev{width:var(--devw,190px)}.eg col.c-tot{width:58px}
+.eg th.wk,.eg td.wk{border-right:2px solid #C9BFAE!important}.eg thead tr.wkr th.wkl{height:20px;font-size:11px;font-weight:600;color:#8A867D;top:0}.eg thead tr.dtr th{top:21px;height:34px}
 .eg th,.eg td{border-right:1px solid #EAE7DF;border-bottom:1px solid #EAE7DF;text-align:center;padding:0;height:34px;
   font-size:11px;position:relative;box-sizing:border-box}
 .eg thead th{background:#F2EFE9;height:42px;font-weight:600;color:#4A4741;font-size:12px;position:sticky;top:0;z-index:3}
