@@ -1924,7 +1924,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                         cens = [c for c in db.CENTERS if c in cen_of.values()]
                         cur_cen = cen_of.get(int(cur["equip_id"])) if cur is not None else None
                         if len(cens) > 1:
-                            cen = st.pills("센터", cens, default=cur_cen if cur_cen in cens else None, format_func=db.center_short,
+                            cen = st.pills("센터", cens, default=cur_cen if cur_cen in cens else None,
                                            key=f"ep_cen_{k}", label_visibility="collapsed")
                             if cen:
                                 in_g = [i for i in in_g if cen_of.get(i) == cen]
