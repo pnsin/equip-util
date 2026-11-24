@@ -101,7 +101,7 @@ def _common(title: str, key: str):
     eq = db.load_equipment()
     years = sorted({d.year for d in logs["start_date"].dropna()}) if not logs.empty else []
 
-    s, e, label, _ = period_picker(key, ["월", "분기", "반기", "연", "직접 지정"], "분기",
+    s, e, label, _ = period_picker(key, ["직접 지정", "월", "분기", "반기", "연"], "직접 지정",
                                    completed=True, years=years)
     section_bar(label, sub=f"{s:%Y-%m-%d} ~ {e:%Y-%m-%d}", first=True)
     return cfg, logs, eq, s, e, label
@@ -274,7 +274,7 @@ def _download_body(key: str) -> None:
     logs = db.load_logs()
     eq = db.load_equipment()
     years = sorted({d.year for d in logs["start_date"].dropna()}) if not logs.empty else []
-    s, e, label, _ = period_picker(key, ["월", "분기", "반기", "연", "직접 지정"], "월", years=years)
+    s, e, label, _ = period_picker(key, ["직접 지정", "월", "분기", "반기", "연"], "직접 지정", years=years)
     if e < s:
         s, e = e, s
     # 2026-11-10: 분야는 입력할 때 고른 '사용목적'이 아니라 장비의 '장비용도'(제조·시험·분석)로 나눔.
