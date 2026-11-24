@@ -611,3 +611,21 @@ def test_itube_borrows_only_same_purpose():
                  product="배터리 전극", detail="· 지원개요 : 배터리 전극 제조")]
     ws = _lw(_io.BytesIO(_it.make_itube_file([rec], [], None, hist)))["Sheet1"]
     assert ws.cell(4, 9).value == "배터리 전극" and "배터리 전극 제조" in ws.cell(4, 12).value
+
+
+def test_itube_dept_only_for_other_dept():
+    from core import itube
+    base = {"purpose": "시험", "start_date": "2026-03-02", "end_date": "2026-03-02", "hours": 8,
+            "include_holidays": "N", "dept": "차세대에너지센터"}
+    assert itube._fill_defaults(dict(base, usage_type="외부"))["dept"] == ""
+    assert itube._fill_defaults(dict(base, usage_type="내부"))["dept"] == ""
+    assert itube._fill_defaults(dict(base, usage_type="내부 타부서"))["dept"] == "차세대에너지센터"
+
+
+def test_itube_check_rows_flags_missing_brn():
+    from core import itube
+    rows = itube.prepare([{"purpose": "시험", "usage_type": "외부", "company": "가나", "brn": "",
+                           "industry": "전기전자", "item": "이차전지_에너지", "sub_item": "이차전지",
+                           "start_date": "2026-03-02", "end_date": "2026-03-02", "hours": 8,
+                           "include_holidays": "N", "equip_name": "x", "equip_code": "1"}])
+    assert any("사업자등록번호" in b["문제"] for b in itube.check_rows(rows))

@@ -200,6 +200,9 @@ def _fill_defaults(rec: dict, known: dict | None = None) -> dict:
             work = sum(1 for d in days if d.weekday() < 5 and d not in off)
             rec["hours"] = (to_num(rec.get("hours"), 0) or 0) * work / len(days)
     rec["include_holidays"] = "N"
+    # 2026-11-24 검토: 내부부서명은 '내부 타부서'만 (양식 유의사항 3). 입력 기본값 '차세대에너지센터'가 모든 실적에 들어 있었음.
+    if to_str(rec.get("usage_type")) != "내부 타부서":
+        rec["dept"] = ""
     if to_str(rec.get("usage_type")) == "내부":
         if not to_str(rec.get("company")):
             rec["company"] = INTERNAL_ORG[0]
@@ -260,6 +263,25 @@ def merge_periods(records: list[dict]) -> list[dict]:
     return out
 
 
+def prepare(records: list[dict], history: list[dict] | None = None) -> list[dict]:
+    """엑셀에 들어갈 줄 그대로: 빈칸 채우기 → 기간 합치기 → 0시간 줄 빼기."""
+    known = known_details(list(history or []) + list(records))
+    out = merge_periods([_fill_defaults(r, known) for r in records])
+    return [r for r in out if (to_num(r.get("hours"), 0) or 0) > 0]  # 주말에만 쓴 실적은 빠짐
+
+
+def check_rows(rows: list[dict]) -> list[dict]:
+    """prepare 결과를 엑셀 칸 값(정수 시간 등)으로 i-Tube 규칙 검사. 문제 있는 줄만."""
+    from core import rules
+    out = []
+    for r in rows:
+        v = dict(r, hours=_cell_value("hours", r), brn=_cell_value("brn", r))
+        for msg in rules.validate(v):
+            out.append({"시작일": to_date(r.get("start_date")), "장비": to_str(r.get("equip_name")),
+                        "기관": to_str(r.get("company")), "문제": msg})
+    return out
+
+
 def make_itube_file(records: list[dict], equipment_rows: list[tuple[str, str]],
                     template_bytes: bytes | None = None, history: list[dict] | None = None) -> bytes:
     """실적 목록을 i-Tube 업로드 양식에 채워 xlsx 바이트로 돌려줍니다.
@@ -268,9 +290,7 @@ def make_itube_file(records: list[dict], equipment_rows: list[tuple[str, str]],
     없으면 build_blank 로 만든 양식에 채웁니다.
     history: 빈칸을 채울 때 참고할 전체 실적 (없으면 records 만 참고).
     """
-    known = known_details(list(history or []) + list(records))
-    records = merge_periods([_fill_defaults(r, known) for r in records])
-    records = [r for r in records if (to_num(r.get("hours"), 0) or 0) > 0]  # 주말에만 쓴 실적은 빠짐
+    records = prepare(records, history)
     if template_bytes:
         wb = load_workbook(io.BytesIO(template_bytes))
         ws = wb["Sheet1"] if "Sheet1" in wb.sheetnames else wb.worksheets[0]
