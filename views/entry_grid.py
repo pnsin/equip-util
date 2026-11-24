@@ -109,15 +109,22 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
 
     near = logs[(logs["start_date"] <= ts1) & (logs["end_date"].fillna(logs["start_date"]) >= ts0)] if not logs.empty else logs
     near = near[near["equip_id"].map(lambda v: groups.get(int(v)) == group)] if not near.empty else near
+    # 2026-11-24 사용자: 세부장비를 따로 쓸 수 없는 묶음(SMT)은 주장비 한 줄로, 표 맨 아래에
+    one = {i for i in order if groups.get(i) == group and root.get(i, i) == i and is_one_row(short.get(i, ""))}
+    up = {i: root[i] for i in order if root.get(i) in one and i != root[i]}
+    if up and not near.empty:
+        near = near.assign(equip_id=near["equip_id"].map(lambda v: up.get(int(v), int(v))))
     with_logs = set(near["equip_id"].astype(int)) if not near.empty else set()
     leaves = set(db.pick_ids(eq, m1))
-    ids = [i for i in order if groups.get(i) == group and (i in leaves or i in with_logs)]
+    ids = [i for i in order if groups.get(i) == group and i not in up and (i in leaves or i in with_logs or i in one)]
 
     # 구분 칸: 제조는 라인(맨 위 장비), 문백은 라인·충방전기 묶음 + 시험 챔버, 나머지는 센터
     from core import status
     dg = status.device_group(eq, db.load_channels())
 
     def section(i: int) -> str:
+        if i in one:
+            return "SMT"
         if group == MB and dg.get(root.get(i, i)) == "시험":
             return "시험 챔버"
         if group.startswith("제조") or group == MB:
@@ -128,7 +135,7 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
         s = section(i)
         if s not in sec_order:
             sec_order.append(s)
-    ids.sort(key=lambda i: sec_order.index(section(i)))  # 같은 묶음끼리 모음 (장비 목록 순서 유지)
+    ids.sort(key=lambda i: (i in one, sec_order.index(section(i))))  # 같은 묶음끼리 모음, 한 줄 묶음은 맨 아래
 
     # 실적 → 한 건(묶음ID로 이은 기간 실적은 하나)
     items_by_eq: dict[int, list[dict]] = {}
@@ -194,11 +201,43 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
         sub = short.get(p, "") if p is not None and not group.startswith("제조") and group != MB else ""
         if sub and sub in name:
             sub = ""
-        if (group.startswith("제조") or group == MB) and root.get(i, i) == i and any(parent.get(j) == i for j in ids):
+        if i in one:
+            name = short.get(i, name)  # 표면실장 기술지원 장비(SMT) 한 줄
+        elif (group.startswith("제조") or group == MB) and root.get(i, i) == i and any(parent.get(j) == i for j in ids):
             name = "라인 전체" if dg.get(i) == "제조" else "장비 전체"
         rows.append({"id": i, "name": name, "full": short.get(i, str(i)), "parent": sub, "sec": section(i),
                      "lanes": lanes or [[]]})
     return {"days": days, "off": off, "rows": rows, "m0": m0}
+
+
+GRP_W = 96  # 주장비 칸 너비 (CSS --grpw 와 같게)
+
+
+def is_one_row(name: str) -> bool:
+    """세부장비를 따로 쓰지 않고 주장비 한 줄로만 등록하는 묶음 (SMT)."""
+    n = db.to_str(name)
+    return "SMT" in n.upper() or "표면실장" in n
+
+
+def _text_px(t: str, wide: float = 12.5, narrow: float = 7.0) -> float:
+    """글자 폭 어림 (한글 12px 글꼴 기준)."""
+    return sum(wide if ord(ch) > 0x2E80 else narrow for ch in t)
+
+
+def _dev_width(rows: list[dict]) -> int:
+    """장비 칸 너비 = 이 표에서 가장 긴 이름에 맞춤 (2026-11-24 사용자: 칸이 너무 넓은 곳은 줄이기).
+    괄호(사양)는 아랫줄이라 따로 잼. 너무 긴 이름은 줄바꿈 (최대 230px)."""
+    has_grp = any(r["parent"] for r in rows)
+    need = 0.0
+    for r in rows:
+        n = r["name"]
+        i = n.find("(")
+        main, spec = (n[:i].rstrip(), n[i:]) if i > 0 else (n, "")
+        w = max(_text_px(main), _text_px(spec, 11, 6.2))
+        if has_grp and not r["parent"]:  # 주장비 칸까지 합친 줄은 그만큼 덜 필요
+            w -= GRP_W
+        need = max(need, w)
+    return int(min(230, max(110, need + 24)))
 
 
 def _name_html(name: str) -> str:
@@ -314,7 +353,7 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
 .eg thead th.today{background:#D97757;color:#fff}.eg thead th.today small{color:#FDF2EE}
 .eg td.off{background:#F7F5F0}
 .eg td.sec{background:#FAF9F5;color:#6B6860;font-weight:700;font-size:11.5px;padding:4px 6px;line-height:1.35;word-break:keep-all}
-.eg td.dev{text-align:left;padding:0 10px;font-size:12px;background:#FFFFFF}
+.eg td.dev{text-align:center;padding:0 10px;font-size:12px;background:#FFFFFF}
 .eg td.dev .nm{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;margin:4px 0}  /* 장비 이름은 다 보이게, 길면 줄바꿈 (2026-11-24 사용자) */
 .eg col.c-grp{width:var(--grpw,96px)}
 .eg td.dev .nm .spec{display:block;font-size:10.5px;color:#8A867D;margin-top:1px}
@@ -705,7 +744,7 @@ def render_grid(container, eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, mont
             elif pre:
                 sel = {"eid": pre["eq"], "day": st.session_state.get("cal_day")}
         nd = len(data["days"])
-        devw = 190 if g.startswith("제조") else 230
+        devw = _dev_width(data["rows"])
         _component()(data={"html": to_html(data, dt.date.today(), sel), "ndays": nd, "sig": f"{g}|{month:%Y-%m}|{hide}",
                            "minw": 92 + devw + nd * 34 + 96, "devw": devw},
                      key="eg_grid", on_pick_change=_on_pick)
