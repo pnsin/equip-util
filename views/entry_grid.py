@@ -208,9 +208,13 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
     rows = data["rows"]
     if not rows:
         return "<div class='eg-empty'>이 구분에는 이번 달에 보일 장비가 없어요.</div>"
-    h = ["<div class='eg-scroll'><table class='eg'><colgroup><col class='c-sec'><col class='c-dev'>"]
+    # 2026-11-24 사용자: 같은 주장비 아래 세부장비는 왼쪽에 주장비 이름을 한 번만(셀 병합), 오른쪽에 장비 이름
+    has_grp = any(r["parent"] for r in rows)
+    h = ["<div class='eg-scroll'><table class='eg" + (" has-grp" if has_grp else "")
+         + "'><colgroup><col class='c-sec'>" + ("<col class='c-grp'>" if has_grp else "") + "<col class='c-dev'>"]
     h += ["<col>" for _ in days]
-    h.append("</colgroup><thead><tr><th class='sec'>구분</th><th class='dev'>장비</th>")
+    h.append("</colgroup><thead><tr><th class='sec'>구분</th>"
+             + ("<th class='dev wide' colspan='2'>장비</th>" if has_grp else "<th class='dev'>장비</th>"))
     for d in days:
         cls = ("off " if d in data["off"] else "") + ("today" if d == today else "")
         h.append(f"<th class='{cls}'>{d.day}<small>{WEEK[d.weekday()]}</small></th>")
@@ -218,10 +222,20 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
     sec_rows: dict[str, int] = {}
     for r in rows:
         sec_rows[r["sec"]] = sec_rows.get(r["sec"], 0) + len(r["lanes"])
+    # 주장비 묶음: 같은 구분 안에서 이어지는 같은 주장비 줄들 → 시작 줄 번호: 묶음 줄 수
+    grp_span: dict[int, int] = {}
+    k = 0
+    while k < len(rows):
+        j = k
+        if rows[k]["parent"]:
+            while j + 1 < len(rows) and rows[j + 1]["parent"] == rows[k]["parent"] and rows[j + 1]["sec"] == rows[k]["sec"]:
+                j += 1
+            grp_span[k] = sum(len(rows[x]["lanes"]) for x in range(k, j + 1))
+        k = j + 1
     seen: set[str] = set()
     sel_eid, sel_day, sel_log = (sel or {}).get("eid"), (sel or {}).get("day"), (sel or {}).get("log")
     ri = 0
-    for r in rows:
+    for idx, r in enumerate(rows):
         n = len(r["lanes"])
         for li, lane in enumerate(r["lanes"]):
             last = " last" if li == n - 1 else ""
@@ -231,8 +245,13 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
                 seen.add(r["sec"])
                 h.append(f"<td class='sec' rowspan='{sec_rows[r['sec']]}'><span>{e(r['sec'])}</span></td>")
             if li == 0:
-                par = f"<small>{e(r['parent'])}</small>" if r["parent"] else ""
-                h.append(f"<td class='dev' rowspan='{n}' title='{e(r['full'])}'><div class='nm'>{e(r['name'])}</div>{par}</td>")
+                if idx in grp_span:
+                    h.append(f"<td class='grp' rowspan='{grp_span[idx]}'>{e(r['parent'])}</td>")
+                if has_grp and not r["parent"]:
+                    h.append(f"<td class='dev wide' colspan='2' rowspan='{n}' title='{e(r['full'])}'>"
+                             f"<div class='nm'>{e(r['name'])}</div></td>")
+                else:
+                    h.append(f"<td class='dev' rowspan='{n}' title='{e(r['full'])}'><div class='nm'>{e(r['name'])}</div></td>")
             at = {d: it for it in lane for d in it["vis"]}
             for ci, d in enumerate(days):
                 cls = "off" if d in data["off"] else ""
@@ -282,8 +301,11 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
 .eg thead th.today{background:#D97757;color:#fff}.eg thead th.today small{color:#FDF2EE}
 .eg td.off{background:#F7F5F0}
 .eg td.sec{background:#FAF9F5;color:#6B6860;font-weight:700;font-size:11.5px;padding:4px 6px;line-height:1.35;word-break:keep-all}
-.eg td.dev{text-align:left;padding:0 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#FFFFFF}
-.eg td.dev .nm{overflow:hidden;text-overflow:ellipsis}
+.eg td.dev{text-align:left;padding:0 10px;font-size:12px;background:#FFFFFF}
+.eg td.dev .nm{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;margin:4px 0}  /* 장비 이름은 다 보이게, 길면 줄바꿈 (2026-11-24 사용자) */
+.eg col.c-grp{width:var(--grpw,128px)}
+.eg td.grp{background:#FAF8F4;color:#6B6860;font-size:11px;font-weight:600;line-height:1.3;padding:4px 8px;word-break:keep-all;position:sticky;left:92px;z-index:2}
+.eg.has-grp td.dev:not(.wide),.eg.has-grp th.dev:not(.wide){left:calc(92px + var(--grpw,128px))}
 .eg td.dev small{display:block;color:#A39F96;font-size:9.5px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
 .eg th.sec,.eg td.sec{position:sticky;left:0;z-index:2}
 .eg th.dev,.eg td.dev{position:sticky;left:92px;z-index:2}
@@ -317,9 +339,9 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
 @media (max-width:640px){
   .eg col.c-sec{width:26px}.eg td.sec{writing-mode:vertical-rl;padding:4px 0;font-size:10px;letter-spacing:.5px}
   .eg th.sec{font-size:0}
-  .eg th.dev,.eg td.dev{left:26px}.eg col.c-dev{width:112px}.eg td.dev{padding:0 6px;font-size:11px}
+  .eg th.dev,.eg td.dev{left:26px}.eg col.c-dev{width:140px}.eg td.grp{left:26px;font-size:10px;padding:3px 4px}.eg col.c-grp{width:64px}.eg.has-grp td.dev:not(.wide),.eg.has-grp th.dev:not(.wide){left:90px}.eg td.dev{padding:0 6px;font-size:11px}
   .eg col.c-tot{width:44px}
-  table.eg{min-width:calc(26px + 112px + var(--ndays) * 42px)}
+  table.eg{min-width:calc(26px + 140px + var(--ndays) * 42px)}.eg.has-grp{min-width:calc(90px + 140px + var(--ndays) * 42px)}
 }
 """
 
@@ -331,7 +353,7 @@ export default function(component) {
   if (!box) { box = document.createElement('div'); box.className = 'eg-root'; parentElement.appendChild(box); }
   box.innerHTML = data.html;
   const t = box.querySelector('table.eg');
-  if (t) { t.style.setProperty('--ndays', data.ndays); t.style.setProperty('--minw', data.minw + 'px'); }
+  if (t) { t.style.setProperty('--ndays', data.ndays); t.style.setProperty('--minw', data.minw + 'px'); t.style.setProperty('--devw', data.devw + 'px'); }
   // 엑셀처럼: 칸 고르기(끌기·Shift+클릭) → Ctrl+C → 다른 칸 누르고 Ctrl+V
   const trs = () => [...box.querySelectorAll('tbody tr[data-ri]')];
   const cellAt = (r, c) => { const tr = trs()[r]; return tr ? tr.querySelector(`td[data-ci="${c}"]`) : null; };
@@ -669,7 +691,7 @@ def render_grid(container, eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, mont
             elif pre:
                 sel = {"eid": pre["eq"], "day": st.session_state.get("cal_day")}
         nd = len(data["days"])
-        devw = 190 if g.startswith("제조") else 230
+        devw = 190 if g.startswith("제조") else 260
         _component()(data={"html": to_html(data, dt.date.today(), sel), "ndays": nd, "sig": f"{g}|{month:%Y-%m}|{hide}",
-                           "minw": 92 + devw + nd * 34},
+                           "minw": 92 + devw + nd * 34 + 128, "devw": devw},
                      key="eg_grid", on_pick_change=_on_pick)
