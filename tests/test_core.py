@@ -629,3 +629,18 @@ def test_itube_check_rows_flags_missing_brn():
                            "start_date": "2026-03-02", "end_date": "2026-03-02", "hours": 8,
                            "include_holidays": "N", "equip_name": "x", "equip_code": "1"}])
     assert any("사업자등록번호" in b["문제"] for b in itube.check_rows(rows))
+
+
+def test_itube_selection_skips_future_rows(monkeypatch):
+    import datetime as dt
+    import pandas as pd
+    from views import export as ex
+    monkeypatch.setattr(ex.db, "load_companies", lambda: pd.DataFrame())
+    t = pd.Timestamp(dt.date.today())
+    logs = pd.DataFrame([
+        {"id": "1", "start_date": t, "end_date": t, "itube_code": "1", "itube_name": "a", "equip_name": "a",
+         "equip_code": "1", "usage_type": "외부", "purpose": "시험", "equip_id": 1},
+        {"id": "2", "start_date": t, "end_date": t + pd.Timedelta(days=3), "itube_code": "1", "itube_name": "a",
+         "equip_name": "a", "equip_code": "1", "usage_type": "외부", "purpose": "시험", "equip_id": 1}])
+    sel, _ = ex.itube_selection(logs, dt.date.today(), dt.date.today() + dt.timedelta(days=30))
+    assert list(sel["id"]) == ["1"]
