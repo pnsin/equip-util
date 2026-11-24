@@ -201,6 +201,14 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
     return {"days": days, "off": off, "rows": rows, "m0": m0}
 
 
+def _name_html(name: str) -> str:
+    """괄호(사양)는 한 줄 아래에 작게 (2026-11-24 사용자). 예: 배터리 완제품 활성화 장비 / (5V, 50A, 192ch)"""
+    i = name.find("(")
+    if i <= 0:
+        return html.escape(name)
+    return f"{html.escape(name[:i].rstrip())}<span class='spec'>{html.escape(name[i:])}</span>"
+
+
 def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
     """표 HTML (칸에 data-eid·data-day, 실적에 data-log)."""
     e = html.escape
@@ -254,9 +262,9 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
                     h.append(f"<td class='grp' rowspan='{grp_span[idx]}'>{e(r['parent'])}</td>")
                 if has_grp and not r["parent"]:
                     h.append(f"<td class='dev wide' colspan='2' rowspan='{n}' title='{e(r['full'])}'>"
-                             f"<div class='nm'>{e(r['name'])}</div></td>")
+                             f"<div class='nm'>{_name_html(r['name'])}</div></td>")
                 else:
-                    h.append(f"<td class='dev' rowspan='{n}' title='{e(r['full'])}'><div class='nm'>{e(r['name'])}</div></td>")
+                    h.append(f"<td class='dev' rowspan='{n}' title='{e(r['full'])}'><div class='nm'>{_name_html(r['name'])}</div></td>")
             at = {d: it for it in lane for d in it["vis"]}
             for ci, d in enumerate(days):
                 cls = "off" if d in data["off"] else ""
@@ -309,6 +317,7 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
 .eg td.dev{text-align:left;padding:0 10px;font-size:12px;background:#FFFFFF}
 .eg td.dev .nm{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;margin:4px 0}  /* 장비 이름은 다 보이게, 길면 줄바꿈 (2026-11-24 사용자) */
 .eg col.c-grp{width:var(--grpw,96px)}
+.eg td.dev .nm .spec{display:block;font-size:10.5px;color:#8A867D;margin-top:1px}
 .eg td.grp{background:#FAF8F4;color:#6B6860;font-size:10.5px;font-weight:600;line-height:1.3;padding:4px 6px;word-break:keep-all;position:sticky;left:92px;z-index:2}
 .eg.has-grp td.dev:not(.wide),.eg.has-grp th.dev:not(.wide){left:calc(92px + var(--grpw,96px))}
 .eg td.dev small{display:block;color:#A39F96;font-size:9.5px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
