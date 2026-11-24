@@ -122,7 +122,7 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
             return "시험 챔버"
         if group.startswith("제조") or group == MB:
             return short.get(root.get(i, i), "")
-        return db.center_short(cen.get(i, "")) or "기타"
+        return cen.get(i, "") or "기타"  # 2026-11-24 사용자: 센터는 정식 이름으로
     sec_order: list[str] = []
     for i in ids:
         s = section(i)
@@ -243,7 +243,12 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
             ri += 1
             if li == 0 and r["sec"] not in seen:
                 seen.add(r["sec"])
-                h.append(f"<td class='sec' rowspan='{sec_rows[r['sec']]}'><span>{e(r['sec'])}</span></td>")
+                sec_txt = e(r["sec"])
+                for tail in ("안전성평가센터", "지원센터"):  # 긴 센터 이름은 두 줄로
+                    if sec_txt.endswith(tail) and len(sec_txt) > len(tail) + 1:
+                        sec_txt = sec_txt[: -len(tail)] + "<br>" + tail
+                        break
+                h.append(f"<td class='sec' rowspan='{sec_rows[r['sec']]}'><span>{sec_txt}</span></td>")
             if li == 0:
                 if idx in grp_span:
                     h.append(f"<td class='grp' rowspan='{grp_span[idx]}'>{e(r['parent'])}</td>")
