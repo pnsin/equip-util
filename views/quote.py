@@ -265,6 +265,8 @@ def _load_saved(rec: dict, copy: bool) -> dict:
     for k in ("status", "equip_text", "model", "requester", "region", "note"):
         base[k] = quotes._s(rec.get(k))
     base["id"] = "" if copy else quotes._s(rec.get("id"))
+    if base["id"]:  # 불러온 순간의 값을 기억 → 그 사이 다른 분이 고치면 저장할 때 알림 (2026-11-24)
+        db.mark_seen("quotes", [base["id"]])
     if copy:
         base["no"] = _next_no(dt.date.today())
         base["date"] = dt.date.today().isoformat()

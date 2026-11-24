@@ -387,11 +387,13 @@ class SheetStore:
         if rows:
             _call(self.ws[t].append_rows, rows, value_input_option="RAW", table_range="A1")
         _applied(t, tok, lambda df: _apply_append(t, df, rows))
+        _saw(t, rows)
 
     def rewrite(self, t: str, rows: list[list]) -> None:
         tok = _dirty(t)
         self._rewrite(t, rows)
         _applied(t, tok, lambda df: _frame(t, [heads(t)] + rows))
+        _saw(t, rows, whole=True)
 
     def _rewrite(self, t: str, rows: list[list]) -> None:
         ws = self.ws[t]
@@ -420,6 +422,7 @@ class SheetStore:
         if data:
             _call(self.ws[t].batch_update, data, value_input_option="RAW")
         _applied(t, tok, lambda df: _apply_update(t, df, hit))
+        _saw(t, list(hit.values()))
         return len(data)
 
     def delete_ids(self, t: str, ids: list[str], where: dict[str, int] | None = None,
@@ -441,6 +444,7 @@ class SheetStore:
             _call(self.ss.batch_update, {"requests": reqs})
         gone = set(ids)
         _applied(t, tok, lambda df: df[~df["id"].astype(str).str.strip().isin(gone)].reset_index(drop=True))
+        _saw(t, gone=ids)
         return len(nums)
 
 
@@ -469,11 +473,13 @@ class CsvStore:
         df = pd.concat([self.read(t), pd.DataFrame(rows, columns=cols(t)).astype(str)], ignore_index=True)
         df.to_csv(self._path(t), index=False)
         _applied(t, tok, lambda d: _apply_append(t, d, rows))
+        _saw(t, rows)
 
     def rewrite(self, t: str, rows: list[list]) -> None:
         tok = _dirty(t)
         pd.DataFrame(rows, columns=cols(t)).to_csv(self._path(t), index=False)
         _applied(t, tok, lambda d: _frame(t, [heads(t)] + list(rows)))
+        _saw(t, rows, whole=True)
 
     def read_rows(self, t: str) -> tuple[pd.DataFrame, dict[str, int]]:
         df = self.read(t)
@@ -557,6 +563,7 @@ _GEN = globals().get("_GEN") or [0]  # 묶음을 시트에서 새로 읽은 횟�
 _SNAP_REF: list = globals().get("_SNAP_REF") or [None]  # 지금 묶음 (쓴 내용을 바로 반영할 곳)
 _READS: dict[str, int] = globals().get("_READS") or {}  # 탭을 하나만 다시 읽은 횟수
 _RECENT = globals().get("_RECENT") or threading.local()  # 이 화면(스레드)에서 쓴 탭: 저장이 끝난 뒤 한 번 더 '다시 읽기'로 표시
+_FRAME_N: dict[str, int] = globals().get("_FRAME_N") or {}  # 묶음 안의 탭 표가 바뀐 횟수 (화면에서 본 값 기억용)
 
 
 def _bump() -> None:
@@ -566,6 +573,7 @@ def _bump() -> None:
 def data_version() -> int:
     """지금 데이터 번호 (묶음을 처음 읽거나 앱에서 쓰면 바뀜)."""
     _snapshot()  # 30분이 지나 묶음을 새로 읽으면 번호도 바뀜
+    _note_snapshot()
     return _VER[0]
 
 
@@ -610,6 +618,7 @@ def _applied(t: str, tok, mutate) -> None:
         try:
             new = mutate(snap[t])
             snap[t] = _frame(t, [heads(t)] + new.values.tolist())  # 시트에서 읽은 것과 같은 모양(글자)으로
+            _FRAME_N[t] = _FRAME_N.get(t, 0) + 1
         except Exception:  # noqa: BLE001 - 반영이 안 되면 다음에 시트에서 다시 읽음
             return
         _STALE.discard(t)
@@ -633,6 +642,314 @@ def snap_cached(fn):
     return outer
 
 
+
+# ── 동시에 고치기 막기 (2026-11-24) ──────────────────────────────────
+# 팀 전체가 같은 시트를 동시에 씁니다. 화면을 연 뒤 다른 사람이 같은 행의 같은 칸을 먼저 고쳤는데
+# 내가 예전 값이 남은 화면으로 저장하면 그 사람이 고친 내용이 지워집니다. 그래서:
+#  1) 이 화면(세션)이 처음 본 행의 값을 기억해 둡니다 (메뉴를 옮기거나 저장하면 새로 기억).
+#  2) 저장 직전에 시트를 다시 읽어, 그 사이 남이 바꾼 칸을 내가 다른 값으로 덮어쓰려 하면 저장을 멈추고 알립니다.
+#     남이 바꾼 칸을 내가 건드리지 않았거나, 다른 행이면 그대로 저장됩니다 (알림 없음).
+#  3) 저장은 서버 안에서 한 번에 하나씩 (읽고 쓰는 사이에 다른 저장이 끼어들지 않게).
+# 시트에 버전 열을 따로 만들지 않으므로 기존 데이터·시트 모양은 그대로입니다. 시트를 직접 고친 칸도 똑같이 지켜집니다.
+_SAVE_LOCK = globals().get("_SAVE_LOCK") or threading.RLock()
+GUARD_SKIP = {"trash", "history", "settings"}  # 기록용·설정 탭은 비교하지 않음
+NO_CHECK = {"updated_at", "updated_by", "created_at", "equip_ref", "order", "imported_at"}  # 저장할 때 저절로 바뀌는 칸
+_NUM = re.compile(r"-?(\d+\.?\d*|\.\d+)")
+
+
+def serial(fn):
+    """저장 함수 장식: 서버 안의 저장을 한 줄로 세워 읽기~쓰기 사이에 다른 저장이 끼지 않게 함."""
+    import functools
+
+    @functools.wraps(fn)
+    def run(*a, **k):
+        with _SAVE_LOCK:
+            return fn(*a, **k)
+    return run
+
+
+def _norm(v) -> str:
+    """비교용 글자 (시트에서 읽은 '1,000' · 저장할 1000 · '1.0' 을 같게)."""
+    s = to_str(_cell(v))
+    t = s.replace(",", "")
+    if _NUM.fullmatch(t):
+        try:
+            x = float(t)
+            return str(int(x)) if x.is_integer() and abs(x) < 1e15 else (t if "." not in t else repr(x))
+        except ValueError:
+            pass
+    return s
+
+
+def _sig(row) -> tuple:
+    return tuple(_norm(v) for v in row)
+
+
+def _seen() -> dict:
+    """이 세션이 본 행: {탭: {ID: 값 묶음}}."""
+    try:
+        ss = _state()
+        if "_seen" not in ss:
+            ss["_seen"] = {}
+        return ss["_seen"]
+    except Exception:  # noqa: BLE001 - 화면 밖(뒤에서 쓰는 기록 등)
+        return {}
+
+
+def _note(t: str, df: pd.DataFrame) -> None:
+    """처음 보는 행만 기억 (이미 본 행은 처음 본 값을 그대로 둠)."""
+    if t in GUARD_SKIP or t not in TABLES or df is None or "id" not in df:
+        return
+    seen = _seen()
+    m = seen.setdefault(t, {})
+    for row in df.reindex(columns=cols(t), fill_value="").values.tolist():
+        k = _norm(row[0])
+        if k and k not in m:
+            m[k] = _sig(row)
+
+
+def _note_snapshot() -> None:
+    snap = _SNAP_REF[0]
+    if snap is None:
+        return
+    try:
+        ss = _state()
+        marks = ss.get("_seen_frames")
+        if marks is None:
+            marks = ss["_seen_frames"] = {}
+    except Exception:  # noqa: BLE001
+        return
+    for t in SNAPSHOT_TABS:
+        if t in GUARD_SKIP or t in _STALE or t not in snap:
+            continue
+        tok = (_GEN[0], _FRAME_N.get(t, 0))
+        if marks.get(t) != tok:
+            _note(t, snap[t])
+            marks[t] = tok
+
+
+def reset_seen(keep_opened: bool = False) -> None:
+    """메뉴를 옮기거나 '새로 불러오기'를 누르면: 지금 화면 값부터 다시 기억.
+    keep_opened = 메뉴만 옮길 때: 열어 둔 입력 카드·견적서(mark_seen)의 기억은 남김 (다시 돌아와 저장할 수 있으니)."""
+    ss = _state()
+    try:
+        kept = {}
+        if keep_opened:
+            old = ss.get("_seen") or {}
+            kept = {t: {i: old[t][i] for i in ids if i in old.get(t, {})}
+                    for t, ids in (ss.get("_seen_keep") or {}).items()}
+        else:
+            ss.pop("_seen_keep", None)
+            for k in [k for k in ss if str(k).startswith("_opened_")]:
+                ss.pop(k, None)
+        ss.pop("_seen_frames", None)
+        ss["_seen"] = {t: m for t, m in kept.items() if m}
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def mark_seen(t: str, ids) -> None:
+    """입력 카드를 새로 열 때: 그 행은 지금 값을 본 것으로 (예전에 기억한 값은 버림)."""
+    m = _seen().setdefault(t, {})
+    want = {_norm(i) for i in ids}
+    try:
+        keep = _state().setdefault("_seen_keep", {})
+        keep[t] = (set(keep.get(t, set())) | want) if len(keep.get(t, ())) < 200 else want
+    except Exception:  # noqa: BLE001
+        pass
+    df = _tab(t) if t in SNAPSHOT_TABS else (load_info().get(t) if t in INFO_TABS else None)
+    if df is None:
+        return
+    for row in df.reindex(columns=cols(t), fill_value="").values.tolist():
+        k = _norm(row[0])
+        if k in want:
+            m[k] = _sig(row)
+
+
+def seen_ids(t: str) -> set[str] | None:
+    """이 세션이 본 행 ID (기억이 없으면 None = 예전처럼 비교하지 않음)."""
+    m = _seen().get(t)
+    return set(m) if m else None
+
+
+def _saw(t: str, rows: list[list] | None = None, gone=None, whole: bool = False) -> None:
+    """이 세션이 직접 쓴 행은 쓴 값을 본 것으로 (내 저장끼리는 부딪히지 않게)."""
+    if t in GUARD_SKIP or t not in TABLES:
+        return
+    seen = _seen()
+    if whole:
+        seen[t] = {}
+    m = seen.setdefault(t, {})
+    for r in rows or []:
+        k = _norm(r[0])
+        if k:
+            m[k] = _sig((list(r) + [""] * len(cols(t)))[:len(cols(t))])
+    for k in gone or []:
+        m.pop(_norm(k), None)
+
+
+class Conflict(StorageError):
+    """다른 사람이 먼저 고친 행을 덮어쓰려 할 때."""
+
+    def __init__(self, t: str, hits: list[tuple[str, dict]]):
+        self.t, self.hits = t, hits
+        super().__init__(conflict_text(t, hits))
+
+
+def _josa(word: str, pair: str = "을를") -> str:
+    ch = word[-1:] if word else ""
+    if "가" <= ch <= "힣":
+        return word + (pair[0] if (ord(ch) - 0xAC00) % 28 else pair[1])
+    return word + pair[1]
+
+
+def conflict_text(t: str, hits: list[tuple[str, dict]]) -> str:
+    name = {"usage": "실적", "fee_ledger": "매출장"}.get(t, TABLE_NAMES.get(t, "내용"))
+    if hits and all(k == "deleted" for k, _ in hits):
+        return f"다른 분이 방금 이 {_josa(name)} 지웠어요. 새로 불러온 뒤 확인해 주세요."
+    return f"다른 분이 방금 이 {_josa(name)} 고쳤어요. 새로 불러온 뒤 다시 저장해 주세요."
+
+
+def _hit_summary(t: str, r: dict) -> str:
+    try:
+        return _usage_summary(r) if t == "usage" else _master_summary(t, r)
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _conflict(t: str, hits: list[tuple[str, dict]]) -> None:
+    """저장을 멈추고 알림. 그 탭은 시트에서 새로 읽게 해 '새로 불러오기'를 누르면 최신 값이 보이게 함."""
+    if t in SNAPSHOT_TABS:
+        with _SNAP_LOCK:
+            _STALE.add(t)
+            _bump()
+    if t in INFO_TABS and "load_info" in globals():
+        load_info.clear()
+    err = Conflict(t, hits)
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        in_app = get_script_run_ctx(suppress_warning=True) is not None
+    except Exception:  # noqa: BLE001
+        in_app = False
+    if in_app:
+        st.session_state["_conflict"] = {"t": t, "text": str(err),
+                                         "rows": [s for s in (_hit_summary(t, r) for _, r in hits[:3]) if s],
+                                         "more": max(0, len(hits) - 3)}
+        st.rerun()  # 입력 창(대화상자·조각 화면) 안에서도 화면 전체를 다시 그려 맨 위에 알림을 띄움
+    raise err  # 화면 밖(시험) 또는 버튼 콜백 안에서 rerun 이 안 될 때도 저장은 반드시 멈춤
+
+
+def _guard(t: str, cur: pd.DataFrame, writes: dict[str, list | None]) -> dict[str, list]:
+    """writes = {ID: 저장할 행(None = 지우기)}. 돌려주는 값 = 실제로 쓸 행 {ID: 행}.
+    칸마다 세 값을 비교: 내가 본 값(b) · 지금 시트 값(c) · 내가 저장할 값(n).
+      - 남이 바꾼 칸(c≠b)을 나는 그대로 뒀으면(n=b) → 남이 고친 값을 살림 (예전 값으로 되돌리지 않음)
+      - 남도 바꾸고 나도 다르게 바꿨으면 → 저장을 멈추고 알림 (_conflict)
+    지우기: 내가 본 뒤 남이 고친 행이면 알림. 고치기: 남이 지운 행을 내가 고쳤으면 알림."""
+    if t in GUARD_SKIP or not writes:
+        return {k: v for k, v in writes.items() if v is not None}
+    base = _seen().get(t) or {}
+    names = cols(t)
+    n = len(names)
+    chk = [i for i, c in enumerate(names) if c not in NO_CHECK]
+    now = {_norm(r[0]): r for r in cur.reindex(columns=names, fill_value="").values.tolist()} if base else {}
+    hits: list[tuple[str, dict]] = []
+    out: dict[str, list] = {}
+    for rid, new in writes.items():
+        b = base.get(_norm(rid))
+        if b is None:  # 이 화면에서 본 적 없는 행 (새 행 등)
+            if new is not None:
+                out[rid] = new
+            continue
+        c = now.get(_norm(rid))
+        if c is None:
+            if new is not None:
+                if any(_sig((list(new) + [""] * n)[:n])[i] != b[i] for i in chk):
+                    hits.append(("deleted", dict(zip(names, b))))
+                # 아무것도 안 고쳤으면 되살리지 않음 (out 에 넣지 않음)
+            continue
+        cs = _sig(c)
+        if new is None:
+            if any(cs[i] != b[i] for i in chk):
+                hits.append(("changed", dict(zip(names, c))))
+            continue
+        row = (list(new) + [""] * n)[:n]
+        ns = _sig(row)
+        clash = False
+        for i in chk:
+            if cs[i] == b[i] or ns[i] == cs[i]:
+                continue
+            if ns[i] == b[i]:
+                row[i] = c[i]  # 남이 고친 칸, 나는 안 건드림 → 남의 값
+            else:
+                clash = True
+        if clash:
+            hits.append(("changed", dict(zip(names, c))))
+        out[rid] = row
+    if hits:
+        _conflict(t, hits)
+    return out
+
+
+def opened(t: str, ids, key: str) -> None:
+    """입력 카드·고칠 줄을 새로 열었을 때 (key 가 바뀌면) 그 행의 지금 값을 '본 값'으로 기억."""
+    ss = _state()
+    mk = f"_opened_{t}"
+    try:
+        if ss.get(mk) == key:
+            return
+        ss[mk] = key
+    except Exception:  # noqa: BLE001
+        return
+    ids = [i for i in ids if to_str(i)]
+    if ids:
+        mark_seen(t, ids)
+
+
+def precheck(t: str, updates: dict | None = None, deletes=None, clean=None) -> None:
+    """여러 번에 나눠 저장하기 전에 한 번에 확인 (중간까지만 저장되는 일이 없게).
+    updates = {ID: 고칠 칸 dict}, clean = 칸 정리 함수 (실적은 저절로). 시트를 한 번 더 읽습니다."""
+    if not (updates or deletes) or not _seen().get(t):
+        return
+    clean = clean or (_clean_log if t == "usage" else dict)
+    cur = get_store().read(t)
+    have = {_norm(i): r for i, r in zip(cur["id"], cur.to_dict("records"))}
+    writes: dict[str, list | None] = {}
+    for rid, vals in (updates or {}).items():
+        old = have.get(_norm(rid))
+        b = _seen()[t].get(_norm(rid))
+        merged = dict(old) if old is not None else (dict(zip(cols(t), b)) if b else {})
+        merged.update(clean(vals))
+        writes[_norm(rid)] = _rows(t, [merged])[0]
+    for rid in deletes or []:
+        writes[_norm(rid)] = None
+    _guard(t, cur, writes)
+
+
+def _plan_master(t: str, new_rows: list[list], cur: pd.DataFrame) -> list[list]:
+    """표 전체를 다시 쓰는 저장: 이 화면이 본 적 없는 행(그 사이 남이 추가)은 남기고,
+    남이 지운 행은 내가 고치지 않았으면 되살리지 않음. 같은 칸을 둘 다 고쳤으면 _conflict."""
+    base = _seen().get(t)
+    if not base or t in GUARD_SKIP:
+        return new_rows
+    names = cols(t)
+    cur_rows = cur.reindex(columns=names, fill_value="").values.tolist()
+    out_ids = {_norm(r[0]) for r in new_rows}
+    writes: dict[str, list | None] = {}
+    for r in new_rows:
+        writes.setdefault(_norm(r[0]), r)
+    extra = []
+    for r in cur_rows:
+        k = _norm(r[0])
+        if not k or k in out_ids:
+            continue
+        if k in base:
+            writes[k] = None  # 내가 지운 행
+        else:
+            extra.append(list(r))  # 그 사이 다른 분이 추가한 행 → 그대로 둠
+    keep = _guard(t, cur, writes)  # 남이 지운 행을 그대로 들고 있었을 뿐이면 빠짐 (되살리지 않음)
+    return [keep[_norm(r[0])] for r in new_rows if _norm(r[0]) in keep and keep[_norm(r[0])] is not None] + extra
+
+
 def _tab(t: str) -> pd.DataFrame:
     snap = _snapshot()
     if t in _STALE:
@@ -641,6 +958,8 @@ def _tab(t: str) -> pd.DataFrame:
             snap[t] = fresh
             _STALE.discard(t)
             _READS[t] = _READS.get(t, 0) + 1
+            _FRAME_N[t] = _FRAME_N.get(t, 0) + 1
+    _note_snapshot()
     df = snap[t].copy()
     for c in cols(t) if t in TABLES else ():  # 시트에 아직 없는 새 열은 빈 칸으로 (앱 재시작 전)
         if c not in df.columns:
@@ -834,12 +1153,14 @@ def _trash_rows(t: str, rows: list[dict]) -> tuple[list[str], list[list]]:
     return ids, _rows("trash", recs)
 
 
+@serial
 def trash_and_delete(t: str, keys: set[str]) -> tuple[pd.DataFrame, list[str], int]:
     """ID 행을 휴지통에 넣고 지움. 구글 요청 2번 (읽기 1 + 휴지통·지우기 한 번에), 예전엔 4번 (2026-11-18).
     돌려주는 값: (지운 행, 휴지통 ID, 지운 수)."""
     store = get_store()
     cur, where = store.read_rows(t)
     cur = cur.astype(str)
+    _guard(t, cur, {k: None for k in keys})
     gone = cur[cur["id"].str.strip().isin(keys)]
     trash_ids, trash = _trash_rows(t, gone.to_dict("records"))
     n = store.delete_ids(t, list(keys), where=where, trash_rows=trash)
@@ -881,6 +1202,7 @@ def _apply(step: tuple) -> None:
             store.delete_ids("trash", step[3])
 
 
+@serial
 def undo_last() -> str | None:
     """마지막 작업을 되돌리고 그 작업 이름을 돌려줍니다."""
     stack = undo_stack()
@@ -924,6 +1246,7 @@ def delete_history(keys: list[tuple]) -> int:
     return n
 
 
+@serial
 def restore_trash(trash_ids: list[str]) -> dict:
     """휴지통에서 골라 되살립니다. 이미 있는 실적은 건너뛰고, 장비·업체·담당자는 ID가 겹치면 새 ID를 붙입니다."""
     store = get_store()
@@ -971,13 +1294,18 @@ def purge_trash(trash_ids: list[str]) -> int:
     return n
 
 
-def _save_master(t: str, out: list[dict]) -> None:
-    """장비·업체·담당자 표 전체를 다시 쓰고, 예전 모습은 되돌리기로, 빠진 행은 휴지통으로."""
+@serial
+def _save_master(t: str, out: list[dict], before_write=None) -> None:
+    """장비·업체·담당자 표 전체를 다시 쓰고, 예전 모습은 되돌리기로, 빠진 행은 휴지통으로.
+    2026-11-24: 그 사이 다른 분이 추가한 행은 남기고, 같은 칸을 먼저 고쳤으면 저장을 멈춤 (_plan_master).
+    before_write(최종 행 dict 목록) = 확인이 끝난 뒤 쓰기 직전에 할 일 (이름 바꿈 반영 등)."""
     store = get_store()
     cur = _raw(t)
     old_rows = cur.values.tolist()
     old_map = {str(r[0]).strip(): [str(x) for x in r] for r in old_rows}
-    new_rows = _rows(t, out)
+    new_rows = _plan_master(t, _rows(t, out), cur)
+    if before_write is not None:
+        before_write([dict(zip(cols(t), r)) for r in new_rows])
     new_ids = {str(r[0]).strip() for r in new_rows}
     gone = [r for r in cur.to_dict("records") if str(r["id"]).strip() and str(r["id"]).strip() not in new_ids]
     added = sum(1 for i in new_ids if i not in old_map)
@@ -994,9 +1322,16 @@ def _save_master(t: str, out: list[dict]) -> None:
 
 # ── 장비 정보 (사양 · 자료 · 사진 · 메모) ────────────────────────────
 
-@st.cache_data(ttl=120, show_spinner=False)
 def load_info() -> dict[str, pd.DataFrame]:
     """장비 정보 화면에서만 읽는 네 탭 (사진이 커서 다른 화면의 묶음 읽기에는 넣지 않음)."""
+    out = _load_info()
+    for t, df in out.items():  # 이 화면이 본 값 기억 (동시에 고치기 막기)
+        _note(t, df)
+    return out
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def _load_info() -> dict[str, pd.DataFrame]:
     out = get_store().read_many(list(INFO_TABS))
     for t, df in out.items():
         df = df.astype(str).apply(lambda c: c.str.strip())
@@ -1008,6 +1343,10 @@ def load_info() -> dict[str, pd.DataFrame]:
     return out
 
 
+load_info.clear = _load_info.clear
+
+
+@serial
 def save_info_rows(t: str, equip_id: int, records: list[dict], label: str = "") -> int:
     """장비 한 대의 사양·자료·사진 줄을 저장합니다. 그 장비 줄만 행 단위로 고치므로
     다른 장비를 동시에 고치는 사람의 내용은 건드리지 않습니다. 바뀐 줄 수를 돌려줍니다."""
@@ -1033,6 +1372,8 @@ def save_info_rows(t: str, equip_id: int, records: list[dict], label: str = "") 
     added = [v for k, v in rows.items() if k not in old]
     if not (gone or changed or added):
         return 0
+    merged = _guard(t, cur, {**changed, **{to_str(r["id"]): None for r in gone}})
+    changed = {k: merged[k] for k in changed if k in merged}
     name = TABLE_NAMES.get(t, t)
     with undo_group(label or f"{name} 저장"):
         if changed:
@@ -1050,6 +1391,7 @@ def save_info_rows(t: str, equip_id: int, records: list[dict], label: str = "") 
     return len(gone) + len(changed) + len(added)
 
 
+@serial
 def save_info_note(equip_id: int, caution: str, contact: str) -> bool:
     """장비 한 대의 '사용 시 주의'와 'A/S 연락처'."""
     store = get_store()
@@ -1062,7 +1404,8 @@ def save_info_note(equip_id: int, caution: str, contact: str) -> bool:
         o = hit.iloc[0].to_dict()
         if to_str(o.get("caution")) == rec["caution"] and to_str(o.get("contact")) == rec["contact"]:
             return False
-        store.update_rows("equip_notes", {eid: _rows("equip_notes", [rec])[0]})
+        row = _guard("equip_notes", cur, {eid: _rows("equip_notes", [rec])[0]})[eid]
+        store.update_rows("equip_notes", {eid: row})
         _step(("put", "equip_notes", {eid: [str(o.get(c, "")) for c in cols("equip_notes")]}), "장비 메모 저장")
     else:
         store.append("equip_notes", _rows("equip_notes", [rec]))
@@ -1099,6 +1442,7 @@ def get_settings() -> dict:
     return out
 
 
+@serial
 def save_settings(**kv) -> None:
     raw = _settings_raw()
     for k, v in kv.items():
@@ -1422,6 +1766,7 @@ def _equip_record(r: dict) -> dict:
     }
 
 
+@serial
 def save_equipment(edited: pd.DataFrame) -> list[str]:
     """장비 표 편집 결과를 반영합니다. 실적이 있는 장비는 삭제하지 않고 오류로 돌려줍니다.
 
@@ -1449,7 +1794,12 @@ def save_equipment(edited: pd.DataFrame) -> list[str]:
             next_id += 1
         rec["order"] = pos
         out.append(rec)
+    seen = seen_ids("equipment")
     for gone in sorted(set(orig) - keep):
+        if seen is not None and str(gone) not in seen:  # 이 화면을 연 뒤 다른 분이 추가한 장비 → 그대로 둠
+            o = orig[gone]
+            out.append(_equip_record(o) | {"id": gone, "order": o["order"] if pd.notna(o["order"]) else None})
+            continue
         if gone in used_ids:
             errors.append(f"'{orig[gone]['name']}'은(는) 사용실적이 있어 삭제하지 않았습니다. 불용일을 입력해 주세요.")
             o = orig[gone]
@@ -1542,13 +1892,26 @@ def check_companies(edited: pd.DataFrame) -> list[str]:
     return errors
 
 
+@serial
+def _companies_now() -> pd.DataFrame:
+    """시트의 지금 업체 목록 (한 칸만 바꾸는 저장은 화면 값 대신 이걸로: 다른 행을 예전 값으로 덮지 않게)."""
+    df = get_store().read("companies")
+    df["id"] = pd.to_numeric(df["id"], errors="coerce")
+    df = df.dropna(subset=["id"])
+    df["id"] = df["id"].astype("int64")
+    for c in COMPANY_TEXT:
+        df[c] = df[c].map(to_str)
+    return df.reset_index(drop=True)
+
+
+@serial
 def sync_company_contact(name: str, contact: str, phone: str) -> None:
     """견적서에 적은 업체 담당자·전화번호를 업체 정보에도 반영 (없는 업체면 새로 추가)."""
     name, phone = to_str(name), to_str(phone)
     contact = to_str(contact).removesuffix("님").strip()
     if not name:
         return
-    df = load_companies()
+    df = _companies_now()
     hit = df["name"] == name
     if not hit.any():
         new = {c: "" for c in COMPANY_TEXT} | {"id": None, "name": name, "contact": contact, "phone": phone}
@@ -1564,13 +1927,14 @@ def sync_company_contact(name: str, contact: str, phone: str) -> None:
         save_companies(df)
 
 
+@serial
 def set_company_brn(pairs: dict[str, str]) -> int:
     """데이터 점검에서 적은 사업자등록번호를 업체 목록에 넣음 (2026-11-24). 없는 업체면 새로 추가.
     i-Tube 파일·점검은 업체 목록 번호를 쓰므로 그 업체의 실적 전부에 바로 적용됨. 바꾼 업체 수를 돌려줌."""
     pairs = {to_str(n): digits(b) for n, b in pairs.items() if to_str(n) and digits(b)}
     if not pairs:
         return 0
-    df = load_companies()
+    df = _companies_now()
     n = 0
     for name, brn in pairs.items():
         hit = df["name"] == name
@@ -1588,6 +1952,7 @@ def set_company_brn(pairs: dict[str, str]) -> int:
     return n
 
 
+@serial
 def save_companies(edited: pd.DataFrame) -> None:
     store = get_store()
     current = store.read("companies")
@@ -1606,8 +1971,8 @@ def save_companies(edited: pd.DataFrame) -> None:
             rec["id"] = next_id
             next_id += 1
         out.append(rec)
-    _rename_refs("companies", out, [("usage", "company"), ("cs", "company")], "업체 이름 바꿈")
-    _save_master("companies", out)
+    _save_master("companies", out, before_write=lambda recs: _rename_refs(
+        "companies", recs, [("usage", "company"), ("cs", "company")], "업체 이름 바꿈"))
     refresh_data()
 
 
@@ -1653,6 +2018,7 @@ def check_staff(edited: pd.DataFrame) -> list[str]:
     return errors
 
 
+@serial
 def save_staff(edited: pd.DataFrame) -> None:
     store = get_store()
     old_ids = set(pd.to_numeric(store.read("staff")["id"], errors="coerce").dropna().astype(int))
@@ -1671,8 +2037,8 @@ def save_staff(edited: pd.DataFrame) -> None:
             rec["id"] = next_id
             next_id += 1
         out.append(rec)
-    _rename_refs("staff", out, [("equipment", "manager"), ("maint", "staff"), ("cs", "staff")], "담당자 이름 바꿈")
-    _save_master("staff", out)
+    _save_master("staff", out, before_write=lambda recs: _rename_refs(
+        "staff", recs, [("equipment", "manager"), ("maint", "staff"), ("cs", "staff")], "담당자 이름 바꿈"))
     refresh_data()
 
 
@@ -1776,6 +2142,7 @@ def chamber_ids(v) -> list[int]:
     return out
 
 
+@serial
 def save_channels(edited: pd.DataFrame) -> None:
     store = get_store()
     old_ids = set(pd.to_numeric(store.read("channels")["id"], errors="coerce").dropna().astype(int))
@@ -1836,6 +2203,7 @@ def load_maint() -> pd.DataFrame:
     return df.sort_values(["_o", "id"], ascending=False).drop(columns="_o").reset_index(drop=True)
 
 
+@serial
 def save_maint(edited: pd.DataFrame) -> int:
     """화면 표 전체를 저장합니다. 장비도 내용도 없는 빈 줄은 버립니다. 저장한 줄 수를 돌려줍니다."""
     store = get_store()
@@ -1960,6 +2328,7 @@ def insert_logs(records: list[dict], user: str = "", ids_out: list | None = None
     return len(rows)
 
 
+@serial
 def update_logs(changes: dict[int, dict]) -> int:
     """고친 실적만 그 행에 다시 씁니다 (다른 사람이 동시에 추가·수정한 행은 건드리지 않음)."""
     if not changes:
@@ -1971,20 +2340,26 @@ def update_logs(changes: dict[int, dict]) -> int:
     ids = df["id"].astype(str).str.strip()
     out: dict[str, list] = {}
     before: dict[str, list] = {}
+    asked: dict[str, list] = {}
+    base = _seen().get("usage") or {}
     for log_id, vals in changes.items():
         key = str(int(log_id))
         hit = df[ids == key]
-        if hit.empty:
-            continue  # 그 사이 다른 사람이 지운 실적
-        cur = hit.iloc[0].to_dict()
-        before[key] = [str(cur.get(c, "")) for c in cols("usage")]
         row = _clean_log(vals)
         row["updated_at"] = now
         row["updated_by"] = who()
         if "equip_id" in row:
             row["equip_ref"] = names.get(row["equip_id"], "")
+        if hit.empty:
+            if key in base:  # 그 사이 다른 분이 지운 실적: 내가 고친 게 있으면 알림
+                asked[key] = _rows("usage", [dict(zip(cols("usage"), base[key])) | row])[0]
+            continue
+        cur = hit.iloc[0].to_dict()
+        before[key] = [str(cur.get(c, "")) for c in cols("usage")]
         cur.update(row)
         out[key] = _rows("usage", [cur])[0]
+    merged = _guard("usage", df, {**asked, **out})
+    out = {k: merged[k] for k in out if k in merged}
     n = store.update_rows("usage", out, where=where)
     if n:
         _step(("put", "usage", before), f"실적 {n}건 수정")
@@ -1994,6 +2369,7 @@ def update_logs(changes: dict[int, dict]) -> int:
     return n
 
 
+@serial
 def delete_logs(ids: list[int]) -> int:
     if not ids:
         return 0
@@ -2165,6 +2541,7 @@ def load_rates() -> pd.DataFrame:
     return df.sort_values(["order", "id"]).reset_index(drop=True)
 
 
+@serial
 def save_rates(rows: list[dict]) -> None:
     """장비 단가 표 전체 저장 (값이 하나도 없는 장비 줄은 저장하지 않음). 예전 모습은 되돌리기로."""
     old_ids = set(pd.to_numeric(get_store().read("rates")["id"], errors="coerce").dropna().astype(int))
@@ -2211,6 +2588,7 @@ def quote_seqs(year: int) -> list[str]:
     return [to_str(s) for s in df["seq"]]
 
 
+@serial
 def save_quote(rec: dict) -> str:
     """견적서 한 건 저장 (id 가 있으면 고치기, 없으면 새로). 저장한 id 를 돌려줍니다."""
     store = get_store()
@@ -2223,7 +2601,8 @@ def save_quote(rec: dict) -> str:
     if rid and rid in have_ids:
         old = have[have["id"].map(to_str) == rid].iloc[0].astype(str).tolist()
         rec["created_at"] = to_str(have.loc[have["id"].map(to_str) == rid, "created_at"].iloc[0]) or now
-        store.update_rows("quotes", {rid: _rows("quotes", [rec])[0]})
+        row = _guard("quotes", have, {rid: _rows("quotes", [rec])[0]})[rid]
+        store.update_rows("quotes", {rid: row})
         _step(("put", "quotes", {rid: old}), f"견적서 {rec.get('no', '')} 고치기")
         log("수정", "견적서", f"{rec.get('no', '')} {rec.get('company', '')}")
     else:

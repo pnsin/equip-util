@@ -1883,6 +1883,8 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             comp_opts.append(cur["company"])
         ov, _, content = seed.parse_detail(cur["detail"]) if cur is not None else ("", "", "")
         k = f"{day}_{edit_id or 'new'}_{ver}_{st.session_state.get('cal_pv', 0)}"
+        if cur is not None:  # 카드를 연 순간의 값을 기억 → 그 뒤 다른 분이 고치면 저장할 때 알림 (2026-11-24)
+            db.opened("usage", [edit_id] + [i for i in series["id"].tolist() if i != edit_id], k)
 
         def ix(opts, v):
             return opts.index(v) if v in opts else None
@@ -2105,6 +2107,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
                             f"S{db._new_ids(1)[0]}" if len(chunks) > 1 else "")
                         parts = chunks if v_mode == "기간" else [{"start_date": day, "end_date": day, "hours": rec["hours"]}]
                         upd, add, gone = per.plan_changes(old, parts, rec, key if v_mode == "기간" else "")
+                        db.precheck("usage", upd, gone)  # 일부만 저장되는 일이 없게 먼저 한 번에 확인
                         db.update_logs(upd)
                         db.insert_logs(add)
                         db.delete_logs(gone)

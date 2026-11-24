@@ -34,7 +34,7 @@ def render() -> None:
     # 빈 목록이면 열 형식을 알 수 없어 편집기가 오류를 내므로 형식을 고정
     view = view.astype({c: "string" for c in TEXT} | {"id": "Int64"})
     action, out, gone = pick_table(
-        view, "staff_tbl", name_col="이름", add_at=add_at,
+        view, "staff_tbl", table="staff", name_col="이름", add_at=add_at,
         column_order=[c for c in COLS.values() if c != "id"],
         column_config={
             "이름": st.column_config.TextColumn(required=True),

@@ -643,6 +643,7 @@ def _delete(items: list[dict]) -> None:
         base = {k: r.get(k) for k in db.LOG_FIELDS if k in r}
         upd[rid] = base | pieces[0]
         adds += [base | p for p in pieces[1:]]
+    db.precheck("usage", upd, dels)  # 일부만 지워지는 일이 없게 먼저 확인
     with db.undo_group(f"칸 지우기 {len(items)}칸"):
         if upd:
             db.update_logs(upd)

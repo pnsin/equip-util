@@ -384,7 +384,7 @@ def _specs(eid: int, name: str, info: dict) -> None:
     base = _of(info["equip_specs"], eid)[["id", "item", "value"]].reset_index(drop=True)
     st.markdown("<div class='boxh'><b>주요 사양</b></div>", unsafe_allow_html=True)
     action, out, _ = common.pick_table(
-        base, f"info_sp_{eid}", name_col="item", column_order=["item", "value"], add_label="사양 추가",
+        base, f"info_sp_{eid}", table="equip_specs", name_col="item", column_order=["item", "value"], add_label="사양 추가",
         height=min(420, 38 + 35 * (len(base) + 1)) if len(base) else 74,
         column_config={"item": st.column_config.TextColumn("항목", width="small"),
                        "value": st.column_config.TextColumn("값", width="large")})

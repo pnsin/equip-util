@@ -1,5 +1,6 @@
 """여러 화면이 함께 쓰는 기간 선택 위젯."""
 import datetime as dt
+import html
 
 import pandas as pd
 import streamlit as st
@@ -433,7 +434,7 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
                mask=None, height: int | None = None, can_add: bool = True, add_label: str = "새로 추가",
                edit_order: list[str] | None = None, disabled: list[str] | None = None,
                extra_actions: list[tuple[str, str, str]] | None = None,
-               extra_ui=None, add_at=None) -> tuple[str | None, pd.DataFrame, list[str]]:
+               extra_ui=None, add_at=None, table: str | None = None) -> tuple[str | None, pd.DataFrame, list[str]]:
     """평소에는 읽기만 되는 표. 맨 앞 '선택'을 체크한 줄만 아래 칸에서 고치고 [저장] / [삭제].
 
     돌려주는 값: (누른 버튼 'save' · 'delete' · extra_actions의 이름 · None, 반영한 전체 표, 지운 줄 이름).
@@ -443,6 +444,7 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
     add_at: '새로 추가' 버튼을 놓을 자리 (표 위 줄에 미리 만든 st.container). 없으면 표 아래.
     """
     ss = st.session_state
+    tname = table  # 저장할 탭 이름 (아래 table 은 화면 표)
     ver = ss.get(f"{key}_ver", 0)
     view = view.reset_index(drop=True)
     shown = view if mask is None else view[pd.Series(mask, index=view.index).fillna(False).astype(bool)]
@@ -455,6 +457,9 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
         height=height or min(640, 38 + 35 * (len(table) + 1)),
         column_config={**_as_text(column_config), PICK: st.column_config.CheckboxColumn(PICK, width=64, default=False)})
     sel = [int(i) for i in locked.index[locked[PICK].fillna(False).astype(bool)]]
+    if tname and sel and "id" in view.columns:  # 고를 때의 값을 기억 → 그 사이 다른 분이 고치면 저장할 때 알림
+        from core import db
+        db.opened(tname, [view.at[i, "id"] for i in sel], f"{key}_{ver}_{sel}")
     n_new = ss.get(f"{key}_new_{ver}", 0)
     action, out, gone = None, view, []
     if sel or n_new:
@@ -501,3 +506,58 @@ def pick_table(view: pd.DataFrame, key: str, *, column_config: dict, column_orde
 def pick_done(key: str) -> None:
     """저장·삭제 뒤 표를 처음 상태로 (선택 풀림)."""
     st.session_state[f"{key}_ver"] = st.session_state.get(f"{key}_ver", 0) + 1
+
+
+# ── 동시에 고치기 알림 (2026-11-24) ─────────────────────────────────
+# 저장하려는 행을 그 사이 다른 분이 먼저 고쳤으면 core.db 가 저장을 멈추고 화면을 다시 그립니다.
+# 이때 맨 위에 짧은 알림과 '새로 불러오기' 버튼을 띄웁니다. 내가 적던 값은 그대로 남아 있어 옮겨 적을 수 있고,
+# '새로 불러오기'를 누르면 입력 칸을 비우고 시트의 최신 값을 다시 보여 줍니다.
+
+def reload_editors() -> None:
+    """고치던 표·입력 카드를 처음 상태로 (되돌리기·새로 불러오기 뒤)."""
+    ss = st.session_state
+    for k in [str(k) for k in ss if "_lock_" in str(k)]:  # 고르기 표: 표 번호를 올려 체크까지 처음 상태로
+        pre, _, n = k.rpartition("_lock_")
+        if n.isdigit():
+            ss[f"{pre}_ver"] = max(int(ss.get(f"{pre}_ver", 0) or 0), int(n))
+    for k in [k for k in ss if str(k).endswith("_editor") or str(k).startswith(("cal_ed_", "_pin_"))
+              or "_edit_" in str(k) or "_lock_" in str(k)]:  # 고르기 표(pick_table)의 고른 줄·고치던 칸도
+        ss.pop(k, None)
+    for k in [k for k in ss if str(k).endswith("_ver") and isinstance(ss[k], int) and not isinstance(ss[k], bool)]:
+        ss[k] = ss[k] + 1  # 표·입력 칸 이름에 붙는 번호 → 바꾸면 새 값으로 다시 그림
+    for k in ("cal_ver", "entry_ver", "cs_ver"):
+        ss[k] = ss.get(k, 0) + 1
+
+
+def _reload_now() -> None:
+    from core import db
+    ss = st.session_state
+    c = ss.pop("_conflict", None) or {}
+    reload_editors()
+    if c.get("t") == "quotes" and isinstance(ss.get("qd"), dict) and ss["qd"].get("id"):
+        hit = db.load_quotes()
+        hit = hit[hit["id"] == str(ss["qd"]["id"])]
+        if not hit.empty:  # 견적서는 불러온 내용이 따로 남아 있어 최신 내용으로 다시 불러옴
+            from views import quote as _q
+            _q._reset(_q._load_saved(hit.iloc[0].to_dict(), copy=False))
+    db.reset_seen()
+
+
+def conflict_notice() -> None:
+    c = st.session_state.get("_conflict")
+    if not c:
+        return
+    if not c.get("toasted"):  # 아래쪽 입력 카드에서 저장했어도 보이게 한 번 띄움
+        st.toast(c["text"], icon=":material/group:")
+        c["toasted"] = True
+    rows = "".join(f"<div class='cf-row'>{html.escape(r)}</div>" for r in c.get("rows") or [])
+    more = f"<div class='cf-row'>외 {c['more']}건</div>" if c.get("more") else ""
+    with st.container(key="conflict_box", horizontal=True, vertical_alignment="center", gap="small"):
+        st.markdown(f"<div class='cf-text'><b>{html.escape(c['text'])}</b>{rows}{more}</div>", unsafe_allow_html=True)
+        st.space("stretch")
+        st.button("새로 불러오기", icon=":material/refresh:", key="conflict_reload", type="primary", on_click=_reload_now)
+    st.markdown(
+        "<style>.st-key-conflict_box{background:#FDF2EE;border:1px solid #F0C9B8;border-radius:12px;"
+        "padding:.7rem .9rem;margin-bottom:.8rem;flex-wrap:wrap}"
+        ".st-key-conflict_box .cf-text{color:#7A3B22;font-size:.92rem;line-height:1.45}"
+        ".st-key-conflict_box .cf-row{color:#9A6A55;font-size:.82rem}</style>", unsafe_allow_html=True)
