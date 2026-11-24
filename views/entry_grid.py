@@ -303,9 +303,9 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
 .eg td.sec{background:#FAF9F5;color:#6B6860;font-weight:700;font-size:11.5px;padding:4px 6px;line-height:1.35;word-break:keep-all}
 .eg td.dev{text-align:left;padding:0 10px;font-size:12px;background:#FFFFFF}
 .eg td.dev .nm{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;margin:4px 0}  /* 장비 이름은 다 보이게, 길면 줄바꿈 (2026-11-24 사용자) */
-.eg col.c-grp{width:var(--grpw,128px)}
-.eg td.grp{background:#FAF8F4;color:#6B6860;font-size:11px;font-weight:600;line-height:1.3;padding:4px 8px;word-break:keep-all;position:sticky;left:92px;z-index:2}
-.eg.has-grp td.dev:not(.wide),.eg.has-grp th.dev:not(.wide){left:calc(92px + var(--grpw,128px))}
+.eg col.c-grp{width:var(--grpw,96px)}
+.eg td.grp{background:#FAF8F4;color:#6B6860;font-size:10.5px;font-weight:600;line-height:1.3;padding:4px 6px;word-break:keep-all;position:sticky;left:92px;z-index:2}
+.eg.has-grp td.dev:not(.wide),.eg.has-grp th.dev:not(.wide){left:calc(92px + var(--grpw,96px))}
 .eg td.dev small{display:block;color:#A39F96;font-size:9.5px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
 .eg th.sec,.eg td.sec{position:sticky;left:0;z-index:2}
 .eg th.dev,.eg td.dev{position:sticky;left:92px;z-index:2}
@@ -691,7 +691,7 @@ def render_grid(container, eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, mont
             elif pre:
                 sel = {"eid": pre["eq"], "day": st.session_state.get("cal_day")}
         nd = len(data["days"])
-        devw = 190 if g.startswith("제조") else 260
+        devw = 190 if g.startswith("제조") else 230
         _component()(data={"html": to_html(data, dt.date.today(), sel), "ndays": nd, "sig": f"{g}|{month:%Y-%m}|{hide}",
-                           "minw": 92 + devw + nd * 34 + 128, "devw": devw},
+                           "minw": 92 + devw + nd * 34 + 96, "devw": devw},
                      key="eg_grid", on_pick_change=_on_pick)
