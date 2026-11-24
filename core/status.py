@@ -184,6 +184,10 @@ def to_excel(rws: list[dict], logs: pd.DataFrame, eq: pd.DataFrame, year: int, t
     roots = year_units(rws)
     fam = db.descendants(eq)  # 장비 → 자신 + 모든 하위 장비
     info = {int(r["id"]): r for r in eq.to_dict("records")}
+    # 2026-11-24 사용자: '의뢰자'에 우리 쪽 담당자(작성자)가 들어가 모두 박노신으로 나옴 → 업체 목록의 업체 담당자 (없으면 빈칸)
+    comp = db.load_companies()
+    contact_of = ({to_str(n): to_str(c) for n, c in zip(comp["name"], comp["contact"]) if to_str(c) not in ("", "-")}
+                  if not comp.empty else {})
     lg = logs[logs["start_date"].notna()].copy() if not logs.empty else logs
     if not lg.empty:
         lg["end_date"] = lg["end_date"].fillna(lg["start_date"])
@@ -238,7 +242,7 @@ def to_excel(rws: list[dict], logs: pd.DataFrame, eq: pd.DataFrame, year: int, t
                         (keys_out if out else keys_in).add(key)
                     vals = [nm, None, None, None, r - 1, d, d, "외부" if out else "내부",
                             to_str(x.get("company")) or to_str(x.get("dept")), to_str(x.get("brn")), None,
-                            seed.purpose_label(to_str(x.get("purpose"))), to_str(x.get("created_by")),
+                            seed.purpose_label(to_str(x.get("purpose"))), contact_of.get(to_str(x.get("company"))) or None,
                             (int(h) if float(h).is_integer() else float(h)) if h is not None else None]
                 if r == 2:  # 장비 정보는 첫 줄에
                     acq = me.get("acquired_on")
@@ -286,7 +290,8 @@ def to_excel(rws: list[dict], logs: pd.DataFrame, eq: pd.DataFrame, year: int, t
     n = len(sheets)
     first, end = 6, 5 + max(n, 1)
     tot.cell(1, 5, f"{year}년 평균가동률").font = bold
-    c = tot.cell(1, 6, f"=AVERAGE(M{first}:M{end})" if n else 0)
+    # 2026-11-24 점검: 장비별 가동률의 단순 평균(18.8%)이 장비 KPI 현황(19.0%)과 달랐음 → 같은 계산 (Σ가동시간 ÷ Σ가용시간)
+    c = tot.cell(1, 6, f"=IFERROR(SUM(K{first}:K{end})/SUM(J{first}:J{end}),0)" if n else 0)
     c.number_format, c.font = "0.0%", bold
     tot.cell(1, 7, f"목표 : {target:g}%").font = bold
     tot.cell(2, 5, (title + " · " if title else "") + f"{cutoff:%Y-%m-%d}까지 · 가용시간·가동시간은 장비 KPI 현황과 같은 계산 "
@@ -308,7 +313,7 @@ def to_excel(rws: list[dict], logs: pd.DataFrame, eq: pd.DataFrame, year: int, t
         q = sn.replace("'", "''")
         vals = [f"세부장비 {kids.get(rid, 0)}대 포함" if kids.get(rid) else None, cen.get(rid, "") or None, k,
                 to_str(me.get("name")), acq.year if acq is not None and pd.notna(acq) else None, to_str(me.get("nfec")) or None,
-                to_str(me.get("code")) or None, None, round(av, 1), f"=N{rr}+Q{rr}", ni + no, f"=IFERROR(K{rr}/J{rr},0)",
+                to_str(me.get("code")) or None, None, av, f"=N{rr}+Q{rr}", ni + no, f"=IFERROR(K{rr}/J{rr},0)",
                 f"='{q}'!R14", ni, f"=IFERROR(N{rr}/J{rr},0)", f"='{q}'!S14", no, f"=IFERROR(Q{rr}/J{rr},0)"]
         for j, v in enumerate(vals, start=2):
             c = tot.cell(rr, j, v)
@@ -321,8 +326,8 @@ def to_excel(rws: list[dict], logs: pd.DataFrame, eq: pd.DataFrame, year: int, t
     tot.cell(rr, 5, "계").font = bold
     for col in "JKLNOQR":
         tot[f"{col}{rr}"] = f"=SUM({col}{first}:{col}{end})"
-    for col in "MPS":
-        tot[f"{col}{rr}"] = f"=AVERAGE({col}{first}:{col}{end})"
+    for col, hc in (("M", "K"), ("P", "N"), ("S", "Q")):  # 계 줄도 Σ시간 ÷ Σ가용시간 (장비 KPI 현황과 같게)
+        tot[f"{col}{rr}"] = f"=IFERROR({hc}{rr}/J{rr},0)"
         tot[f"{col}{rr}"].number_format = "0.0%"
     for col in "JKNQ":
         tot[f"{col}{rr}"].number_format = "#,##0.0"

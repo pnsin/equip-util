@@ -88,6 +88,6 @@ def test_excel_same_format_as_test_part_file_and_hours_match_kpi(monkeypatch):
     assert ws["Q2"].value.startswith("=SUMIFS($N:$N") and ws["Q14"].value == "=SUM(Q2:Q13)"
     tot = wb["총괄"]
     assert tot["E6"].value == "열충격 시험기" and tot["N6"].value == "='1. 열충격 시험기'!R14"
-    assert abs(tot["J6"].value - round(summ["가용시간"], 1)) < 1e-9
+    assert abs(tot["J6"].value - summ["가용시간"]) < 1e-9  # 반올림 없이 (평균 가동률이 KPI 현황과 똑같게)
     line = wb[next(n for n in wb.sheetnames if n.endswith("전극 라인"))]
     assert any(c.value == "전극 라인 › 롤프레스" for c in line["A"])  # 세부장비 실적은 주장비 탭에

@@ -16,8 +16,8 @@ COMP = pd.DataFrame({"name": ["가업체", "나업체"], "brn": ["1234567890", "
 
 
 def _log(i, eid, **kw):
-    base = dict(id=i, equip_id=eid, equip_name=f"장비{eid}", start_date=pd.Timestamp("2026-03-02"),
-                end_date=pd.Timestamp("2026-03-02"), hours=8, company="", purpose="시험", purpose_detail="",
+    base = dict(id=i, equip_id=eid, equip_name=f"장비{eid}", start_date=pd.Timestamp("2026-03-03"),
+                end_date=pd.Timestamp("2026-03-03"), hours=8, company="", purpose="시험", purpose_detail="",
                 chambers="10" if eid == 2 else "", ch_part="", series="", itube_code="A-1", usage_type="내부", brn="")
     return base | kw
 
@@ -31,7 +31,7 @@ def test_clean_data_has_no_findings():
 
 
 def test_missing_equipment_and_bad_dates():
-    f = _run([_log(1, 99), _log(2, 1, end_date=pd.Timestamp("2026-03-01")), _log(3, 1, hours=0)])
+    f = _run([_log(1, 99), _log(2, 1, end_date=pd.Timestamp("2026-03-02")), _log(3, 1, hours=0)])
     assert list(f["no_equip"]["rows"]["ID"]) == [1]
     assert list(f["bad_date"]["rows"]["ID"]) == [2]
     assert list(f["no_hours"]["rows"]["ID"]) == [3]
@@ -93,3 +93,25 @@ def test_confirmed_note_rows_move_to_done_list():
         ("no_itube_facility", [1], ["2026-11-24"])]
     assert health.summary(show)[1] == 1 and health.summary(done) == (0, 1)
     assert health.brn_needed(show).to_dict("records") == [{"업체": "나업체", "실적": 2}]
+
+
+def test_off_days_only_and_parent_child():
+    # 2026-03-01 일요일 · 03-02 삼일절 대체공휴일 → 가동률 0시간
+    f = _run([_log(1, 4, start_date=pd.Timestamp("2026-03-01"), end_date=pd.Timestamp("2026-03-02")),
+              _log(2, 1), _log(3, 2), _log(4, 1, start_date=pd.Timestamp("2026-04-01"),
+                                              end_date=pd.Timestamp("2026-04-01"))])
+    assert list(f["off_days_only"]["rows"]["ID"]) == [1]
+    assert sorted(f["parent_child"]["rows"]["ID"]) == [2, 3]  # 4는 다른 날
+
+
+def test_fee_without_usage():
+    led = pd.DataFrame({"id": [1, 2, 3], "tax_date": [dt.date(2026, 3, 20), dt.date(2026, 3, 20), dt.date(2026, 3, 20)],
+                        "brn": ["123-45-67890", "999-99-99999", "999-99-99999"], "company": ["가업체", "다업체", "다업체"],
+                        "item": ["시험료", "시험료", "현장실습"], "supply": [100, 200, 300], "staff": ["", "", ""],
+                        "report_cat": ["", "", ""]})
+    eq = EQ.assign(report_cat=["환경시험", "", "", ""], group=["", "", "", ""])
+    rows = [_log(1, 1, company="가업체", usage_type="외부", brn="1234567890")]
+    got = health.run(pd.DataFrame(rows), eq, CH, COMP, {2}, today=dt.date(2026, 11, 20),
+                     ledger=led.assign(report_cat=["환경시험", "환경시험", ""]))
+    fee = next(f for f in got if f["key"] == "fee_no_usage")
+    assert list(fee["rows"]["ID"]) == [2]  # 1은 실적 있음, 3은 교육(기타)

@@ -1,3 +1,4 @@
 libreoffice-calc-nogui
 fonts-nanum
 poppler-utils
+tzdata
