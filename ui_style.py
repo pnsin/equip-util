@@ -644,6 +644,14 @@ _SLATE_CSS = """<style>
   .st-key-info_view [data-testid="stButtonGroup"] button:hover p, .st-key-maint_mode [data-testid="stButtonGroup"] button:hover p, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button:hover p { color: #191918 !important; }
   .st-key-info_view [data-testid="stButtonGroup"] button[aria-checked="true"], .st-key-maint_mode [data-testid="stButtonGroup"] button[aria-checked="true"], div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button[aria-checked="true"] { background: transparent !important; border-bottom-color: #D97757 !important; }
   .st-key-info_view [data-testid="stButtonGroup"] button[aria-checked="true"] p, .st-key-maint_mode [data-testid="stButtonGroup"] button[aria-checked="true"] p, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p { color: #191918 !important; }
+  /* 2026-11-24 센터 고르기(common.center_pick): 정식 이름이라 휴대폰에서는 같은 너비 2칸 격자, 전체는 한 줄 */
+  @media (max-width: 640px) {
+      [data-testid="stLayoutWrapper"]:has(> [class*="st-key-cpk_"]) {flex: 1 1 100% !important; width: 100% !important;}
+      [class*="st-key-cpk_"], [class*="st-key-cpk_"] [data-testid="stElementContainer"], [class*="st-key-cpk_"] [data-testid="stButtonGroup"] {width: 100% !important; flex: 1 1 100% !important; max-width: 100% !important;}
+      [class*="st-key-cpk_"] [data-testid="stButtonGroup"] > div {display: grid !important; grid-template-columns: 1fr 1fr; width: 100%; max-width: 100% !important;}
+      [class*="st-key-cpk_"] [data-testid="stButtonGroup"] button {width: 100%; padding: 0 6px !important;}
+      [class*="st-key-cpk_"] [data-testid="stButtonGroup"] button:first-child {grid-column: 1 / -1;}
+      [class*="st-key-cpk_"] [data-testid="stButtonGroup"] button p {font-size: .8rem; white-space: nowrap; letter-spacing: -.02em;}}
 </style>"""
 
 
