@@ -163,6 +163,8 @@ CSS = """<style>
 .drep {table-layout: fixed;} .drep th:first-child {width: 31%;}
 /* 2026-11-19 사용자: 가동률 표도 수수료 표처럼 맨 위 '목표' 줄 · 아래 전체 · 달성률. 2026-11-23 가동률 목표 줄 = 피치 틴트 */
 .drep:not(.fee) tr.goal td {color: #C26344; background: #FDF2EE !important;}
+/* 2026-11-24 사용자: 전체·합계 줄 글씨도 그 표의 목표 줄과 같은 색 (가동률 테라코타, 수수료 세이지) */
+.drep:not(.fee) tr.sum td {color: #C26344;} .drep.fee tr.sum td {color: #4A6B5D;}
 [class*="st-key-dsec_"] [data-testid="stVerticalBlock"] {gap: .35rem;}
 </style>"""
 
