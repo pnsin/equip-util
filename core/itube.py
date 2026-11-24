@@ -143,11 +143,13 @@ DEFAULT_OVERVIEW = {
 DEFAULT_PRODUCT = "이차전지"
 
 
-def _who(rec: dict) -> tuple[str, str]:
-    """같은 업체·같은 i-Tube 장비를 알아보는 열쇠."""
+def _who(rec: dict) -> tuple[str, str, str]:
+    """같은 업체·같은 i-Tube 장비·같은 사용목적을 알아보는 열쇠.
+
+    2026-11-24: 사용목적까지 같아야 빌려 씀 (내부 '생산' 실적에 내부 '교육' 실적의 제품명 '배터리 제조 교육'이 들어가던 문제)."""
     code = to_str(rec.get("itube_code")) or to_str(rec.get("equip_code"))
     who = to_str(rec.get("company")) or f"내부:{to_str(rec.get('dept'))}"
-    return code, who
+    return code, who, to_str(rec.get("purpose"))
 
 
 def known_details(history: list[dict]) -> dict[tuple[str, str], dict]:

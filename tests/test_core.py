@@ -552,7 +552,7 @@ def test_itube_fills_blank_detail_product_purpose():
     recs = [dict(base, id=1, purpose="생산", company="A", equip_name="e", equip_code="C1"),
             dict(base, id=2, purpose="시험", company="B", equip_name="e", equip_code="C2", purpose_detail="열충격시험"),
             dict(base, id=3, purpose="생산", company="A", equip_name="e", equip_code="C3")]
-    hist = [dict(id=9, itube_code="C3", company="A", dept="", product="배터리 전극",
+    hist = [dict(id=9, itube_code="C3", company="A", dept="", purpose="생산", product="배터리 전극",
                  detail="· 지원개요 : 5Ah급 셀 개발 지원\n· 인증/인정/시험법 : -\n· 지원내용 :")]
     ws = _lw(_io.BytesIO(_it.make_itube_file(recs, [], None, hist)))["Sheet1"]
     rows = [[ws.cell(r, c).value for c in range(1, 23)] for r in range(4, 7)]
@@ -593,3 +593,21 @@ def test_itube_holidays_always_n():
                include_holidays="Y", samples=1, fee=0)
     ws = _lw(_io.BytesIO(_it.make_itube_file([rec], [], None)))["Sheet1"]
     assert ws.cell(4, 18).value == "N" and ws.cell(4, 19).value == round(148 * 5 / 7)
+
+
+def test_itube_borrows_only_same_purpose():
+    """내부 교육 실적의 제품명이 같은 장비의 내부 생산 실적으로 번지지 않음 (2026-11-24)."""
+    import io as _io
+    import datetime as _dt
+    from openpyxl import load_workbook as _lw
+    from core import itube as _it
+    d = _dt.date(2026, 10, 1)
+    rec = dict(purpose="생산", usage_type="내부", company="", brn="", dept="센터", equip_name="e", equip_code="C1",
+               start_date=d, end_date=d, hours=4, include_holidays="N", samples=1, fee=0, sub_item="이차전지",
+               detail="", product="", purpose_detail="")
+    hist = [dict(id=1, start_date=_dt.date(2026, 5, 12), itube_code="C1", company="", dept="센터", purpose="교육",
+                 product="배터리 제조 교육", detail="· 지원개요 : 배터리 제조 현장 실습"),
+            dict(id=2, start_date=_dt.date(2026, 4, 7), itube_code="C1", company="", dept="센터", purpose="생산",
+                 product="배터리 전극", detail="· 지원개요 : 배터리 전극 제조")]
+    ws = _lw(_io.BytesIO(_it.make_itube_file([rec], [], None, hist)))["Sheet1"]
+    assert ws.cell(4, 9).value == "배터리 전극" and "배터리 전극 제조" in ws.cell(4, 12).value
