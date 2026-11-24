@@ -195,6 +195,18 @@ def test_master_save_undo_and_trash(store):
     assert sorted(store.read("companies")["name"]) == ["가", "나"] and store.read("trash").empty
 
 
+def test_set_company_brn_updates_and_adds(store):
+    import pandas as pd
+    db.save_companies(pd.DataFrame([{"name": "가", "brn": ""}, {"name": "나", "brn": "1112223333"}]))
+    assert db.set_company_brn({"가": "123-45-67890", "다": "9998887777", "나": ""}) == 2
+    got = dict(zip(store.read("companies")["name"], store.read("companies")["brn"].astype(str)))
+    assert got == {"가": "1234567890", "나": "1112223333", "다": "9998887777"}
+    s = db.get_settings()
+    assert s["health_ok"] == {}
+    db.save_settings(health_ok={"no_itube_facility": {"5": "2026-11-24"}})
+    assert db.get_settings()["health_ok"] == {"no_itube_facility": {"5": "2026-11-24"}}
+
+
 def test_compare_period_modes():
     import datetime as dt
     from core.calc import compare_period

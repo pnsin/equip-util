@@ -149,7 +149,8 @@ DEFAULT_SETTINGS = {
     "idle_days": 90,          # 이 날수 넘게 안 쓴 장비를 저활용·유휴 후보로
     "chart_top": 25,          # 장비별 그래프에 보여 줄 최대 대수
     "default_period": "월",   # 대시보드를 열 때 기간 단위
-    "quote_next_seq": 145,    # 앱에 저장된 올해 견적서가 없을 때 쓸 다음 견적 번호 (2026 엑셀 대장이 144번까지)
+    "quote_next_seq": 145,
+    "health_ok": {},          # 데이터 점검에서 '확인'한 참고 실적 {항목: {실적 ID: 확인한 날}} (2026-11-24)    # 앱에 저장된 올해 견적서가 없을 때 쓸 다음 견적 번호 (2026 엑셀 대장이 144번까지)
 }
 
 CHUNK = 40000  # 구글 시트 셀 한도(50,000자)보다 작게 나눠 저장
@@ -1561,6 +1562,30 @@ def sync_company_contact(name: str, contact: str, phone: str) -> None:
             changed = True
     if changed:
         save_companies(df)
+
+
+def set_company_brn(pairs: dict[str, str]) -> int:
+    """데이터 점검에서 적은 사업자등록번호를 업체 목록에 넣음 (2026-11-24). 없는 업체면 새로 추가.
+    i-Tube 파일·점검은 업체 목록 번호를 쓰므로 그 업체의 실적 전부에 바로 적용됨. 바꾼 업체 수를 돌려줌."""
+    pairs = {to_str(n): digits(b) for n, b in pairs.items() if to_str(n) and digits(b)}
+    if not pairs:
+        return 0
+    df = load_companies()
+    n = 0
+    for name, brn in pairs.items():
+        hit = df["name"] == name
+        if hit.any():
+            i = df.index[hit][0]
+            if df.at[i, "brn"] != brn:
+                df.at[i, "brn"] = brn
+                n += 1
+        else:
+            new = {c: "" for c in COMPANY_TEXT} | {"id": None, "name": name, "brn": brn}
+            df = pd.concat([df, pd.DataFrame([new])], ignore_index=True)
+            n += 1
+    if n:
+        save_companies(df)
+    return n
 
 
 def save_companies(edited: pd.DataFrame) -> None:

@@ -78,3 +78,18 @@ def test_device_without_use_is_hidden_from_status_board():
     eq = EQ.assign(use=["시험", "시험", "시험", ""])
     got = {f["key"] for f in health.run(pd.DataFrame([_log(1, 4)]), eq, CH, COMP, {2}, today=dt.date(2026, 11, 20))}
     assert "no_group" in got
+
+
+def test_confirmed_note_rows_move_to_done_list():
+    rows = [_log(1, 4, itube_code=""), _log(2, 4, itube_code=""),
+            _log(3, 1, usage_type="외부", company="나업체"), _log(4, 1, usage_type="외부", company="나업체")]
+    found = health.run(pd.DataFrame(rows), EQ, CH, COMP, {2}, today=dt.date(2026, 11, 20))
+    ok = {"no_itube_facility": {"1": "2026-11-24"}, "ext_no_brn": {"3": "x"}}  # '확인' 항목은 확인으로 못 내림
+    show, done = health.split_confirmed(found, ok)
+    s = {f["key"]: f for f in show}
+    assert list(s["no_itube_facility"]["rows"]["ID"]) == [2]
+    assert list(s["ext_no_brn"]["rows"]["ID"]) == [3, 4]
+    assert [(f["key"], list(f["rows"]["ID"]), list(f["rows"]["확인"])) for f in done] == [
+        ("no_itube_facility", [1], ["2026-11-24"])]
+    assert health.summary(show)[1] == 1 and health.summary(done) == (0, 1)
+    assert health.brn_needed(show).to_dict("records") == [{"업체": "나업체", "실적": 2}]

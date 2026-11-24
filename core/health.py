@@ -208,7 +208,7 @@ def run(logs: pd.DataFrame, eq: pd.DataFrame, ch: pd.DataFrame, companies: pd.Da
         "이 장비와 그 위 장비 모두 i-Tube 번호가 없어서 i-Tube 파일에 장비번호 '-'로 들어가요(업로드 때 걸러질 수 있어요). 장비 목록에서 번호를 넣어 주세요.",
         no_code[~no_code["eid"].map(facility)])
     add("no_itube_facility", NOTE, "i-Tube 번호가 없는 시설의 실적",
-        "시설(클린룸·드라이룸 등)이라 i-Tube에 등록이 안 돼요. 기록용으로 i-Tube 파일에 장비번호 '-'로 들어가요.",
+        "시설(클린룸·드라이룸 등)이라 i-Tube에 등록이 안 돼요. 기록용으로 i-Tube 파일에 장비번호 '-'로 들어가요. 확인한 줄은 체크하고 [확인]을 누르면 목록에서 내려가요.",
         no_code[no_code["eid"].map(facility)])
     ext = ok[ok["usage_type"].map(to_str) == "외부"]
     add("ext_no_company", CHECK, "외부 실적인데 업체가 비어 있음", "i-Tube 파일에 기관명이 비어 올라가요.",
@@ -221,7 +221,7 @@ def run(logs: pd.DataFrame, eq: pd.DataFrame, ch: pd.DataFrame, companies: pd.Da
               if not companies.empty and "brn" in companies else {})
     no_brn = [not num(b) and not brn_of.get(to_str(c)) for b, c in zip(has_c["brn"], has_c["company"])]
     add("ext_no_brn", CHECK, "외부 실적인데 사업자등록번호가 없음",
-        "실적에도 업체 목록에도 번호가 없어 i-Tube 파일에 비어 올라가요. 업체 목록에 번호를 넣으면 파일에 자동으로 들어가요.",
+        "실적에도 업체 목록에도 번호가 없어 i-Tube 파일에 비어 올라가요. 아래에 번호를 적고 저장하면 업체 목록에 들어가 그 업체 실적 모두에 적용돼요.",
         has_c[no_brn] if len(has_c) else has_c)
     add("unknown_company", NOTE, "업체 목록에 없는 업체 이름",
         "업체 목록과 글자가 달라서 사업자번호·업종이 자동으로 채워지지 않아요.",
@@ -233,3 +233,29 @@ def summary(found: list[dict]) -> tuple[int, int]:
     """(확인 필요 건수, 참고 건수) — 실적 줄 수 기준."""
     return (sum(len(f["rows"]) for f in found if f["level"] == CHECK),
             sum(len(f["rows"]) for f in found if f["level"] == NOTE))
+
+
+# 2026-11-24 사용자: "아이튜브 번호가 없는 실적도 확인하면 없어질 수 있게". '참고' 항목은 줄마다 '확인'해서 목록에서
+# 내릴 수 있음. 확인한 줄은 설정 'health_ok' = {항목 key: {실적 ID: "확인한 날 이름"}} 에 남고, 화면 맨 아래
+# '확인한 실적'에서 언제든 다시 볼 수 있음 (숨긴 실적이 사라지면 안 됨). i-Tube 파일 등 다른 화면에는 영향 없음.
+def split_confirmed(found: list[dict], ok: dict) -> tuple[list[dict], list[dict]]:
+    """(아직 볼 것, 확인한 것). 확인한 것의 rows 에는 '확인' 열(확인한 날)이 붙음."""
+    show, done = [], []
+    for f in found:
+        marks = {str(k): str(v) for k, v in (ok or {}).get(f["key"], {}).items()} if f["level"] == NOTE else {}
+        hit = f["rows"]["ID"].astype(str).isin(marks)
+        if (~hit).any():
+            show.append(f | {"rows": f["rows"][~hit].reset_index(drop=True)})
+        if hit.any():
+            rows = f["rows"][hit].reset_index(drop=True)
+            done.append(f | {"rows": rows.assign(확인=rows["ID"].astype(str).map(marks))})
+    return show, done
+
+
+def brn_needed(found: list[dict]) -> pd.DataFrame:
+    """사업자등록번호가 없는 외부 실적을 업체별로: [업체, 실적(건수)] — 실적 많은 업체부터."""
+    f = next((f for f in found if f["key"] == "ext_no_brn"), None)
+    if f is None:
+        return pd.DataFrame(columns=["업체", "실적"])
+    out = f["rows"].groupby("업체").size().rename("실적").reset_index()
+    return out.sort_values(["실적", "업체"], ascending=[False, True]).reset_index(drop=True)
