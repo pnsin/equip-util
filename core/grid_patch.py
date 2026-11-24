@@ -140,4 +140,5 @@ RUNTIME_JS = """
 
 def inject():
     import streamlit as st
-    st.html("<script>" + RUNTIME_JS + "</script>", unsafe_allow_javascript=True)
+    from views.common import NUM_STEP_JS  # 숫자 칸 −/＋ 를 브라우저에서 바로 (views/common.num_input)
+    st.html("<script>" + RUNTIME_JS + NUM_STEP_JS + "</script>", unsafe_allow_javascript=True)
