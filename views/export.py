@@ -312,8 +312,15 @@ def _download_body(key: str) -> None:
         st.warning("i-Tube는 한 번에 1000건까지 올릴 수 있어요. 기간을 나눠 주세요.", icon=":material/info:")
     if sel.empty:
         return
-    args = (sel.to_dict("records"), [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], itube_template(cfg),
-            _history(logs))
+    records, hist = sel.to_dict("records"), _history(logs)
+    # 2026-11-24: 엑셀에 들어갈 줄 그대로 i-Tube 규칙 점검 (사업자번호 없는 외부 실적 등은 업로드가 안 됨)
+    bad = itube.check_rows(itube.prepare(records, hist))
+    if bad:
+        st.warning(f"i-Tube가 받아 주지 않을 줄 {len(bad)}건이 있어요. 아래 내용을 고친 뒤 내려받아 주세요.",
+                   icon=":material/warning:")
+        st.dataframe(pd.DataFrame(bad), hide_index=True, width="stretch",
+                     column_config={"시작일": st.column_config.DateColumn(format="YYYY-MM-DD")})
+    args = (records, [(n, c) for n, c in zip(eq["name"], eq["code"]) if c], itube_template(cfg), hist)
     data = lambda args=args: itube.make_itube_file(*args)  # noqa: E731 - 누를 때만 만듦
     fname = _itube_filename(cfg, s, e)
     if picked:
