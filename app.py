@@ -98,6 +98,7 @@ def _undo() -> None:
         st.session_state.cal_ver = st.session_state.get("cal_ver", 0) + 1
         st.session_state.entry_ver = st.session_state.get("entry_ver", 0) + 1
         st.session_state.cs_ver = st.session_state.get("cs_ver", 0) + 1
+        db.reset_seen()
     st.rerun()
 
 
@@ -239,4 +240,11 @@ if check_password():
     if local:
         st.warning("구글 시트가 연결되지 않아 임시 저장 중입니다. 앱이 재시작되면 데이터가 지워질 수 있습니다.")
     keep_choices()
+    # 2026-11-24 동시에 고치기: 메뉴를 옮기면 그 화면에서 본 값부터 새로 기억 (core.db 동시에 고치기 막기)
+    if st.session_state.get("_page") != pg.url_path:
+        db.reset_seen(keep_opened=True)
+        if "_page" in st.session_state:
+            st.session_state.pop("_conflict", None)
+        st.session_state["_page"] = pg.url_path
+    common.conflict_notice()
     pg.run()

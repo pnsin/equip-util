@@ -33,6 +33,7 @@ def _all() -> list[dict]:
     return [r for r in db.get_store().read(T).to_dict("records") if str(r.get("id", "")).strip()]
 
 
+@db.serial
 def add(eid: int, day, content: str, thumb: str = "", photo: str = "") -> None:
     rows = _all()
     nid = max([int(float(r["id"])) for r in rows] or [0]) + 1
@@ -41,6 +42,7 @@ def add(eid: int, day, content: str, thumb: str = "", photo: str = "") -> None:
     _write(rows)
 
 
+@db.serial
 def update(rid: int, **vals) -> None:
     rows = _all()
     for r in rows:
@@ -49,6 +51,7 @@ def update(rid: int, **vals) -> None:
     _write(rows)
 
 
+@db.serial
 def delete(rid: int) -> None:
     _write([r for r in _all() if int(float(r["id"])) != rid])
 

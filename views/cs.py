@@ -251,6 +251,7 @@ def _table(view: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str]
             for e in errors:
                 st.error(e)
         else:
+            db.precheck(cs.T, ups, dels, clean=cs._clean)  # 일부만 저장되는 일이 없게 먼저 확인
             with db.undo_group(f"CS활동 표 저장 (추가 {len(adds)} · 수정 {len(ups)} · 삭제 {len(dels)})"):
                 cs.insert(adds)
                 cs.update(ups)
@@ -277,6 +278,8 @@ def _panel(df: pd.DataFrame, label_of: dict, id_of: dict, companies: list[str], 
         cur = hit.iloc[0].to_dict()
     pre = cur or st.session_state.get("cs_prefill") or {}
     k = f"{rid}_{st.session_state.get('cs_ver', 0)}"
+    if cur is not None:  # 연 순간의 값을 기억 (2026-11-24 동시에 고치기)
+        db.opened(cs.T, [rid], k)
     d0 = pre.get("date")
     d0 = d0.date() if isinstance(d0, pd.Timestamp) and pd.notna(d0) else (d0 if isinstance(d0, dt.date) else dt.date.today())
     with st.container(key="cs_panel"):

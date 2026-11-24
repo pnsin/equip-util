@@ -36,7 +36,7 @@ def render() -> None:
                 | view["업체 담당자"].astype(str).str.contains(q, case=False, regex=False))
 
     action, out, gone = pick_table(
-        view, "company_tbl", mask=mask, name_col="업체명", add_at=add_at,
+        view, "company_tbl", table="companies", mask=mask, name_col="업체명", add_at=add_at,
         column_order=[c for c in COLS.values() if c != "id"],
         column_config={
             "업체명": st.column_config.TextColumn(required=True, width="medium"),

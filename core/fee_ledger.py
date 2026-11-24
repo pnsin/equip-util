@@ -115,6 +115,7 @@ def _same(r: dict) -> str:
     return brn + "|" + re.sub(r"\s", "", str(r.get("item") or ""))
 
 
+@db.serial
 def merge(new: pd.DataFrame) -> tuple[int, int, int]:
     """올린 줄을 저장된 매출장에 합침 → (새로 넣음, 입금 고침, 이미 있음).
     2026-11-19: 예전에 보고 분류를 고친 적 있는 업체 · 발행내역이면 새 줄도 같은 분류로."""
@@ -142,6 +143,7 @@ def merge(new: pd.DataFrame) -> tuple[int, int, int]:
     return add, upd, same
 
 
+@db.serial
 def set_cats(changes: dict[int, str]) -> int:
     """2026-11-19: 줄마다 보고 분류를 고침. 같은 업체 · 같은 발행내역 줄도 함께 (다음에 올리는 매출장 줄도 따라감).
     발행내역 자동 분류와 같으면 비워 둠 (규칙이 바뀌면 따라가게)."""

@@ -101,6 +101,7 @@ def insert(records: list[dict]) -> list[str]:
     return ids
 
 
+@db.serial
 def update(changes: dict[str, dict]) -> int:
     if not changes:
         return 0
@@ -118,6 +119,8 @@ def update(changes: dict[str, dict]) -> int:
         cur.update(_clean(vals))
         cur.update(updated_at=now, updated_by=db.who())
         out[str(rid)] = db._rows(T, [cur])[0]
+    merged = db._guard(T, df, out)
+    out = {k: merged[k] for k in out if k in merged}
     n = store.update_rows(T, out)
     if n:
         db._step(("put", T, before), f"CS활동 {n}건 수정")

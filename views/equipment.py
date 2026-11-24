@@ -211,7 +211,7 @@ def _devices(eq: pd.DataFrame, cfg: dict) -> None:
     cats = list(dict.fromkeys(["단독장비", "시스템장비", "시스템시설", "단독장비(복수구매)"] + [c for c in eq["category"] if c]))
     uses = list(dict.fromkeys(list(seed.PURPOSES) + ["제조"] + [u for u in eq["use"] if u]))
     action, out, gone = pick_table(
-        view, "equip_tbl", mask=mask, name_col="장비명(한글)", add_label="장비 추가", add_at=add_at,
+        view, "equip_tbl", table="equipment", mask=mask, name_col="장비명(한글)", add_label="장비 추가", add_at=add_at,
         height=min(640, 38 + 35 * (int(mask.sum()) + 1)),
         column_order=BASIC + list(RATE.values()) + ["비고"], edit_order=BASIC + list(RATE.values()) + ["모델명", "제조사", "구매처", "자산번호",
                                                                           "국가연구시설장비번호", "연간기준시간", "도입일",
