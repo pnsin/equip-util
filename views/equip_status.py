@@ -47,12 +47,13 @@ CSS = """<style>
 .tl2 .nm .sd.d-now {background: #4A6B5D; box-shadow: 0 0 0 3px rgba(74,107,93,.18);}
 .tl2 .nm .sd.d-soon {background: #D4A359;}
 .tl2 .hd {height: 62px; border-bottom: 1px solid #E0DCD3;}
-.tl2 .hd .dy small {display: block; font-size: .62rem; line-height: 1.15; font-weight: inherit; opacity: .85;}
+.tl2 .hd .dy small {display: block; font-size: .64rem; line-height: 1.15; font-weight: 600; color: #55514A;}
 .tl2 .hd .ln {position: relative;}
-.tl2 .hd .wk {position: absolute; top: 9px; font-size: .74rem; color: #55514A; font-weight: 650; white-space: nowrap; display: flex; justify-content: center;}
+.tl2 .hd .wk {position: absolute; top: 9px; font-size: .76rem; color: #2A2825; font-weight: 700; white-space: nowrap; display: flex; justify-content: center;}
 .tl2 .hd .wk.r {justify-content: flex-end; padding-right: 4px;}
-.tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #736F66; text-align: center;}
-.tl2 .hd .dy.off {color: #C84B31; font-weight: 650;}
+.tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .72rem; color: #2A2825; font-weight: 600; text-align: center;}
+.tl2 .hd .dy.off, .tl2 .hd .dy.off small {color: #B23A22; font-weight: 700;}
+.tl2 .hd .dy.td small {color: #fff;}
 .tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; padding: 1px 0; background: #D97757; color: #fff; font-weight: 700;}
 .tl2 .grpw {position: relative; z-index: 3; margin-top: 18px; border-top: 2px solid var(--gc); background: color-mix(in srgb, var(--gc) 5%, #FFFFFF);}
 .tl2 .grpw.first {margin-top: 0;}
@@ -72,15 +73,15 @@ CSS = """<style>
 .tl2 .bar {position: absolute; height: 24px; border-radius: 7px; display: flex; align-items: center; padding: 0 9px;
   font-size: .75rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: var(--cb); color: var(--c); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent); box-sizing: border-box;}
-.tl2 .bar.bdone {background: #F2EFE9; box-shadow: none; color: #625E56; font-weight: 550;}
+.tl2 .bar.bdone {background: #F2EFE9; box-shadow: none; color: #3A3833; font-weight: 650;}
 .tl2 .bar.cl {border-top-left-radius: 0; border-bottom-left-radius: 0;}
 .tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
 .tl2 .bar span {position: relative; z-index: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
-.tl2 .bar small.pd {font-weight: 600; opacity: .72; margin-left: 6px; font-size: .7rem;}
+.tl2 .bar small.pd {font-weight: 600; opacity: .9; margin-left: 6px; font-size: .7rem;}
 .tl2 .out {position: absolute; height: 24px; display: block; line-height: 24px; overflow: hidden; text-overflow: ellipsis; font-size: .75rem; font-weight: 650;
   color: #191918; white-space: nowrap;}
-.tl2 .out small {font-weight: 500; color: #55514A; font-size: .7rem;}
-.tl2 .out.bdone {opacity: .5;}
+.tl2 .out small {font-weight: 600; color: #3A3833; font-size: .7rem;}
+.tl2 .out.bdone {color: #3A3833;}
 .tl2 .chx {display: none;} .tl2.all .chx {display: grid;}
 .tl2 .chx .nm b {font-size: .74rem; color: #55514A; font-weight: 600; padding-left: 22px;}
 .tl2 .chx .ln {min-height: 26px;}
