@@ -28,12 +28,12 @@ CSS = """<style>
 .cs-stat:hover {transform: translateY(-2px); box-shadow: 0 12px 24px rgba(25, 25, 24, .08); border-color: color-mix(in srgb, var(--accent) 30%, var(--line));}
 .cs-stat b {display: block; order: 2; font-size: 2rem; font-weight: 800; line-height: 1.15; color: var(--ink);
   font-variant-numeric: tabular-nums;}
-.cs-stat span {order: 1; font-size: 1.15rem; font-weight: 700; color: #4A4741;}
+.cs-stat span {order: 1; font-size: 1.15rem; font-weight: 700; color: #3A3833;}
 .cs-stat em {font-style: normal; font-size: .72rem; font-weight: 700; color: #C26344; margin-left: 6px;}
 .st-key-cs_tools {align-items: center; gap: .5rem; flex-wrap: wrap;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button {border-radius: 999px !important; height: 34px; min-height: 0;
   padding: 0 14px; background: var(--panel); border: 1px solid var(--line) !important;}
-.st-key-cs_tools [data-testid="stButtonGroup"] button p {font-size: .84rem; font-weight: 600; color: #6B6860;}
+.st-key-cs_tools [data-testid="stButtonGroup"] button p {font-size: .84rem; font-weight: 600; color: #55514A;}
 .st-key-cs_tools [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .st-key-cs_tools .st-key-cs_q {flex: 1 1 200px; min-width: 180px;}
 .st-key-cs_tools .st-key-cs_new button {background: var(--accent); color: #fff; border: none; border-radius: 12px;
@@ -58,7 +58,7 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
 .cs-m {font-size: .8rem; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .cs-tag {display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; margin-right: 7px;
   vertical-align: 1px;}
-.cs-eq {display: inline-block; font-size: .72rem; padding: 0 8px; border-radius: 6px; background: #F2EFE9; color: #6B6860; margin-left: 5px;}
+.cs-eq {display: inline-block; font-size: .72rem; padding: 0 8px; border-radius: 6px; background: #F2EFE9; color: #55514A; margin-left: 5px;}
 .cs-who {width: 58px; text-align: right; font-size: .78rem; color: var(--muted); flex: none; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;}
 .st-key-cs_more button {border: none; background: transparent; color: var(--accent); font-weight: 700;}
@@ -76,11 +76,11 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
   .st-key-cs_panel {box-shadow: 0 18px 48px rgba(25, 25, 24, .14) !important;}
 }
 .st-key-cs_head {align-items: center !important;}
-.cs-ph {font-size: 1.15rem; font-weight: 800; color: var(--ink);} .cs-ph em {font-style: normal; font-size: .85rem; color: #6B6860; margin-left: 4px;}
+.cs-ph {font-size: 1.15rem; font-weight: 800; color: var(--ink);} .cs-ph em {font-style: normal; font-size: .85rem; color: #55514A; margin-left: 4px;}
 .st-key-cs_close {width: auto !important;}
 .st-key-cs_close button {height: 36px; width: 36px; padding: 0; border-radius: 12px; border: none; background: #F2EFE9;}
 .st-key-cs_panel [data-testid="stWidgetLabel"] {margin-bottom: 0; min-height: 0;}
-.st-key-cs_panel [data-testid="stWidgetLabel"] p {font-size: .8rem; font-weight: 700; color: #6B6860;}
+.st-key-cs_panel [data-testid="stWidgetLabel"] p {font-size: .8rem; font-weight: 700; color: #55514A;}
 .st-key-cs_panel [data-baseweb="select"] > div, .st-key-cs_panel [data-baseweb="input"], .st-key-cs_panel [data-baseweb="textarea"] {
   background: #F2EFE9 !important; border: 1.5px solid transparent !important; border-radius: 11px !important;}
 .st-key-cs_panel [data-baseweb="input"] > div, .st-key-cs_panel [data-baseweb="input"] input,
@@ -89,7 +89,7 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
 .st-key-cs_panel [data-baseweb="textarea"]:focus-within {border-color: var(--accent) !important; background: var(--panel) !important;}
 .st-key-cs_panel [data-testid="stButtonGroup"] button {border-radius: 999px !important; padding: 2px 12px; min-height: 0; height: 31px;
 }
-.st-key-cs_panel [data-testid="stButtonGroup"] button p {font-size: .8rem; font-weight: 600; color: #6B6860;}
+.st-key-cs_panel [data-testid="stButtonGroup"] button p {font-size: .8rem; font-weight: 600; color: #55514A;}
 .st-key-cs_panel [data-testid="stButtonGroup"] button[aria-checked="true"] {background: var(--accent) !important;}
 .st-key-cs_panel [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .st-key-cs_newcomp {margin-top: -.5rem;}
@@ -98,7 +98,7 @@ div[class*="st-key-cs_card_"] div[class*="st-key-cs_open_"] button {width: 100%;
 .st-key-cs_btns > div {width: auto !important;}
 .st-key-cs_btns .st-key-cs_save {flex: 1 1 auto; width: auto !important;}
 .st-key-cs_save button {height: 44px; border-radius: 13px; font-weight: 800; border: none; box-shadow: 0 4px 12px rgba(217, 119, 87, .25);}
-.st-key-cs_copy button {height: 44px; border-radius: 13px; border: none; background: #F2EFE9; color: #6B6860;}
+.st-key-cs_copy button {height: 44px; border-radius: 13px; border: none; background: #F2EFE9; color: #55514A;}
 .st-key-cs_del button, .st-key-cs_delok button {height: 44px; border-radius: 13px; color: #C84B31; background: #FBEAE5; border: none;}
 .cs-ask {font-size: .85rem; font-weight: 700; color: #C84B31; background: #FBEAE5; border-radius: 12px; padding: 10px 12px;}
 </style>"""

@@ -247,7 +247,7 @@ _CNT_JS = """<script>
   const doc = w.document;
   const st = doc.createElement('style');
   st.textContent = `[role=option][data-cnt]{display:flex;align-items:center}
-[role=option][data-cnt]::after{content:attr(data-cnt);margin-left:auto;padding-left:24px;font-size:.78rem;color:#6B6860}
+[role=option][data-cnt]::after{content:attr(data-cnt);margin-left:auto;padding-left:24px;font-size:.78rem;color:#55514A}
 [role=option][data-zero]{opacity:.4}`;
   doc.head.appendChild(st);
   const hide = () => doc.querySelectorAll('[data-testid=stHtml] > script').forEach(sc => {

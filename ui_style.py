@@ -114,12 +114,12 @@ THEMES = {
     # J. 따뜻한 종이 (2026-11-23 사용자 지시서 'Warm Editorial Light'): 종이색 바탕 · 흰 카드 · 테라코타 + 세이지
     "paper": {
         "bg": "#FAF9F5", "panel": "#FFFFFF", "panel2": "#F2EFE9", "deep": "#F7F5F0",
-        "line": "#E8E6DF", "line2": "#DDD9CF", "ink": "#191918", "muted": "#6B6860", "dim": "#A39F96",
+        "line": "#DCD8CE", "line2": "#CFCAC0", "ink": "#191918", "muted": "#55514A", "dim": "#736F66",
         "accent": "#D97757", "accent-hi": "#C26344", "accent-bg": "#FDF2EE",
         "ok": "#4A6B5D", "ok-bg": "#EBF2EE", "ng": "#C84B31", "ng-bg": "#FBEAE5", "warn": "#9C6B20", "warn-bg": "#FBF3E2",
-        "bar-off": "#EAE7DF", "shadow": "0 12px 32px rgba(25,25,24,.08)", "card-shadow": "0 2px 10px rgba(25,25,24,.04)",
-        "side": "#F5F3EC", "side-line": "#E8E6DF", "side-ink": "#191918", "side-muted": "#6B6860", "side-dim": "#A39F96",
-        "side-hover": "#EDEAE2", "side-active": "#FDF2EE", "side-active-ink": "#D97757",
+        "bar-off": "#E0DCD3", "shadow": "0 12px 32px rgba(25,25,24,.08)", "card-shadow": "0 2px 10px rgba(25,25,24,.04)",
+        "side": "#F5F3EC", "side-line": "#DCD8CE", "side-ink": "#191918", "side-muted": "#55514A", "side-dim": "#736F66",
+        "side-hover": "#EDEAE2", "side-active": "#FDF2EE", "side-active-ink": "#C26344",
         "logo": "logo_light.png", "base": "light",
     },
 }
@@ -127,9 +127,9 @@ THEME_NAME = os.environ.get("EQUIP_THEME", "paper")
 TOKENS = {k: v for k, v in THEMES.get(THEME_NAME, THEMES["dark"]).items() if k not in ("logo", "base")}
 T = TOKENS
 
-# 그래프 색 (plotly). 2026-11-23 지시서: 축 글자 #6B6860 · 가이드선 #EAE7DF · 테라코타/세이지/웜골드
+# 그래프 색 (plotly). 2026-11-23 지시서: 축 글자 #55514A · 가이드선 #E0DCD3 · 테라코타/세이지/웜골드
 CHART_FONT = dict(family="Pretendard Variable, Pretendard, Noto Sans KR, Malgun Gothic, sans-serif", color=T["ink"], size=12)
-CHART_GRID = "#EAE7DF"
+CHART_GRID = "#E0DCD3"
 GOLD = "#D4A359"
 SERIES = [T["accent"], T["ok"], GOLD, "#8A6F9E", "#B8865B", "#7A9A8C", T["muted"]]
 
@@ -340,7 +340,7 @@ _CSS = """
   .st-key-login_card [data-testid="stTextInputRootElement"] > div, .st-key-login_card [data-testid="stTextInputRootElement"] input { background: transparent; }
   .st-key-login_card [data-testid="stTextInputRootElement"] input { font-size: 1.05rem; }
   .st-key-login_card [data-testid="stTextInputRootElement"] [data-testid="stTextInputIcon"],
-  .st-key-login_card [data-testid="stTextInputRootElement"] span[data-testid="stIconMaterial"] { color: #6B6860; font-size: 1.2rem; }
+  .st-key-login_card [data-testid="stTextInputRootElement"] span[data-testid="stIconMaterial"] { color: #55514A; font-size: 1.2rem; }
   .st-key-login_card [data-testid="stFormSubmitButton"], .st-key-login_card [data-testid="stFormSubmitButton"] button { width: 100%; }
   .st-key-login_card [data-testid="stFormSubmitButton"] button { min-height: 3.4rem; border-radius: 12px; border: none;
         background: var(--accent); box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 30%, transparent); transition: all .2s ease; margin-top: 0.5rem; }
@@ -490,7 +490,7 @@ _CLEAN_CSS = """<style>
 </style>"""
 
 
-# 배치·크기 규칙 (2026-11-06 다크로 시작). 2026-11-23 색은 따뜻한 종이(paper): 카드 #FFFFFF · 선 #E8E6DF · 테라코타 #D97757 · 세이지 #4A6B5D
+# 배치·크기 규칙 (2026-11-06 다크로 시작). 2026-11-23 색은 따뜻한 종이(paper): 카드 #FFFFFF · 선 #DCD8CE · 테라코타 #D97757 · 세이지 #4A6B5D
 _SLATE_CSS = """<style>
   .block-container { max-width: 1600px !important; }
   .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stMainBlockContainer"] { padding: 2rem 2.5rem 4rem !important; }
@@ -530,20 +530,20 @@ _SLATE_CSS = """<style>
         font-variant-numeric: tabular-nums; }
   [data-testid="stSidebar"] .brand-ic { background: #D97757 !important; color: #fff !important; }
   [data-testid="stSidebar"] .brand img { width: 184px !important; margin: -1.6rem 0 1.1rem .1rem !important; }
-  [data-testid="stSidebar"] .nav-group { color: #A39F96 !important; }
-  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { color: #4A4741 !important; }
+  [data-testid="stSidebar"] .nav-group { color: #736F66 !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { color: #3A3833 !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] {
         background: #FFFFFF !important; box-shadow: inset 3px 0 0 #D97757 !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] span, [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] span { color: #191918 !important; font-weight: 600; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] [data-testid="stIconMaterial"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] [data-testid="stIconMaterial"] { color: #C26344 !important; }
   /* 2026-11-10 왼쪽 메뉴 다시: 묶음 제목 작게, 줄 간격 고르게, 고른 메뉴는 연한 남보라 알약 */
   [data-testid="stSidebar"] .nav-group { font-size: .7rem !important; font-weight: 600 !important; letter-spacing: .06em !important;
-        color: #6B6860 !important; margin: 1.15rem 0 .45rem 0 !important; padding: 0 .7rem !important; }
+        color: #55514A !important; margin: 1.15rem 0 .45rem 0 !important; padding: 0 .7rem !important; }
   [data-testid="stSidebar"] [data-testid="stElementContainer"]:has([data-testid="stPageLink"]) { margin-bottom: -1.05rem !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a { padding: .42rem .7rem !important; border-radius: 9px !important; gap: .7rem !important;
         transition: background .15s ease; }
-  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { color: #6B6860 !important; font-size: .9rem !important; font-weight: 500 !important; }
-  [data-testid="stSidebar"] [data-testid="stPageLink"] a [data-testid="stIconMaterial"] { color: #A39F96 !important; font-size: 18px !important;
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a span { color: #55514A !important; font-size: .9rem !important; font-weight: 500 !important; }
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a [data-testid="stIconMaterial"] { color: #736F66 !important; font-size: 18px !important;
         width: 20px !important; background: transparent !important; box-shadow: none !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover { background: #F2EFE9 !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover span { color: #191918 !important; }
@@ -553,7 +553,7 @@ _SLATE_CSS = """<style>
         color: #D97757 !important; font-weight: 700 !important; }
   [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] [data-testid="stIconMaterial"], [data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] [data-testid="stIconMaterial"] {
         color: #C26344 !important; }
-  [data-testid="stSidebar"] .brand { border-bottom: 1px solid #E8E6DF !important; margin-bottom: .2rem !important; }
+  [data-testid="stSidebar"] .brand { border-bottom: 1px solid #DCD8CE !important; margin-bottom: .2rem !important; }
   /* 2026-11-17 왼쪽 메뉴 머리글 (칩 아이콘 + 팀 이름 + 시스템 이름) */
   [data-testid="stSidebar"] .cbtp-foot-logo { border-top: 1px solid rgba(255,255,255,.08); margin-top: .6rem; padding: 1.1rem 0 .4rem;
         display: flex; justify-content: center; }
@@ -569,18 +569,18 @@ _SLATE_CSS = """<style>
   [data-testid="stSidebar"] .cbtp-icon-equip { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center;
         justify-content: center; background: rgba(217,119,87,.12); border: 1px solid rgba(217,119,87,.28); }
   [data-testid="stSidebar"] .cbtp-text-group { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  [data-testid="stSidebar"] .cbtp-dept-label { font-size: 13px; font-weight: 600; color: #6B6860; letter-spacing: .03em; line-height: 1.3; }
+  [data-testid="stSidebar"] .cbtp-dept-label { font-size: 13px; font-weight: 600; color: #55514A; letter-spacing: .03em; line-height: 1.3; }
   [data-testid="stSidebar"] .cbtp-sys-title { font-size: 20px; font-weight: 700; color: #191918; letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; }
-  .ph { border-bottom: 1px solid #E8E6DF !important; } .ph .t { font-size: 24px !important; }
+  .ph { border-bottom: 1px solid #DCD8CE !important; } .ph .t { font-size: 24px !important; }
   .stButton button[kind="primary"], .stDownloadButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] { background: #D97757 !important; color: #fff !important; }
   .stButton button[kind="primary"] p, .stDownloadButton button[kind="primary"] p, .stFormSubmitButton button[kind="primary"] p { color: #fff !important; }
   .stButton button[kind="primary"]:hover { background: #C26344 !important; }
-  .stButton button[kind="primary"]:disabled, .stDownloadButton button[kind="primary"]:disabled { background: #F2EFE9 !important; border-color: #E8E6DF !important; opacity: 1 !important; }
-  .stButton button[kind="primary"]:disabled p, .stButton button[kind="primary"]:disabled span { color: #A39F96 !important; }
+  .stButton button[kind="primary"]:disabled, .stDownloadButton button[kind="primary"]:disabled { background: #F2EFE9 !important; border-color: #DCD8CE !important; opacity: 1 !important; }
+  .stButton button[kind="primary"]:disabled p, .stButton button[kind="primary"]:disabled span { color: #736F66 !important; }
   .stApp:not(:has(.login-bg, .login-preview-bg)) [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) { border-radius: 14px !important;
         box-shadow: 0 2px 10px rgba(25,25,24,.04) !important; }
-  [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: #FFFFFF !important; border-color: #E8E6DF !important; }
-  [data-testid="stDataFrame"], [data-testid="stDataEditor"] { border: 1px solid #E8E6DF !important; border-radius: 14px !important; overflow: hidden; background: #FFFFFF !important;
+  [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] { background: #FFFFFF !important; border-color: #DCD8CE !important; }
+  [data-testid="stDataFrame"], [data-testid="stDataEditor"] { border: 1px solid #DCD8CE !important; border-radius: 14px !important; overflow: hidden; background: #FFFFFF !important;
         box-shadow: 0 2px 10px rgba(25,25,24,.04) !important; }
   [data-testid="stAlert"] > div { background: #FFFFFF !important; border-left: 4px solid #D4A359; border-radius: 10px; color: #191918; }
   [data-testid="stAlert"] p { color: #191918 !important; }
@@ -589,32 +589,32 @@ _SLATE_CSS = """<style>
         background: #FFFFFF !important; border: 0 !important; border-left: 4px solid #D97757 !important; border-radius: 8px !important; }
   .empty .ic { font-size: 1rem !important; margin: 0 !important; color: #C26344 !important; }
   .empty .h { white-space: nowrap; font-size: .92rem !important; margin: 0 !important; color: #191918 !important; }
-  .empty .b { font-size: .85rem !important; color: #6B6860 !important; }
+  .empty .b { font-size: .85rem !important; color: #55514A !important; }
   /* 대시보드: 카드 12px · 위쪽 색 막대 · 숫자 크게/단위 작게 · 알약 배지 */
-  [class*="st-key-dsec_"] { background: #FFFFFF !important; border: 1px solid #E8E6DF !important; border-radius: 14px !important;
+  [class*="st-key-dsec_"] { background: #FFFFFF !important; border: 1px solid #DCD8CE !important; border-radius: 14px !important;
         box-shadow: 0 2px 10px rgba(25,25,24,.04) !important; transform: none !important; padding: 20px 24px !important; }
   .st-key-dsec_util { border-top: 4px solid #D97757 !important; } .st-key-dsec_fee { border-top: 4px solid #4A6B5D !important; }
   .st-key-dsec_maint { border-top: 4px solid #4A6B5D !important; }
   .dst .sl, .dst.big .sl { font-size: 19px !important; font-weight: 700 !important; }
   .st-key-dsec_util .dst .sl, .st-key-dsec_util .dst.big .sl { color: #C26344 !important; } .st-key-dsec_fee .dst .sl, .st-key-dsec_fee .dst.big .sl { color: #4A6B5D !important; }
   .st-key-dsec_maint .dst .sl, .st-key-dsec_maint .dst.big .sl { color: #4A6B5D !important; }
-  .dst { background: #FFFFFF !important; border: 1px solid #E8E6DF !important; border-radius: 12px !important; box-shadow: none !important; }
+  .dst { background: #FFFFFF !important; border: 1px solid #DCD8CE !important; border-radius: 12px !important; box-shadow: none !important; }
   .dst:hover { background: #F2EFE9 !important; transform: none !important; }
-  .dst.big { background: #F2EFE9 !important; border: 1px solid #E8E6DF !important; }
+  .dst.big { background: #F2EFE9 !important; border: 1px solid #DCD8CE !important; }
   .dst.big * { color: inherit !important; } .dst.big .sl { color: #191918 !important; }
   .dst .sv, .dst.big .sv { font-size: 30px !important; font-weight: 700; color: #191918 !important; font-variant-numeric: tabular-nums; }
-  .dst .sv small { font-size: 16px !important; font-weight: 500 !important; color: #6B6860 !important; }
-  .dch { background: rgba(107,104,96,.15) !important; color: #4A4741 !important; }
+  .dst .sv small { font-size: 16px !important; font-weight: 500 !important; color: #55514A !important; }
+  .dch { background: rgba(107,104,96,.15) !important; color: #3A3833 !important; }
   .dch.g { background: rgba(74,107,93,.15) !important; color: #4A6B5D !important; }
   .dch.r { background: rgba(200,75,49,.15) !important; color: #C84B31 !important; }
-  .dh .per { background: #FFFFFF !important; border: 1px solid #E8E6DF; }
+  .dh .per { background: #FFFFFF !important; border: 1px solid #DCD8CE; }
   /* 접속 화면도 같은 다크 톤 */
   .stApp:has(.login-bg, .login-preview-bg) [data-testid="stAppViewContainer"] { background: #FAF9F5 !important; }
-  .st-key-login_card { background: #FFFFFF !important; border: 1px solid #E8E6DF !important; box-shadow: 0 24px 60px rgba(25,25,24,.10), 0 2px 10px rgba(25,25,24,.04) !important; }
-  .st-key-login_card [data-testid="stTextInputRootElement"], .st-key-login_card [data-testid="stTextInputRootElement"]:focus-within { background: #FFFFFF !important; border-color: #E8E6DF; }
+  .st-key-login_card { background: #FFFFFF !important; border: 1px solid #DCD8CE !important; box-shadow: 0 24px 60px rgba(25,25,24,.10), 0 2px 10px rgba(25,25,24,.04) !important; }
+  .st-key-login_card [data-testid="stTextInputRootElement"], .st-key-login_card [data-testid="stTextInputRootElement"]:focus-within { background: #FFFFFF !important; border-color: #DCD8CE; }
   .st-key-login_card input { color: #191918 !important; }
   .st-key-login_card .stButton button, .st-key-login_card [data-testid="stFormSubmitButton"] button { background: #D97757 !important; border: 0 !important; }
-  .login-head .s, .login-head p, .login-head .d { color: #6B6860 !important; }
+  .login-head .s, .login-head p, .login-head .d { color: #55514A !important; }
   .login-head .t { color: #191918 !important; }
   .login-foot span { background: #EBF2EE !important; color: #4A6B5D !important; border-radius: 20px !important; }
   /* 2026-11-10 숫자 카드 안 글자는 모두 가운데 (st.metric · 대시보드 카드 · 충방전기 카드) */
@@ -632,15 +632,15 @@ _SLATE_CSS = """<style>
      '보기 바꾸기'(카드/목록 · 기록/장비별 · 견적서 양식)는 st.tabs 와 같은 밑줄 탭 (VIEW_KEYS). */
   [data-testid="stButtonGroup"] > div { gap: 6px !important; }
   [data-testid="stButtonGroup"] button { border-radius: 999px !important; margin: 0 !important; min-height: 34px;
-        padding: 0 11px !important; background: var(--panel) !important; border: 1px solid #E8E6DF !important; box-shadow: none !important; }
-  [data-testid="stButtonGroup"] button p { font-size: .88rem; font-weight: 600; color: #4A4741 !important; }
+        padding: 0 11px !important; background: var(--panel) !important; border: 1px solid #DCD8CE !important; box-shadow: none !important; }
+  [data-testid="stButtonGroup"] button p { font-size: .88rem; font-weight: 600; color: #3A3833 !important; }
   [data-testid="stButtonGroup"] button:hover { border-color: #D97757 !important; }
   [data-testid="stButtonGroup"] button[aria-checked="true"] { background: #D97757 !important; border-color: #D97757 !important; }
   [data-testid="stButtonGroup"] button[aria-checked="true"] p { color: #FFFFFF !important; }
   .st-key-info_view [data-testid="stButtonGroup"] > div, .st-key-maint_mode [data-testid="stButtonGroup"] > div, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] > div { gap: 18px !important; }
   .st-key-info_view [data-testid="stButtonGroup"] button, .st-key-maint_mode [data-testid="stButtonGroup"] button, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button { border-radius: 0 !important; background: transparent !important; border: 0 !important;
         border-bottom: 2px solid transparent !important; padding: 0 2px !important; min-height: 34px; }
-  .st-key-info_view [data-testid="stButtonGroup"] button p, .st-key-maint_mode [data-testid="stButtonGroup"] button p, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button p { font-size: .95rem; color: #6B6860 !important; }
+  .st-key-info_view [data-testid="stButtonGroup"] button p, .st-key-maint_mode [data-testid="stButtonGroup"] button p, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button p { font-size: .95rem; color: #55514A !important; }
   .st-key-info_view [data-testid="stButtonGroup"] button:hover p, .st-key-maint_mode [data-testid="stButtonGroup"] button:hover p, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button:hover p { color: #191918 !important; }
   .st-key-info_view [data-testid="stButtonGroup"] button[aria-checked="true"], .st-key-maint_mode [data-testid="stButtonGroup"] button[aria-checked="true"], div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button[aria-checked="true"] { background: transparent !important; border-bottom-color: #D97757 !important; }
   .st-key-info_view [data-testid="stButtonGroup"] button[aria-checked="true"] p, .st-key-maint_mode [data-testid="stButtonGroup"] button[aria-checked="true"] p, div[class*="st-key-q_form_"] [data-testid="stButtonGroup"] button[aria-checked="true"] p { color: #191918 !important; }
@@ -652,6 +652,12 @@ _SLATE_CSS = """<style>
       [class*="st-key-cpk_"] [data-testid="stButtonGroup"] button {width: 100%; padding: 0 6px !important;}
       [class*="st-key-cpk_"] [data-testid="stButtonGroup"] button:first-child {grid-column: 1 / -1;}
       [class*="st-key-cpk_"] [data-testid="stButtonGroup"] button p {font-size: .8rem; white-space: nowrap; letter-spacing: -.02em;}}
+  /* 글자 잘 보이게 (2026-11-24 사용자 C안) */
+  [data-testid="stSidebar"] [data-testid="stPageLink"] a p { font-weight: 600 !important; color: #3A3833 !important; }
+  .tl2 .nm, .tl2 .nm b, .tl2 .wd, .tl2 .lg { font-weight: 600; }
+  [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: #55514A !important; font-weight: 500; }
+  [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { font-weight: 500; }
+  [data-testid="stMarkdownContainer"] p, [data-testid="stWidgetLabel"] p { font-weight: 500; }
 </style>"""
 
 
@@ -731,11 +737,11 @@ PH_ICONS = {
 }
 # 2026-11-23 따뜻한 종이 테마: 묶음 색도 테라코타 · 세이지 · 웜골드 계열로
 PH_COLORS = {"현황": ("#D97757", "#E8A288"), "실적": ("#C26344", "#D4A359"), "장비": ("#4A6B5D", "#7A9A8C"),
-             "업체": ("#C9963F", "#E0BC7E"), "정보": ("#7E6A96", "#A792BC"), "관리": ("#8C877C", "#B5B0A5")}
+             "업체": ("#C9963F", "#E0BC7E"), "정보": ("#7E6A96", "#A792BC"), "관리": ("#625E56", "#B5B0A5")}
 PH_CSS = """<style>
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0');
 .ph2 {display: flex; align-items: center; gap: 16px; padding: 2px 0 14px; margin-bottom: 18px; position: relative;
-  border-bottom: 1px solid #E8E6DF;}
+  border-bottom: 1px solid #DCD8CE;}
 .ph2::after {content: ''; position: absolute; left: 0; bottom: -1px; width: 120px; height: 2px; border-radius: 2px;
   background: linear-gradient(90deg, var(--c), transparent);}
 .ph2 .ic {width: 52px; height: 52px; flex: none; border-radius: 16px; display: grid; place-items: center; color: #fff;
@@ -915,7 +921,7 @@ def nice_step(top: float) -> float:
 
 
 def chart_layout(fig, height: int, legend: bool = True):
-    """plotly 그래프를 밝은 종이 화면에 맞게 (투명 바탕 · 축 글자 #6B6860 · 가이드선 #EAE7DF)."""
+    """plotly 그래프를 밝은 종이 화면에 맞게 (투명 바탕 · 축 글자 #55514A · 가이드선 #E0DCD3)."""
     fig.update_layout(
         height=height, margin=dict(l=8, r=8, t=36 if legend else 12, b=8), font=CHART_FONT,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0, font=dict(color=T["muted"])),
