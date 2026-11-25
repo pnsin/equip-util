@@ -360,7 +360,7 @@ CSS = """
 table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;min-width:var(--minw,900px);
   font-family:inherit;color:#191918}
 .eg col.c-sec{width:92px}.eg col.c-dev{width:var(--devw,190px)}.eg col.c-tot{width:58px}
-.eg th.wk,.eg td.wk{border-right:2px solid #B8AD99!important}.eg thead tr.wkr th.wkl{height:20px;font-size:12px;font-weight:600;color:#625E56;top:0}.eg thead tr.dtr th{top:21px;height:34px}
+.eg th.wk,.eg td.wk{border-right:2px solid #D2C9BA!important}.eg thead tr.wkr th.wkl{height:20px;font-size:12px;font-weight:600;color:#625E56;top:0}.eg thead tr.dtr th{top:21px;height:34px}
 .eg th,.eg td{border-right:1px solid #E0DCD3;border-bottom:1px solid #E0DCD3;text-align:center;padding:0;height:34px;
   font-size:12px;position:relative;box-sizing:border-box}
 .eg thead th{background:#F2EFE9;height:42px;font-weight:600;color:#3A3833;font-size:12px;position:sticky;top:0;z-index:3}
