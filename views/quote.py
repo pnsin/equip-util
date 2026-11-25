@@ -631,12 +631,22 @@ def _ledger() -> None:
     view = cur[list(LEDGER)].rename(columns=LEDGER).reset_index(drop=True)
     recs = cur.to_dict("records")
     tv = st.session_state.get("q_led_ver", 0)
-    styled = view.style.set_properties(subset=["견적번호"], **{"color": "#C26344", "font-weight": "600"})
-    ev = st.dataframe(styled, hide_index=True, width="stretch", height=min(520, 38 + 35 * (len(view) + 1)),
+    money = ["계(VAT별도)", "계(부가세 포함)"]
+    view[money] = view[money].fillna(0)  # 금액이 빈 줄: 값은 0(정렬용), 화면에는 빈칸
+    styled = view.style.set_properties(subset=["견적번호"], **{"color": "#C26344", "font-weight": "600"}) \
+        .format(lambda v: f"{v:,.0f}" if v else "", subset=money)
+    # 2026-11-25: 한 번에 많이 보이게 — 표가 화면 아래까지 (줄이 적으면 줄 수만큼, 휴대폰도 최소 420px)
+    full = 38 + 35 * (len(view) + 1)
+    st.html(f"""<style>
+.st-key-q_led_box {{ flex: none !important; height: min({full}px, max(420px, calc(100dvh - 15.5rem))) !important; }}
+.st-key-q_led_box > [data-testid="stElementContainer"] {{ flex: 1 1 0; min-height: 0; }}
+.st-key-q_led_box [data-testid="stFullScreenFrame"], .st-key-q_led_box [data-testid="stDataFrame"] {{
+  height: 100% !important; display: block; }}
+</style>""")
+    box = st.container(key="q_led_box")
+    ev = box.dataframe(styled, hide_index=True, width="stretch", height="stretch",
                       on_select="rerun", selection_mode="single-cell", key=f"q_led_tbl_{year}_{tv}",
-                      column_config={"발급일자": st.column_config.DateColumn(format="YYYY-MM-DD"),
-                                     "계(VAT별도)": st.column_config.NumberColumn(format="localized"),
-                                     "계(부가세 포함)": st.column_config.NumberColumn(format="localized")})
+                      column_config={"발급일자": st.column_config.DateColumn(format="YYYY-MM-DD")})
     cells = (ev.selection or {}).get("cells") or [] if ev else []
     if cells:
         row = cells[0][0] if isinstance(cells[0], (list, tuple)) else cells[0].get("row")
