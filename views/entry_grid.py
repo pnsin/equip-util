@@ -205,8 +205,20 @@ def build(eq: pd.DataFrame, logs: pd.DataFrame, cfg: dict, month: dt.date, group
             name = short.get(i, name)  # 표면실장 기술지원 장비(SMT) 한 줄
         elif (group.startswith("제조") or group == MB) and root.get(i, i) == i and any(parent.get(j) == i for j in ids):
             name = "라인 전체" if dg.get(i) == "제조" else "장비 전체"
+        pole = 0
+        if group.startswith("제조") or group == MB:
+            # 2026-11-25 사용자: '(양극)/(음극)' 장비는 왼쪽에 양극·음극 병합, 오른쪽엔 장비 이름만. 양극 위·음극 아래
+            m = re.match(r"^(.*?)\s*\((양극|음극)\)$", name)
+            if m:
+                name, sub, pole = m.group(1), m.group(2), (1 if m.group(2) == "양극" else 2)
         rows.append({"id": i, "name": name, "full": short.get(i, str(i)), "parent": sub, "sec": section(i),
-                     "lanes": lanes or [[]]})
+                     "lanes": lanes or [[]], "_o": (0 if name in ("라인 전체", "장비 전체") else pole or 3)})
+    first: dict[str, int] = {}
+    for n, r in enumerate(rows):
+        first.setdefault(r["sec"], n)
+    rows.sort(key=lambda r: (first[r["sec"]], r["_o"]))  # 안정 정렬: 그 밖의 순서는 그대로
+    for r in rows:
+        r.pop("_o")
     return {"days": days, "off": off, "rows": rows, "m0": m0}
 
 
