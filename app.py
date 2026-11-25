@@ -121,8 +121,8 @@ def keep_choices() -> None:
 PAGES = {
     "현황": [
         st.Page(dashboard.render, title="장비 KPI 현황", url_path="home", default=True),
-        st.Page(equip_detail.render, title="장비별 가동률", url_path="equip"),
         st.Page(equip_status.render, title="장비 가동 현황", url_path="status"),
+        st.Page(equip_detail.render, title="장비별 가동률", url_path="equip"),
     ],
     "실적": [
         st.Page(input_page.render, title="장비 사용 등록", url_path="input"),
