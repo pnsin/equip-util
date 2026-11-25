@@ -208,7 +208,7 @@ def sidebar(local: bool) -> None:
         lk = '[data-testid="stSidebar"] [data-testid="stPageLink"] a'
         css.append(f'{lk} span::before {{display:none !important;}} '
                    f'{lk}::before {{content:""; width:6px; height:6px; border-radius:50%; background:#D6D2C8; flex:none; '
-                   f'transition:all .2s ease;}} {lk}:hover::before {{background:#A39F96;}} '
+                   f'transition:all .2s ease;}} {lk}:hover::before {{background:#736F66;}} '
                    f'{on}::before {{background:#D97757 !important; box-shadow:0 0 0 3px rgba(217,119,87,.2);}}')
         st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
         last = db.last_undo()

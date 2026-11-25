@@ -70,11 +70,11 @@ CSS = """<style>
 .st-key-ep_head {padding: 4px 0 8px !important; box-shadow: 0 -16px 0 var(--panel), 0 6px 10px -8px rgba(25,25,24,.5);}
 [class*="st-key-ep_long_"] details {border: none !important; background: rgba(242,239,233,.35); border-radius: 12px !important;}
 [class*="st-key-ep_long_"] summary {padding: 8px 12px !important; min-height: 0 !important;}
-[class*="st-key-ep_long_"] summary p {font-size: .82rem !important; font-weight: 700; color: #4A4741;}
+[class*="st-key-ep_long_"] summary p {font-size: .82rem !important; font-weight: 700; color: #3A3833;}
 [class*="st-key-ep_long_"] [data-testid="stExpanderDetails"] {padding: 0 8px 8px !important;}
 .ep-h {line-height: 1.25;}
 .ep-d {font-family: 'Nunito', 'Pretendard Variable', 'Pretendard', sans-serif; font-size: 1.3rem; font-weight: 900; color: var(--ink);}
-.ep-d em {font-style: normal; font-size: .95rem; color: #6B6860; font-weight: 700; margin-left: 4px;}
+.ep-d em {font-style: normal; font-size: .95rem; color: #55514A; font-weight: 700; margin-left: 4px;}
 .ep-n {display: block; font-size: .85rem; font-weight: 700; color: var(--accent); margin-top: 2px;}
 .st-key-ep_new {width: auto !important;}
 .st-key-ep_new button {border: none !important; background: var(--accent) !important; color: #fff !important; border-radius: 12px !important;
@@ -87,23 +87,23 @@ div[class*="st-key-ep_list"] button::before {content: ''; position: absolute; le
   border-radius: 50%; background: var(--chip-fg, #F2EFE9);}
 div[class*="st-key-ep_list"] button:hover {background: rgba(217,119,87,0.16);}
 div[class*="st-key-ep_list"] button div[data-testid="stMarkdownContainer"] {text-align: left; width: 100%;}
-div[class*="st-key-ep_list"] button p {margin: 0; font-size: .8rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6B6860;}
+div[class*="st-key-ep_list"] button p {margin: 0; font-size: .8rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #55514A;}
 div[class*="st-key-ep_list"] button p:first-child {font-weight: 700; font-size: .88rem; color: #191918;}
 div[class*="st-key-ep_list"] button > div {justify-content: flex-start !important; width: 100%; min-width: 0;}
 div[class*="st-key-ep_list"] button[data-testid="stBaseButton-primary"] {background: rgba(217,119,87,0.16) !important; box-shadow: inset 0 0 0 2px var(--accent);}
-div[class*="st-key-ep_list"] button[data-testid="stBaseButton-primary"] p {color: #6B6860 !important;}
+div[class*="st-key-ep_list"] button[data-testid="stBaseButton-primary"] p {color: #55514A !important;}
 div[class*="st-key-ep_list"] button[data-testid="stBaseButton-primary"] p:first-child {color: #191918 !important;}
 .st-key-ep_panel [data-testid="stMarkdownContainer"]:has(.ep-t, .ep-h, .ep-empty) {margin-bottom: 0 !important;}
-.ep-empty {font-size: .85rem; color: #6B6860; background: rgba(217,119,87,0.16); border-radius: 12px; padding: 12px; text-align: center;}
+.ep-empty {font-size: .85rem; color: #55514A; background: rgba(217,119,87,0.16); border-radius: 12px; padding: 12px; text-align: center;}
 div[class*="st-key-ep_row_test_"] button {--chip-fg: #9A3412;} div[class*="st-key-ep_row_chg_"] button {--chip-fg: #8A2E5A;} div[class*="st-key-ep_row_make_"] button {--chip-fg: #1E4D3B;}
 div[class*="st-key-ep_row_anal_"] button {--chip-fg: #4C3575;}
-.st-key-ep_form {border-top: 1px solid #E8E6DF; padding-top: 14px; gap: .65rem;}
+.st-key-ep_form {border-top: 1px solid #DCD8CE; padding-top: 14px; gap: .65rem;}
 .ep-t {font-weight: 800; font-size: 1.05rem; color: var(--ink); display: flex; align-items: center; gap: 8px;}
 .ep-t span {font-size: .72rem; font-weight: 800; padding: 2px 9px; border-radius: 999px;}
 .ep-path {margin: -8px 0 8px; font-size: .74rem; color: var(--muted); line-height: 1.45;}
 .ep-path span {display: inline-block; margin-right: 6px; padding: 0 8px; border-radius: 999px; font-weight: 700;
   background: var(--accent-bg); color: var(--accent);}
-.st-key-ep_form [data-testid="stWidgetLabel"] p {font-size: .8rem; font-weight: 700; color: #6B6860;}
+.st-key-ep_form [data-testid="stWidgetLabel"] p {font-size: .8rem; font-weight: 700; color: #55514A;}
 .st-key-ep_form [data-baseweb="select"] > div, .st-key-ep_form [data-baseweb="input"], .st-key-ep_form [data-baseweb="textarea"],
 .st-key-ep_form [data-testid="stNumberInputContainer"] {background: #F2EFE9 !important; border: 1.5px solid transparent !important; border-radius: 11px !important;}
 .st-key-ep_form [data-baseweb="input"] > div, .st-key-ep_form [data-baseweb="textarea"] > div,
@@ -116,7 +116,7 @@ div[class*="st-key-ep_row_anal_"] button {--chip-fg: #4C3575;}
   width: 28px; box-shadow: 0 1px 2px rgba(25,25,24,.06);}
 .st-key-ep_form [data-testid="stButtonGroup"] button {border-radius: 999px !important; padding: 2px 13px; min-height: 0; height: 32px;
   border: none !important; background: #F2EFE9;}
-.st-key-ep_form [data-testid="stButtonGroup"] button p {font-size: .82rem; font-weight: 600; color: #6B6860;}
+.st-key-ep_form [data-testid="stButtonGroup"] button p {font-size: .82rem; font-weight: 600; color: #55514A;}
 .st-key-ep_form [data-testid="stButtonGroup"] button[aria-checked="true"] {background: var(--accent) !important;}
 .st-key-ep_form [data-testid="stButtonGroup"] button[aria-checked="true"] p {color: #fff !important;}
 .st-key-ep_newcomp {margin-top: -.45rem;}
@@ -153,7 +153,7 @@ div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button[aria-checked="
   z-index: 2; opacity: 0; transition: opacity .12s;}
 .st-key-calgrid div[class*="st-key-er_"]:hover div[class*="st-key-x_"] {opacity: 1;}
 .st-key-calgrid div[class*="st-key-x_"] button {min-height: 0; height: 20px; width: 20px; padding: 0; border-radius: 4px;
-  background: var(--panel, #fff); border: 1px solid var(--line2, #E8E6DF); color: var(--muted, #6B6860);}
+  background: var(--panel, #fff); border: 1px solid var(--line2, #DCD8CE); color: var(--muted, #55514A);}
 .st-key-calgrid div[class*="st-key-x_"] button:hover {background: #C84B31; border-color: #C84B31; color: #fff;}
 .st-key-calgrid div[class*="st-key-x_"] button span {font-size: 14px !important;}
 /* 드래그 선택 */
@@ -179,20 +179,20 @@ div[class*="st-key-ep_act_"] [data-testid="stButtonGroup"] button[aria-checked="
 .st-key-calgrid div[class*="st-key-cardv_"], .st-key-calgrid div[class*="st-key-cardrv_"] {top: calc(100% + 8px); bottom: auto;}
 div[class*="st-key-cardv_"] .cal-card::after, div[class*="st-key-cardrv_"] .cal-card::after {bottom: auto; top: -7px;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {z-index: 40;}
-.cal-card {background: #FFFFFF; border: 1px solid #E8E6DF; border-radius: 14px;
+.cal-card {background: #FFFFFF; border: 1px solid #DCD8CE; border-radius: 14px;
   box-shadow: 0 14px 32px rgba(25,25,24,.12); padding: 13px 15px; color: #191918;}
 .cal-card::after {content: ''; position: absolute; bottom: -7px; left: 26px; width: 12px; height: 12px;
   background: #FFFFFF; transform: rotate(45deg); border-radius: 2px;}
 div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 .cal-card .cc-h {display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
-  padding-bottom: 8px; border-bottom: 1px solid #EAE7DF;}
+  padding-bottom: 8px; border-bottom: 1px solid #E0DCD3;}
 .cal-card .cc-d {font-size: 1.05rem; font-weight: 700; color: #191918;}
 .cal-card .cc-sum {font-size: .85rem; color: #C26344; font-weight: 700;}
 .cal-card .cc-e {padding: 7px 10px; border-left: 3px solid var(--accent, #D97757); margin: 6px 0;
   background: #FAF9F5; border-radius: 0 8px 8px 0;}
 .cal-card .cc-n {font-size: .95rem; font-weight: 700; line-height: 1.35; margin-bottom: 4px; word-break: keep-all; color: #191918;}
 .cal-card .cc-r {display: grid; grid-template-columns: 3.2em 1fr; gap: 2px 8px; font-size: .88rem; line-height: 1.5;}
-.cal-card .cc-r span:nth-child(odd) {color: #6B6860;}
+.cal-card .cc-r span:nth-child(odd) {color: #55514A;}
 .cal-card .cc-r span:nth-child(even) {color: #191918 !important;}
 .cal-card .cc-sum {color: #C26344 !important;}
 .cal-card .cc-h2 {font-weight: 700;}
@@ -213,13 +213,13 @@ div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 [data-testid="stElementContainer"]:has(> div .cal-chips) {position: relative; z-index: 1; pointer-events: none;}
 .cal-chips {display: flex; gap: 4px; margin: 0 0 4px;}
 .cal-chip {flex: 1; text-align: center; font-size: .68rem; font-weight: 800; padding: 2px 0; border-radius: 999px;
-  background: #F2EFE9; color: #6B6860; white-space: nowrap;}
+  background: #F2EFE9; color: #55514A; white-space: nowrap;}
 .cal-chip.on.c-test {background: #FDE8E4; color: #9A3412;} .cal-chip.on.c-make {background: #E6F2EC; color: #1E4D3B;}
-.cal-chip.on.c-anal {background: #EFEBF8; color: #4C3575;} .cal-chip.on.c-etc {background: #F2EFE9; color: #6B6860;}
+.cal-chip.on.c-anal {background: #EFEBF8; color: #4C3575;} .cal-chip.on.c-etc {background: #F2EFE9; color: #55514A;}
 .cal-chip.c-etc:not(.on) {display: none;}
 /* 빈 구역: 색 없이 얇은 줄과 흐린 글자만 */
 .st-key-calgrid div[class*="st-key-sec_"]:not(:has(div[class*="st-key-er_"])):not(:has(div[class*="st-key-cf_"])) {
-  background: transparent; border-radius: 0; padding: 1px 5px 3px; border-bottom: 1px solid #E8E6DF;}
+  background: transparent; border-radius: 0; padding: 1px 5px 3px; border-bottom: 1px solid #DCD8CE;}
 .cal-sec-h.none {opacity: .9;}
 /* ✕ 누른 뒤 '삭제할까요?' */
 .st-key-calgrid div[class*="st-key-cf_"] {pointer-events: auto; position: relative; z-index: 3; gap: 4px !important;
@@ -232,7 +232,7 @@ div[class*="st-key-cardr_"] .cal-card::after {left: auto; right: 26px;}
 .st-key-calgrid div[class*="st-key-sec_chg_"] {--sec-bg: #F6E3EC; --sec-line: #8A2E5A33; --sec-fg: #8A2E5A; --chip-fg: #8A2E5A;}
 .st-key-calgrid div[class*="st-key-sec_make_"] {--sec-bg: #E6F2EC; --sec-line: #1E4D3B33; --sec-fg: #1E4D3B; --chip-fg: #1E4D3B;}
 .st-key-calgrid div[class*="st-key-sec_anal_"] {--sec-bg: #EFEBF8; --sec-line: #4C357533; --sec-fg: #4C3575; --chip-fg: #4C3575;}
-.st-key-calgrid div[class*="st-key-sec_etc_"] {--sec-bg: #F2EFE9; --sec-line: #3F3D3833; --sec-fg: #6B6860; --chip-fg: #6B6860;}
+.st-key-calgrid div[class*="st-key-sec_etc_"] {--sec-bg: #F2EFE9; --sec-line: #3F3D3833; --sec-fg: #55514A; --chip-fg: #55514A;}
 /* 구분 필터 */
 div[class*="st-key-cal_cats"] {margin: .1rem 0 .4rem;}
 div[class*="st-key-cal_cats"] button {border-radius: 999px !important; font-weight: 600;}
@@ -244,7 +244,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 /* 아래쪽에 떠 있는 작은 도구 막대 (선택·복사 상태) */
 .st-key-cal_selbar, .st-key-cal_delbar {position: fixed !important; left: 50%; bottom: 26px; transform: translateX(-50%);
   z-index: 1000; width: auto !important; max-width: min(760px, calc(100vw - 32px)); flex-wrap: nowrap !important;
-  padding: 6px 8px 6px 18px; border-radius: 999px; background: #FFFFFF; color: #191918; border: 1px solid #E8E6DF;
+  padding: 6px 8px 6px 18px; border-radius: 999px; background: #FFFFFF; color: #191918; border: 1px solid #DCD8CE;
   box-shadow: 0 12px 30px rgba(25,25,24,.14); animation: calPop .18s ease-out;}
 .st-key-cal_delbar {bottom: 84px; background: var(--panel); border: 1px solid rgba(200,75,49,0.3); box-shadow: 0 12px 30px rgba(200,75,49,.15);}
 @keyframes calPop {from {opacity: 0; transform: translate(-50%, 8px);} to {opacity: 1; transform: translate(-50%, 0);}}
@@ -255,7 +255,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 .st-key-cal_selbar [data-testid="stElementContainer"]:has(button) {width: auto !important;}
 .st-key-cal_selbar button {background: #F2EFE9 !important; border: none !important; color: #191918 !important;
   border-radius: 999px !important; min-height: 0; height: 34px; padding: 0 14px;}
-.st-key-cal_selbar button:hover {background: #EAE7DF !important;}
+.st-key-cal_selbar button:hover {background: #E0DCD3 !important;}
 .st-key-cal_selbar button p {font-size: .85rem;}
 .st-key-cal_delbar button {border-radius: 999px !important; min-height: 0; height: 34px; padding: 0 16px;}
 .st-key-cal_sel_clear button {padding: 0 10px !important;}
@@ -270,7 +270,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button {justify-content: flex-start; text-align: left;}
 .st-key-calgrid div[class*="st-key-day_"] button > div,
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button > div {width: 100%; min-width: 0; justify-content: flex-start;}
-.st-key-calgrid div[class*="st-key-day_"] button p {font-size: 0.76rem; color: #6B6860;}
+.st-key-calgrid div[class*="st-key-day_"] button p {font-size: 0.76rem; color: #55514A;}
 .st-key-calgrid div[class*="st-key-day_"] button strong {font-family: 'Nunito', 'Pretendard Variable', 'Pretendard', sans-serif;
   font-size: 1.12rem; font-weight: 800; letter-spacing: -.01em; display: inline-flex; align-items: center;
   justify-content: center; min-width: 1.75em; height: 1.75em; border-radius: 999px; margin-right: 2px;}
@@ -283,7 +283,7 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   transition: transform .1s ease, box-shadow .1s ease;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button:hover {transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(25,25,24,.12); filter: saturate(1.15);}
-.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p {font-size: 0.72rem; line-height: 1.4; color: #6B6860;}
+.st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p {font-size: 0.72rem; line-height: 1.4; color: #55514A;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:first-child {font-weight: 700; font-size: .78rem; color: #191918;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:first-child::before {content: var(--cat-label, ""); display: inline-block;
   font-size: .62rem; font-weight: 800; padding: 0 6px; margin-right: 5px; border-radius: 999px; line-height: 1.6;
@@ -292,11 +292,11 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
 .st-key-calgrid div[class*="st-key-cell_"] {background: var(--panel); border: 2px solid transparent !important; border-radius: 18px !important;
   box-shadow: 0 1px 2px rgba(25,25,24,.05), 0 4px 14px rgba(25,25,24,.04); transition: box-shadow .15s ease;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 2px 4px rgba(25,25,24,.06), 0 10px 24px rgba(25,25,24,.10);}
-.st-key-calgrid .cal-wk {text-align: center; font-size: 1.05rem; font-weight: 800; color: #6B6860; padding: 2px 0 4px;}
+.st-key-calgrid .cal-wk {text-align: center; font-size: 1.05rem; font-weight: 800; color: #55514A; padding: 2px 0 4px;}
 .st-key-calgrid .cal-wk.sat {color: #3B6EA8;} .st-key-calgrid .cal-wk.sun {color: #C84B31;}
 .st-key-calgrid .cal-out {min-height: 230px; border-radius: 18px; border: none; padding: 8px 10px;
-  font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1.05rem; color: #A39F96; background: #F7F5F0;}
-.st-key-calgrid div[class*="st-key-more_"] p {font-size: 0.7rem; color: #6B6860; margin: 0 0 0 4px;}
+  font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1.05rem; color: #736F66; background: #F7F5F0;}
+.st-key-calgrid div[class*="st-key-more_"] p {font-size: 0.7rem; color: #55514A; margin: 0 0 0 4px;}
 /* 휴대폰: 7칸을 한 줄에 유지한 작은 달력 (날짜·건수만, 누르면 아래에 그날 실적) */
 .cal-mobile-hint {display: none;}
 .cal-mini, .cal-agenda {display: none;}
@@ -328,22 +328,22 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
     left: 0; right: 0; top: 27px; width: auto !important; z-index: 1;}
   /* 구분·건수·시간이 줄마다 같은 자리에 오게 왼쪽 정렬 표 (2026-11-20) */
   .cal-mini {display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 2px;
-    padding: 0 3px; line-height: 1.25; font-size: .47rem; font-weight: 600; color: #4A4741; white-space: nowrap;}
+    padding: 0 3px; line-height: 1.25; font-size: .47rem; font-weight: 600; color: #3A3833; white-space: nowrap;}
   .cal-mini b, .cal-mini span {letter-spacing: -.05em;}
   .cal-mini div {display: contents;}
   .cal-mini b {font-weight: 800; text-align: left;}
   .cal-mini span {text-align: left;}
-  .cal-mini span i {font-style: normal; color: #A39F96;}
+  .cal-mini span i {font-style: normal; color: #736F66;}
   /* 달력 아래 이달 실적 목록 */
-  .cal-agenda {display: block; margin-top: .3rem; border-top: 1px solid var(--line, #E8E6DF); padding-top: .5rem; text-align: left;}
+  .cal-agenda {display: block; margin-top: .3rem; border-top: 1px solid var(--line, #DCD8CE); padding-top: .5rem; text-align: left;}
   .cal-agenda .ag-h {display: flex; align-items: baseline; gap: 8px; font-size: .82rem; font-weight: 800; color: #191918; margin-bottom: .35rem;}
-  .cal-agenda .ag-h small {margin-left: auto; font-size: .66rem; font-weight: 600; color: #A39F96;}
-  .cal-agenda .ag-none {font-size: .78rem; color: #6B6860; text-align: center;}
+  .cal-agenda .ag-h small {margin-left: auto; font-size: .66rem; font-weight: 600; color: #736F66;}
+  .cal-agenda .ag-none {font-size: .78rem; color: #55514A; text-align: center;}
   .cal-agenda summary {list-style: none; cursor: pointer; display: flex; align-items: center; gap: 7px;}
   .cal-agenda summary::-webkit-details-marker {display: none;}
-  .cal-agenda summary::after {content: '›'; margin-left: 4px; color: #A39F96; font-weight: 700; transition: transform .15s;}
+  .cal-agenda summary::after {content: '›'; margin-left: 4px; color: #736F66; font-weight: 700; transition: transform .15s;}
   .cal-agenda details[open] > summary::after {transform: rotate(90deg);}
-  .cal-agenda summary span {margin-left: auto; flex: none; font-size: .72rem; font-weight: 700; color: #6B6860;}
+  .cal-agenda summary span {margin-left: auto; flex: none; font-size: .72rem; font-weight: 700; color: #55514A;}
   .cal-agenda .ag-cat {margin-bottom: 6px; border-radius: 10px; background: rgba(242,239,233,.35);}
   .cal-agenda .ag-cat > summary {padding: 8px 10px; font-size: .82rem;}
   .cal-agenda .ag-cat > summary i {width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none;}
@@ -351,11 +351,11 @@ div[data-baseweb="tooltip"] [data-testid="stTooltipContent"] p {margin: 0;}
   .cal-agenda .ag-eq {border-top: 1px solid rgba(232,230,223,.6); margin: 0 10px;}
   .cal-agenda .ag-eq > summary {padding: 7px 0; font-size: .78rem;}
   .cal-agenda .ag-eq > summary b {min-width: 0; color: #191918; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-  .cal-agenda .ag-r {display: flex; align-items: center; gap: 8px; padding: 3px 0 3px 10px; font-size: .72rem; color: #6B6860;}
+  .cal-agenda .ag-r {display: flex; align-items: center; gap: 8px; padding: 3px 0 3px 10px; font-size: .72rem; color: #55514A;}
   .cal-agenda .ag-r:last-child {padding-bottom: 8px;}
   .cal-agenda .ag-d {flex: none; width: 72px; font-weight: 700;}
   .cal-agenda .ag-c {flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-  .cal-agenda .ag-hr {flex: none; font-weight: 700; color: #4A4741;}
+  .cal-agenda .ag-hr {flex: none; font-weight: 700; color: #3A3833;}
 }
 /* ===== v3: 작은 달력 카드 + 작은 입력 카드 ===== */
 .st-key-calcard {background: var(--panel); border-radius: 22px; padding: 16px 16px 14px;
@@ -372,13 +372,13 @@ div[class*="st-key-cal_cats"] {margin: 0 !important;}
 div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 0; height: 28px; padding: 0 11px;}
 .st-key-calgrid [data-testid="stHorizontalBlock"] {gap: 6px !important;}
 .st-key-calgrid > [data-testid="stLayoutWrapper"], .st-key-calgrid {gap: 6px !important;}
-.st-key-calgrid .cal-wk {font-size: .82rem !important; font-weight: 800; color: #6B6860; padding: 0 0 2px !important;}
+.st-key-calgrid .cal-wk {font-size: .82rem !important; font-weight: 800; color: #55514A; padding: 0 0 2px !important;}
 .st-key-calgrid .cal-wk.sat {color: #3B6EA8 !important;} .st-key-calgrid .cal-wk.sun {color: #C84B31 !important;}
 .st-key-calgrid div[class*="st-key-cell_"] {min-height: 112px !important; padding: 32px 6px 7px !important; gap: 3px !important;
   background: rgba(217,119,87,0.16); border-radius: 14px !important; box-shadow: none !important; border: 1.5px solid transparent !important;}
 .st-key-calgrid div[class*="st-key-cell_"]:hover {box-shadow: 0 4px 14px rgba(25,25,24,.08) !important; background: var(--panel);}
 .st-key-calgrid .cal-out {min-height: 112px !important; background: transparent !important; border: none !important;
-  font-size: .9rem !important; padding: 8px 10px !important; color: #6B6860 !important;}
+  font-size: .9rem !important; padding: 8px 10px !important; color: #55514A !important;}
 .st-key-calgrid div[class*="st-key-day_"] button {padding: 5px 6px !important; border-radius: 14px !important;}
 .st-key-calgrid div[class*="st-key-day_"] button strong {font-size: .9rem !important; min-width: 24px !important; height: 24px !important;}
 .st-key-calgrid div[class*="st-key-day_"] button:hover strong {background: rgba(217,119,87, .10);}
@@ -387,7 +387,7 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
 .st-key-calgrid [data-testid="stMarkdownContainer"]:has(.cal-dh) {margin: 0 !important;}
 .cal-dh {display: flex; align-items: center; gap: 4px; height: 18px;}
 .cal-dots {display: flex; gap: 2px;} .cal-dots i {width: 6px; height: 6px; border-radius: 50%; display: block;}
-.cal-tot {margin-left: auto; font-size: .7rem; font-weight: 700; color: #6B6860;}
+.cal-tot {margin-left: auto; font-size: .7rem; font-weight: 700; color: #55514A;}
 .c-test {background: #9A3412;} .c-make {background: #1E4D3B;} .c-anal {background: #4C3575;}
 .c-edu {background: #92400E;} .c-sup {background: #2C5470;} .c-etc {background: #F2EFE9;}
 /* 스티커 한 줄: 장비 이름 ··· 시간 */
@@ -403,7 +403,7 @@ div[class*="st-key-cal_cats"] [data-testid="stButtonGroup"] button {min-height: 
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button:hover {transform: none; filter: brightness(.97);}
 .st-key-calgrid div[class*="st-key-x_"] {top: -4px !important; right: -4px !important;}
 .st-key-calgrid div[class*="st-key-x_"] button {height: 18px !important; width: 18px !important; border-radius: 50% !important;}
-.st-key-calgrid div[class*="st-key-more_"] p {font-size: .68rem !important; font-weight: 700; color: #6B6860; margin-left: 6px;}
+.st-key-calgrid div[class*="st-key-more_"] p {font-size: .68rem !important; font-weight: 700; color: #55514A; margin-left: 6px;}
 .st-key-calgrid div[class*="st-key-cf_"] {padding: 4px 5px !important; gap: 3px !important;}
 /* 입력 카드 */
 .st-key-calwrap [data-testid="stHorizontalBlock"] {align-items: stretch !important;}
@@ -430,9 +430,9 @@ div[class*="st-key-ep_list"] button p {font-size: .76rem !important;}
 div[class*="st-key-ep_list"] button p:first-child {flex: 1; min-width: 0; font-size: .8rem !important;}
 div[class*="st-key-ep_list"] button p:last-child {flex: none;}
 .ep-empty {padding: 9px !important; font-size: .8rem !important;}
-.st-key-ep_form {border-top: 1px dashed #E8E6DF !important; padding-top: 10px !important; gap: .5rem !important;}
+.st-key-ep_form {border-top: 1px dashed #DCD8CE !important; padding-top: 10px !important; gap: .5rem !important;}
 .ep-t {font-size: .92rem !important;}
-.st-key-ep_form [data-testid="stWidgetLabel"] p, .num-l {font-size: .72rem !important; font-weight: 700; color: #6B6860 !important;}
+.st-key-ep_form [data-testid="stWidgetLabel"] p, .num-l {font-size: .72rem !important; font-weight: 700; color: #55514A !important;}
 .num-l {margin-bottom: 4px;}
 .st-key-ep_form [data-baseweb="select"] > div, .st-key-ep_form [data-baseweb="input"] {min-height: 36px;}
 .st-key-ep_form [data-baseweb="select"] div, .st-key-ep_form input, .st-key-ep_form textarea {font-size: .82rem !important;}
@@ -448,7 +448,7 @@ div[class*="st-key-numr_"] {background: rgba(217,119,87,0.16); border-radius: 10
 div[class*="st-key-numr_"] [data-testid="stElementContainer"]:has(button) {width: auto !important; flex: none;}
 div[class*="st-key-numr_"] button {min-height: 0 !important; height: 28px; width: 28px; padding: 0 !important; border: none !important;
   background: var(--panel) !important; border-radius: 8px !important; box-shadow: 0 1px 2px rgba(25,25,24,.06);}
-div[class*="st-key-numr_"] button p {font-size: .9rem !important; color: #6B6860; font-weight: 700;}
+div[class*="st-key-numr_"] button p {font-size: .9rem !important; color: #55514A; font-weight: 700;}
 div[class*="st-key-numr_"] [data-baseweb="input"] {background: transparent !important; border: none !important; min-height: 28px !important;}
 div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding: 0 2px !important;}
 .st-key-ep_form [data-testid="stExpander"] details {border: none !important; background: transparent;}
@@ -457,7 +457,7 @@ div[class*="st-key-numr_"] input {text-align: center; font-weight: 700; padding:
 /* ===== v4: 구역형 달력 (시험/제조/분석 줄) + 시안 색 ===== */
 .st-key-calgrid div[class*="st-key-cell_"] {min-height: 168px !important; padding: 34px 6px 8px !important; gap: 4px !important;}
 .st-key-calgrid .cal-out {min-height: 168px !important;}
-.st-key-calgrid div[class*="st-key-day_"] button p {font-size: .72rem; color: #6B6860; font-weight: 700;}
+.st-key-calgrid div[class*="st-key-day_"] button p {font-size: .72rem; color: #55514A; font-weight: 700;}
 .st-key-calgrid div[class*="st-key-sec_"] {background: transparent !important; padding: 0 !important; gap: 3px !important;
   border: none !important; border-radius: 0 !important;}
 .st-key-calgrid div[class*="st-key-sec_"]:not(:has(div[class*="st-key-er_"])):not(:has(div[class*="st-key-cf_"])) {
@@ -530,7 +530,7 @@ div[class*="st-key-ep_ch_"] [data-testid="stButtonGroup"] button[aria-pressed="t
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:nth-child(1) {font-size: .76rem !important; font-weight: 800; color: #191918 !important;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:nth-child(2) {font-size: .74rem !important; font-weight: 800; color: var(--chip-fg) !important;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button p:nth-child(3) {grid-column: 1 / -1; font-size: .68rem !important;
-  font-weight: 500 !important; color: #6B6860 !important;}
+  font-weight: 500 !important; color: #55514A !important;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button > div > span {flex: 1 1 auto; min-width: 0; width: 100%;}
 .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button > div, .st-key-calgrid :is(div[class*="st-key-ent_"], div[class*="st-key-chg_"]) button div[data-testid="stMarkdownContainer"] {
   width: 100% !important; min-width: 0;}

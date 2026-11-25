@@ -45,9 +45,9 @@ CSS = """<style>
   mask-size: var(--ms) 100%; -webkit-mask-size: var(--ms) 100%;}
 .bat .cap {width: 6px; height: 14px; margin-left: 3px; border-radius: 0 4px 4px 0;
   background: color-mix(in srgb, var(--c) 55%, var(--line));}
-.bat .goal {position: absolute; background: none; border-radius: 0; padding: 0; margin: 0; box-shadow: none; top: -9px; bottom: -9px; width: 0; border-left: 2px dashed #6B6860; opacity: .9;}
+.bat .goal {position: absolute; background: none; border-radius: 0; padding: 0; margin: 0; box-shadow: none; top: -9px; bottom: -9px; width: 0; border-left: 2px dashed #55514A; opacity: .9;}
 .bat .goal em {font-style: normal; position: absolute; top: -20px; left: 0; transform: translateX(-50%); font-size: 12px; font-weight: 700;
-  color: #6B6860; white-space: nowrap;}
+  color: #55514A; white-space: nowrap;}
 .kc .meta {display: flex; justify-content: center; gap: 28px; margin-top: 18px; font-size: 15px; color: var(--muted);}
 .kc .meta b {display: block; font-size: 22px; color: var(--ink); font-weight: 800; margin-top: 2px;}
 .kc .meta b.hit {color: var(--c);}
@@ -65,16 +65,16 @@ CSS = """<style>
 .ks .v small {font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 3px 0 1px;}
 .ks .cl:first-child .v, .ks .cl:first-child .v small {color: var(--c);} .ks .cl:first-child .v {font-size: 28px;}
 .ks .v.d {font-size: 17px;}
-.ks .s {font-size: 11.5px; color: var(--muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.ks .s {font-size: 12px; color: var(--muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 @media (max-width: 900px) {.kh, .ks {grid-template-columns: 1fr; gap: 10px;}}
 @media (max-width: 640px) {
   .kc {padding: 12px 14px 12px; border-radius: 14px;} .kc .lb {font-size: 14px;} .kc .num {font-size: 34px; margin: 2px 0 20px;}
   .kc .num small {font-size: 18px;} .bat .cell {height: 22px; border-radius: 8px;} .bat .fill {border-radius: 4px;}
   .kc .meta {gap: 6px; font-size: 13px; margin-top: 10px;} .kc .meta > div {display: flex; gap: 5px; align-items: baseline;}
   .kc .meta b {display: inline; font-size: 15px; margin: 0;} 
-  .ks > div {min-height: 76px;} .ks .cl {padding: 8px 3px;} .ks .t {font-size: 11px; letter-spacing: -.02em;} .ks .v {font-size: 17px;}
-  .ks .cl:first-child .v {font-size: 19px;} .ks .v small {font-size: 11px; margin: 0 1px;} .ks .v.d {font-size: 14px;} .ks .s {font-size: 10.5px;}
-  .ks .cn .t {font-size: 10.5px; letter-spacing: -.03em;}}
+  .ks > div {min-height: 76px;} .ks .cl {padding: 8px 3px;} .ks .t {font-size: 12px; letter-spacing: -.02em;} .ks .v {font-size: 17px;}
+  .ks .cl:first-child .v {font-size: 19px;} .ks .v small {font-size: 12px; margin: 0 1px;} .ks .v.d {font-size: 14px;} .ks .s {font-size: 11.5px;}
+  .ks .cn .t {font-size: 11.5px; letter-spacing: -.03em;}}
 </style>"""
 
 

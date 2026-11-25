@@ -35,23 +35,23 @@ CSS = """<style>
 .tl2-in {position: relative; min-width: calc(var(--nw) + var(--n) * var(--md));}
 .tl2 .cols {position: absolute; top: 0; bottom: 0; left: var(--nw); right: 0; pointer-events: none;}
 .tl2 .cols i {position: absolute; top: 62px; bottom: 0;}
-.tl2 .cols i.wl {top: 6px; width: 0; border-left: 1px solid #EAE7DF;}
+.tl2 .cols i.wl {top: 6px; width: 0; border-left: 1px solid #E0DCD3;}
 .tl2 .cols i.off {background: rgba(120,104,72,.06);}
 .tl2 .cols i.td {background: rgba(217,119,87,.13); box-shadow: inset 1px 0 0 rgba(217,119,87,.5), inset -1px 0 0 rgba(217,119,87,.5);}
 .tl2 .r {display: grid; grid-template-columns: var(--nw) 1fr; position: relative;}
 .tl2 .nm {position: sticky; left: 0; z-index: 2; background: var(--panel); padding: 6px 14px 6px 20px; min-width: 0;
   display: flex; flex-direction: column; justify-content: center; text-align: left;}
 .tl2 .nm b {font-weight: 650; font-size: .86rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.tl2 .nm small {color: #A39F96; font-size: .72rem; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.tl2 .nm .sd {display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: #E8E6DF;}
+.tl2 .nm small {color: #736F66; font-size: .72rem; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.tl2 .nm .sd {display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: #DCD8CE;}
 .tl2 .nm .sd.d-now {background: #4A6B5D; box-shadow: 0 0 0 3px rgba(74,107,93,.18);}
 .tl2 .nm .sd.d-soon {background: #D4A359;}
-.tl2 .hd {height: 62px; border-bottom: 1px solid #EAE7DF;}
+.tl2 .hd {height: 62px; border-bottom: 1px solid #E0DCD3;}
 .tl2 .hd .dy small {display: block; font-size: .62rem; line-height: 1.15; font-weight: inherit; opacity: .85;}
 .tl2 .hd .ln {position: relative;}
-.tl2 .hd .wk {position: absolute; top: 9px; font-size: .74rem; color: #6B6860; font-weight: 650; white-space: nowrap; display: flex; justify-content: center;}
+.tl2 .hd .wk {position: absolute; top: 9px; font-size: .74rem; color: #55514A; font-weight: 650; white-space: nowrap; display: flex; justify-content: center;}
 .tl2 .hd .wk.r {justify-content: flex-end; padding-right: 4px;}
-.tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #A39F96; text-align: center;}
+.tl2 .hd .dy {position: absolute; bottom: 7px; font-size: .68rem; color: #736F66; text-align: center;}
 .tl2 .hd .dy.off {color: #C84B31; font-weight: 650;}
 .tl2 .hd .dy.td b {display: block; margin: 0 2px; border-radius: 6px; padding: 1px 0; background: #D97757; color: #fff; font-weight: 700;}
 .tl2 .grpw {position: relative; z-index: 3; margin-top: 18px; border-top: 2px solid var(--gc); background: color-mix(in srgb, var(--gc) 5%, #FFFFFF);}
@@ -62,51 +62,51 @@ CSS = """<style>
 .tl2 .grp i {width: 8px; height: 8px; border-radius: 50%;}
 .tl2 .grpw .grp {font-size: .92rem;}
 .tl2 .grpw .grp i {width: 10px; height: 10px;}
-.tl2 .grp span {color: #6B6860; font-weight: 500; font-size: .75rem;}
+.tl2 .grp span {color: #55514A; font-weight: 500; font-size: .75rem;}
 .tl2 .grp span em {font-style: normal; color: var(--ink); font-weight: 650;}
-.tl2 .dv {border-top: 1px solid #EAE7DF;}
-.tl2 .dv.kid {border-top: 1px dashed #EAE7DF;}
+.tl2 .dv {border-top: 1px solid #E0DCD3;}
+.tl2 .dv.kid {border-top: 1px dashed #E0DCD3;}
 .tl2 .dv.kid .nm {padding-left: calc(38px + var(--dp, 0) * 14px);}
-.tl2 .dv.kid .nm b {font-weight: 500; color: #4A4741; font-size: .8rem;}
+.tl2 .dv.kid .nm b {font-weight: 500; color: #3A3833; font-size: .8rem;}
 .tl2 .ln {position: relative; overflow: hidden; min-height: 38px;}
 .tl2 .bar {position: absolute; height: 24px; border-radius: 7px; display: flex; align-items: center; padding: 0 9px;
   font-size: .75rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: var(--cb); color: var(--c); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent); box-sizing: border-box;}
-.tl2 .bar.bdone {background: #F2EFE9; box-shadow: none; color: #8C877C; font-weight: 550;}
+.tl2 .bar.bdone {background: #F2EFE9; box-shadow: none; color: #625E56; font-weight: 550;}
 .tl2 .bar.cl {border-top-left-radius: 0; border-bottom-left-radius: 0;}
 .tl2 .bar.cr {border-top-right-radius: 0; border-bottom-right-radius: 0;}
 .tl2 .bar span {position: relative; z-index: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
 .tl2 .bar small.pd {font-weight: 600; opacity: .72; margin-left: 6px; font-size: .7rem;}
 .tl2 .out {position: absolute; height: 24px; display: block; line-height: 24px; overflow: hidden; text-overflow: ellipsis; font-size: .75rem; font-weight: 650;
   color: #191918; white-space: nowrap;}
-.tl2 .out small {font-weight: 500; color: #6B6860; font-size: .7rem;}
+.tl2 .out small {font-weight: 500; color: #55514A; font-size: .7rem;}
 .tl2 .out.bdone {opacity: .5;}
 .tl2 .chx {display: none;} .tl2.all .chx {display: grid;}
-.tl2 .chx .nm b {font-size: .74rem; color: #6B6860; font-weight: 600; padding-left: 22px;}
+.tl2 .chx .nm b {font-size: .74rem; color: #55514A; font-weight: 600; padding-left: 22px;}
 .tl2 .chx .ln {min-height: 26px;}
 .tl2 .chx .nm {padding-top: 2px; padding-bottom: 2px;}
 .tl2 .chx .bar {height: 20px; font-size: .7rem;} .tl2 .chx .out {height: 20px;}
 .tl2 .dv.cb .nm small {padding-left: 0;}
-.tl2 .free {position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: .72rem; color: #A39F96;}
+.tl2 .free {position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: .72rem; color: #736F66;}
 .tl2 label.es-ck {display: flex; align-items: center; gap: 7px; cursor: pointer; min-width: 0;}
 .tl2 label.es-ck input {display: none;}
 .tl2 label.es-ck i {font-style: normal; flex: none; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #D97757;
   color: #C26344; font-size: 12px; line-height: 12px; text-align: center; font-weight: 700;}
 .tl2 label.es-ck:has(input:checked) i {background: #D97757; color: #fff; border-color: #D97757;}
-.es-idle .chip small {color: #A39F96; font-size: .7rem; margin-left: 2px;}
+.es-idle .chip small {color: #736F66; font-size: .7rem; margin-left: 2px;}
 .es-idle {background: var(--panel); border-radius: 18px; padding: 14px 20px; margin-top: 12px;}
 .es-idle summary {list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 700;
   color: var(--ink);}
 .es-idle summary::-webkit-details-marker {display: none;}
-.es-idle summary span {color: #6B6860; font-weight: 500; font-size: .76rem;}
+.es-idle summary span {color: #55514A; font-weight: 500; font-size: .76rem;}
 .es-idle summary em {margin-left: auto; font-style: normal; font-size: .76rem; color: #C26344; font-weight: 600;}
 .es-idle summary em:before {content: "펼치기 ▾";} .es-idle[open] summary em:before {content: "접기 ▴";}
 .es-idle .ig {display: grid; grid-template-columns: 110px 1fr; gap: 10px 12px; margin-top: 12px; text-align: left;}
-.es-idle .k {font-size: .76rem; color: #6B6860; display: flex; gap: 6px; align-items: center; height: 26px;}
+.es-idle .k {font-size: .76rem; color: #55514A; display: flex; gap: 6px; align-items: center; height: 26px;}
 .es-idle .k i {width: 7px; height: 7px; border-radius: 50%;}
 .es-idle .chips {display: flex; flex-wrap: wrap; gap: 6px;}
-.es-idle .chip {font-size: .76rem; color: #4A4741; background: #F2EFE9; border-radius: 999px; padding: 4px 11px;}
-.es-leg {display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; font-size: .74rem; color: #6B6860; margin-top: 12px;}
+.es-idle .chip {font-size: .76rem; color: #3A3833; background: #F2EFE9; border-radius: 999px; padding: 4px 11px;}
+.es-leg {display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; font-size: .74rem; color: #55514A; margin-top: 12px;}
 .es-leg span {display: flex; align-items: center; gap: 6px;}
 .es-leg i {width: 16px; height: 10px; border-radius: 3px; display: inline-block;}
 @media (max-width: 640px) {
@@ -304,7 +304,7 @@ def _device_board(eq: pd.DataFrame, logs: pd.DataFrame, groups: dict, want: str,
     bk = status.bars(logs, w0, w1)
     rws = status.rows(eq, groups, bk, w0, w1, want, center)
     if not rws:
-        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#6B6860'>이 구분·센터에 장비가 없어요.</div>",
+        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#55514A'>이 구분·센터에 장비가 없어요.</div>",
                     unsafe_allow_html=True)
         return
     by_eq: dict[int, list[dict]] = {}
@@ -399,7 +399,7 @@ def _charger_board(center: str, all_open: bool, today: dt.date) -> None:
     if center != "전체":
         stt = stt[stt["center"] == center]
     if stt.empty:
-        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#6B6860'>이 센터에 충방전기가 없어요.</div>",
+        st.markdown("<div class='tl2' style='padding:28px;text-align:center;color:#55514A'>이 센터에 충방전기가 없어요.</div>",
                     unsafe_allow_html=True)
         return
     hol, day_px, cols, hd = _frame(w0, w1, md, today)

@@ -27,7 +27,7 @@ DOC_TAG = {"설명서": ("PDF", "pink"), "SOP": ("SOP", "blue"), "사양서": ("
 # ── 장비 친구들: 사진이 없을 때 대신 나오는 그림 (이름으로 고름) ───────────────
 
 # 2026-11-06 다크 명세서: 귀여운 그림 대신 미니멀한 설비 선 아이콘
-_LN = 'stroke="#A39F96" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"'
+_LN = 'stroke="#736F66" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"'
 ICONS = {
     "mix": ("#F2EFE9", f'<path d="M16 26h32l-4 22a5 5 0 0 1-5 4H25a5 5 0 0 1-5-4z" {_LN}/><path d="M12 26h40M32 10v24" {_LN}/>'),
     "roll": ("#F2EFE9", f'<circle cx="22" cy="24" r="10" {_LN}/><circle cx="22" cy="24" r="3" {_LN}/><path d="M10 46h44M32 24h20" {_LN}/>'),
@@ -106,12 +106,12 @@ CSS = """<style>
 .ic .cd {display: flex; align-items: center; gap: .4rem; margin-top: .3rem; font-size: .82rem; font-variant-numeric: tabular-nums;}
 /* 2026-11-18 사용자 요청: 이 번호가 아이튜브 번호인 걸 알 수 있게 'i-Tube No.' 이름표 + 더 밝은 글자색 */
 .it {flex: none; font-size: .68rem; font-weight: 700; padding: .08rem .45rem; border-radius: 6px; letter-spacing: .02em;
-  background: #F2EFE9; color: #4A4741;}  /* 2026-11-23 지시서: 사진 카드 배지는 #F2EFE9 바탕 · #4A4741 글자 */
+  background: #F2EFE9; color: #3A3833;}  /* 2026-11-23 지시서: 사진 카드 배지는 #F2EFE9 바탕 · #3A3833 글자 */
 .itn {font-weight: 700; letter-spacing: .03em; color: var(--ink);}
 .itn.no {font-weight: 500; color: var(--muted);}
 .ic .wh {font-size: .75rem; color: var(--muted); margin-top: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .ic .bs {display: flex; gap: .3rem; margin-top: .55rem; flex-wrap: wrap; min-height: 1.36rem;}  /* 2026-11-19 배지 없는 카드도 같은 높이 */
-.bdg {font-size: .7rem; padding: .12rem .55rem; border-radius: 999px; background: #F2EFE9; color: #4A4741;}
+.bdg {font-size: .7rem; padding: .12rem .55rem; border-radius: 999px; background: #F2EFE9; color: #3A3833;}
 .bdg.e {background: var(--warn-bg); color: var(--warn);}
 .bdg.k {background: var(--accent-bg); color: var(--accent);}
 /* 장비 한 대 */

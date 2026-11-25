@@ -24,7 +24,7 @@ from core.period import kr_holidays
 MB = "제조(문백)"  # 문백 센터 장비 전체 (제조 라인·충방전기·챔버). 2026-11-24 사용자: 버튼 이름은 제조(문백)
 GROUPS = ["시험(환경)", "시험(충방전)", "제조(오창)", MB, "분석"]
 GROUP_DOT = {"시험(환경)": "#D97757", "시험(충방전)": "#B0567F", "제조(오창)": "#4A6B5D", MB: "#D4A359",
-             "분석": "#7A65A8", "기타": "#A39F96"}
+             "분석": "#7A65A8", "기타": "#736F66"}
 WEEK = "월화수목금토일"
 # 업체 색: (글자색, 칸 바탕) 짝. 밝은 종이 바탕에서 서로 구별되는 부드러운 파스텔 + 진한 글자 (업체 이름으로 늘 같은 색)
 # 2026-11-23 지시서: 앞 다섯 짝은 시험·제조·분석·교육·지원 색과 같은 계열
@@ -356,31 +356,31 @@ def to_html(data: dict, today: dt.date, sel: dict | None) -> str:
 
 CSS = """
 :host{display:block}
-.eg-scroll{overflow-x:auto;border:1px solid #E8E6DF;border-radius:14px;background:#FFFFFF}
+.eg-scroll{overflow-x:auto;border:1px solid #DCD8CE;border-radius:14px;background:#FFFFFF}
 table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;min-width:var(--minw,900px);
   font-family:inherit;color:#191918}
 .eg col.c-sec{width:92px}.eg col.c-dev{width:var(--devw,190px)}.eg col.c-tot{width:58px}
-.eg th.wk,.eg td.wk{border-right:2px solid #C9BFAE!important}.eg thead tr.wkr th.wkl{height:20px;font-size:11px;font-weight:600;color:#8A867D;top:0}.eg thead tr.dtr th{top:21px;height:34px}
-.eg th,.eg td{border-right:1px solid #EAE7DF;border-bottom:1px solid #EAE7DF;text-align:center;padding:0;height:34px;
-  font-size:11px;position:relative;box-sizing:border-box}
-.eg thead th{background:#F2EFE9;height:42px;font-weight:600;color:#4A4741;font-size:12px;position:sticky;top:0;z-index:3}
-.eg thead th small{display:block;font-size:10px;color:#A39F96;font-weight:400}
+.eg th.wk,.eg td.wk{border-right:2px solid #B8AD99!important}.eg thead tr.wkr th.wkl{height:20px;font-size:12px;font-weight:600;color:#625E56;top:0}.eg thead tr.dtr th{top:21px;height:34px}
+.eg th,.eg td{border-right:1px solid #E0DCD3;border-bottom:1px solid #E0DCD3;text-align:center;padding:0;height:34px;
+  font-size:12px;position:relative;box-sizing:border-box}
+.eg thead th{background:#F2EFE9;height:42px;font-weight:600;color:#3A3833;font-size:12px;position:sticky;top:0;z-index:3}
+.eg thead th small{display:block;font-size:11px;color:#736F66;font-weight:400}
 .eg thead th.off,.eg thead th.off small{color:#C84B31}
 .eg thead th.today{background:#D97757;color:#fff}.eg thead th.today small{color:#FDF2EE}
 .eg td.off{background:#F7F5F0}
-.eg td.sec{background:#FAF9F5;color:#6B6860;font-weight:700;font-size:11.5px;padding:4px 6px;line-height:1.35;word-break:keep-all}
+.eg td.sec{background:#FAF9F5;color:#55514A;font-weight:700;font-size:12px;padding:4px 6px;line-height:1.35;word-break:keep-all}
 .eg td.dev{text-align:center;padding:0 10px;font-size:12px;background:#FFFFFF}
 .eg td.dev .nm{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;margin:4px 0}  /* 장비 이름은 다 보이게, 길면 줄바꿈 (2026-11-24 사용자) */
 .eg col.c-grp{width:var(--grpw,96px)}
-.eg td.dev .nm .spec{display:block;font-size:10.5px;color:#8A867D;margin-top:1px}
-.eg td.grp{background:#FAF8F4;color:#6B6860;font-size:10.5px;font-weight:600;line-height:1.3;padding:4px 6px;word-break:keep-all;position:sticky;left:92px;z-index:2}
+.eg td.dev .nm .spec{display:block;font-size:11.5px;color:#625E56;margin-top:1px}
+.eg td.grp{background:#FAF8F4;color:#55514A;font-size:11.5px;font-weight:600;line-height:1.3;padding:4px 6px;word-break:keep-all;position:sticky;left:92px;z-index:2}
 .eg.has-grp td.dev:not(.wide),.eg.has-grp th.dev:not(.wide){left:calc(92px + var(--grpw,96px))}
-.eg td.dev small{display:block;color:#A39F96;font-size:9.5px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
+.eg td.dev small{display:block;color:#736F66;font-size:10.5px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
 .eg th.sec,.eg td.sec{position:sticky;left:0;z-index:2}
 .eg th.dev,.eg td.dev{position:sticky;left:92px;z-index:2}
 .eg thead th.sec,.eg thead th.dev{z-index:4}
 .eg td.tot{font-weight:700;background:#F2EFE9;font-size:12px}
-.eg td.tot.z{color:#A39F96;font-weight:400}
+.eg td.tot.z{color:#736F66;font-weight:400}
 .eg tbody td[data-eid]{cursor:pointer}
 .eg tbody td[data-eid]:hover{background:rgba(217,119,87,.14)}
 .eg tbody td.drag{background:rgba(217,119,87,.28)!important}
@@ -389,9 +389,9 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
   line-height:1.15;cursor:pointer;color:#191918;overflow:hidden}
 .cell b{font-size:12px}.cell span{font-size:9px;letter-spacing:-.2px;opacity:.92;white-space:nowrap}
 .bar{position:absolute;top:3px;bottom:3px;left:2px;right:2px;border-radius:6px;border-left:3px solid;display:flex;align-items:center;
-  gap:6px;padding:0 8px;font-size:11px;white-space:nowrap;overflow:hidden;cursor:pointer;color:#191918}
+  gap:6px;padding:0 8px;font-size:12px;white-space:nowrap;overflow:hidden;cursor:pointer;color:#191918}
 .bar.cl{border-top-left-radius:0;border-bottom-left-radius:0}.bar.cr{border-top-right-radius:0;border-bottom-right-radius:0}
-.bar .d{opacity:.7;font-size:10px}
+.bar .d{opacity:.7;font-size:11px}
 .cell:hover,.bar:hover{filter:brightness(.96)}
 .cell.picked,.bar.picked{outline:2px solid #D97757;outline-offset:-2px}
 .cell.jl{left:0;border-top-left-radius:0;border-bottom-left-radius:0}
@@ -399,12 +399,12 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
 .eg tbody td.rs{background:rgba(217,119,87,.22)!important}
 .eg tbody td.rs .cell{box-shadow:inset 0 0 0 2px #C26344}
 .eg tbody td.cp{outline:2px dashed #D97757;outline-offset:-3px}
-.eg-tip{font-size:11.5px;color:#A39F96;margin-top:6px}
+.eg-tip{font-size:12px;color:#736F66;margin-top:6px}
 .eg-foot{display:flex;justify-content:space-between;gap:12px;margin-top:10px;flex-wrap:wrap}
-.eg-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#6B6860}
+.eg-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#55514A}
 .eg-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
-.eg-note{font-size:12px;color:#A39F96}
-.eg-empty{padding:40px;text-align:center;color:#6B6860;border:1px dashed #E8E6DF;border-radius:14px}
+.eg-note{font-size:12px;color:#736F66}
+.eg-empty{padding:40px;text-align:center;color:#55514A;border:1px dashed #DCD8CE;border-radius:14px}
 @media (max-width:640px){
   .eg col.c-sec{width:26px}.eg td.sec{writing-mode:vertical-rl;padding:4px 0;font-size:10px;letter-spacing:.5px}
   .eg th.sec{font-size:0}
@@ -413,6 +413,15 @@ table.eg{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%
   table.eg{min-width:calc(26px + 140px + var(--ndays) * 42px)}.eg.has-grp{min-width:calc(90px + 140px + var(--ndays) * 42px)}
 }
 """
+
+# 글자 잘 보이게 (2026-11-24 사용자 C안): 넓은 화면은 조금 크고 굵게, 휴대폰은 크기 그대로 굵기만
+READ_CSS = ("@media (min-width:641px){.eg td.dev{font-size:13px}.eg td.grp,.eg td.sec{font-size:12px}"
+            ".eg thead th{font-size:13px}.eg thead th small{font-size:11px}.eg thead tr.wkr th.wkl{font-size:12px}"
+            ".eg td.dev .nm .spec,.eg td.dev small{font-size:11px}}"
+            ".eg td.dev{font-weight:600}.eg td.grp,.eg td.sec{font-weight:700}.eg thead th{font-weight:700}"
+            ".eg thead th small{font-weight:600}.eg td.dev .nm .spec,.eg td.dev small{font-weight:500}.cell span{font-weight:500}"
+            ".eg thead tr.wkr th.wkl{font-weight:700}.eg thead th{background:#ECE8DF;color:#2A2825}.eg td.grp{background:#F5F2EC}"
+            ".eg thead th.today{background:#D97757;color:#fff}.eg thead th.off,.eg thead th.off small{color:#C84B31}")
 
 JS = r"""
 export default function(component) {
@@ -539,7 +548,7 @@ _COMP = None
 def _component():
     global _COMP
     if _COMP is None:
-        _COMP = st.components.v2.component("equip_entry_grid", css=CSS, js=JS)
+        _COMP = st.components.v2.component("equip_entry_grid", css=CSS + READ_CSS, js=JS)
     return _COMP
 
 

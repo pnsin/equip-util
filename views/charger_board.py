@@ -22,14 +22,14 @@ CSS = """<style>
 .cb-k b {display: block; font-size: 1.45rem; color: var(--ink); line-height: 1.3;}
 .cb-box {background: var(--panel); border-radius: 20px; box-shadow: 0 1px 3px rgba(25,25,24,.05); padding: 6px 0 8px; overflow-x: auto;}
 .cb-t {border-collapse: collapse; width: max-content; margin: 0 auto; font-size: .8rem;}
-.cb-t th {font-size: .72rem; color: #6B6860; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #EAE7DF;
+.cb-t th {font-size: .72rem; color: #55514A; font-weight: 600; text-align: center; padding: 8px 8px; border-bottom: 1px solid #E0DCD3;
   white-space: nowrap;}
-.cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #EAE7DF; white-space: nowrap;}
+.cb-t td {padding: 0 8px; height: 31px; border-bottom: 1px solid #E0DCD3; white-space: nowrap;}
 .cb-t td {text-align: center;} .cb-t td.tl {text-align: left;}
 .cb-t td.u {font-weight: 700; color: var(--ink);}
 .cb-t td.c {color: var(--muted);}
-.cb-t td.m {color: #6B6860;}
-.cb-dash {color: #6B6860;}
+.cb-t td.m {color: #55514A;}
+.cb-dash {color: #55514A;}
 .cb-t td.co, .cb-t td.pd {font-weight: 700; color: var(--ink); font-size: .8rem;}
 .cb-t td.pd {font-size: .88rem; letter-spacing: .01em;}  /* 숫자는 한글보다 작아 보여서 살짝 키움 */
 .cb-t td.co {overflow: hidden; text-overflow: ellipsis;}
@@ -40,18 +40,18 @@ CSS = """<style>
 .cb-t .s2 {left: 450px; width: 120px; min-width: 120px; max-width: 120px;}
 .cb-t .s3 {left: 570px; width: 120px; min-width: 120px; max-width: 120px;}
 .cb-t .s4 {left: 690px; width: 160px; min-width: 160px; max-width: 160px;}
-.cb-t .s5 {left: 850px; width: 120px; min-width: 120px; max-width: 120px; box-shadow: inset -1px 0 0 #DDD9CF;}
-.cb-t td.s0[colspan] {width: 570px; max-width: 570px;} .cb-t td.s4[colspan] {width: 280px; max-width: 280px; box-shadow: inset -1px 0 0 #DDD9CF;}
+.cb-t .s5 {left: 850px; width: 120px; min-width: 120px; max-width: 120px; box-shadow: inset -1px 0 0 #CFCAC0;}
+.cb-t td.s0[colspan] {width: 570px; max-width: 570px;} .cb-t td.s4[colspan] {width: 280px; max-width: 280px; box-shadow: inset -1px 0 0 #CFCAC0;}
 .cb-t th.tl {padding: 8px 0;}
 @media (max-width: 700px) {.cb-t .s0, .cb-t .s1, .cb-t .s2, .cb-t .s3, .cb-t .s4, .cb-t .s5 {position: static;}}
 .cb-t td.tl {position: relative; padding: 0;}
 .cb-tl, .cb-mh {width: var(--tlw); min-width: var(--tlw);}  /* 달마다 같은 너비 */
-.cb-t tr.grp td {border-top: 1px solid #EAE7DF;}
+.cb-t tr.grp td {border-top: 1px solid #E0DCD3;}
 .cb-tl {position: relative; height: 31px;}
 .cb-mh {position: relative; height: 16px;}
-.cb-mh span {position: absolute; top: 0; font-size: .7rem; color: #6B6860; font-weight: 600; text-align: center; box-sizing: border-box;
-  border-left: 1px solid #EAE7DF;}
-.cb-g {position: absolute; top: 0; bottom: 0; width: 1px; background: #EAE7DF;}
+.cb-mh span {position: absolute; top: 0; font-size: .7rem; color: #55514A; font-weight: 600; text-align: center; box-sizing: border-box;
+  border-left: 1px solid #E0DCD3;}
+.cb-g {position: absolute; top: 0; bottom: 0; width: 1px; background: #E0DCD3;}
 .cb-now {position: absolute; top: -2px; bottom: -2px; width: 2px; background: #C84B31; border-radius: 2px; z-index: 2;}
 .cb-bar {position: absolute; top: 5px; height: 21px; border-radius: 8px; font-size: .7rem; font-weight: 700; padding: 0 8px;
   display: flex; align-items: center; overflow: hidden; white-space: nowrap; border-left: 4px solid var(--fg);
@@ -66,7 +66,7 @@ CSS = """<style>
 label.cb-ch input {display: none;}
 label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-t tr.chx {visibility: collapse;} .cb-box.all tr.chx {visibility: visible;}
-.cb-t tr.chx td {background: linear-gradient(rgba(217,119,87,.05), rgba(217,119,87,.05)), var(--panel); height: 28px;} .cb-t tr.chx td.n {color: #6B6860; font-weight: 700; text-align: center;}
+.cb-t tr.chx td {background: linear-gradient(rgba(217,119,87,.05), rgba(217,119,87,.05)), var(--panel); height: 28px;} .cb-t tr.chx td.n {color: #55514A; font-weight: 700; text-align: center;}
 .cb-t tr.chx td:empty {border-bottom-color: transparent;}
 .cb-ch summary::-webkit-details-marker {display: none;}
 .cb-ch summary i, label.cb-ch i {font-style: normal; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--accent);
@@ -77,7 +77,7 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
 .cb-ch li {display: flex; gap: 6px; font-size: .72rem; line-height: 1.5; color: #4A6B5D; white-space: nowrap;}
 .cb-t td.u {white-space: nowrap; vertical-align: middle; padding: 0 12px; line-height: 1.35;}
 .cb-t td.u .sp {font: inherit; color: inherit;}
-.cb-t td.u .cn {display: block; font-size: .72rem; font-weight: 500; color: #6B6860; margin-top: 2px;}
+.cb-t td.u .cn {display: block; font-size: .72rem; font-weight: 500; color: #55514A; margin-top: 2px;}
 .cb-t td.u .cn.one {display: inline; margin: 0 0 0 6px;} .cb-t td.u .cn.one:before {content: '· ';}
 @media (max-width: 640px) {.cb-t td.u .cn {font-size: .62rem; margin-top: 0;}}
 .cb-ch li b {color: var(--muted); font-weight: 600; min-width: 38px;}
@@ -91,7 +91,7 @@ label.cb-ch:has(input:checked) i {background: var(--accent); color: #fff;}
   .cb-k {padding: 8px 4px; border-radius: 12px;} .cb-k span {font-size: .7rem;} .cb-k b {font-size: .95rem;}
   .cb-t {font-size: .72rem;} .cb-t th {font-size: .66rem; padding: 6px 4px;} .cb-t td {padding: 0 4px;}
   .cb-t .s0 {position: sticky !important; left: 0; width: 104px; min-width: 104px; max-width: 104px; white-space: normal !important;
-    word-break: keep-all; line-height: 1.25; font-size: .7rem; box-shadow: inset -1px 0 0 #DDD9CF;}
+    word-break: keep-all; line-height: 1.25; font-size: .7rem; box-shadow: inset -1px 0 0 #CFCAC0;}
   .cb-t .s1, .cb-t .s2, .cb-t .s3 {width: 64px; min-width: 64px; max-width: 64px;}
   .cb-t .s4 {width: 110px; min-width: 110px; max-width: 110px;} .cb-t .s5 {width: 92px; min-width: 92px; max-width: 92px;}
   .cb-t td.s0[colspan] {width: 232px; max-width: 232px;} .cb-t td.s4[colspan] {width: 202px; max-width: 202px;}
