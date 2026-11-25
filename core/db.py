@@ -2579,7 +2579,10 @@ def load_quotes() -> pd.DataFrame:
     for c in ("amount", "amount_vat"):
         df[c] = pd.to_numeric(df[c].astype(str).str.replace(",", ""), errors="coerce")
     df["issued_on"] = pd.to_datetime(df["issued_on"], errors="coerce")
-    return df.sort_values(["issued_on", "created_at"], ascending=False).reset_index(drop=True)
+    # 같은 날은 번호 큰 것이 위 (엑셀 대장에서 옮긴 줄은 작성일시가 모두 같음, 126-1 같은 번호는 앞 숫자)
+    df["_n"] = pd.to_numeric(df["seq"].astype(str).str.extract(r"(\d+)", expand=False), errors="coerce")
+    df = df.sort_values(["issued_on", "_n", "created_at"], ascending=False, na_position="last")
+    return df.drop(columns="_n").reset_index(drop=True)
 
 
 def quote_seqs(year: int) -> list[str]:

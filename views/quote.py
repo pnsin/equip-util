@@ -262,6 +262,13 @@ def _load_saved(rec: dict, copy: bool) -> dict:
         d = {}
     base = _blank(d.get("form", "제조"))
     base.update({k: v for k, v in d.items() if k in base})
+    if not d:  # 엑셀 발급대장에서 옮겨온 줄 (2026-11-25): 견적서 내용은 없고 대장 칸만 있음
+        day = rec.get("issued_on")
+        day = day.date() if isinstance(day, (pd.Timestamp, dt.datetime)) and pd.notna(day) else None
+        base.update({"no": quotes._s(rec.get("no")) or base["no"], "company": quotes._s(rec.get("company")),
+                     "writer": quotes._s(rec.get("writer")), "title": quotes._s(rec.get("title"))})
+        if day:
+            base["date"] = day.isoformat()
     for k in ("status", "equip_text", "model", "requester", "region", "note"):
         base[k] = quotes._s(rec.get(k))
     base["id"] = "" if copy else quotes._s(rec.get("id"))
@@ -599,18 +606,25 @@ def _ledger_xlsx(df: pd.DataFrame, year: int) -> bytes:
     return buf.getvalue()
 
 
+def _year_of(df: pd.DataFrame) -> pd.Series:
+    """발급 연도. 발급일자가 빈 줄(엑셀 대장에 날짜가 안 적힌 줄)은 견적번호(RAT-26..) → 작성일시 순으로 봄."""
+    by_no = pd.to_numeric(df["no"].astype(str).str.extract(r"RAT-(\d{2})", expand=False), errors="coerce") + 2000
+    made = pd.to_datetime(df["created_at"], errors="coerce").dt.year
+    return df["issued_on"].dt.year.fillna(by_no).fillna(made)
+
+
 def _ledger() -> None:
     """견적서 발급대장: 발급한 견적서 목록을 보고 엑셀로 내려받기 (2026-11-10)."""
     df = db.load_quotes()
     if df.empty:
         st.caption("아직 발급한 견적서가 없어요.")
         return
-    years = sorted({d.year for d in df["issued_on"].dropna()}, reverse=True) or [dt.date.today().year]
+    years = sorted({int(y) for y in _year_of(df).dropna()}, reverse=True) or [dt.date.today().year]
     with st.container(horizontal=True, vertical_alignment="center"):
         year = st.segmented_control("연도", years, default=years[0], key="q_led_year", label_visibility="collapsed",
                                     format_func=lambda y: f"{y}년") or years[0]
         st.space("stretch")
-        cur = df[df["issued_on"].dt.year == year]
+        cur = df[_year_of(df) == year]
         st.download_button("발급대장 엑셀", lambda cur=cur, year=year: _ledger_xlsx(cur, year), file_name=f"견적서_발급대장_{year}.xlsx",
                            icon=":material/download:", key="q_led_dl",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -677,6 +691,12 @@ def _pages(pdf: bytes) -> list[bytes]:
 
 def _show_quote(rec: dict) -> None:
     """발급대장에서 견적번호를 누르면: 발급한 그대로의 견적서 + 내려받기 + 고치기."""
+    if not quotes._s(rec.get("data")):  # 엑셀 발급대장에서 옮겨온 줄: 앱에서 만든 견적서가 아니라 파일이 없음
+        st.caption("엑셀 발급대장에서 옮겨온 견적서라 앱에 저장된 견적서 파일은 없어요.")
+        if st.button("견적서 작성에서 내용 채우기", icon=":material/edit:", key="q_led_fill"):
+            _reset(_load_saved(rec, copy=False))
+            st.switch_page(common.PAGES["quote"])
+        return
     d = _load_saved(rec, copy=False)
     d["lines"] = [ln for ln in d["lines"] if not quote_doc.is_blank_line(ln)]
     with st.spinner("견적서 여는 중…"):
