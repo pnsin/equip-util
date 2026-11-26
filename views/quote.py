@@ -663,7 +663,7 @@ def _quote_files(data: str) -> dict:
     """저장한 견적서 내용으로 발급 때와 같은 엑셀·PDF·미리보기를 만듦 (같은 내용이면 다시 안 만듦)."""
     d = json.loads(data)
     out = {"xlsx": quote_doc.fill_xlsx(copy.deepcopy(d)), "pdfs": [], "pages": [], "error": ""}
-    parts = [("customer", "PDF 받기 (업체용)"), ("internal", "PDF 받기 (내부보관용)")] \
+    parts = [("customer", "PDF 받기")] \
         if d.get("form") == "시험" else [("all", "PDF 받기")]
     try:
         for part, label in parts:
@@ -834,7 +834,7 @@ def _issue(d: dict, t: dict) -> None:
             pass
         files = {"no": d["no"], "pdfs": []}
         try:
-            parts = [("customer", "PDF 받기 (업체용)"), ("internal", "PDF 받기 (내부보관용)")] \
+            parts = [("customer", "PDF 받기")] \
                 if d["form"] == "시험" else [("all", "PDF 받기")]
             for part, label in parts:
                 pdf = quote_doc.to_pdf(quote_doc.fill_xlsx(d, part))
