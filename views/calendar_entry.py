@@ -1940,10 +1940,10 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             if where:  # 어느 주장비 소속인지 작게 (시간은 주장비에 합산)
                 st.markdown(f"<div class='ep-path'><span>소속</span>{html.escape(where)}</div>", unsafe_allow_html=True)
             c1, c2 = st.columns(2, gap="small")
-            v_comp = c1.selectbox("업체", comp_opts,
+            v_comp = c1.selectbox("사용 업체", comp_opts,
                                   index=ix(comp_opts, db.to_str(cur["company"])) if cur is not None else None,
                                   placeholder="내부면 비워 두기", key=f"ep_comp_{k}")
-            v_staff = c2.selectbox("담당자", staff_opts,
+            v_staff = c2.selectbox("TP 담당자", staff_opts,
                                    index=ix(staff_opts, db.to_str(cur["created_by"]) if cur is not None else last_staff),
                                    placeholder="담당자 선택", key=f"ep_staff_{k}")
             if st.button("새 업체 등록", icon=":material/add:", key="ep_newcomp", type="tertiary"):
@@ -2083,7 +2083,7 @@ def _entry_panel(day: dt.date, logs: pd.DataFrame, eq: pd.DataFrame, comp: pd.Da
             if not v_eq:
                 errors.append("장비를 고르세요.")
             if not v_staff:
-                errors.append("담당자를 고르세요.")
+                errors.append("TP 담당자를 고르세요.")
             if not v_type or not v_purp:
                 errors.append("활용유형과 사용목적을 고르세요.")
             rec = _record(row, base, comp_by_name, eq_id, cfg) if not errors else None
