@@ -119,11 +119,23 @@ def is_missing(row: dict) -> bool:
 
 # ── 견적 줄에서 고르는 장비·항목 ───────────────────────────────
 
+_CHAMBER = re.compile(r"\s*\+\s*(?:\d+\s*)?챔버.*$")
+
+
+def quote_name(name) -> str:
+    """견적서에 쓰는 장비 이름: 충방전기 이름 뒤 '+챔버 3대(문백#1~#3)' 같은 챔버 설명은 뺌 (장비 목록 이름은 그대로)."""
+    return _CHAMBER.sub("", _s(name)) or _s(name)
+
+
 def pick_options(devices: pd.DataFrame, extras: pd.DataFrame) -> dict[str, dict]:
     """고르기 칸에 보일 이름 → 단가 정보. 장비는 장비 목록의 짧은 이름, 기타 항목은 항목 이름."""
     out: dict[str, dict] = {}
-    for r in devices.to_dict("records"):
-        out[r["equip"]] = {"equip_id": r["equip_id"], "name": r["name"], "spec": r["spec"], "unit": r["unit"],
+    recs = devices.to_dict("records")
+    labels = [quote_name(r["equip"]) for r in recs]
+    for r, label in zip(recs, labels):
+        if labels.count(label) > 1:  # 챔버 설명을 빼서 이름이 겹치면 원래 이름
+            label = r["equip"]
+        out[label] = {"equip_id": r["equip_id"], "name": quote_name(r["name"]), "spec": r["spec"], "unit": r["unit"],
                            "price_req": r["price_req"], "price_self": r["price_self"]}
     for r in extras.to_dict("records"):
         label = r["name"]

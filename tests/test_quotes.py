@@ -121,3 +121,10 @@ def test_quote_save_and_undo(tmp_path, monkeypatch):
     assert list(db.load_quotes()["company"]) == ["B"]
     db.undo_last()
     assert list(db.load_quotes()["company"]) == ["A"]
+
+
+def test_quote_name_drops_chamber_part():
+    from core import quotes
+    assert quotes.quote_name("활성화 충방전기(10A, 120ch)+챔버 3대(문백#1~#3)") == "활성화 충방전기(10A, 120ch)"
+    assert quotes.quote_name("배터리 완제품 활성화 장비(50A, 192ch)+챔버6") == "배터리 완제품 활성화 장비(50A, 192ch)"
+    assert quotes.quote_name("방폭챔버") == "방폭챔버"
